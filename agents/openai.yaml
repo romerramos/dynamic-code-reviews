@@ -1,0 +1,7 @@
+interface:
+  display_name: "Dynamic Code Reviews"
+  short_description: "Incremental HTML reviews with grouped change history"
+  icon_small: "./assets/icon.svg"
+  icon_large: "./assets/icon.svg"
+  brand_color: "#655BE8"
+  default_prompt: "Use $dynamic-code-reviews to create a grouped HTML code review walkthrough."

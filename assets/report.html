@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Dynamic Code Review</title>
+  <style>__STYLES__</style>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to review</a>
+  <header class="app-header">
+    <div class="brand"><span class="brand-icon" aria-hidden="true">__ICON__</span><div><strong>Dynamic Code Reviews</strong><small id="repo-label"></small></div></div>
+    <div class="header-title"><strong id="title"></strong><span id="scope"></span></div>
+    <div class="header-actions"><div id="revision-navigation"></div><button class="btn btn-sm btn-ghost" id="context-toggle">Review details</button></div>
+  </header>
+  <div class="workspace">
+    <aside class="sidebar" aria-label="Change groups">
+      <div class="sidebar-heading"><strong>Review navigator</strong><span id="file-total" class="badge neutral"></span></div>
+      <input id="search" class="input input-bordered" type="search" placeholder="Find a file or step…" aria-label="Find a file or step">
+      <nav id="navigation" aria-label="Review navigation"></nav>
+      <div class="sidebar-footer"><progress id="progress-bar" class="progress progress-primary" value="0" max="1" aria-label="Review progress"></progress><span id="progress" role="status"></span><small><kbd>J</kbd> next · <kbd>K</kbd> previous · <kbd>Z</kbd> focus</small></div>
+    </aside>
+    <div class="review-area">
+      <div class="review-toolbar">
+        <div class="toolbar-navigation"><button id="nav-toggle" class="btn btn-sm btn-ghost" aria-expanded="false" aria-label="Toggle review navigation">☰</button><button id="prev" class="btn btn-sm btn-ghost" aria-label="Previous step">←</button><button id="next" class="btn btn-sm btn-ghost" aria-label="Next step">→</button><span id="position"></span></div>
+        <div class="toolbar-options">
+          <fieldset class="join" role="group" aria-label="Diff layout"><button id="auto-layout" class="btn btn-sm join-item" aria-pressed="true">Auto</button><button id="unified" class="btn btn-sm join-item">Unified</button><button id="split" class="btn btn-sm join-item">Split</button></fieldset>
+          <label><input id="comments-toggle" class="checkbox checkbox-xs checkbox-primary" type="checkbox" checked> Comments</label>
+          <button id="focus" class="btn btn-sm btn-ghost" aria-pressed="false">Focus</button>
+        </div>
+      </div>
+      <main id="content" tabindex="-1"></main>
+    </div>
+  </div>
+  <dialog id="details-dialog" class="modal" aria-labelledby="details-title"><article class="modal-box"><header><button aria-label="Close review details" rel="prev" class="btn btn-sm btn-circle btn-ghost" id="close-details">✕</button><h2 id="details-title">Review details</h2></header><div id="review-details"></div><footer><button id="export" class="btn btn-sm btn-ghost">Export local notes</button><button class="btn btn-sm btn-primary" id="done-details">Done</button></footer></article></dialog>
+  <div id="comment-popover" class="comment-popover" popover="auto" role="dialog" aria-labelledby="comment-popover-title"></div>
+  <div id="range-actions" class="range-actions" hidden><div><strong id="range-label"></strong><small>Select another line to extend the range.</small></div><button id="write-comment" class="btn btn-sm btn-primary">Comment</button><button id="clear-range" class="btn btn-sm btn-ghost" aria-label="Clear selected range">✕</button></div>
+  <dialog id="comment-editor" class="modal" aria-labelledby="editor-title"><form id="comment-form" class="modal-box"><header><h2 id="editor-title">Your comment</h2><button id="cancel-comment" type="button" class="btn btn-sm btn-circle btn-ghost" aria-label="Cancel comment">✕</button></header><p id="editor-location" class="comment-location"></p><pre id="editor-snippet" class="comment-snippet"></pre><label class="editor-label">Type<select id="editor-label" class="select select-bordered"><option value="note">Note</option><option value="question">Question</option><option value="suggestion">Suggestion</option><option value="issue">Issue</option></select></label><label class="editor-label">Comment<input id="editor-subject" class="input input-bordered" required placeholder="What should change, or what needs a closer look?"></label><label class="editor-label">Details <span class="muted">(optional)</span><textarea id="editor-discussion" class="textarea textarea-bordered" rows="3"></textarea></label><label class="editor-blocking"><input id="editor-blocking" type="checkbox" class="checkbox checkbox-sm"> Blocks approval</label><footer><span class="muted">Saved in this browser. Export a copy to keep it.</span><button type="submit" class="btn btn-sm btn-primary">Save comment</button></footer></form></dialog>
+  <dialog id="copy-dialog" class="modal" aria-labelledby="copy-title"><div class="modal-box"><h2 id="copy-title">Copy for LLMs</h2><p>Automatic copying is unavailable. Select and copy this text.</p><textarea id="copy-text" class="textarea textarea-bordered" readonly rows="12" aria-label="Review text to copy"></textarea><button id="close-copy" class="btn btn-sm btn-primary">Done</button></div></dialog>
+  <div id="toast" role="status" hidden></div>
+  <script type="application/json" id="data">__REVIEW_DATA__</script>
+  <script>__SCRIPTS__</script>
+</body>
+</html>

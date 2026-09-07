@@ -1,0 +1,21 @@
+# Generated reviews and local working data do not belong in the skill repository.
+.reviews/
+tmp/
+scratch/
+snapshot.json
+review.json
+draft.json
+plan.json
+update.json
+review-notes.json
+.DS_Store
+*.log
+
+# Local configuration and credentials.
+.env
+.env.*
+.secrets/
+*.pem
+*.key
+*.p12
+*.pfx

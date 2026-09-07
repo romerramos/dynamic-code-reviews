@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <title>Dynamic Code Reviews</title>
+  <defs>
+    <linearGradient id="dcr-tile" x1="8" y1="4" x2="53" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8981FF"/>
+      <stop offset=".5" stop-color="#655BE8"/>
+      <stop offset="1" stop-color="#4435A8"/>
+    </linearGradient>
+    <linearGradient id="dcr-badge" x1="39" y1="35" x2="55" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#CDFFE9"/>
+      <stop offset="1" stop-color="#7CE5BF"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="56" height="56" rx="16" fill="url(#dcr-tile)"/>
+  <rect x="3" y="3" width="54" height="54" rx="15" stroke="white" stroke-opacity=".2"/>
+  <path d="m22 19-8 9 8 9m16-18 8 9-8 9" stroke="#F9F8FF" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m33 18-6 20" stroke="#D6D1FF" stroke-width="3.2" stroke-linecap="round"/>
+  <circle cx="47" cy="47" r="14" fill="#4435A8"/>
+  <circle cx="47" cy="47" r="12" fill="url(#dcr-badge)"/>
+  <path d="m41.5 47 3.7 3.7 7.3-8" stroke="#175747" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
