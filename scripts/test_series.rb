@@ -148,6 +148,38 @@ module SeriesChecks
         end
       end
     end
+    checks['attaches offline QA without rewriting findings or old revisions; rejects stale inputs'] = lambda do
+      ReviewChecks.fixture do |root, _commit|
+        Dir.mktmpdir('review-qa-check-') do |out|
+          first = ReviewSeries.start(repo: root, name: 'qa-check', report: initial(root))
+          before = File.binread(first)
+          payload = DynamicReviews.extract(first)
+          png = Base64.strict_decode64('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jWZkAAAAASUVORK5CYII=')
+          File.binwrite(File.join(out, 'state.png'), png)
+          qa = {'status' => 'complete', 'fingerprint' => payload['snapshot']['fingerprint'], 'summary' => 'A synthetic state was captured.', 'environment' => 'Synthetic fixture, not an application test.',
+                'flows' => [{'title' => 'Inspect state', 'steps' => ['Inspect a synthetic state'], 'expected' => 'A sample image', 'observed' => 'Sample image attached', 'result' => 'passed',
+                             'assets' => [{'path' => 'state.png', 'caption' => 'Synthetic fixture', 'comment_id' => 'value-note'}]}]}
+          input = File.join(out, 'qa.json')
+          File.write(input, JSON.generate(qa))
+          second = ReviewSeries.qa(repo: root, name: 'qa-check', revision: 1, update: input)
+          after = DynamicReviews.extract(second)
+          assert(File.read(second).include?('media-src data:;'), 'Offline media blocked by report CSP')
+          assert(File.binread(first) == before, 'QA overwrote the first review')
+          assert(after['snapshot'] == payload['snapshot'] && after['review']['findings'] == payload['review']['findings'], 'QA changed code conclusions')
+          assert(after['review']['qa']['flows'][0]['assets'][0]['data_uri'].start_with?('data:image/png;base64,'), 'Media not embedded')
+          assert(!after['review']['qa']['flows'][0]['assets'][0].key?('path'), 'Scratch path leaked into report')
+          rejects('Stale revision accepted') { ReviewSeries.qa(repo: root, name: 'qa-check', revision: 1, update: input) }
+          qa['fingerprint'] = 'wrong'; File.write(input, JSON.generate(qa))
+          rejects('Wrong snapshot accepted') { ReviewSeries.qa(repo: root, name: 'qa-check', revision: 2, update: input) }
+          qa['fingerprint'] = payload['snapshot']['fingerprint']; qa['summary'] = 'New evidence'; File.write(input, JSON.generate(qa))
+          File.write(File.join(root, 'sample.rb'), "changed after capture\n")
+          rejects('Changed source accepted') { ReviewSeries.qa(repo: root, name: 'qa-check', revision: 2, update: input) }
+          draft = ReviewSeries.draft_review(after['review'], after['snapshot'], ReviewSeries.compare(after['snapshot'], after['snapshot']))
+          assert(!draft.key?('qa'), 'An increment silently reused historical QA')
+          assert(ReviewSeries.manifest(File.dirname(File.dirname(first)))['revisions'].length == 2, 'Rejected QA wrote a revision')
+        end
+      end
+    end
     checks.each { |description, check| check.call; puts "PASS #{description}" }
     puts "#{checks.length} series checks passed"
   end

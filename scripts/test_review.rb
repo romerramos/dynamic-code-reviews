@@ -116,6 +116,35 @@ module ReviewChecks
         rejects('Missing hunk accepted') { DynamicReviews.validate(snapshot, review) }
       end
     end
+    checks['validates QA media, status and comment references'] = lambda do
+      snapshot = {'fingerprint' => 'fixture'}
+      qa = {'status' => 'pending', 'fingerprint' => 'fixture', 'summary' => 'Capture planned', 'flows' => []}
+      ReviewQA.validate(qa, snapshot)
+      qa['status'] = 'awaiting-environment'
+      ReviewQA.validate(qa, snapshot)
+      qa['status'] = 'complete'
+      rejects('Empty completed QA accepted') { ReviewQA.validate(qa, snapshot) }
+      qa['environment'] = 'Synthetic fixture'
+      qa['flows'] = [{'title' => 'State', 'steps' => ['Open'], 'expected' => 'Visible', 'observed' => 'Visible', 'result' => 'passed',
+                      'assets' => [{'caption' => 'State', 'data_uri' => 'https://example.com/private.png'}]}]
+      rejects('External media accepted') { ReviewQA.validate(qa, snapshot) }
+      asset = qa['flows'][0]['assets'][0]
+      asset['data_uri'] = 'data:image/png;base64,' + Base64.strict_encode64('<svg>not a PNG</svg>')
+      rejects('Spoofed image accepted') { ReviewQA.validate(qa, snapshot) }
+      asset['data_uri'] = 'data:image/png;base64,' + Base64.strict_encode64("\x89PNG\r\n\x1a\n".b)
+      asset['comment_id'] = 'missing'
+      rejects('Unknown comment accepted') { ReviewQA.validate(qa, snapshot, {'comments' => []}) }
+      asset.delete('comment_id')
+      ReviewQA.validate(qa, snapshot)
+      qa['flows'][0]['assets'] = []
+      rejects('Completed visual QA without media accepted') { ReviewQA.validate(qa, snapshot) }
+      qa['status'] = 'partial'
+      ReviewQA.validate(qa, snapshot)
+      qa['status'] = 'complete'
+      qa['flows'][0]['assets'] = [asset]
+      qa['flows'][0]['result'] = 'not-run'
+      rejects('Unrun flow accepted as complete') { ReviewQA.validate(qa, snapshot) }
+    end
     checks.each do |description, check|
       check.call
       puts "PASS #{description}"

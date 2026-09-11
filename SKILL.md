@@ -85,12 +85,38 @@ Include:
 - Related PRs, suggested labels and reviewers when supported by live metadata, CODEOWNERS (last matching rule wins), or focused history. They are suggestions only; do not assign, comment, push or mutate external services. Mark unavailable or skipped context explicitly.
 - Snapshot/coverage limitations and genuine before-merge/deployment actions, separate from code findings. No simulated live CI, chat, native review submission, semantic symbol lookup or remote progress sync. Omit poems/fortunes by default because this is a focused review artifact; add only if requested.
 
+## Optional visual QA: publish the review first
+
+When the inspected change has a concrete UI or user flow that can usefully be
+exercised, read [references/visual-qa.md](references/visual-qa.md). Publish and
+link the initial HTML before attempting capture so the user can read the review
+while QA continues. After publishing, ask “Do you have this environment
+provisioned?” with options to supply a local URL, discover a provisioning skill,
+or skip screenshots for this review. Reuse an environment or skip decision
+already supplied in the conversation; do not ask again. Missing runtime alone
+is not a reason to stop without offering these paths. Use `awaiting-environment`
+while waiting for that choice, and “QA assets are being generated” only once
+capture is actually planned. Omit QA for changes with no meaningful visual flow.
+
+Use an isolated browser tab/session through the available harness. Save its native
+screenshot output directly as report evidence; screenshots do not require video
+recording support or a separate capture system. Capture a few
+important states with short action captions, and attach relevant evidence to
+UI/UX comments. Prefer these pictures over long descriptions of visible defects.
+Never record the user's desktop or require them to keep a window foregrounded.
+Background video is optional: use it only if the tool explicitly supports
+isolated recording. Otherwise deliver an honestly labelled screenshot walkthrough,
+not a simulated screencast. Finish with complete, partial, blocked or skipped
+status; never leave pending as the final status of an attempted QA pass. A completed
+visual QA pass must contain embedded media. Verify the current HTML includes the
+expected assets, then link it again and remind the user to reload an open report.
+
 ## Render and verify
 
 For a fresh series, write review JSON in the same temporary directory as the snapshot, then:
 `ruby <skill>/scripts/series.rb start --repo <root> --name <short-feature-slug> --snapshot <snapshot.json> --review <review.json>`.
 
-This creates `.reviews/<slug>/index.html`, a compact `manifest.json`, `revisions/001.html`, and `current.html`. Subsequent publishes add immutable numbered HTML files and refresh the current view and index. A series slug represents a feature or phase, not a commit SHA; its original base remains fixed across commits. The implementation's local `.lock` coordinates concurrent writes. No database, watcher, project script or per-revision asset folders are needed. Import an existing standalone report with `series.rb start --repo <root> --name <slug> --report <previous.html>`; preserve the old file and link.
+This creates `.reviews/<slug>/index.html`, a compact `manifest.json`, `revisions/001.html`, and `current.html`. Subsequent publishes add immutable numbered HTML files and refresh the current view and index. A series slug represents a feature or phase, not a commit SHA; its original base remains fixed across commits. The implementation's local `.lock` coordinates concurrent writes. No database, watcher, project script or per-revision asset folders are needed. Optional QA media is embedded in the offline HTML. Import an existing standalone report with `series.rb start --repo <root> --name <slug> --report <previous.html>`; preserve the old file and link.
 
 For a requested UI refresh, use `ruby <skill>/scripts/series.rb refresh --repo <root> --name <slug>`. It rebuilds `current.html` from the latest saved review using the new assets, without inspecting new source or changing any saved revision. Link this current view for the updated UI, and keep historical snapshots immutable.
 

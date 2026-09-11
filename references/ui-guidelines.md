@@ -160,3 +160,15 @@ limit accurately. Do not route blocked private content through another URL.
 
 Native behavior reference (consult only when needed for maintenance):
 [HTML popover attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/popover).
+
+## Optional QA media
+
+Visual QA belongs in the Overview, after findings. Show status, environment,
+expected/observed outcome, short steps and captioned media. Screenshots and
+controls must fit the content column at narrow widths. Associate media with
+generated comments through comment_id; the overview thread shows it directly
+and the compact gutter popover links to it with See visual evidence. Preserve
+resolved state when opening evidence. No autoplay, remote media, automatic
+refresh or simulated background worker. Verify pending/completed states, loaded
+images, video playback when supported, comment navigation and a narrow viewport
+using synthetic captures, never implying they validate the reviewed application.

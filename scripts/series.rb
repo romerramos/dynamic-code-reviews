@@ -189,6 +189,7 @@ module ReviewSeries
     review['sections'] = []
     review['coverage'] = ''
     review.delete('history')
+    review.delete('qa') # Captures prove a particular runtime/snapshot, never an automatic increment.
     review
   end
 
@@ -230,7 +231,7 @@ module ReviewSeries
 
   def apply_update(draft, update)
     review = copy(draft)
-    allowed = %w[title headline summary effort coverage validation sections flow file_categories]
+    allowed = %w[title headline summary effort coverage validation sections flow file_categories qa]
     update.fetch('review', {}).each do |key, value|
       raise ArgumentError, "Unsupported review update: #{key}" unless allowed.include?(key)
       review[key] = value
@@ -333,6 +334,30 @@ module ReviewSeries
     end
   end
 
+  # Attach evidence to the exact reviewed snapshot without rewriting analysis/history.
+  def qa(repo:, name:, update:, revision:, **_unused)
+    update_path = File.expand_path(update)
+    evidence = ReviewQA.pack(read(update_path), directory: File.dirname(update_path))
+    path = directory(repo, name)
+    locked(path) do
+      history = manifest(path)
+      raise ArgumentError, 'Another revision was published; inspect it before attaching QA' unless history['revisions'].last['number'] == Integer(revision)
+      raise ArgumentError, 'Branch changed; use the original review checkout' unless history['branch'] == branch(repo)
+      payload = latest(path, history)
+      snapshot, review = payload.values_at('snapshot', 'review')
+      ReviewQA.validate(evidence, snapshot)
+      fresh = DynamicReviews.collect(repo: repo, mode: 'series', base: snapshot['base'], head: snapshot['mode'] == 'uncommitted' || snapshot['working_tree'] ? nil : snapshot['head'])
+      raise ArgumentError, 'Code changed; review the new snapshot before attaching QA' unless code_key(fresh) == code_key(snapshot) && fresh['head'] == snapshot['head']
+      recorded_context = review.fetch('context', {})
+      raise ArgumentError, 'Context changed; reassess before attaching QA' unless contexts(fresh, recorded_context.keys) == recorded_context
+      raise ArgumentError, 'QA evidence is unchanged' if review['qa'] == evidence
+      review['qa'] = evidence
+      increment = {'summary' => "QA evidence updated: #{evidence['summary']}", 'files' => [], 'groups' => {},
+                   'finding_states' => review.dig('history', 'finding_states') || []}
+      append(path, history, snapshot, review, increment)
+    end
+  end
+
   def start(repo:, name:, report: nil, snapshot: nil, review: nil, **_unused)
     raise ArgumentError, 'Provide --report or both --snapshot and --review' unless report || (snapshot && review)
     payload = report ? DynamicReviews.extract(report) : {'snapshot' => read(snapshot), 'review' => read(review)}
@@ -416,12 +441,12 @@ module ReviewSeries
     command = argv.shift
     options = {}
     parser = OptionParser.new do |p|
-      p.banner = 'ruby series.rb start|prepare|publish|refresh|list [options]'
-      %w[repo name report snapshot review out head base prepared update].each { |key| p.on("--#{key} VALUE") { |value| options[key.to_sym] = value } }
+      p.banner = 'ruby series.rb start|prepare|publish|qa|refresh|list [options]'
+      %w[repo name report snapshot review out head base prepared update revision].each { |key| p.on("--#{key} VALUE") { |value| options[key.to_sym] = value } }
       p.on('--record', 'Save an intentional reassessment without code changes') { options[:record] = true }
     end
     parser.parse!(argv)
-    raise ArgumentError, parser.to_s unless %w[start prepare publish refresh list].include?(command)
+    raise ArgumentError, parser.to_s unless %w[start prepare publish qa refresh list].include?(command)
     result = public_send(command, **options)
     puts result.is_a?(String) ? result : JSON.pretty_generate(result)
   end

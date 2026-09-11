@@ -79,3 +79,9 @@
 .review-thread.is-resolved{background:#fafbfc;border-color:#dde3e9}
 .thread-summary:focus-visible,.thread-code:focus-visible{outline:2px solid #7864d9;outline-offset:-3px}
 @media(max-width:767px){.thread-file{flex-direction:column;gap:2px}.thread-body{padding:18px}.thread-footer{padding:12px}.thread-code-line{grid-template-columns:44px minmax(0,1fr)}.thread-code-line>code{padding:0 10px}.thread-line-number{padding:0 8px}}
+
+/* Captured QA is optional and stays secondary to the review. */
+.qa-flow { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; }
+.qa-asset { margin: 1rem 0; }
+.qa-asset img, .qa-asset video { display: block; max-width: 100%; max-height: 560px; border: 1px solid #e5e7eb; border-radius: 8px; }
+.qa-asset figcaption { margin-top: .5rem; font-size: 14px; line-height: 1.6; }

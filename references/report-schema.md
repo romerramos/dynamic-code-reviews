@@ -134,3 +134,19 @@ navigator, collapsible file cards, a details dialog, and local notes. `ruby
 scripts/review.rb extract --report <file.html> --out <payload.json>` recovers a
 previous report's captured snapshot and analysis for reuse. Use `--replace` when
 refreshing an existing report's UI; otherwise filenames receive a timestamp.
+
+## Optional visual QA
+
+Top-level `qa` is absent for nonvisual changes. It accepts `status` (pending,
+awaiting-environment, complete, partial, blocked, skipped), the exact snapshot `fingerprint`, `summary`,
+`environment`, and `flows`. Each flow has `title`, text `steps`, `expected`,
+`observed`, `result` (passed, failed, blocked, not-run) and `assets`. The attachment
+helper turns local asset `path` into a validated embedded `data_uri`; each asset
+needs a `caption` and may reference an existing generated `comment_id`.
+See [visual-qa.md](visual-qa.md) for report-first capture and the attachment command.
+`complete` requires at least one embedded media asset and no unfinished flows.
+Use `partial` or `blocked` when capture fails; DOM-only checks do not constitute
+a completed screenshot walkthrough.
+Media is not automatically carried to new code snapshots. Never hand-author
+base64, claim a pending worker exists, or mark a runtime check passed from code
+inspection alone.
