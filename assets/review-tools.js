@@ -44,5 +44,20 @@ globalThis.ReviewTools = (() => {
     notes.filter(note => note.text.trim()).forEach(note => parts.push(`Step: ${note.title}\nFiles: ${note.paths.join(', ')}\n\n${note.text}`));
     return [header, ...parts].join('\n\n---\n\n');
   }
-  return {categories, category, anchor, sourceText, commentText, reviewText};
+  // Show each issue once, but never hide findings behind an ambiguous comment match.
+  function overviewFeedback(review) {
+    const comments = (review.comments || []).map(comment => ({...comment}));
+    const findings = review.findings || [];
+    const remaining = findings.filter(finding => {
+      const candidates = comments.filter(comment => comment.label === 'issue' && comment.hunk === finding.hunk);
+      const match = finding.comment_id
+        ? candidates.find(comment => comment.id === finding.comment_id)
+        : candidates.length === 1 && findings.filter(other => other.hunk === finding.hunk).length === 1 ? candidates[0] : null;
+      if (!match) return true;
+      match.severity = finding.severity;
+      return false;
+    });
+    return {comments, findings:remaining};
+  }
+  return {categories, category, anchor, sourceText, commentText, reviewText, overviewFeedback};
 })();

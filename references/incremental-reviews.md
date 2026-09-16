@@ -54,7 +54,7 @@ and hunk IDs; always take current IDs from the prepared plan. A small update:
   "review": {
     "coverage": "Inspected the two changed ranges and the export caller; reused unchanged download explanations.",
     "validation": ["Focused regression test passed on this revision."],
-    "sections": [{"title": "Quality assessment", "body": "No new concrete quality concerns found in the inspected increment."}]
+    "sections": []
   },
   "items": [{
     "group": "group-2",

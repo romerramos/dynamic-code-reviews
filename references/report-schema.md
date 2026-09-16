@@ -27,7 +27,7 @@ All prose is plain text, escaped by the renderer. Do not include HTML or duplica
 }
 ```
 
-Use an empty findings array when none are substantiated. Add sections for linked issue assessment, related PRs/reviewers/labels, verification boundaries, and activation actions as appropriate. Links only accept HTTP(S). The report supports offline navigation, ranges with old/new line numbers, unified/split diffs, J/K/Z keys, inline Conventional Comments, file search, browser-local notes and viewed layers. It does not implement whitespace-insensitive diff, semantic diff or live provider integration.
+Use an empty findings array when none are substantiated. Default to an empty sections array. Add optional context only when it changes a review decision; sections appear in Review details. Do not generate routine issue, quality, PR or deployment assessment paragraphs. Findings can specify comment_id to link their matching issue comment on the same hunk; the overview displays the issue once with its severity. Links only accept HTTP(S). The report supports offline navigation, ranges with old/new line numbers, unified/split diffs, J/K/Z keys, inline Conventional Comments, file search, browser-local notes and viewed layers. It does not implement whitespace-insensitive diff, semantic diff or live provider integration.
 
 The HTML embeds `{snapshot, review}` as inert JSON in `<script id="data" type="application/json">`. This is also the portable snapshot for later comparison. A series has a small manifest and history index alongside immutable HTML revisions; prepared analysis files stay outside the repository. Browser notes are keyed by snapshot and series revision; they are not automatically carried to changed revisions. Export notes is a user-triggered download.
 
@@ -80,7 +80,7 @@ the copy succeeded.
 Write findings and comment discussions for someone who has not traced the code.
 Name the visible problem first. For an interaction defect, include the starting
 state, numbered actions using on-screen labels, and separate Expected and Actual
-sentences. Explain the cause and a minimal fix afterward. Plain text with newlines
+sentences. Add a cause or fix direction only if it contributes information beyond the proof; otherwise stop after Actual. Plain text with newlines
 is supported; the renderer preserves line breaks, including in copied comments.
 For example:
 
@@ -95,8 +95,6 @@ To reproduce (start with a closed conversation):
 Expected: the conversation disappears from the Closed list.
 Actual: it stays listed, but its button now says Close.
 
-Cause: the action receives Open as the active filter even though Closed is visible.
-Keep that filter value consistent when selecting a conversation or switching lists.
 ```
 
 A method name can help locate the cause; it is not a reproduction step. Keep

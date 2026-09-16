@@ -47,3 +47,15 @@ assert.match(resolved,/Conversation: resolved locally \(not verification that th
 assert.match(resolved,/11 \| safe\(\)/);
 assert.match(resolved,/Check the fallback/);
 console.log('PASS combined review retains comments and personal step notes');
+const issue = {id:'c1', label:'issue', hunk:'h1'};
+const finding = {id:'F1', hunk:'h1', severity:'P2'};
+const review = {comments:[issue],findings:[finding]};
+assert.deepEqual(tools.overviewFeedback(review), {comments:[{...issue,severity:'P2'}],findings:[]});
+assert.equal(issue.severity, undefined);
+assert.equal(tools.overviewFeedback({comments:[{...issue,label:'note'}],findings:[finding]}).findings.length,1);
+assert.equal(tools.overviewFeedback({comments:[issue],findings:[finding,{...finding,id:'F2'}]}).findings.length,2);
+assert.equal(tools.overviewFeedback({comments:[issue,{...issue,id:'c2'}],findings:[finding]}).findings.length,1);
+assert.equal(tools.overviewFeedback({comments:[issue,{...issue,id:'c2'}],findings:[{...finding,comment_id:'c1'}]}).findings.length,0);
+assert.equal(tools.overviewFeedback({comments:[issue],findings:[{...finding,comment_id:'missing'}]}).findings.length,1);
+assert.deepEqual(tools.overviewFeedback({}),{comments:[],findings:[]});
+console.log('PASS overview deduplicates only matching issues and retains unmatched findings');

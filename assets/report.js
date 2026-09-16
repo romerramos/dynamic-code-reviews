@@ -8,7 +8,8 @@
   const files = new Map(snapshot.files.map(file => [file.id, file]));
   const hunkFiles = new Map(snapshot.files.flatMap(file => file.hunks.map(hunk => [hunk.id, file])));
   const layers = review.groups.flatMap((group, groupIndex) => group.layers.map((layer, layerIndex) => ({...layer, group, id:`g${groupIndex}l${layerIndex}`})));
-  const generatedComments = review.comments || [];
+  const feedback = ReviewTools.overviewFeedback(review);
+  const generatedComments = feedback.comments;
   let comments = [];
   const storageKey = `dynamic-review:${snapshot.fingerprint}${review.history ? `:${review.history.series}:${review.history.revision}` : ""}`;
   let saved = {};
@@ -44,7 +45,7 @@
 
   function renderNavigation() {
     const query = $('search').value.trim().toLowerCase();
-    let html = `<ul class="menu"><li><button data-view="overview" aria-current="${state.view === 'overview' ? 'page' : 'false'}"><span class="step-number">☷</span><span class="step-body"><strong>Overview</strong><small>Walkthrough & review outcome</small></span></button></li><li><button data-view="files" aria-current="${state.view === 'files' ? 'page' : 'false'}"><span class="step-number">⌘</span><span class="step-body"><strong>All changes</strong><small>Diffs by responsibility · ${files.size} files</small></span></button></li></ul>`;
+    let html = `<ul class="menu"><li><button data-view="overview" aria-current="${state.view === 'overview' ? 'page' : 'false'}"><span class="step-number">☷</span><span class="step-body"><strong>Overview</strong><small>Comments & evidence</small></span></button></li><li><button data-view="files" aria-current="${state.view === 'files' ? 'page' : 'false'}"><span class="step-number">⌘</span><span class="step-body"><strong>All changes</strong><small>Diffs by responsibility · ${files.size} files</small></span></button></li></ul>`;
     review.groups.forEach(group => {
       const matching = layers.filter(layer => layer.group === group && `${layer.title} ${layer.items.map(item => files.get(item.file).path).join(' ')}`.toLowerCase().includes(query));
       if (!matching.length) return;
@@ -274,17 +275,16 @@
   };
   function threadBadges(comment) {
     const [symbol, title, hint, tone] = commentTypes[comment.label] || commentTypes.note;
-    return `<span class="thread-type type-${tone}" title="${hint}"><span class="thread-type-icon">${icon(symbol)}</span>${title}</span><span class="thread-priority ${comment.decoration === 'blocking' ? 'is-blocking' : 'is-optional'}">${comment.decoration === 'blocking' ? `${icon('circle-alert')} Blocking` : 'Non-blocking'}</span>${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${comment.personal ? '<span class="thread-author">Your comment</span>' : ''}`;
+    return `<span class="thread-type type-${tone}" title="${hint}"><span class="thread-type-icon">${icon(symbol)}</span>${title}</span><span class="thread-priority ${comment.decoration === 'blocking' ? 'is-blocking' : 'is-optional'}">${comment.decoration === 'blocking' ? `${icon('circle-alert')} Blocking` : 'Non-blocking'}</span>${comment.severity ? `<span class="thread-severity">${escape(comment.severity)}</span>` : ''}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${comment.personal ? '<span class="thread-author">Your comment</span>' : ''}`;
   }
   function commentCard(comment) {
     const found = ReviewTools.anchor(snapshot, comment);
     if (!found) return '';
     const colors = highlights(found.hunk, found.file.path)[comment.side];
-    const hint = (commentTypes[comment.label] || commentTypes.note)[2];
     const id = escape(comment.id);
     const range = `${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end === comment.start ? '' : `–${comment.end}`}`;
     const snippet = `<div class="thread-code" role="region" tabindex="0" aria-label="${escape(found.file.path)} ${range}">${found.lines.map(line => `<div class="thread-code-line"><span class="thread-line-number">${line[comment.side]}</span><code>${colors.get(line[comment.side]) ?? escape(line.text)}</code></div>`).join('')}</div>`;
-    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${escape(found.file.path)}</span><span class="thread-range">${range}</span></div><details class="thread-details" ${comment.resolved ? '' : 'open'}><summary class="thread-summary" aria-label="Code and conversation: ${escape(comment.subject)}"><span class="thread-badges">${threadBadges(comment)}</span><strong>${escape(comment.subject)}</strong><span class="thread-disclosure">${comment.resolved ? 'Show conversation' : 'Code & conversation'}</span><span class="thread-chevron">${icon('chevron-down')}</span></summary>${snippet}<div class="thread-body"><div class="thread-badges">${threadBadges(comment)}</div><p class="thread-type-hint">${hint}</p><h3>${escape(comment.subject)}</h3>${comment.discussion ? `<p class="comment-discussion">${escape(comment.discussion)}</p>` : ''}${commentEvidence(comment)}</div></details><div class="thread-footer"><div class="comment-actions"><button class="btn btn-sm btn-soft" data-copy="${id}">${icon('copy')} Copy for LLMs</button><button class="btn btn-sm btn-ghost" data-comment="${id}">Open in diff ${icon('arrow-right')}</button>${comment.personal ? `<button class="btn btn-sm btn-ghost" data-edit="${id}">${icon('pencil')} Edit</button><button class="btn btn-sm btn-ghost" data-delete="${id}">${icon('trash-2')} Delete</button>` : ''}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
+    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${escape(found.file.path)}</span><span class="thread-range">${range}</span></div><details class="thread-details" ${comment.resolved ? '' : 'open'}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}"><span class="thread-badges">${threadBadges(comment)}</span><strong>${escape(comment.subject)}</strong><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${comment.discussion ? `<p class="comment-discussion">${escape(comment.discussion)}</p>` : ''}${commentEvidence(comment)}</div><details class="thread-source"><summary>View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'}</summary>${snippet}</details></details><div class="thread-footer"><div class="comment-actions"><button class="btn btn-sm btn-soft" data-copy="${id}">${icon('copy')} Copy for LLMs</button><button class="btn btn-sm btn-ghost" data-comment="${id}">Open in diff ${icon('arrow-right')}</button>${comment.personal ? `<button class="btn btn-sm btn-ghost" data-edit="${id}">${icon('pencil')} Edit</button><button class="btn btn-sm btn-ghost" data-delete="${id}">${icon('trash-2')} Delete</button>` : ''}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
   }
   function toggleResolved(id) {
     const comment = comments.find(comment => comment.id === id);
@@ -349,9 +349,14 @@
   }
 
   function renderOverview() {
-    const findingCount = (review.findings || []).length;
-    const pendingFindings = (review.history?.finding_states || []).filter(item => item.status === 'needs-rechecking').length;
-    return `${renderIncrement()}<div class="page-intro"><div class="eyebrow">The walkthrough</div><h1>${escape(review.headline || review.title)}</h1><p class="lead">${escape(review.summary)}</p><div class="metrics"><span class="badge badge-soft">${files.size} changed files</span><span class="badge badge-soft">${layers.length} review steps</span><span class="badge neutral">Effort ${review.effort.score} / 5</span><span class="badge warning">${comments.length} inline comments</span></div><p class="muted">${escape(review.effort.reason)}</p>${flow(review.flow)}</div><h2>A reading order that follows the change</h2>${review.groups.map((group,index) => `<article class="group-card card"><div class="group-title"><span class="group-number">${String(index + 1).padStart(2,'0')}</span><div><h3>${escape(titleWithoutNumber(group.title))} ${review.history?.groups?.[group.id] ? `<span class="badge neutral">${escape(review.history.groups[group.id])}</span>` : ""}</h3><p>${escape(group.summary)}</p></div></div><div class="group-actions">${layers.filter(layer => layer.group === group).map(layer => `<button class="btn btn-sm btn-soft btn-primary" data-view="${layer.id}">${escape(layer.title)} <span aria-hidden="true">→</span></button>`).join('')}</div></article>`).join('')}<h2>Review outcome</h2>${findingCount ? review.findings.map(findingCard).join('') : pendingFindings ? `<div class="verdict alert alert-soft alert-warning">${pendingFindings} previous finding${pendingFindings === 1 ? '' : 's'} still need rechecking.<small>See Finding history above; an absent code anchor is not proof of resolution.</small></div>` : '<div class="verdict alert alert-soft alert-success">No substantiated defects found in the inspected change.<small>See Review details for coverage and verification.</small></div>'}${renderQA()}${renderMyReview()}${generatedComments.length ? `<section class="review-section"><div class="section-heading"><div><h2>Review comments <span class="badge neutral">${generatedComments.length}</span></h2><p>Read each observation with its file and source range.</p></div></div>${comments.filter(comment => !comment.personal).map(commentCard).join('')}</section>` : ''}${renderSections()}`;
+    const generated = comments.filter(comment => !comment.personal);
+    const pending = (review.history?.finding_states || []).filter(item => item.status === 'needs-rechecking').length;
+    const revision = review.history;
+    const qa = review.qa;
+    const hasPersonal = comments.some(comment => comment.personal) || personalNotes().length;
+    const historyLinks = revision ? `<nav class="overview-history" aria-label="Review history"><a href="${revision.preview ? '' : '../'}current.html">Latest review</a><a href="${revision.preview ? '' : '../'}index.html">All revisions</a></nav>` : '';
+    const empty = !generated.length && !feedback.findings.length && !pending ? '<p class="review-empty">No issues found in this review.</p>' : '';
+    return `<div class="overview-reading"><header class="overview-intro"><p class="eyebrow">Review overview</p><h1>${escape(review.title)}</h1><p class="lead">${escape(review.summary)}</p>${revision && revision.revision > 1 ? `<p class="overview-update"><strong>Revision ${revision.revision}</strong> · ${escape(revision.summary)}</p>` : ''}${historyLinks}</header>${pending ? `<p class="overview-notice">${pending} previous finding${pending === 1 ? '' : 's'} still need checking. See Review details.</p>` : ''}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}<section class="overview-comments" aria-label="Review comments">${empty}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${generated.map(commentCard).join('')}</section>${hasPersonal ? renderMyReview() : ''}</div>`;
   }
 
   function renderStep(layer) {
@@ -413,6 +418,7 @@
   function jump(hunk, commentID) {
     const layer = layers.find(layer => hunkIDs(layer).includes(hunk));
     if (!layer) return;
+    if ($('details-dialog').open) $('details-dialog').close();
     showComments = true; $('comments-toggle').checked = true;
     if (state.view === 'files') { categoryFilter = 'All'; $('search').value = ''; render(); } else select(layer.id, false);
     const trigger = commentID ? [...document.querySelectorAll('.comment-trigger')].find(button => button.dataset.notes.split(' ').includes(commentID)) : null;
@@ -422,7 +428,7 @@
   }
   function toast(message) { $('toast').hidden = false; $('toast').textContent = message; setTimeout(() => { $('toast').hidden = true; }, 3500); }
   function context() {
-    $('review-details').innerHTML = `<div class="details-section"><span class="badge neutral">${escape(snapshot.mode)} snapshot</span><p class="muted">Captured ${escape(snapshot.created)}</p><h3>Scope and coverage</h3><p>${escape(review.coverage)}</p><small>Before → after</small><pre>${escape(snapshot.base)}\n${escape(snapshot.head)}</pre></div><div class="details-section"><h3>Verification</h3>${bulletList(review.validation)}</div><p class="muted">Comments, conversation resolution and viewed marks stay in this browser for this snapshot. Resolving a conversation does not verify a code fix. Use Copy for LLMs or Export local notes to keep a portable copy.</p>`;
+    $('review-details').innerHTML = `<div class="details-section"><span class="badge neutral">${escape(snapshot.mode)} snapshot</span><p class="muted">Captured ${escape(snapshot.created)}</p><h3>Scope and coverage</h3><p>${escape(review.coverage)}</p><small>Before → after</small><pre>${escape(snapshot.base)}\n${escape(snapshot.head)}</pre></div><div class="details-section"><h3>Verification</h3>${bulletList(review.validation)}</div><details class="details-extra"><summary>Review effort and history</summary><p>Effort ${review.effort.score} / 5 · ${escape(review.effort.reason)}</p>${renderIncrement()}</details>${review.qa ? `<details class="details-extra"><summary>Visual checks</summary>${renderQA()}</details>` : ''}${review.sections?.length ? `<details class="details-extra"><summary>Additional context</summary>${renderSections()}</details>` : ''}<p class="muted">Comments, conversation resolution and viewed marks stay in this browser for this snapshot. Resolving a conversation does not verify a code fix. Use Copy for LLMs or Export local notes to keep a portable copy.</p>`;
     $('details-dialog').showModal();
   }
 
