@@ -135,6 +135,9 @@ module ReviewChecks
       asset['comment_id'] = 'missing'
       rejects('Unknown comment accepted') { ReviewQA.validate(qa, snapshot, {'comments' => []}) }
       asset.delete('comment_id')
+      qa['flows'][0]['comment_id'] = 'missing'
+      rejects('Unknown flow owner accepted') { ReviewQA.validate(qa, snapshot, {'comments' => []}) }
+      qa['flows'][0].delete('comment_id')
       qa['flows'][0]['journey'] = ['Open', 'Select']
       ReviewQA.validate(qa, snapshot)
       [[], [''], [1], 'Open'].each do |invalid|

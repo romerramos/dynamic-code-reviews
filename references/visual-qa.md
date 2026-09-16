@@ -133,9 +133,13 @@ historical pending status. No background task is promised after the agent stops.
 ```
 
 Paths resolve relative to the QA JSON, not the current directory. `comment_id` is
-optional; it links that generated comment to the matching QA walkthrough flow.
-Media appears only in the expandable flow, never duplicated in the comment.
-Use short journey labels and one observed-result sentence for the collapsed flow. Keep gutter popovers compact. New comments and
+optional; it associates that generated comment with the evidence flow.
+Prefer flow comment_id to assign the evidence to one comment, including text-only
+flows. Legacy asset associations use the first linked comment as owner. Media
+appears only inside the owning comment’s expandable steps. Keep discussion empty
+when the flow already supplies the explanation; use journey and expected/observed
+for its concise visible summary. Unmatched failures remain visible; useful passed
+checks go in Other flows checked. Keep gutter popovers compact. New comments and
 changed findings belong in a normal review update, then attach media to that
 revision. Use a short factual caption instead of repeating the image in prose.
 Text-only copy does not carry image bytes; share the offline report for evidence.

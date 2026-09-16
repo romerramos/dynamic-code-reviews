@@ -16,7 +16,7 @@
   try { saved = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { /* file:// storage may be disabled */ }
   const state = {view:'overview', viewed:[], notes:{}, personalComments:[], resolvedComments:[], ...saved};
   state.resolvedComments = Array.isArray(state.resolvedComments) ? state.resolvedComments.filter(id => typeof id === 'string') : [];
-  state.personalComments = Array.isArray(state.personalComments) ? state.personalComments.filter(comment => typeof comment.id === 'string' && comment.id.startsWith('mine-') && typeof comment.subject === 'string' && ReviewTools.anchor(snapshot, comment)) : [];
+  state.personalComments = Array.isArray(state.personalComments) ? state.personalComments.filter(comment => typeof comment.id === 'string' && comment.id.startsWith('mine-') && typeof comment.subject === 'string' && (comment.general === true || ReviewTools.anchor(snapshot, comment))) : [];
   function refreshComments() { comments = [...generatedComments.map(comment => ({...comment, personal:false})), ...state.personalComments.map(comment => ({...comment, personal:true}))].map(comment => ({...comment, resolved:state.resolvedComments.includes(comment.id)})); }
   refreshComments();
   const tabletLayout = matchMedia('(max-width: 1199px)');
@@ -131,15 +131,16 @@
     if (!ReviewTools.anchor(snapshot, selection)) { clearSelection(); return; }
     paintSelection();
   }
-  function openEditor(comment = null) {
-    const range = comment || selection;
-    if (!range || !ReviewTools.anchor(snapshot, range)) return;
+  function openEditor(comment = null, general = false) {
+    const range = comment || (general ? {general:true} : selection);
+    if (!range || (!range.general && !ReviewTools.anchor(snapshot, range))) return;
     closeComments();
-    editorRange = {hunk:range.hunk, side:range.side, start:range.start, end:range.end};
+    editorRange = range.general ? {general:true} : {hunk:range.hunk, side:range.side, start:range.start, end:range.end};
     editingID = comment?.id || null;
     $('editor-title').textContent = comment ? 'Edit your comment' : 'Add your comment';
-    $('editor-location').textContent = `${hunkFiles.get(range.hunk).path} · ${range.side === 'new' ? 'After' : 'Before'} L${range.start}–${range.end}`;
-    $('editor-snippet').textContent = ReviewTools.sourceText(snapshot, range);
+    $('editor-location').textContent = range.general ? 'General comment on this review' : `${hunkFiles.get(range.hunk).path} · ${range.side === 'new' ? 'After' : 'Before'} L${range.start}–${range.end}`;
+    $('editor-snippet').hidden = !!range.general;
+    $('editor-snippet').textContent = range.general ? '' : ReviewTools.sourceText(snapshot, range);
     $('editor-label').value = comment?.label || 'note';
     $('editor-subject').value = comment?.subject || '';
     $('editor-discussion').value = comment?.discussion || '';
@@ -148,7 +149,7 @@
     $('editor-subject').focus();
   }
   async function copyText(text) {
-    try { await navigator.clipboard.writeText(text); toast('Copied with file, source range and code context.'); }
+    try { await navigator.clipboard.writeText(text); toast('Copied to clipboard.'); }
     catch {
       closeComments();
       $('copy-text').value = text;
@@ -158,7 +159,7 @@
   }
 
   function commentHTML(comment) {
-    return `<section class="popover-comment"><p class="comment-location">${escape(ReviewTools.anchor(snapshot, comment)?.file.path || '')}</p><div class="thread-badges">${threadBadges(comment)}</div><p class="comment-location">${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}</p><h4>${escape(comment.subject)}</h4>${comment.discussion ? `<p class="comment-discussion">${escape(comment.discussion)}</p>` : ''}${commentAssets(comment).length ? `<button class="btn btn-xs btn-soft" data-evidence="${escape(comment.id)}">See visual evidence</button>` : ''}<div class="comment-actions"><button class="btn btn-xs btn-ghost" data-copy="${escape(comment.id)}">${icon('copy')} Copy for LLMs</button>${comment.personal ? `<button class="btn btn-xs btn-ghost" data-edit="${escape(comment.id)}">${icon('pencil')} Edit</button><button class="btn btn-xs btn-ghost" data-delete="${escape(comment.id)}">${icon('trash-2')} Delete</button>` : ""}</div></section>`;
+    return `<section class="popover-comment"><p class="comment-location">${escape(ReviewTools.anchor(snapshot, comment)?.file.path || '')}</p><div class="thread-badges">${threadBadges(comment)}</div><p class="comment-location">${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}</p><h4>${escape(comment.subject)}</h4>${ReviewTools.commentBody(comment, review.qa) ? `<p class="comment-discussion">${escape(ReviewTools.commentBody(comment, review.qa))}</p>` : ''}${ReviewTools.evidenceFlows(review.qa, comment).length ? `<button class="btn btn-xs btn-soft" data-evidence="${escape(comment.id)}">See visual evidence</button>` : ''}<div class="comment-actions"><button class="btn btn-xs btn-ghost" data-copy="${escape(comment.id)}">${icon('copy')} Copy for LLMs</button>${comment.personal ? `<button class="btn btn-xs btn-ghost" data-edit="${escape(comment.id)}">${icon('pencil')} Edit</button><button class="btn btn-xs btn-ghost" data-delete="${escape(comment.id)}">${icon('trash-2')} Delete</button>` : ""}</div></section>`;
   }
 
   function commentTrigger(hunk, side, number) {
@@ -279,12 +280,12 @@
   }
   function commentCard(comment) {
     const found = ReviewTools.anchor(snapshot, comment);
-    if (!found) return '';
-    const colors = highlights(found.hunk, found.file.path)[comment.side];
+    if (!found && !comment.general) return '';
+    const colors = found ? highlights(found.hunk, found.file.path)[comment.side] : null;
     const id = escape(comment.id);
     const range = `${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end === comment.start ? '' : `–${comment.end}`}`;
-    const snippet = `<div class="thread-code" role="region" tabindex="0" aria-label="${escape(found.file.path)} ${range}">${found.lines.map(line => `<div class="thread-code-line"><span class="thread-line-number">${line[comment.side]}</span><code>${colors.get(line[comment.side]) ?? escape(line.text)}</code></div>`).join('')}</div>`;
-    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${escape(found.file.path)}</span><span class="thread-range">${range}</span></div><details class="thread-details" ${comment.resolved ? '' : 'open'}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}"><span class="thread-badges">${threadBadges(comment)}</span><strong>${escape(comment.subject)}</strong><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${comment.discussion ? `<p class="comment-discussion">${escape(comment.discussion)}</p>` : ''}${commentEvidence(comment)}</div><details class="thread-source"><summary>View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'}</summary>${snippet}</details></details><div class="thread-footer"><div class="comment-actions"><button class="btn btn-sm btn-soft" data-copy="${id}">${icon('copy')} Copy for LLMs</button><button class="btn btn-sm btn-ghost" data-comment="${id}">Open in diff ${icon('arrow-right')}</button>${comment.personal ? `<button class="btn btn-sm btn-ghost" data-edit="${id}">${icon('pencil')} Edit</button><button class="btn btn-sm btn-ghost" data-delete="${id}">${icon('trash-2')} Delete</button>` : ''}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
+    const snippet = found ? `<div class="thread-code" role="region" tabindex="0" aria-label="${escape(found.file.path)} ${range}">${found.lines.map(line => `<div class="thread-code-line"><span class="thread-line-number">${line[comment.side]}</span><code>${colors.get(line[comment.side]) ?? escape(line.text)}</code></div>`).join('')}</div>` : '';
+    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${escape(found?.file.path || 'General comment')}</span><span class="thread-range">${found ? range : ''}</span></div><details class="thread-details" ${comment.resolved ? '' : 'open'}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}"><span class="thread-badges">${threadBadges(comment)}</span><strong>${escape(comment.subject)}</strong><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${comment.discussion ? `<p class="comment-discussion">${escape(comment.discussion)}</p>` : ''}${commentEvidence(comment)}</div>${found ? `<details class="thread-source"><summary>View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'}</summary>${snippet}</details>` : ''}</details><div class="thread-footer"><div class="comment-actions"><button class="btn btn-sm btn-soft" data-copy-comment="${id}">${icon('copy')} Copy for comment</button><button class="btn btn-sm btn-ghost" data-copy="${id}">${icon('copy')} Copy for LLMs</button>${found ? `<button class="btn btn-sm btn-ghost" data-comment="${id}">Open in diff ${icon('arrow-right')}</button>` : ''}${comment.personal ? `<button class="btn btn-sm btn-ghost" data-edit="${id}">${icon('pencil')} Edit</button><button class="btn btn-sm btn-ghost" data-delete="${id}">${icon('trash-2')} Delete</button>` : ''}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
   }
   function toggleResolved(id) {
     const comment = comments.find(comment => comment.id === id);
@@ -307,7 +308,7 @@
   function renderMyReview() {
     const personal = comments.filter(comment => comment.personal);
     const notes = personalNotes();
-    return `<section class="review-section" id="my-review"><div class="section-heading"><div><h2>Your review <span class="badge neutral">${personal.length + notes.length}</span></h2><p>Comments you add to this snapshot.</p></div><button class="btn btn-sm btn-primary" data-copy-all ${personal.length + notes.length ? '' : 'disabled'}>Copy my review for LLMs</button></div>${personal.length + notes.length ? personal.map(commentCard).join('') + notes.map(note => `<article class="review-comment personal-comment"><span class="badge neutral">Your step note</span><h3>${escape(note.title)}</h3><p class="comment-discussion">${escape(note.text)}</p><button class="btn btn-sm btn-ghost" data-view="${note.id}">Open step →</button></article>`).join('') : '<p class="review-empty">Select a line number in a diff to add a comment. Select another line to extend the range.</p>'}</section>`;
+    return `<section class="review-section" id="my-review"><div class="section-heading"><div><h2>User comments <span class="badge neutral">${personal.length + notes.length}</span></h2><p>Add a general comment here, or select code lines in the diff. Saved in this browser for this review revision.</p></div><div class="comment-actions"><button class="btn btn-sm btn-primary" data-add-general>Add comment</button><button class="btn btn-sm btn-soft" data-copy-all ${personal.length + notes.length ? '' : 'disabled'}>Copy all for LLMs</button></div></div>${personal.length + notes.length ? personal.map(commentCard).join('') + notes.map(note => `<article class="review-comment personal-comment"><span class="badge neutral">Your step note</span><h3>${escape(note.title)}</h3><p class="comment-discussion">${escape(note.text)}</p><button class="btn btn-sm btn-soft" data-copy-note="${note.id}">Copy for LLMs</button><button class="btn btn-sm btn-ghost" data-view="${note.id}">Open step →</button></article>`).join('') : '<p class="review-empty">No user comments yet.</p>'}</section>`;
   }
   function findingComment(finding) {
     const file = hunkFiles.get(finding.hunk);
@@ -318,30 +319,37 @@
       discussion:`${finding.body}\n\nThe snippet covers the related diff hunk; the finding may concern only part of it.`};
   }
   function findingCard(finding, index) {
-    return `<article class="review-comment"><span class="badge blocking">${escape(finding.severity)}</span><p class="comment-location">${escape(hunkFiles.get(finding.hunk).path)}</p><h3>${escape(finding.title)}</h3><p class="comment-discussion">${escape(finding.body)}</p><div class="comment-actions"><button class="btn btn-sm btn-ghost" data-hunk="${escape(finding.hunk)}">See changed code →</button><button class="btn btn-sm btn-soft" data-copy-finding="${index}">${icon('copy')} Copy for LLMs</button></div></article>`;
+    return `<article class="review-comment"><span class="badge blocking">${escape(finding.severity)}</span><p class="comment-location">${escape(hunkFiles.get(finding.hunk).path)}</p><h3>${escape(finding.title)}</h3><p class="comment-discussion">${escape(finding.body)}</p><div class="comment-actions"><button class="btn btn-sm btn-ghost" data-hunk="${escape(finding.hunk)}">See changed code →</button><button class="btn btn-sm btn-soft" data-post-finding="${index}">${icon('copy')} Copy for comment</button><button class="btn btn-sm btn-ghost" data-copy-finding="${index}">${icon('copy')} Copy for LLMs</button></div></article>`;
   }
   function renderQAAsset(asset) {
     return `<figure class="qa-asset">${asset.data_uri.startsWith('data:video/') ? `<video controls preload="none" playsinline aria-label="${escape(asset.caption)}" src="${escape(asset.data_uri)}"></video>` : `<img loading="lazy" alt="${escape(asset.caption)}" src="${escape(asset.data_uri)}">`}<figcaption>${escape(asset.caption)}</figcaption></figure>`;
   }
-  function commentAssets(comment) {
-    return comment.personal ? [] : (review.qa?.flows || []).flatMap(flow => flow.assets || []).filter(asset => asset.comment_id === comment.id);
+  function qaDetails(flow) {
+    return `<details class="qa-steps"><summary>View steps${flow.assets?.length ? ' and screenshots' : ''}</summary><ol>${flow.steps.map(step => `<li>${escape(step)}</li>`).join('')}</ol>${(flow.assets || []).map(renderQAAsset).join('')}</details>`;
+  }
+  function qaFlow(flow, index, showTitle = true) {
+    const labels = {passed:'Passed', failed:'Failed', blocked:'Blocked', 'not-run':'Not run'};
+    return `<div class="qa-journey" id="qa-flow-${index}" tabindex="-1">${showTitle ? `<h3>${escape(flow.title)}</h3>` : ''}<p class="qa-route">${(flow.journey || []).map(escape).join(' → ')}</p><p class="qa-result ${escape(flow.result)}">${showTitle ? `<strong>${labels[flow.result]}:</strong> ` : '<strong>Actual:</strong> '}${escape(flow.observed)}</p><p class="qa-expected"><strong>Expected:</strong> ${escape(flow.expected)}</p>${qaDetails(flow)}</div>`;
   }
   function commentEvidence(comment) {
-    return ReviewTools.evidenceFlows(review.qa, comment).map(index => `<button class="btn btn-sm btn-ghost qa-evidence-link" data-qa-flow="${index}">View QA walkthrough: ${escape(review.qa.flows[index].title)} ${icon('arrow-right')}</button>`).join('');
+    const indices = ReviewTools.evidenceFlows(review.qa, comment);
+    return indices.map(index => qaFlow(review.qa.flows[index], index, indices.length > 1)).join('');
   }
-  function renderQA() {
-    const qa = review.qa;
-    if (!qa?.flows?.length) return '';
-    const labels = {passed:'Passed', failed:'Failed', blocked:'Blocked', 'not-run':'Not run'};
-    return `<section class="qa-walkthrough" aria-label="QA walkthrough"><h2>QA walkthrough</h2>${qa.flows.map((flow, index) => `<article class="qa-journey" id="qa-flow-${index}" tabindex="-1"><h3>${escape(flow.title)}</h3><p class="qa-route">${(flow.journey || flow.steps).map(escape).join(' → ')}</p><p class="qa-result ${escape(flow.result)}"><strong>${labels[flow.result]}:</strong> ${escape(flow.observed)}</p><details><summary>View steps${flow.assets?.length ? ' and screenshots' : ''}</summary><ol>${flow.steps.map(step => `<li>${escape(step)}</li>`).join('')}</ol><p><strong>Expected:</strong> ${escape(flow.expected)}</p>${(flow.assets || []).map(renderQAAsset).join('')}</details></article>`).join('')}</section>`;
+  function unlinkedFlows() {
+    return (review.qa?.flows || []).map((flow,index) => ({flow,index})).filter(({flow}) => !generatedComments.some(comment => ReviewTools.flowOwner(flow) === comment.id));
+  }
+  function renderOtherChecks() {
+    const other = unlinkedFlows().filter(({flow}) => flow.result !== 'failed');
+    return other.length ? `<details class="other-checks"><summary>Other flows checked (${other.length})</summary>${other.map(({flow,index}) => qaFlow(flow,index)).join('')}</details>` : '';
   }
   function showQA(index) {
     if ($('details-dialog').open) $('details-dialog').close();
     select('overview');
     const target = $(`qa-flow-${index}`);
     if (!target) return;
+    for (let node = target.parentElement; node; node = node.parentElement) if (node.tagName === 'DETAILS') node.open = true;
     target.querySelector('details').open = true;
-    target.scrollIntoView({block:'start'});
+    target.scrollIntoView({block:'center'});
     target.focus({preventScroll:true});
   }
 
@@ -362,10 +370,9 @@
     const pending = (review.history?.finding_states || []).filter(item => item.status === 'needs-rechecking').length;
     const revision = review.history;
     const qa = review.qa;
-    const hasPersonal = comments.some(comment => comment.personal) || personalNotes().length;
     const historyLinks = revision ? `<nav class="overview-history" aria-label="Review history"><a href="${revision.preview ? '' : '../'}current.html">Latest review</a><a href="${revision.preview ? '' : '../'}index.html">All revisions</a></nav>` : '';
-    const empty = !generated.length && !feedback.findings.length && !pending ? '<p class="review-empty">No issues found in this review.</p>' : '';
-    return `<div class="overview-reading"><header class="overview-intro"><p class="eyebrow">Review overview</p><h1>${escape(review.title)}</h1><h2 class="what-changed-title">What changed</h2><p class="overview-scope">${escape(ReviewTools.comparisonText(snapshot, review))}</p><p class="lead">${escape(review.summary)}</p>${revision && revision.revision > 1 ? `<p class="overview-update"><strong>Review revision ${revision.revision}</strong> · ${escape(revision.summary)}</p>` : ''}${historyLinks}</header>${pending ? `<p class="overview-notice">${pending} previous finding${pending === 1 ? '' : 's'} still need checking. See Review details.</p>` : ''}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}${renderQA()}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${generated.map(commentCard).join('')}</section>${hasPersonal ? renderMyReview() : ''}</div>`;
+    const empty = !generated.length && !feedback.findings.length && !pending && !unlinkedFlows().some(({flow}) => flow.result === 'failed') ? '<p class="review-empty">No issues found in this review.</p>' : '';
+    return `<div class="overview-reading"><header class="overview-intro"><p class="eyebrow">Review overview</p><h1>${escape(review.title)}</h1><h2 class="what-changed-title">What changed</h2><p class="overview-scope">${escape(ReviewTools.comparisonText(snapshot, review))}</p><p class="lead">${escape(review.summary)}</p>${revision && revision.revision > 1 ? `<p class="overview-update"><strong>Review revision ${revision.revision}</strong> · ${escape(revision.summary)}</p>` : ''}${historyLinks}</header>${pending ? `<p class="overview-notice">${pending} previous finding${pending === 1 ? '' : 's'} still need checking. See Review details.</p>` : ''}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${generated.map(commentCard).join('')}${unlinkedFlows().filter(({flow}) => flow.result === 'failed').map(({flow,index}) => qaFlow(flow,index)).join('')}</section>${renderOtherChecks()}${renderMyReview()}</div>`;
   }
 
   function renderStep(layer) {
@@ -444,8 +451,6 @@
   document.addEventListener('click', async event => {
     const navigation = event.target.closest('[data-view]');
     if (navigation) select(navigation.dataset.view);
-    const qaLink = event.target.closest('[data-qa-flow]');
-    if (qaLink) showQA(Number(qaLink.dataset.qaFlow));
     const evidence = event.target.closest('[data-evidence]');
     if (evidence) {
       const comment = comments.find(comment => comment.id === evidence.dataset.evidence);
@@ -466,11 +471,18 @@
     if (category) { categoryFilter = category.dataset.category; clearSelection(); render(); }
     const line = event.target.closest('[data-select-line]');
     if (line) selectLine(line);
+    if (event.target.closest('[data-add-general]')) openEditor(null, true);
+    const post = event.target.closest('[data-copy-comment]');
+    if (post) { const comment = comments.find(comment => comment.id === post.dataset.copyComment); if (comment) await copyText(ReviewTools.postingText(snapshot, comment, review.qa)); }
+    const noteCopy = event.target.closest('[data-copy-note]');
+    if (noteCopy) { const note = personalNotes().find(note => note.id === noteCopy.dataset.copyNote); if (note) await copyText(ReviewTools.reviewText(snapshot, [], [note])); }
     const copy = event.target.closest('[data-copy]');
-    if (copy) { const comment = comments.find(comment => comment.id === copy.dataset.copy); if (comment) await copyText(ReviewTools.commentText(snapshot, comment)); }
+    if (copy) { const comment = comments.find(comment => comment.id === copy.dataset.copy); if (comment) await copyText(ReviewTools.commentText(snapshot, comment, review.qa)); }
+    const postFinding = event.target.closest('[data-post-finding]');
+    if (postFinding) { const finding = review.findings?.[Number(postFinding.dataset.postFinding)]; if (finding) await copyText(ReviewTools.postingText(snapshot, {...findingComment(finding), discussion:finding.body})); }
     const copyFinding = event.target.closest('[data-copy-finding]');
     if (copyFinding) { const finding = review.findings?.[Number(copyFinding.dataset.copyFinding)]; if (finding) await copyText(ReviewTools.commentText(snapshot, findingComment(finding))); }
-    if (event.target.closest('[data-copy-all]')) await copyText(ReviewTools.reviewText(snapshot, comments.filter(comment => comment.personal), personalNotes()));
+    if (event.target.closest('[data-copy-all]')) await copyText(ReviewTools.reviewText(snapshot, comments.filter(comment => comment.personal), personalNotes(), review.qa));
     const edit = event.target.closest('[data-edit]');
     if (edit) { const comment = comments.find(comment => comment.personal && comment.id === edit.dataset.edit); if (comment) openEditor(comment); }
     const remove = event.target.closest('[data-delete]');
@@ -519,7 +531,7 @@
   };
   $('comment-editor').addEventListener('close', () => {
     const button = [...document.querySelectorAll('[data-select-line]')].find(button => button.dataset.rangeHunk === editorRange?.hunk && button.dataset.rangeSide === editorRange?.side && Number(button.dataset.selectLine) === editorRange?.start);
-    button?.focus({preventScroll:true});
+    (button || document.querySelector('[data-add-general]'))?.focus({preventScroll:true});
   });
   $('close-details').onclick = $('done-details').onclick = () => $('details-dialog').close();
   $('export').onclick = () => {

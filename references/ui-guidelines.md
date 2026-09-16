@@ -36,7 +36,7 @@ from its original snapshot and analysis when refreshing presentation only.
   Detailed metadata belongs in Review details; file/context panels can collapse.
   Preserve Overview, All changes, search, J/K/Z, viewed state and local notes.
 - Keep company-size/reviewer calibration out of visible and embedded report
-  content. Overview starts with What changed: the exact review type/comparison and a short behavioral paragraph. Then show the compact QA walkthrough and review comments. Report-revision updates are separate from code changes. Keep the walkthrough in the sidebar, supporting metadata in Review details, and omit routine assessment boilerplate. Show each
+  content. Overview starts with What changed: the exact review type/comparison and a short behavioral paragraph. Then show review comments with their QA evidence, optional collapsed successful checks, and User comments. Report-revision updates are separate from code changes. Keep the walkthrough in the sidebar, supporting metadata in Review details, and omit routine assessment boilerplate. Show each
   observation as an individual entry with its path, range, readable subject and
   full discussion. Other evidence sections use
   clear headings, 14px text, generous line spacing and roughly 80ch prose widths.
@@ -56,7 +56,7 @@ from its original snapshot and analysis when refreshing presentation only.
 
 ## Overview comment threads
 
-- Use a centered reading column bounded to 840px, with 16–17px prose, generous line spacing and 24–28px card padding. Stack the file/range header, subject, concise comment body and evidence link, collapsed View code disclosure, and action footer. Show each issue once: matched findings add severity to their issue comment; unmatched findings remain visible. No masonry or parallel metadata columns. Keep long file paths wrapping.
+- Use a centered reading column bounded to 840px, with 16–17px prose, generous line spacing and 24–28px card padding. Stack the file/range header, subject, concise comment body and embedded evidence, collapsed View code disclosure, and action footer. Show each issue once: matched findings add severity to their issue comment; unmatched findings remain visible. No masonry or parallel metadata columns. Keep long file paths wrapping.
 - Highlight snippets through the same bundled Prism grammar and whole-hunk
   tokenization as the diff, preserving multiline tokens and exact old/new source
   numbers. Bound long snippets to 260px with scrolling and keyboard focus.
@@ -109,10 +109,10 @@ from its original snapshot and analysis when refreshing presentation only.
   source text across omitted context. Different hunks or sides start a new range.
 - The comment editor shows the exact path/range/snippet, type, subject, optional
   details and blocking choice. Saving adds a personal gutter marker and an entry
-  in Your review. Edit and Delete affect only personal comments. Keep modal text
+  in User comments. Edit and Delete affect only personal comments. Keep modal text
   intact while resizing; suppress review-navigation shortcuts inside dialogs.
 - Copy for LLMs includes the file, old/new side, source revision or capture,
-  numbered source snippet and full comment. Copy my review collects personal
+  numbered source snippet and full comment. Copy all for LLMs collects personal
   comments and general step notes. Use safe fences for snippets containing fence
   characters. Clipboard failure opens selectable text; do not silently fail.
 - Store personal comments with the snapshot/revision, alongside existing notes.
@@ -166,16 +166,27 @@ Native behavior reference (consult only when needed for maintenance):
 
 ## Optional QA media
 
-Show a compact QA walkthrough between What changed and review comments. Each flow
-has a title, a short arrow-separated journey, an explicit result label and one
-sentence describing the observation. Native details disclose numbered actions,
-expected results and captioned media. Include meaningful successful flows too.
-Screenshots appear only here; overview comments and gutter popovers open the
-matching flow and move focus to it without changing local resolution state.
-Support multiple evidence flows per comment, and text-only flows without dead
-screenshot links. Keep QA environment/capture metadata in Review details.
-Screenshots and controls must fit narrow widths. No autoplay, remote media,
-automatic refresh or simulated background worker. Test evidence links from both
-comments and code, initially collapsed flows, passed/failed/blocked/not-run labels,
-loaded media, narrow layouts and the separation of scope from report history.
-Use synthetic captures without implying they validate the reviewed application.
+Each failed flow belongs inside its issue comment, not in a separate QA section.
+Show its short journey and expected/actual results once; native details disclose
+numbered steps and captioned media. Put useful successful checks in one collapsed
+Other flows checked disclosure. Unmatched failures remain visible under Review
+comments. A flow has one owner (flow comment_id, falling back to the first asset
+comment_id) so multiple associations never render the same flow twice. Gutter
+See visual evidence opens the owning thread and its steps without resolving it.
+Preserve distinct comment discussion, but do not author a second copy of the QA
+reproduction there. Keep capture provenance in Review details.
+
+User comments is always available at the bottom. Add comment opens a general
+comment editor without requiring a source selection. Code-line comments retain
+their exact anchors. General and anchored comments support edit/delete, individual
+Copy for LLMs, and combined Copy all for LLMs including resolved comments and step
+notes. Keep all user data browser-local and exportable. Copy for comment gives
+plain GitHub/Linear-ready text with file/range, finding and reproduction, without
+source dumps, local resolution status, data URIs or broken local image links.
+Clipboard failure must expose selectable text. Test copying actual text as well
+as adding, editing, deleting, reloading and combining both kinds of user comment.
+
+Screenshots and controls must fit narrow widths. No autoplay, remote media or
+simulated background worker. Test evidence navigation from the diff, collapsed
+steps, unmatched failed flows, text-only evidence, loaded media, and narrow layouts
+using synthetic captures without implying they validate the reviewed application.

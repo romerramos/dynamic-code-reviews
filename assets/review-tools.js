@@ -30,17 +30,33 @@ globalThis.ReviewTools = (() => {
     const found = anchor(snapshot, comment);
     return found ? found.lines.map(line => `${line[comment.side]} | ${line.text}`).join('\n') : '';
   }
-  function commentText(snapshot, comment) {
+  function commentBody(comment, qa) {
+    const evidence = evidenceFlows(qa, comment).map(index => {
+      const flow = qa.flows[index];
+      return `${flow.steps.map((step, i) => `${i + 1}. ${step}`).join('\n')}\n\nExpected: ${flow.expected}\nActual: ${flow.observed}`;
+    });
+    return [comment.discussion, ...evidence].filter(Boolean).join('\n\n');
+  }
+  function postingText(snapshot, comment, qa) {
     const found = anchor(snapshot, comment);
+    if (!found && !comment.general) throw new Error('Comment range is not present in this snapshot.');
+    const location = found ? `File: ${found.file.path} (${comment.side === 'new' ? 'after' : 'before'} lines ${comment.start}–${comment.end})\n\n` : '';
+    const body = commentBody(comment, qa);
+    return `${comment.label} (${comment.decoration}): ${comment.subject}\n\n${location}${body}`.trim();
+  }
+  function commentText(snapshot, comment, qa) {
+    const found = anchor(snapshot, comment);
+    const body = commentBody(comment, qa);
+    if (comment.general) return `General comment · ${snapshot.head}\nSnapshot: ${snapshot.fingerprint}${comment.resolved ? '\nConversation: resolved locally (not verification that the code was fixed)' : ''}\n\n${postingText(snapshot, comment, qa)}`;
     if (!found) throw new Error('Comment range is not present in this snapshot.');
     const code = sourceText(snapshot, comment);
     const fence = '~'.repeat(Math.max(3, ...[...code.matchAll(/~+/g)].map(match => match[0].length + 1)));
     const endpoint = comment.side === 'old' ? snapshot.base : (snapshot.working_tree || snapshot.mode === 'uncommitted' ? `working tree captured at ${snapshot.created} (HEAD ${snapshot.head})` : snapshot.head);
-    return `File: ${found.file.path}\nRange: ${comment.side === 'new' ? 'After' : 'Before'} lines ${comment.start}–${comment.end}\nSource: ${endpoint}${comment.resolved ? '\nConversation: resolved locally (not verification that the code was fixed)' : ''}\n\n${fence}\n${code}\n${fence}\n\n${comment.label} (${comment.decoration}): ${comment.subject}${comment.discussion ? `\n\n${comment.discussion}` : ''}`;
+    return `File: ${found.file.path}\nRange: ${comment.side === 'new' ? 'After' : 'Before'} lines ${comment.start}–${comment.end}\nSource: ${endpoint}${comment.resolved ? '\nConversation: resolved locally (not verification that the code was fixed)' : ''}\n\n${fence}\n${code}\n${fence}\n\n${comment.label} (${comment.decoration}): ${comment.subject}${body ? `\n\n${body}` : ''}`;
   }
-  function reviewText(snapshot, comments, notes = []) {
+  function reviewText(snapshot, comments, notes = [], qa) {
     const header = `My code review\nSnapshot: ${snapshot.fingerprint}\nCaptured: ${snapshot.created}\n\nThese comments refer to the captured code below. Check the current code before applying changes.`;
-    const parts = comments.map(comment => commentText(snapshot, comment));
+    const parts = comments.map(comment => commentText(snapshot, comment, qa));
     notes.filter(note => note.text.trim()).forEach(note => parts.push(`Step: ${note.title}\nFiles: ${note.paths.join(', ')}\n\n${note.text}`));
     return [header, ...parts].join('\n\n---\n\n');
   }
@@ -57,9 +73,10 @@ globalThis.ReviewTools = (() => {
     if (snapshot.mode === 'commit') return `Commit review · ${short(snapshot.head)} compared with ${before}`;
     return `Cumulative review · ${after} compared with ${before}`;
   }
+  function flowOwner(flow) { return flow.comment_id || (flow.assets || []).find(asset => asset.comment_id)?.comment_id; }
   function evidenceFlows(qa, comment) {
     if (comment.personal) return [];
-    return (qa?.flows || []).flatMap((flow, index) => (flow.assets || []).some(asset => asset.comment_id === comment.id) ? [index] : []);
+    return (qa?.flows || []).flatMap((flow, index) => flowOwner(flow) === comment.id ? [index] : []);
   }
   // Show each issue once, but never hide findings behind an ambiguous comment match.
   function overviewFeedback(review) {
@@ -76,5 +93,5 @@ globalThis.ReviewTools = (() => {
     });
     return {comments, findings:remaining};
   }
-  return {categories, category, anchor, sourceText, commentText, reviewText, overviewFeedback, comparisonText, evidenceFlows};
+  return {categories, category, anchor, sourceText, commentText, reviewText, overviewFeedback, comparisonText, evidenceFlows, flowOwner, commentBody, postingText};
 })();

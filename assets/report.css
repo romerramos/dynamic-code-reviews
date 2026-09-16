@@ -160,3 +160,14 @@
 .qa-journey>details>ol{padding-left:24px;font-size:15px;line-height:1.7;margin:16px 0}
 .qa-journey>details>p{font-size:15px;line-height:1.6}
 .qa-evidence-link{max-width:100%;height:auto;min-height:32px;white-space:normal;text-align:left;justify-content:flex-start;padding:6px 0}
+
+.overview-comments .qa-journey{border:0;padding:0;margin-top:12px}
+.qa-expected{font-size:15px;line-height:1.6;margin:0 0 12px}
+.qa-steps>summary,.other-checks>summary{font-size:14px;color:#514ba6}
+.qa-steps>ol{padding-left:24px;line-height:1.7;font-size:15px;margin:16px 0}
+.other-checks{margin:28px 0 36px;border-top:1px solid #dde2ec;padding-top:18px}
+.other-checks>.qa-journey{margin-top:18px}
+#my-review{margin-top:40px;border-top:1px solid #dde2ec;padding-top:28px}
+#my-review .section-heading{flex-wrap:wrap;gap:16px}
+#my-review .section-heading p{font-size:14px;max-width:60ch;line-height:1.6}
+.thread-footer{flex-wrap:wrap;gap:12px}

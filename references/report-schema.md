@@ -63,7 +63,7 @@ The browser UI owns personal comments; do not put them in model-authored review
 JSON. Select a line number, optionally select a second line in the same hunk and
 side, then choose Comment. Before and After are distinct sources. Ranges cannot
 bridge omitted context or different files; use separate comments for those cases.
-Users can edit/delete their comments, see them under Your review, and copy their
+Users can edit/delete their comments, see them under User comments, and copy their
 whole review including general step notes. Every generated/personal comment has
 Copy for LLMs with path, source side, source revision/capture, numbered snippet
 and Conventional Comment. Finding copies identify their snippet as the related
@@ -197,13 +197,19 @@ used when both SHAs match; otherwise the UI shows captured SHAs. Refresh names
 from live PR metadata for each review. `history.origin_mode` is helper-owned.
 Do not call a cumulative working-tree series merely “uncommitted changes”.
 
-## Compact QA walkthrough
+## Evidence inside review comments
 
 Each QA flow optionally accepts `journey`, an array of short action labels such
 as `["Open inbox", "Select conversation", "Close", "Reopen"]`. `steps` holds the
 full numbered instructions. Keep `observed` to one plain-language outcome sentence;
 record capture provenance and material qualifications in `qa.environment` or
 validation. Result labels remain explicit even without color. Older flows without
-`journey` fall back to their steps. Screenshots appear once inside the expandable
-flow; asset `comment_id` links comments and gutter popovers to that flow. A comment
-can link to several flows. Keep reproduction text in copied comments self-contained.
+`journey` fall back to their steps. Use flow `comment_id` to assign evidence to an existing generated comment, including text-only flows. Legacy asset `comment_id` remains supported; the first association owns the flow. A comment can own multiple flows. Screenshots appear once inside the owning comment. Leave its discussion empty when the flow already explains the defect; only add distinct context. The renderer combines the flow steps and expected/actual results into both copy formats. Unmatched failed flows stay visible; other flows sit in a collapsed disclosure.
+
+
+User comments supports both anchored code comments and general comments added
+from the overview. These are browser-local records, not authored report JSON.
+Copy for comment is plain paste-ready feedback for GitHub/Linear; Copy for LLMs
+adds captured source context. Both include the complete structured QA reproduction.
+General comments have no fabricated source range. Copy all includes general,
+anchored and resolved user comments plus step notes, and excludes generated comments.
