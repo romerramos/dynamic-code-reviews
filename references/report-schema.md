@@ -178,3 +178,32 @@ a completed screenshot walkthrough.
 Media is not automatically carried to new code snapshots. Never hand-author
 base64, claim a pending worker exists, or mark a runtime check passed from code
 inspection alone.
+
+## What changed and review comparison
+
+`summary` is a short paragraph about the behavior delivered by the selected code
+scope. It is not the report revision summary (`since_previous`). The overview
+labels uncommitted changes versus HEAD, a specific commit versus its parent, PR
+branch changes since their merge base, and cumulative series scope separately.
+For PRs, supply verified names with their captured endpoints:
+
+```json
+{"comparison": {"base": "<snapshot.base>", "head": "<snapshot.head>", "base_label": "main", "head_label": "feat/inbox-state", "pr_number": 123}}
+```
+
+These are display labels, not instructions to collect a different diff. Use the
+snapshot merge-base SHA for `base`, not a newer base branch tip. Labels are only
+used when both SHAs match; otherwise the UI shows captured SHAs. Refresh names
+from live PR metadata for each review. `history.origin_mode` is helper-owned.
+Do not call a cumulative working-tree series merely “uncommitted changes”.
+
+## Compact QA walkthrough
+
+Each QA flow optionally accepts `journey`, an array of short action labels such
+as `["Open inbox", "Select conversation", "Close", "Reopen"]`. `steps` holds the
+full numbered instructions. Keep `observed` to one plain-language outcome sentence;
+record capture provenance and material qualifications in `qa.environment` or
+validation. Result labels remain explicit even without color. Older flows without
+`journey` fall back to their steps. Screenshots appear once inside the expandable
+flow; asset `comment_id` links comments and gutter popovers to that flow. A comment
+can link to several flows. Keep reproduction text in copied comments self-contained.

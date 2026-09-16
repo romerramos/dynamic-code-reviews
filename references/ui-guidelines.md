@@ -36,7 +36,7 @@ from its original snapshot and analysis when refreshing presentation only.
   Detailed metadata belongs in Review details; file/context panels can collapse.
   Preserve Overview, All changes, search, J/K/Z, viewed state and local notes.
 - Keep company-size/reviewer calibration out of visible and embedded report
-  content. Overview starts with one useful sentence describing the change, followed directly by review comments. Keep the walkthrough in the sidebar, supporting metadata in Review details, and omit routine assessment boilerplate. Show each
+  content. Overview starts with What changed: the exact review type/comparison and a short behavioral paragraph. Then show the compact QA walkthrough and review comments. Report-revision updates are separate from code changes. Keep the walkthrough in the sidebar, supporting metadata in Review details, and omit routine assessment boilerplate. Show each
   observation as an individual entry with its path, range, readable subject and
   full discussion. Other evidence sections use
   clear headings, 14px text, generous line spacing and roughly 80ch prose widths.
@@ -56,7 +56,7 @@ from its original snapshot and analysis when refreshing presentation only.
 
 ## Overview comment threads
 
-- Use a centered reading column bounded to 840px, with 16–17px prose, generous line spacing and 24–28px card padding. Stack the file/range header, subject, concise comment body and evidence, collapsed View code disclosure, and action footer. Show each issue once: matched findings add severity to their issue comment; unmatched findings remain visible. No masonry or parallel metadata columns. Keep long file paths wrapping.
+- Use a centered reading column bounded to 840px, with 16–17px prose, generous line spacing and 24–28px card padding. Stack the file/range header, subject, concise comment body and evidence link, collapsed View code disclosure, and action footer. Show each issue once: matched findings add severity to their issue comment; unmatched findings remain visible. No masonry or parallel metadata columns. Keep long file paths wrapping.
 - Highlight snippets through the same bundled Prism grammar and whole-hunk
   tokenization as the diff, preserving multiline tokens and exact old/new source
   numbers. Bound long snippets to 260px with scrolling and keyboard focus.
@@ -166,11 +166,16 @@ Native behavior reference (consult only when needed for maintenance):
 
 ## Optional QA media
 
-Put relevant captioned evidence beside its overview comment. Do not repeat the same media in a separate overview QA section. Keep full QA status, environment and supporting checks in Review details; show a short overview notice for incomplete QA. Screenshots and
-controls must fit the content column at narrow widths. Associate media with
-generated comments through comment_id; the overview thread shows it directly
-and the compact gutter popover links to it with See visual evidence. Preserve
-resolved state when opening evidence. No autoplay, remote media, automatic
-refresh or simulated background worker. Verify pending/completed states, loaded
-images, video playback when supported, comment navigation and a narrow viewport
-using synthetic captures, never implying they validate the reviewed application.
+Show a compact QA walkthrough between What changed and review comments. Each flow
+has a title, a short arrow-separated journey, an explicit result label and one
+sentence describing the observation. Native details disclose numbered actions,
+expected results and captioned media. Include meaningful successful flows too.
+Screenshots appear only here; overview comments and gutter popovers open the
+matching flow and move focus to it without changing local resolution state.
+Support multiple evidence flows per comment, and text-only flows without dead
+screenshot links. Keep QA environment/capture metadata in Review details.
+Screenshots and controls must fit narrow widths. No autoplay, remote media,
+automatic refresh or simulated background worker. Test evidence links from both
+comments and code, initially collapsed flows, passed/failed/blocked/not-run labels,
+loaded media, narrow layouts and the separation of scope from report history.
+Use synthetic captures without implying they validate the reviewed application.

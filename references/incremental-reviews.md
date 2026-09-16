@@ -83,7 +83,7 @@ IDs and outcomes are illustrative.
 Update operations:
 
 - `review`: replace supplied top-level title, headline, summary, effort, coverage,
-  validation, sections, flow or `file_categories` path overrides. Refresh any overall description made stale by
+  validation, sections, flow, `comparison` labels or `file_categories` path overrides. Refresh any overall description made stale by
   the increment. **Current coverage and validation are mandatory**; explicitly
   say when tests were not run. Refresh linked-issue and quality assessments as
   appropriate; the draft does not carry them forward as current conclusions.

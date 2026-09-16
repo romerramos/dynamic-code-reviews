@@ -118,6 +118,7 @@ historical pending status. No background task is promised after the agent stops.
   "environment": "Local test app; build SHA verified against the reviewed head; Chrome, 1280 x 800; synthetic account.",
   "flows": [{
     "title": "Open the assignment menu on the last row",
+    "journey": ["Templates", "Last row", "Assignment menu"],
     "steps": ["Open templates", "Click the last row's assignment count"],
     "expected": "All menu items remain readable beyond the table boundary.",
     "observed": "The menu clears the footer; a long name requires horizontal scrolling.",
@@ -132,8 +133,9 @@ historical pending status. No background task is promised after the agent stops.
 ```
 
 Paths resolve relative to the QA JSON, not the current directory. `comment_id` is
-optional; it displays the evidence beside that existing generated comment in the
-overview as well as in Visual QA. Keep gutter popovers compact. New comments and
+optional; it links that generated comment to the matching QA walkthrough flow.
+Media appears only in the expandable flow, never duplicated in the comment.
+Use short journey labels and one observed-result sentence for the collapsed flow. Keep gutter popovers compact. New comments and
 changed findings belong in a normal review update, then attach media to that
 revision. Use a short factual caption instead of repeating the image in prose.
 Text-only copy does not carry image bytes; share the offline report for evidence.

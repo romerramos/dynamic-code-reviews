@@ -59,3 +59,17 @@ assert.equal(tools.overviewFeedback({comments:[issue,{...issue,id:'c2'}],finding
 assert.equal(tools.overviewFeedback({comments:[issue],findings:[{...finding,comment_id:'missing'}]}).findings.length,1);
 assert.deepEqual(tools.overviewFeedback({}),{comments:[],findings:[]});
 console.log('PASS overview deduplicates only matching issues and retains unmatched findings');
+const endpoints = {mode:'pr',base:'abcdef123',head:'123456789'};
+const comparison = {base:endpoints.base,head:endpoints.head,base_label:'main',head_label:'feat/inbox',pr_number:123};
+assert.match(tools.comparisonText(endpoints,{comparison}), /PR #123 · feat\/inbox compared with main/);
+assert.match(tools.comparisonText({...endpoints,head:'newhead123'},{comparison}), /newhead1 compared with abcdef12/);
+assert.match(tools.comparisonText({...endpoints,mode:'uncommitted'},{comparison}), /^Uncommitted changes .*HEAD$/);
+assert.match(tools.comparisonText({...endpoints,mode:'commit'}), /^Commit review · 12345678 compared with abcdef12/);
+assert.match(tools.comparisonText({...endpoints,mode:'series',working_tree:true},{comparison,history:{origin_mode:'uncommitted'}}), /^Cumulative review · committed and uncommitted changes compared with main$/);
+assert.match(tools.comparisonText({...endpoints,mode:'series',working_tree:false},{comparison,history:{origin_mode:'pr'}}), /^PR #123/);
+assert.match(tools.comparisonText({...endpoints,mode:'series',working_tree:false}), /^Cumulative review/);
+const qa = {flows:[{assets:[{comment_id:'c1'},{comment_id:'c1'}]},{assets:[]},{assets:[{comment_id:'c1'}]}]};
+assert.deepEqual(tools.evidenceFlows(qa,{id:'c1'}),[0,2]);
+assert.deepEqual(tools.evidenceFlows(qa,{id:'c1',personal:true}),[]);
+assert.deepEqual(tools.evidenceFlows(undefined,{id:'c1'}),[]);
+console.log('PASS scope labels distinguish review modes and evidence links target unique flows');

@@ -231,7 +231,7 @@ module ReviewSeries
 
   def apply_update(draft, update)
     review = copy(draft)
-    allowed = %w[title headline summary effort coverage validation sections flow file_categories qa]
+    allowed = %w[title headline summary effort coverage validation sections flow file_categories qa comparison]
     update.fetch('review', {}).each do |key, value|
       raise ArgumentError, "Unsupported review update: #{key}" unless allowed.include?(key)
       review[key] = value
@@ -389,7 +389,7 @@ module ReviewSeries
     raise ArgumentError, 'Revision already exists; preserved rather than overwritten' if File.exist?(output)
     entry = {'number' => number, 'created' => Time.now.utc.iso8601, 'captured' => snapshot['created'], 'head' => snapshot['head'], 'fingerprint' => snapshot['fingerprint'], 'title' => review['title'], 'summary' => increment['summary']}
     history['revisions'] << entry
-    review['history'] = increment.merge('series' => history['name'], 'revision' => number, 'entries' => history['revisions'])
+    review['history'] = increment.merge('series' => history['name'], 'revision' => number, 'entries' => history['revisions'], 'origin_mode' => history['origin_mode'])
     html = DynamicReviews.review_html(snapshot, review)
     # Revision is durable first; manifest is the commit point. Old HTML is never rewritten.
     atomic_write(output, html)
@@ -404,6 +404,7 @@ module ReviewSeries
       payload = DynamicReviews.extract(revision_path(path, entry.fetch('number')))
       review = payload.fetch('review')
       review['history']['preview'] = true
+      review['history']['origin_mode'] = history['origin_mode']
       review['history']['entries'] = history['revisions']
       html = DynamicReviews.review_html(payload.fetch('snapshot'), review)
       atomic_write(File.join(path, format('revision-%03d.html', entry['number'])), html)

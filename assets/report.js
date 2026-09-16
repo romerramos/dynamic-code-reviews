@@ -327,13 +327,22 @@
     return comment.personal ? [] : (review.qa?.flows || []).flatMap(flow => flow.assets || []).filter(asset => asset.comment_id === comment.id);
   }
   function commentEvidence(comment) {
-    return commentAssets(comment).map(renderQAAsset).join('');
+    return ReviewTools.evidenceFlows(review.qa, comment).map(index => `<button class="btn btn-sm btn-ghost qa-evidence-link" data-qa-flow="${index}">View QA walkthrough: ${escape(review.qa.flows[index].title)} ${icon('arrow-right')}</button>`).join('');
   }
   function renderQA() {
     const qa = review.qa;
-    if (!qa) return '';
-    const labels = {'awaiting-environment':'Waiting for your environment choice', pending:'QA assets are being generated', complete:'QA capture complete', partial:'QA partially completed', blocked:'QA capture blocked', skipped:'QA capture skipped'};
-    return `<section class="evidence-section qa-section" aria-label="Visual QA"><h2>Visual QA</h2><span class="badge neutral">${escape(labels[qa.status])}</span><p>${escape(qa.summary)}</p>${qa.status === 'pending' ? '<p class="muted">This is a saved snapshot, not a live progress feed. Keep reading; open the updated current report when capture finishes.</p>' : ''}${qa.environment ? `<p class="muted">${escape(qa.environment)}</p>` : ''}${(qa.flows || []).map(flow => `<article class="qa-flow"><h3>${escape(flow.title)} <span class="badge neutral">${escape(flow.result)}</span></h3><details><summary>Walkthrough steps</summary><ol>${flow.steps.map(step => `<li>${escape(step)}</li>`).join('')}</ol></details><p><strong>Expected:</strong> ${escape(flow.expected)}</p><p><strong>Observed:</strong> ${escape(flow.observed)}</p>${(flow.assets || []).map(renderQAAsset).join('')}</article>`).join('')}</section>`;
+    if (!qa?.flows?.length) return '';
+    const labels = {passed:'Passed', failed:'Failed', blocked:'Blocked', 'not-run':'Not run'};
+    return `<section class="qa-walkthrough" aria-label="QA walkthrough"><h2>QA walkthrough</h2>${qa.flows.map((flow, index) => `<article class="qa-journey" id="qa-flow-${index}" tabindex="-1"><h3>${escape(flow.title)}</h3><p class="qa-route">${(flow.journey || flow.steps).map(escape).join(' → ')}</p><p class="qa-result ${escape(flow.result)}"><strong>${labels[flow.result]}:</strong> ${escape(flow.observed)}</p><details><summary>View steps${flow.assets?.length ? ' and screenshots' : ''}</summary><ol>${flow.steps.map(step => `<li>${escape(step)}</li>`).join('')}</ol><p><strong>Expected:</strong> ${escape(flow.expected)}</p>${(flow.assets || []).map(renderQAAsset).join('')}</details></article>`).join('')}</section>`;
+  }
+  function showQA(index) {
+    if ($('details-dialog').open) $('details-dialog').close();
+    select('overview');
+    const target = $(`qa-flow-${index}`);
+    if (!target) return;
+    target.querySelector('details').open = true;
+    target.scrollIntoView({block:'start'});
+    target.focus({preventScroll:true});
   }
 
   function renderSections() {
@@ -356,7 +365,7 @@
     const hasPersonal = comments.some(comment => comment.personal) || personalNotes().length;
     const historyLinks = revision ? `<nav class="overview-history" aria-label="Review history"><a href="${revision.preview ? '' : '../'}current.html">Latest review</a><a href="${revision.preview ? '' : '../'}index.html">All revisions</a></nav>` : '';
     const empty = !generated.length && !feedback.findings.length && !pending ? '<p class="review-empty">No issues found in this review.</p>' : '';
-    return `<div class="overview-reading"><header class="overview-intro"><p class="eyebrow">Review overview</p><h1>${escape(review.title)}</h1><p class="lead">${escape(review.summary)}</p>${revision && revision.revision > 1 ? `<p class="overview-update"><strong>Revision ${revision.revision}</strong> · ${escape(revision.summary)}</p>` : ''}${historyLinks}</header>${pending ? `<p class="overview-notice">${pending} previous finding${pending === 1 ? '' : 's'} still need checking. See Review details.</p>` : ''}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}<section class="overview-comments" aria-label="Review comments">${empty}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${generated.map(commentCard).join('')}</section>${hasPersonal ? renderMyReview() : ''}</div>`;
+    return `<div class="overview-reading"><header class="overview-intro"><p class="eyebrow">Review overview</p><h1>${escape(review.title)}</h1><h2 class="what-changed-title">What changed</h2><p class="overview-scope">${escape(ReviewTools.comparisonText(snapshot, review))}</p><p class="lead">${escape(review.summary)}</p>${revision && revision.revision > 1 ? `<p class="overview-update"><strong>Review revision ${revision.revision}</strong> · ${escape(revision.summary)}</p>` : ''}${historyLinks}</header>${pending ? `<p class="overview-notice">${pending} previous finding${pending === 1 ? '' : 's'} still need checking. See Review details.</p>` : ''}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}${renderQA()}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${generated.map(commentCard).join('')}</section>${hasPersonal ? renderMyReview() : ''}</div>`;
   }
 
   function renderStep(layer) {
@@ -428,23 +437,20 @@
   }
   function toast(message) { $('toast').hidden = false; $('toast').textContent = message; setTimeout(() => { $('toast').hidden = true; }, 3500); }
   function context() {
-    $('review-details').innerHTML = `<div class="details-section"><span class="badge neutral">${escape(snapshot.mode)} snapshot</span><p class="muted">Captured ${escape(snapshot.created)}</p><h3>Scope and coverage</h3><p>${escape(review.coverage)}</p><small>Before → after</small><pre>${escape(snapshot.base)}\n${escape(snapshot.head)}</pre></div><div class="details-section"><h3>Verification</h3>${bulletList(review.validation)}</div><details class="details-extra"><summary>Review effort and history</summary><p>Effort ${review.effort.score} / 5 · ${escape(review.effort.reason)}</p>${renderIncrement()}</details>${review.qa ? `<details class="details-extra"><summary>Visual checks</summary>${renderQA()}</details>` : ''}${review.sections?.length ? `<details class="details-extra"><summary>Additional context</summary>${renderSections()}</details>` : ''}<p class="muted">Comments, conversation resolution and viewed marks stay in this browser for this snapshot. Resolving a conversation does not verify a code fix. Use Copy for LLMs or Export local notes to keep a portable copy.</p>`;
+    $('review-details').innerHTML = `<div class="details-section"><span class="badge neutral">${escape(snapshot.mode)} snapshot</span><p class="muted">Captured ${escape(snapshot.created)}</p><h3>Scope and coverage</h3><p>${escape(review.coverage)}</p><small>Before → after</small><pre>${escape(snapshot.base)}\n${escape(snapshot.head)}</pre></div><div class="details-section"><h3>Verification</h3>${bulletList(review.validation)}</div><details class="details-extra"><summary>Review effort and history</summary><p>Effort ${review.effort.score} / 5 · ${escape(review.effort.reason)}</p>${renderIncrement()}</details>${review.qa ? `<details class="details-extra"><summary>Visual checks</summary><p>${escape(review.qa.summary)}</p><p class="muted">${escape(review.qa.environment || "")}</p></details>` : ''}${review.sections?.length ? `<details class="details-extra"><summary>Additional context</summary>${renderSections()}</details>` : ''}<p class="muted">Comments, conversation resolution and viewed marks stay in this browser for this snapshot. Resolving a conversation does not verify a code fix. Use Copy for LLMs or Export local notes to keep a portable copy.</p>`;
     $('details-dialog').showModal();
   }
 
   document.addEventListener('click', async event => {
     const navigation = event.target.closest('[data-view]');
     if (navigation) select(navigation.dataset.view);
+    const qaLink = event.target.closest('[data-qa-flow]');
+    if (qaLink) showQA(Number(qaLink.dataset.qaFlow));
     const evidence = event.target.closest('[data-evidence]');
     if (evidence) {
-      select('overview');
-      const thread = [...document.querySelectorAll('[data-thread-id]')].find(node => node.dataset.threadId === evidence.dataset.evidence);
-      if (thread) {
-        thread.querySelector('details').open = true;
-        thread.setAttribute('tabindex', '-1');
-        thread.scrollIntoView({block:'center'});
-        thread.focus({preventScroll:true});
-      }
+      const comment = comments.find(comment => comment.id === evidence.dataset.evidence);
+      const index = comment && ReviewTools.evidenceFlows(review.qa, comment)[0];
+      if (index !== undefined) showQA(index);
     }
     const finding = event.target.closest('button[data-hunk]');
     if (finding) jump(finding.dataset.hunk);

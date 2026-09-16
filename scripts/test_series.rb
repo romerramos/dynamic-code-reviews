@@ -145,6 +145,11 @@ module SeriesChecks
           snapshot = DynamicReviews.collect(repo: root, mode: 'pr', base: first, head: second)
           report = DynamicReviews.render(snapshot: snapshot, review: original['review'], name: 'pr')
           ReviewSeries.start(repo: root, name: 'pr-values', report: report)
+          current = DynamicReviews.extract(File.join(root, '.reviews/pr-values/current.html'))
+          assert(current['review']['history']['origin_mode'] == 'pr', 'PR comparison type lost in browsing view')
+          labels = {'base' => first, 'head' => second, 'base_label' => 'main', 'head_label' => 'feature'}
+          updated = ReviewSeries.apply_update(current['review'], {'review' => {'comparison' => labels}})
+          assert(updated['comparison'] == labels, 'Comparison labels lost in review update')
           File.write(File.join(root, 'sample.rb'), "dirty working content\n")
           rejects('PR continued without verified refs') { ReviewSeries.prepare(repo: root, name: 'pr-values', out: out) }
           unchanged = ReviewSeries.prepare(repo: root, name: 'pr-values', out: out, base: first, head: second)

@@ -55,6 +55,9 @@ module ReviewQA
       if qa['status'] == 'complete' && %w[blocked not-run].include?(flow['result'])
         raise ArgumentError, 'Incomplete flow cannot be marked complete'
       end
+      if flow.key?('journey') && (!flow['journey'].is_a?(Array) || flow['journey'].empty? || !flow['journey'].all? { |step| step.is_a?(String) && !step.strip.empty? })
+        raise ArgumentError, 'QA journey must contain short text steps'
+      end
       Array(flow['assets']).each do |asset|
         if asset['comment_id'] && review && !Array(review['comments']).any? { |comment| comment['id'] == asset['comment_id'] }
           raise ArgumentError, 'QA asset refers to an unknown review comment'

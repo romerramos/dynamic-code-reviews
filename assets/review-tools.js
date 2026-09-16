@@ -44,6 +44,23 @@ globalThis.ReviewTools = (() => {
     notes.filter(note => note.text.trim()).forEach(note => parts.push(`Step: ${note.title}\nFiles: ${note.paths.join(', ')}\n\n${note.text}`));
     return [header, ...parts].join('\n\n---\n\n');
   }
+  function comparisonText(snapshot, review = {}) {
+    const short = value => String(value || 'unknown').slice(0, 8);
+    const supplied = review.comparison;
+    // Labels belong to these exact endpoints; old labels must not describe new code.
+    const labels = supplied?.base === snapshot.base && supplied?.head === snapshot.head ? supplied : {};
+    const before = labels.base_label || short(snapshot.base);
+    const after = labels.head_label || short(snapshot.head);
+    if (snapshot.mode === 'uncommitted') return 'Uncommitted changes · staged and unstaged edits, plus non-ignored untracked files, compared with HEAD';
+    if (snapshot.mode === 'series' && snapshot.working_tree) return `Cumulative review · committed and uncommitted changes compared with ${before}`;
+    if (snapshot.mode === 'pr' || (snapshot.mode === 'series' && review.history?.origin_mode === 'pr')) return `${labels.pr_number ? `PR #${labels.pr_number}` : 'PR review'} · ${after} compared with ${before} · branch changes since their merge base`;
+    if (snapshot.mode === 'commit') return `Commit review · ${short(snapshot.head)} compared with ${before}`;
+    return `Cumulative review · ${after} compared with ${before}`;
+  }
+  function evidenceFlows(qa, comment) {
+    if (comment.personal) return [];
+    return (qa?.flows || []).flatMap((flow, index) => (flow.assets || []).some(asset => asset.comment_id === comment.id) ? [index] : []);
+  }
   // Show each issue once, but never hide findings behind an ambiguous comment match.
   function overviewFeedback(review) {
     const comments = (review.comments || []).map(comment => ({...comment}));
@@ -59,5 +76,5 @@ globalThis.ReviewTools = (() => {
     });
     return {comments, findings:remaining};
   }
-  return {categories, category, anchor, sourceText, commentText, reviewText, overviewFeedback};
+  return {categories, category, anchor, sourceText, commentText, reviewText, overviewFeedback, comparisonText, evidenceFlows};
 })();

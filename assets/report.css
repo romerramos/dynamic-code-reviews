@@ -143,3 +143,20 @@
   .overview-reading .thread-footer{padding:12px 16px}
   .thread-source{margin:0 18px 18px}
 }
+
+/* Scope describes code; revision updates describe the report. */
+.what-changed-title{font-size:18px;margin:26px 0 8px}
+.overview-scope{font-size:13px;line-height:1.6;color:#657087;overflow-wrap:anywhere;margin:0 0 12px}
+.qa-walkthrough{margin:32px 0 40px}
+.qa-walkthrough>h2,.overview-comments>h2{font-size:20px;margin:0 0 18px}
+.qa-journey{padding:20px 0;border-bottom:1px solid #dde2ec;scroll-margin-top:20px}
+.qa-journey:first-of-type{padding-top:0}
+.qa-journey h3{font-size:16px;margin:0 0 6px}
+.qa-route{font-size:14px;line-height:1.6;color:#657087;margin:0 0 8px;overflow-wrap:anywhere}
+.qa-result{font-size:15px;line-height:1.6;margin:0 0 10px}
+.qa-result.failed strong{color:#9e363e}.qa-result.passed strong{color:#24714c}
+.qa-result.blocked strong,.qa-result.not-run strong{color:#865b16}
+.qa-journey>details>summary{font-size:13px;color:#514ba6;padding:4px 0}
+.qa-journey>details>ol{padding-left:24px;font-size:15px;line-height:1.7;margin:16px 0}
+.qa-journey>details>p{font-size:15px;line-height:1.6}
+.qa-evidence-link{max-width:100%;height:auto;min-height:32px;white-space:normal;text-align:left;justify-content:flex-start;padding:6px 0}
