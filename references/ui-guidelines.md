@@ -49,8 +49,12 @@ from its original snapshot and analysis when refreshing presentation only.
 - Series revisions also show a compact revision selector, an overview of changes
   since the previous revision, updated/reused group labels and explicit finding
   lifecycle states. Unanchored concerns needing rechecking must not receive a
-  green clean-review verdict. Historical HTML stays immutable; the History link
-  reaches the current index. Notes and viewed marks belong to one revision.
+  green clean-review verdict. Original snapshot HTML stays immutable.
+  Refreshable revision browsing pages
+  offer every known revision, including newer ones when viewing an older review.
+  Keep Latest review and All revisions links visible, and distinguish the original
+  saved snapshot from the refreshed browsing view. Notes and viewed marks belong
+  to one revision.
 
 ## Overview comment threads
 
@@ -148,7 +152,10 @@ and 3840×2160, plus a shorter viewport for edge placement:
    Validate exact copy content with `node scripts/test_ui.js`. At 768×1024,
    check automatic unified mode, navigation, range selection and editor sizing.
 7. For a UI refresh, rebuild the series' current view with `series.rb refresh`.
-   Saved historical revisions remain unchanged; a UI refresh is not a new review.
+   Original snapshots remain unchanged; a UI refresh is not a new review.
+   Navigate newest → oldest → newest through the selector. Check revision text
+   clears the native caret and the search input retains at least 40px height in
+   a crowded sidebar at 1024×768 and 768×1024.
 8. For thread changes, check initially expanded highlighted snippets, readable
    type/blocking differences, Resolve/collapse, reload persistence, manual
    expansion and Reopen. Check personal threads and combined copying, and verify

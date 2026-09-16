@@ -77,7 +77,8 @@ For each group explain, in 2–4 plain sentences: what changes for the user/syst
 
 Include:
 - High-level outcome, grouped walkthrough and review effort **1–5** with a reason (not a fake time prediction).
-- Inline feedback in [Conventional Comments](https://conventionalcomments.org/) format: `label (blocking/non-blocking): subject`, with a short explanation when useful. Use `note` for behavior worth understanding, `question` for unresolved context, `suggestion` for an improvement, and `issue` for a substantiated defect. No artificial quota. Each comment must identify its hunk, old/new side, and exact inclusive line range; prefer a small coherent block. The UI shows a gutter marker at the range's first line and opens its comment in a compact popover, marking every covered line. Keep subjects short and discussions to one concise paragraph when possible. Do not restate every hunk summary as a comment.
+- Inline feedback in [Conventional Comments](https://conventionalcomments.org/) format: `label (blocking/non-blocking): subject`, with a short explanation when useful. Use `note` for behavior worth understanding, `question` for unresolved context, `suggestion` for an improvement, and `issue` for a substantiated defect. No artificial quota. Each comment must identify its hunk, old/new side, and exact inclusive line range; prefer a small coherent block. The UI shows a gutter marker at the range's first line and opens its comment in a compact popover, marking every covered line. Keep subjects short and discussions concise; use separate lines for reproduction steps and expected/actual results when useful. Do not restate every hunk summary as a comment.
+- Explain defects in terms of what the user does and sees. Lead with the visible problem, then give clear reproduction steps using actual screen/control labels, followed by expected and actual results. Put the technical cause and smallest fix direction last; explain code terms instead of using method names as user actions. For non-UI defects, use equally concrete inputs, commands, or events. Include any prerequisite data or state needed to reproduce, and distinguish observed behavior from an untested inference. A short finding needs only a short sequence; do not bury multiple distinct sequences in one dense paragraph.
 - Actionable findings ordered P0–P3, with a concrete trigger, consequence, precise changed hunk, confidence and minimal suggested direction. Verify against surrounding code. Distinguish introduced defects from pre-existing architecture and optional improvements. No minimum finding quota.
 - Quality / “slop” assessment: evidence of redundant abstractions, duplicate logic, misleading comments, invented requirements, empty tests or unrelated churn. Do not infer authorship or label code defective for being verbose. Say when no concrete signal was found.
 - Tests actually run with outcomes, tests inspected, tests not run and why; include uncovered material risks. Follow repository test workflow. Avoid creating tests that merely repeat implementation.
@@ -102,7 +103,12 @@ Use an isolated browser tab/session through the available harness. Save its nati
 screenshot output directly as report evidence; screenshots do not require video
 recording support or a separate capture system. Capture a few
 important states with short action captions, and attach relevant evidence to
-UI/UX comments. Prefer these pictures over long descriptions of visible defects.
+UI/UX comments. When a single result image does not explain a multi-step failure,
+capture the starting state and decisive intermediate/result states in order.
+Number captions to match the reproduction steps, name the action and visible
+change, and keep expected versus actual behavior explicit. Use existing evidence
+when it already makes the sequence clear; do not add screenshots just for volume.
+Prefer these pictures over long descriptions of visible defects.
 Never record the user's desktop or require them to keep a window foregrounded.
 Background video is optional: use it only if the tool explicitly supports
 isolated recording. Otherwise deliver an honestly labelled screenshot walkthrough,
@@ -116,9 +122,9 @@ expected assets, then link it again and remind the user to reload an open report
 For a fresh series, write review JSON in the same temporary directory as the snapshot, then:
 `ruby <skill>/scripts/series.rb start --repo <root> --name <short-feature-slug> --snapshot <snapshot.json> --review <review.json>`.
 
-This creates `.reviews/<slug>/index.html`, a compact `manifest.json`, `revisions/001.html`, and `current.html`. Subsequent publishes add immutable numbered HTML files and refresh the current view and index. A series slug represents a feature or phase, not a commit SHA; its original base remains fixed across commits. The implementation's local `.lock` coordinates concurrent writes. No database, watcher, project script or per-revision asset folders are needed. Optional QA media is embedded in the offline HTML. Import an existing standalone report with `series.rb start --repo <root> --name <slug> --report <previous.html>`; preserve the old file and link.
+This creates `.reviews/<slug>/index.html`, a compact `manifest.json`, `revisions/001.html`, and `current.html`. Subsequent publishes add immutable numbered HTML files and refresh the current view, revision browsing pages, and index. The dropdown opens `revision-NNN.html` browsing pages with all known revisions; `revisions/NNN.html` remains the immutable original snapshot. A series slug represents a feature or phase, not a commit SHA; its original base remains fixed across commits. The implementation's local `.lock` coordinates concurrent writes. No database, watcher, project script or per-revision asset folders are needed. Optional QA media is embedded in the offline HTML. Import an existing standalone report with `series.rb start --repo <root> --name <slug> --report <previous.html>`; preserve the old file and link.
 
-For a requested UI refresh, use `ruby <skill>/scripts/series.rb refresh --repo <root> --name <slug>`. It rebuilds `current.html` from the latest saved review using the new assets, without inspecting new source or changing any saved revision. Link this current view for the updated UI, and keep historical snapshots immutable.
+For a requested UI refresh, use `ruby <skill>/scripts/series.rb refresh --repo <root> --name <slug>`. It rebuilds `current.html` and the revision browsing pages from saved reviews using the new assets and complete history, without inspecting new source or changing any original saved snapshot. Link this current view for the updated UI, and keep historical snapshots immutable.
 
 For a standalone report or an explicitly requested presentation refresh, the original command remains available:
 `ruby <skill>/scripts/review.rb render --snapshot <snapshot.json> --review <review.json> --name <short-related-slug>`.

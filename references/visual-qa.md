@@ -82,7 +82,10 @@ states and a short flow; avoid exhaustive screenshots or full-session recordings
    text; save bytes and reference the files. Inspect selected images before use.
 6. Write a small QA JSON in scratch storage and attach it with the command below.
    Captions describe the action and visible result, plus timestamps for clips when
-   useful. A screenshot sequence is not a continuous recording. Videos need native
+   useful. For a failure that depends on several actions, use a numbered screenshot
+   sequence when the final image alone is ambiguous. Align captions with the
+   reproduction steps and say what should have changed versus what actually did.
+   A screenshot sequence is not a continuous recording. Videos need native
    controls, no autoplay, and a text walkthrough for accessibility. Cropping is
    fine if labelled; never fabricate an app state or silently hide a failed result.
 7. Verify attachment before announcing success: extract the saved current report

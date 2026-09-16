@@ -16,7 +16,8 @@ The helpers do not call an LLM or generate review conclusions on their own.
 - Conventional Comments types, blocking badges, local Resolve/Reopen and
   Copy for LLMs with file, source range and code context.
 - Personal line/range comments, combined copying and browser-local progress.
-- Immutable review revisions and a refreshable current view. Incremental review
+- Immutable review snapshots and refreshable browsing pages with complete revision
+  navigation. Incremental review
   reuses explanations only when the captured ranges and recorded context match.
 
 ## Requirements
@@ -174,6 +175,7 @@ Reports live in the reviewed repository, under `.reviews/`:
   index.html
   manifest.json
   current.html
+  revision-001.html  # refreshed UI and navigation for revision 1
   revisions/
     001.html
     002.html

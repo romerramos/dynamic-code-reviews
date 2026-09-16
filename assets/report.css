@@ -27,7 +27,7 @@
 .popover-comment .btn{font-size:11px;height:26px;min-height:26px;padding:3px 9px;color:#7f6e4c;background:#f5efe3;border:1px solid #e9dfca}
 @media print{.comment-trigger,.comment-popover{display:none!important}}
 /* Review series keep navigation compact and history prose readable. */
-.header-actions{display:flex;align-items:center;gap:12px}.revision-control{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted)}.revision-control .select{width:138px;min-height:32px;height:32px;font-size:12px}.increment-card{max-width:1050px}.increment-card h2{margin:5px 0 12px}.increment-card details{margin:16px 0}.increment-card summary{font-size:13px;font-weight:600}.increment-card>a{display:inline-block;margin-top:12px;font-size:13px}.increment-card code{font-size:12px;overflow-wrap:anywhere}.finding-state{margin:16px 0}.finding-state strong{display:block;font-size:13px;margin-top:6px}.finding-state p{margin:5px 0}.group-title h3 .badge{vertical-align:middle;margin-left:7px}
+.header-actions{display:flex;align-items:center;gap:12px}.revision-control{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted)}.revision-control .select{width:145px;min-width:145px;min-height:36px;height:36px;padding-inline:12px 36px;font-size:12px;line-height:1.4;flex-shrink:0}.increment-card{max-width:1050px}.increment-card h2{margin:5px 0 12px}.increment-card details{margin:16px 0}.increment-card summary{font-size:13px;font-weight:600}.increment-card>a{display:inline-block;margin-top:12px;font-size:13px}.increment-card code{font-size:12px;overflow-wrap:anywhere}.finding-state{margin:16px 0}.finding-state strong{display:block;font-size:13px;margin-top:6px}.finding-state p{margin:5px 0}.group-title h3 .badge{vertical-align:middle;margin-left:7px}
 @media(max-width:1050px){.header-actions{gap:4px}.revision-control>span{display:none}.header-title #scope{display:none}}
 .verdict.alert-warning{background:#fff8e5;border-color:#ecdbaf;color:#80622c}.verdict.alert-warning small{color:#8a7855}
 /* Review reading flow: distinct observations, bounded prose, direct code access. */
@@ -85,3 +85,20 @@
 .qa-asset { margin: 1rem 0; }
 .qa-asset img, .qa-asset video { display: block; max-width: 100%; max-height: 560px; border: 1px solid #e5e7eb; border-radius: 8px; }
 .qa-asset figcaption { margin-top: .5rem; font-size: 14px; line-height: 1.6; }
+
+/* Keep controls usable when the navigation rail has more content than height. */
+.sidebar #search{flex:0 0 40px;height:40px;min-height:40px;padding:0 12px;line-height:1.5}
+.sidebar-heading,.sidebar-footer{flex-shrink:0}
+.history-links{display:flex;flex-wrap:wrap;gap:12px 20px;margin-top:18px;font-size:13px}
+.popover-comment .comment-discussion{white-space:pre-wrap}
+
+@media(max-width:1199px){.navigation-open .sidebar{max-height:none}}
+@media(max-width:650px){
+  .app-header{height:112px;grid-template-columns:1fr;padding:10px 12px;gap:8px}
+  .header-actions{justify-content:space-between;gap:10px}
+  .revision-control{display:flex}
+  .revision-control>span{display:none}
+  .workspace{height:calc(100dvh - 112px)}
+  .review-toolbar{min-height:96px;align-content:center}
+  .navigation-open .sidebar{top:208px}
+}

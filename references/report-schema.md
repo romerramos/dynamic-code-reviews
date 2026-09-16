@@ -75,6 +75,36 @@ Export local notes provide portable copies; moving the file/browser may not carr
 browser storage. Clipboard failures show selectable text rather than pretending
 the copy succeeded.
 
+## Explain the behavior before the code
+
+Write findings and comment discussions for someone who has not traced the code.
+Name the visible problem first. For an interaction defect, include the starting
+state, numbered actions using on-screen labels, and separate Expected and Actual
+sentences. Explain the cause and a minimal fix afterward. Plain text with newlines
+is supported; the renderer preserves line breaks, including in copied comments.
+For example:
+
+```text
+Reopened conversations remain in the Closed list.
+
+To reproduce (start with a closed conversation):
+1. Open Inbox and choose Closed.
+2. Select a conversation.
+3. Click its Closed button to reopen it.
+
+Expected: the conversation disappears from the Closed list.
+Actual: it stays listed, but its button now says Close.
+
+Cause: the action receives Open as the active filter even though Closed is visible.
+Keep that filter value consistent when selecting a conversation or switching lists.
+```
+
+A method name can help locate the cause; it is not a reproduction step. Keep
+separate reproduction sequences visibly separate. Add ordered screenshots when
+readers need intermediate states to understand the failure, not automatically
+for every click. A result image needs a caption that names both the action and
+what is wrong in the result.
+
 ## Inline Conventional Comments
 
 Add an optional top-level `comments` array. Every comment is attached to one

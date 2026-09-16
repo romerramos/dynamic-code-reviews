@@ -137,13 +137,18 @@ provide fresh conclusions and use `--record`. Never manufacture a code increment
 just to demonstrate history. Browser notes and viewed marks are revision-local;
 they are not silently copied as approval of changed code.
 
-Latest revisions offer a selector for all revisions known when saved. Historical
-HTML cannot know about future files; its History link opens the up-to-date index.
+The revision selector opens refreshable `revision-NNN.html` browsing pages.
+Every publish or refresh rebuilds these pages with all known revisions, so an
+older review can navigate forward again. Its captured code, analysis, and local
+notes identity remain tied to that revision. `revisions/NNN.html` preserves the
+immutable original HTML, available through Original saved snapshot. Older
+original snapshots may have the old UI; use the index or current view to browse.
 The whole series folder preserves navigation when copied; an individual HTML
 still renders independently, but sibling history links then need those files.
 
 For UI-only changes, `series.rb refresh --repo <root> --name <feature>` rebuilds
-`current.html` from the latest saved snapshot and analysis. This does not create
+`current.html` and every revision browsing page from their saved snapshots and
+analysis, with the complete revision selector. This does not create
 a revision, change historical HTML, or claim to review current working files.
 The index's Latest review link uses the refreshed current view; Saved snapshot
 opens the immutable original rendering.
