@@ -104,7 +104,7 @@ module ReviewChecks
         output = DynamicReviews.render(snapshot: snapshot, review: review, name: 'fixture')
         html = File.read(output)
         assert(!html.include?('</script><script>unexpected()'), 'Raw source can close the data script')
-        assert(!html.match?(/<(?:script|link)\b[^>]*(?:src|href)=["']https?:/), 'Report depends on remote assets')
+        assert(!html.match?(/<script\b[^>]*\bsrc=|<link\b[^>]*\bhref=/), 'Report depends on external scripts or styles')
         assert(DynamicReviews.extract(output)['review']['comments'].first['end'] == 2, 'Round trip lost comment range')
         assert(DynamicReviews.git(root, 'status', '--porcelain') == status, 'Rendering changed source status')
         assert(!DynamicReviews.git(root, 'check-ignore', '.reviews/fixture.html').empty?, 'Report not ignored')

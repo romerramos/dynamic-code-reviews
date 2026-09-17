@@ -101,8 +101,9 @@
 
   let commentAnchor = null;
 
-  function lineButton(hunk, side, number) {
+  function lineButton(hunk, side, number, comment = null) {
     if (number === undefined) return '';
+    if (comment) return `<span class="line-number">${number}</span>`;
     return `<button class="line-number" type="button" data-select-line="${number}" data-range-hunk="${hunk.id}" data-range-side="${side}" aria-label="Select ${side === 'new' ? 'after' : 'before'} line ${number} in ${escape(hunkFiles.get(hunk.id).path)}" title="Select line to comment">${number}</button>`;
   }
   function clearSelection() {
@@ -162,8 +163,8 @@
     return `<section class="popover-comment"><p class="comment-location">${escape(ReviewTools.anchor(snapshot, comment)?.file.path || '')}</p><div class="thread-badges">${threadBadges(comment)}</div><p class="comment-location">${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}</p><h4>${escape(comment.subject)}</h4>${ReviewTools.commentBody(comment, review.qa) ? `<p class="comment-discussion">${escape(ReviewTools.commentBody(comment, review.qa))}</p>` : ''}${ReviewTools.evidenceFlows(review.qa, comment).length ? `<button class="btn btn-xs btn-soft" data-evidence="${escape(comment.id)}">See visual evidence</button>` : ''}<div class="comment-actions"><button class="btn btn-xs btn-ghost" data-copy="${escape(comment.id)}">${icon('copy')} Copy for LLMs</button>${comment.personal ? `<button class="btn btn-xs btn-ghost" data-edit="${escape(comment.id)}">${icon('pencil')} Edit</button><button class="btn btn-xs btn-ghost" data-delete="${escape(comment.id)}">${icon('trash-2')} Delete</button>` : ""}</div></section>`;
   }
 
-  function commentTrigger(hunk, side, number) {
-    if (!showComments || number === undefined) return '';
+  function commentTrigger(hunk, side, number, comment = null) {
+    if (comment || !showComments || number === undefined) return '';
     const anchored = comments.filter(comment => comment.hunk === hunk.id && comment.side === side && comment.start === number);
     if (!anchored.length) return '';
     const label = anchored.length === 1 ? `Read ${anchored[0].label}: ${anchored[0].subject}` : `Read ${anchored.length} comments on ${side === 'new' ? 'after' : 'before'} line ${number}`;
@@ -171,9 +172,9 @@
   }
 
   function highlightComments(ids) {
-    document.querySelectorAll('.range-selected').forEach(cell => cell.classList.remove('range-selected'));
+    $('content').querySelectorAll('.range-selected').forEach(cell => cell.classList.remove('range-selected'));
     const selected = comments.filter(comment => ids.includes(comment.id));
-    document.querySelectorAll('.gutter[data-line]').forEach(cell => {
+    $('content').querySelectorAll('.gutter[data-line]').forEach(cell => {
       if (!selected.some(comment => comment.hunk === cell.dataset.hunk && comment.side === cell.dataset.side && Number(cell.dataset.line) >= comment.start && Number(cell.dataset.line) <= comment.end)) return;
       cell.classList.add('range-selected');
       const code = layout === 'split' ? cell.nextElementSibling : cell.parentElement.querySelector('.code');
@@ -218,36 +219,41 @@
     popover.querySelector('[data-close-comment]').focus({preventScroll:true});
   }
 
-  function rangeClasses(hunk, side, number) {
+  function rangeClasses(hunk, side, number, comment = null) {
+    if (comment) return comment.side === side && number >= comment.start && number <= comment.end ? ' range-selected' : '';
     if (!showComments || number === undefined) return '';
     const matches = comments.filter(comment => comment.hunk === hunk.id && comment.side === side && number >= comment.start && number <= comment.end);
     if (!matches.length) return '';
     return ` annotated${matches.some(comment => comment.start === number) ? ' range-start' : ''}${matches.some(comment => comment.end === number) ? ' range-end' : ''}`;
   }
 
-  function splitCells(hunk, line, side, colored) {
+  function splitCells(hunk, line, side, colored, comment = null) {
     const divider = side === 'new' ? ' side-divider' : '';
     if (!line) return `<td class="gutter empty${divider}"></td><td class="code empty" aria-label="No corresponding line"></td>`;
     const number = line[side];
-    const marked = rangeClasses(hunk, side, number);
+    const marked = rangeClasses(hunk, side, number, comment);
     const kind = line.kind === 'context' ? '' : line.kind;
     const sign = line.kind === 'del' ? '−' : line.kind === 'add' ? '+' : ' ';
-    return `<td class="gutter ${kind}${divider}${marked}" data-hunk="${hunk.id}" data-side="${side}" data-line="${number}">${commentTrigger(hunk, side, number)}${lineButton(hunk, side, number)}</td><td class="code ${kind}${marked}"><code><span class="sign" aria-hidden="true">${sign}</span>${colored[side].get(number) || ''}</code>${line.no_newline ? '<span class="newline-marker">No newline at end of file</span>' : ''}</td>`;
+    return `<td class="gutter ${kind}${divider}${marked}" data-hunk="${hunk.id}" data-side="${side}" data-line="${number}">${commentTrigger(hunk, side, number, comment)}${lineButton(hunk, side, number, comment)}</td><td class="code ${kind}${marked}"><code><span class="sign" aria-hidden="true">${sign}</span>${colored[side].get(number) || ''}</code>${line.no_newline ? '<span class="newline-marker">No newline at end of file</span>' : ''}</td>`;
   }
 
-  function renderHunk(hunk, summary, path) {
-    const columns = layout === 'split' ? 4 : 3;
+  function renderHunk(hunk, summary, path, mode = layout, comment = null) {
+    const columns = mode === 'split' ? 4 : 3;
     const colored = highlights(hunk, path);
     const range = (side) => hunk[`${side}_count`] === 0 ? '—' : `${hunk[`${side}_start`]}–${hunk[`${side}_start`] + hunk[`${side}_count`] - 1}`;
-    const heading = `<tr class="range-heading" id="${hunk.id}"><td colspan="${columns}"><div class="range-label"><span>CHANGED RANGE</span><span>Before ${range('old')} &nbsp; / &nbsp; After ${range('new')}</span></div><p>${escape(summary)}</p></td></tr>`;
-    return heading + hunk.rows[layout].map(row => {
-      if (layout === 'split') return `<tr class="code-row">${splitCells(hunk, row.old, 'old', colored)}${splitCells(hunk, row.new, 'new', colored)}</tr>`;
+    const heading = `<tr class="range-heading" id="${comment ? 'expanded-' : ''}${hunk.id}"><td colspan="${columns}"><div class="range-label"><span>CHANGED RANGE</span><span>Before ${range('old')} &nbsp; / &nbsp; After ${range('new')}</span></div><p>${escape(summary)}</p></td></tr>`;
+    return heading + hunk.rows[mode].map(row => {
+      if (mode === 'split') return `<tr class="code-row">${splitCells(hunk, row.old, 'old', colored, comment)}${splitCells(hunk, row.new, 'new', colored, comment)}</tr>`;
       const side = row.kind === 'del' ? 'old' : 'new';
-      const marked = rangeClasses(hunk, 'old', row.old) + rangeClasses(hunk, 'new', row.new);
+      const marked = rangeClasses(hunk, 'old', row.old, comment) + rangeClasses(hunk, 'new', row.new, comment);
       const kind = row.kind === 'context' ? '' : row.kind;
       const sign = row.kind === 'del' ? '−' : row.kind === 'add' ? '+' : ' ';
-      return `<tr class="code-row"><td class="gutter ${kind}${rangeClasses(hunk,'old',row.old)}" data-hunk="${hunk.id}" data-side="old" ${row.old !== undefined ? `data-line="${row.old}"` : ''}>${commentTrigger(hunk, 'old', row.old)}${lineButton(hunk, 'old', row.old)}</td><td class="gutter ${kind}${rangeClasses(hunk,'new',row.new)}" data-hunk="${hunk.id}" data-side="new" ${row.new !== undefined ? `data-line="${row.new}"` : ''}>${commentTrigger(hunk, 'new', row.new)}${lineButton(hunk, 'new', row.new)}</td><td class="code ${kind}${marked}"><code><span class="sign" aria-hidden="true">${sign}</span>${colored[side].get(row[side]) || ''}</code>${row.no_newline ? '<span class="newline-marker">No newline at end of file</span>' : ''}</td></tr>`;
+      return `<tr class="code-row"><td class="gutter ${kind}${rangeClasses(hunk,'old',row.old,comment)}" data-hunk="${hunk.id}" data-side="old" ${row.old !== undefined ? `data-line="${row.old}"` : ''}>${commentTrigger(hunk, 'old', row.old, comment)}${lineButton(hunk, 'old', row.old, comment)}</td><td class="gutter ${kind}${rangeClasses(hunk,'new',row.new,comment)}" data-hunk="${hunk.id}" data-side="new" ${row.new !== undefined ? `data-line="${row.new}"` : ''}>${commentTrigger(hunk, 'new', row.new, comment)}${lineButton(hunk, 'new', row.new, comment)}</td><td class="code ${kind}${marked}"><code><span class="sign" aria-hidden="true">${sign}</span>${colored[side].get(row[side]) || ''}</code>${row.no_newline ? '<span class="newline-marker">No newline at end of file</span>' : ''}</td></tr>`;
     }).join('');
+  }
+
+  function renderDiffTable(file, hunks, summaries, mode = layout, comment = null) {
+    return `<div class="diff-scroll"><table class="diff-table ${mode}" aria-label="${escape(file.path)} ${mode} diff"><colgroup><col class="gutter">${mode === 'split' ? '<col><col class="gutter"><col>' : '<col class="gutter"><col>'}</colgroup><thead><tr>${mode === 'split' ? `<th colspan="2">BEFORE · ${escape(snapshot.base.slice(0,8))}</th><th colspan="2" class="after">AFTER · ${escape(snapshot.mode === 'uncommitted' || snapshot.working_tree ? 'working tree' : snapshot.head.slice(0,8))}</th>` : '<th>OLD</th><th>NEW</th><th>CODE</th>'}</tr></thead><tbody>${hunks.map(hunk => renderHunk(hunk, summaries[hunk.id], file.path, mode, comment)).join('')}</tbody></table></div>`;
   }
 
   function renderFile(item) {
@@ -256,7 +262,7 @@
     const changes = hunks.flatMap(hunk => hunk.rows.unified);
     const added = changes.filter(line => line.kind === 'add').length;
     const removed = changes.filter(line => line.kind === 'del').length;
-    const table = `<div class="diff-scroll"><table class="diff-table ${layout}" aria-label="${escape(file.path)} ${layout} diff"><colgroup><col class="gutter">${layout === 'split' ? '<col><col class="gutter"><col>' : '<col class="gutter"><col>'}</colgroup><thead><tr>${layout === 'split' ? `<th colspan="2">BEFORE · ${escape(snapshot.base.slice(0,8))}</th><th colspan="2" class="after">AFTER · ${escape(snapshot.mode === 'uncommitted' || snapshot.working_tree ? 'working tree' : snapshot.head.slice(0,8))}</th>` : '<th>OLD</th><th>NEW</th><th>CODE</th>'}</tr></thead><tbody>${hunks.map(hunk => renderHunk(hunk, item.summaries[hunk.id], file.path)).join('')}</tbody></table></div>`;
+    const table = renderDiffTable(file, hunks, item.summaries);
     return `<details class="file-card" open><summary><span class="file-icon" aria-hidden="true">&lt;/&gt;</span><span class="filename">${escape(file.path)}</span><span class="badge success">+${added}</span><span class="badge blocking">−${removed}</span></summary>${item.summary || file.note ? `<div class="file-summary">${escape(item.summary || '')}${file.note ? ` · ${escape(file.note)}` : ''}</div>` : ''}${hunks.length ? table : `<div class="file-summary"><pre>${escape(file.patch || 'No text diff available.')}</pre></div>`}</details>`;
   }
 
@@ -281,11 +287,9 @@
   function commentCard(comment) {
     const found = ReviewTools.anchor(snapshot, comment);
     if (!found && !comment.general) return '';
-    const colors = found ? highlights(found.hunk, found.file.path)[comment.side] : null;
     const id = escape(comment.id);
-    const range = `${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end === comment.start ? '' : `–${comment.end}`}`;
-    const snippet = found ? `<div class="thread-code" role="region" tabindex="0" aria-label="${escape(found.file.path)} ${range}">${found.lines.map(line => `<div class="thread-code-line"><span class="thread-line-number">${line[comment.side]}</span><code>${colors.get(line[comment.side]) ?? escape(line.text)}</code></div>`).join('')}</div>` : '';
-    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${escape(found?.file.path || 'General comment')}</span><span class="thread-range">${found ? range : ''}</span></div><details class="thread-details" ${comment.resolved ? '' : 'open'}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}"><span class="thread-badges">${threadBadges(comment)}</span><strong>${escape(comment.subject)}</strong><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${comment.discussion ? `<p class="comment-discussion">${escape(comment.discussion)}</p>` : ''}${commentEvidence(comment)}</div>${found ? `<details class="thread-source"><summary>View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'}</summary>${snippet}</details>` : ''}</details><div class="thread-footer"><div class="comment-actions"><button class="btn btn-sm btn-soft" data-copy-comment="${id}">${icon('copy')} Copy for comment</button><button class="btn btn-sm btn-ghost" data-copy="${id}">${icon('copy')} Copy for LLMs</button>${found ? `<button class="btn btn-sm btn-ghost" data-comment="${id}">Open in diff ${icon('arrow-right')}</button>` : ''}${comment.personal ? `<button class="btn btn-sm btn-ghost" data-edit="${id}">${icon('pencil')} Edit</button><button class="btn btn-sm btn-ghost" data-delete="${id}">${icon('trash-2')} Delete</button>` : ''}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
+    const range = found ? `${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}` : '';
+    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${escape(found?.file.path || 'General comment')}</span><span class="thread-range">${found ? range : ''}</span></div><details class="thread-details" ${comment.resolved ? '' : 'open'}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}"><span class="thread-badges">${threadBadges(comment)}</span><strong>${escape(comment.subject)}</strong><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${comment.discussion ? `<p class="comment-discussion">${escape(comment.discussion)}</p>` : ''}${commentEvidence(comment)}</div>${found ? `<button class="thread-source btn btn-sm btn-ghost" type="button" data-open-code="${id}" aria-haspopup="dialog" aria-label="${escape(`View code for ${found.file.path}, ${range}: ${comment.subject}`)}">View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : ''}</details><div class="thread-footer"><div class="comment-actions"><button class="btn btn-sm btn-soft" data-copy-comment="${id}">${icon('copy')} Copy for comment</button><button class="btn btn-sm btn-ghost" data-copy="${id}">${icon('copy')} Copy for LLMs</button>${found ? `<button class="btn btn-sm btn-ghost" data-comment="${id}">Open in diff ${icon('arrow-right')}</button>` : ''}${comment.personal ? `<button class="btn btn-sm btn-ghost" data-edit="${id}">${icon('pencil')} Edit</button><button class="btn btn-sm btn-ghost" data-delete="${id}">${icon('trash-2')} Delete</button>` : ''}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
   }
   function toggleResolved(id) {
     const comment = comments.find(comment => comment.id === id);
@@ -322,7 +326,64 @@
     return `<article class="review-comment"><span class="badge blocking">${escape(finding.severity)}</span><p class="comment-location">${escape(hunkFiles.get(finding.hunk).path)}</p><h3>${escape(finding.title)}</h3><p class="comment-discussion">${escape(finding.body)}</p><div class="comment-actions"><button class="btn btn-sm btn-ghost" data-hunk="${escape(finding.hunk)}">See changed code →</button><button class="btn btn-sm btn-soft" data-post-finding="${index}">${icon('copy')} Copy for comment</button><button class="btn btn-sm btn-ghost" data-copy-finding="${index}">${icon('copy')} Copy for LLMs</button></div></article>`;
   }
   function renderQAAsset(asset) {
-    return `<figure class="qa-asset">${asset.data_uri.startsWith('data:video/') ? `<video controls preload="none" playsinline aria-label="${escape(asset.caption)}" src="${escape(asset.data_uri)}"></video>` : `<img loading="lazy" alt="${escape(asset.caption)}" src="${escape(asset.data_uri)}">`}<figcaption>${escape(asset.caption)}</figcaption></figure>`;
+    return `<figure class="qa-asset">${asset.data_uri.startsWith('data:video/') ? `<video controls preload="none" playsinline aria-label="${escape(asset.caption)}" src="${escape(asset.data_uri)}"></video>` : `<button class="qa-image-button" type="button" data-expand-image aria-label="${escape(`Expand screenshot: ${asset.caption}`)}" aria-haspopup="dialog"><img loading="lazy" alt="${escape(asset.caption)}" src="${escape(asset.data_uri)}"><span class="qa-image-hint">Click to expand</span></button>`}<figcaption>${escape(asset.caption)}</figcaption></figure>`;
+  }
+  let viewerAnchor;
+  let viewerCode = null;
+  let viewerLayout = 'auto';
+  let viewerLabel = 'Screenshot viewer';
+  const expandedViewer = GLightbox({
+    selector:null, elements:[], openEffect:'none', closeEffect:'none', slideEffect:'none',
+    autoplayVideos:false, preload:false, keyboardNavigation:false, svg:{close:icon('x')},
+    onOpen:() => {
+      const viewer = $('glightbox-body');
+      viewer.setAttribute('aria-label', viewerLabel);
+      viewer.setAttribute('aria-modal', 'true');
+      viewer.querySelector('.gclose').focus({preventScroll:true});
+    },
+    onClose:() => {
+      const anchor = viewerAnchor?.isConnected ? viewerAnchor : [...document.querySelectorAll('button[aria-haspopup="dialog"]')].find(button => button.getAttribute('aria-label') === viewerAnchor?.getAttribute('aria-label'));
+      anchor?.focus({preventScroll:true});
+      viewerCode = null;
+    }
+  });
+  function expandImage(button) {
+    const image = button.querySelector('img');
+    viewerAnchor = button;
+    viewerLabel = 'Screenshot viewer';
+    viewerCode = null;
+    expandedViewer.setElements([{href:image.src, type:'image', alt:image.alt, title:escape(image.alt),
+      description:'Click or pinch the image to zoom; drag to pan.'}]);
+    expandedViewer.open();
+  }
+  function renderExpandedCode() {
+    if (!viewerCode || !$('expanded-diff-body')) return;
+    const {file, hunk, comment} = viewerCode;
+    const autoMode = tabletLayout.matches ? 'unified' : 'split';
+    const mode = viewerLayout === 'auto' ? autoMode : viewerLayout;
+    const body = $('expanded-diff-body');
+    const scroll = body.scrollTop;
+    body.innerHTML = renderDiffTable(file, [hunk], {[hunk.id]:comment.subject}, mode, comment);
+    body.scrollTop = scroll;
+    document.querySelectorAll('[data-viewer-layout]').forEach(button => {
+      button.setAttribute('aria-pressed', button.dataset.viewerLayout === viewerLayout);
+      if (button.dataset.viewerLayout === 'auto') button.textContent = `Auto (${autoMode})`;
+    });
+  }
+  function expandCode(button) {
+    const comment = comments.find(comment => comment.id === button.dataset.openCode);
+    const found = comment && ReviewTools.anchor(snapshot, comment);
+    if (!found) return;
+    viewerAnchor = button;
+    viewerLabel = 'Code diff viewer';
+    viewerLayout = 'auto';
+    viewerCode = {...found, comment};
+    const content = document.createElement('section');
+    content.className = 'expanded-diff';
+    content.innerHTML = `<header class="expanded-diff-header"><p class="eyebrow">Comment context</p><h2>${escape(found.file.path)}</h2><p>${escape(comment.subject)} · ${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}</p><div class="join" role="group" aria-label="Expanded diff layout">${['auto','unified','split'].map(mode => `<button class="btn btn-sm join-item" type="button" data-viewer-layout="${mode}" aria-pressed="${mode === 'auto'}">${mode === 'auto' ? 'Auto' : mode === 'split' ? 'Split' : 'Unified'}</button>`).join('')}</div></header><div id="expanded-diff-body" class="expanded-diff-body" tabindex="0" role="region" aria-label="Comment context diff"></div>`;
+    expandedViewer.setElements([{type:'inline', content, width:'96vw', height:'92vh', draggable:false}]);
+    expandedViewer.open();
+    renderExpandedCode();
   }
   function qaDetails(flow) {
     return `<details class="qa-steps"><summary>View steps${flow.assets?.length ? ' and screenshots' : ''}</summary><ol>${flow.steps.map(step => `<li>${escape(step)}</li>`).join('')}</ol>${(flow.assets || []).map(renderQAAsset).join('')}</details>`;
@@ -449,6 +510,12 @@
   }
 
   document.addEventListener('click', async event => {
+    const image = event.target.closest('[data-expand-image]');
+    if (image) { expandImage(image); return; }
+    const code = event.target.closest('[data-open-code]');
+    if (code) { expandCode(code); return; }
+    const viewerMode = event.target.closest('[data-viewer-layout]');
+    if (viewerMode) { viewerLayout = viewerMode.dataset.viewerLayout; renderExpandedCode(); return; }
     const navigation = event.target.closest('[data-view]');
     if (navigation) select(navigation.dataset.view);
     const evidence = event.target.closest('[data-evidence]');
@@ -504,7 +571,7 @@
   $('prev').onclick = () => step(-1);
   $('next').onclick = () => step(1);
   ['auto','unified','split'].forEach(mode => { $(mode === 'auto' ? 'auto-layout' : mode).onclick = () => { const scroll = $('content').scrollTop; layoutChoice = mode; layout = mode === 'auto' ? (tabletLayout.matches ? 'unified' : 'split') : mode; render(); $('content').scrollTop = scroll; }; });
-  tabletLayout.addEventListener('change', () => { if (layoutChoice === 'auto') { const scroll = $('content').scrollTop; layout = tabletLayout.matches ? 'unified' : 'split'; render(); $('content').scrollTop = scroll; } });
+  tabletLayout.addEventListener('change', () => { renderExpandedCode(); if (layoutChoice === 'auto') { const scroll = $('content').scrollTop; layout = tabletLayout.matches ? 'unified' : 'split'; render(); $('content').scrollTop = scroll; } });
   $('nav-toggle').onclick = () => { const open = document.body.classList.toggle('navigation-open'); $('nav-toggle').setAttribute('aria-expanded', open); };
   $('comments-toggle').onchange = event => { const scroll = $('content').scrollTop; showComments = event.target.checked; render(); $('content').scrollTop = scroll; };
   $('focus').onclick = () => { document.body.classList.toggle('focus'); $('focus').setAttribute('aria-pressed', document.body.classList.contains('focus')); schedulePosition(); };
@@ -541,6 +608,16 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   document.addEventListener('keydown', event => {
+    if (expandedViewer.lightboxOpen) {
+      if (event.key === 'Escape') { event.preventDefault(); expandedViewer.close(); }
+      if (event.key === 'Tab') {
+        const controls = [...$('glightbox-body').querySelectorAll('button:not([disabled]), [tabindex="0"]')].filter(control => control.getClientRects().length);
+        const index = controls.indexOf(document.activeElement);
+        event.preventDefault();
+        controls[(index + (event.shiftKey ? -1 : 1) + controls.length) % controls.length]?.focus({preventScroll:true});
+      }
+      return;
+    }
     if (/INPUT|TEXTAREA|SELECT/.test(event.target.tagName) || event.metaKey || event.ctrlKey || event.altKey || $('details-dialog').open || $('comment-editor').open || $('copy-dialog').open || $('comment-popover').matches(':popover-open')) return;
     const key = event.key.toLowerCase();
     if (key === 'j' || key === 'k') { event.preventDefault(); step(key === 'j' ? 1 : -1); }

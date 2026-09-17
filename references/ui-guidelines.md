@@ -56,10 +56,11 @@ from its original snapshot and analysis when refreshing presentation only.
 
 ## Overview comment threads
 
-- Use a centered reading column bounded to 840px, with 16–17px prose, generous line spacing and 24–28px card padding. Stack the file/range header, subject, concise comment body and embedded evidence, collapsed View code disclosure, and action footer. Show each issue once: matched findings add severity to their issue comment; unmatched findings remain visible. No masonry or parallel metadata columns. Keep long file paths wrapping.
-- Highlight snippets through the same bundled Prism grammar and whole-hunk
+- Use a centered reading column bounded to 840px, with 16–17px prose, generous line spacing and 24–28px card padding. Stack the file/range header, subject, concise comment body and embedded evidence, View code action, and action footer. Show each issue once: matched findings add severity to their issue comment; unmatched findings remain visible. No masonry or parallel metadata columns. Keep long file paths wrapping.
+- Highlight code through the same bundled Prism grammar and whole-hunk
   tokenization as the diff, preserving multiline tokens and exact old/new source
-  numbers. Bound long snippets to 260px with scrolling and keyboard focus.
+  numbers. View code opens the complete related hunk in the shared fullscreen
+  viewer, with a scrollable, keyboard-focusable diff body.
 - Give each Conventional Comments type an explicit name, distinct icon and
   accent plus a short meaning: Note is context, Praise is what works well,
   Question asks for an answer, Thought offers an idea. Never rely on color alone.
@@ -152,7 +153,7 @@ and 3840×2160, plus a shorter viewport for edge placement:
    Navigate newest → oldest → newest through the selector. Check revision text
    clears the native caret and the search input retains at least 40px height in
    a crowded sidebar at 1024×768 and 768×1024.
-8. For thread changes, check initially collapsed View code disclosures, highlighted snippets when opened, readable
+8. For thread changes, check View code actions, highlighted diffs when opened, readable
    type/blocking differences, Resolve/collapse, reload persistence, manual
    expansion and Reopen. Check personal threads and combined copying, and verify
    the original review findings/history remain unchanged.
@@ -190,3 +191,15 @@ Screenshots and controls must fit narrow widths. No autoplay, remote media or
 simulated background worker. Test evidence navigation from the diff, collapsed
 steps, unmatched failed flows, text-only evidence, loaded media, and narrow layouts
 using synthetic captures without implying they validate the reviewed application.
+
+Screenshot thumbnails and overview View code actions open the same bundled
+GLightbox viewer. Code uses the shared diff renderer for the complete related
+hunk, highlighting the precise comment range. Auto uses split above 1200px and
+unified below, with explicit Auto/Unified/Split controls; split can scroll
+horizontally on phones. Check old/new numbers, paired replacement rows, syntax
+colors, range highlighting, breakpoint changes and manual overrides. Embed
+the library CSS/JS and reuse the embedded image source; do not load a CDN or
+separate image file at runtime. Preserve captions as escaped plain text. Check
+click and Enter/Space activation, image zoom/pan, Escape and close-button dismissal,
+focus return, and narrow viewport sizing. Review shortcuts must not change the
+underlying step while the viewer is open. Videos retain their inline controls.

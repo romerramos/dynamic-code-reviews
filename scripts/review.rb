@@ -253,11 +253,11 @@ module DynamicReviews
     snapshot = Marshal.load(Marshal.dump(snapshot))
     snapshot['files'].each { |file| file['hunks'].each { |hunk| hunk['rows'] = diff_rows(hunk) } }
     payload = JSON.generate({'snapshot' => snapshot, 'review' => review}).gsub('<', '\\u003c').gsub('>', '\\u003e').gsub('&', '\\u0026')
-    licenses = %w[DAISYUI-LICENSE PRISM-LICENSE lucide/LICENSE].map { |name| File.read(File.join(ASSETS, 'vendor', name)) }.join("\n")
-    styles = "/* Third-party licenses\n#{licenses}\n*/\n" + File.read(File.join(ASSETS, 'vendor/daisyui.css')) + "\n" + File.read(File.join(ASSETS, 'report.css'))
+    licenses = %w[DAISYUI-LICENSE PRISM-LICENSE lucide/LICENSE glightbox/LICENSE].map { |name| File.read(File.join(ASSETS, 'vendor', name)) }.join("\n")
+    styles = "/* Third-party licenses\n#{licenses}\n*/\n" + File.read(File.join(ASSETS, 'vendor/daisyui.css')) + "\n" + File.read(File.join(ASSETS, 'vendor/glightbox/glightbox.min.css')) + "\n" + File.read(File.join(ASSETS, 'report.css'))
     prism = LANGUAGES.map { |lang| File.read(File.join(ASSETS, "vendor/prism-#{lang}.min.js")) }.join("\n")
     icons = Dir[File.join(ASSETS, 'vendor/lucide/*.svg')].sort.to_h { |path| [File.basename(path, '.svg'), File.read(path)] }
-    scripts = "window.Prism = {manual: true};\nwindow.ReviewIcons = #{JSON.generate(icons)};\n#{prism}\n#{File.read(File.join(ASSETS, 'review-tools.js'))}\n#{File.read(File.join(ASSETS, 'report.js'))}"
+    scripts = "window.Prism = {manual: true};\nwindow.ReviewIcons = #{JSON.generate(icons)};\n#{prism}\n#{File.read(File.join(ASSETS, 'vendor/glightbox/glightbox.min.js'))}\n#{File.read(File.join(ASSETS, 'review-tools.js'))}\n#{File.read(File.join(ASSETS, 'report.js'))}"
     replacements = {'__STYLES__' => styles, '__SCRIPTS__' => scripts.gsub(%r{</script}i, '<\\/script'), '__REVIEW_DATA__' => payload, '__ICON__' => File.read(File.join(ASSETS, 'icon.svg'))}
     html = File.read(File.join(ASSETS, 'report.html')).gsub(/__STYLES__|__SCRIPTS__|__REVIEW_DATA__|__ICON__/) { |token| replacements.fetch(token) }
     html

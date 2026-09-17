@@ -21,6 +21,12 @@ Keep their licenses with this skill when sharing it.
   - Only the SVG files used by the review UI are saved in `lucide/`. The Ruby
     renderer embeds them as a lookup table, with no icon font, framework or
     runtime CDN request. Preserve upstream geometry; apply size and stroke in CSS.
+- GLightbox 3.3.1: https://github.com/biati-digital/glightbox/tree/v3.3.1
+  - Vendored CSS/JS: https://cdn.jsdelivr.net/npm/glightbox@3.3.1/dist/
+  - License: `glightbox/LICENSE` (MIT).
+  - CSS and JavaScript are embedded inline. The shared viewer opens only embedded image data
+    or a rendered code hunk; video remains in its native inline player.
+    No CDN, image files, fonts or additional player libraries load at runtime.
 
 Update only when needed, pin versions, retain license text, and verify the
 synthetic diff fixture plus actual token colors/layout after a library change.
