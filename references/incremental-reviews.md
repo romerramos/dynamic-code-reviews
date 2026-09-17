@@ -95,6 +95,10 @@ Update operations:
   explanation or reading order. `remove_groups` removes IDs explicitly.
   To move already-mapped ranges between groups, replace the affected groups so
   each hunk still appears exactly once. Empty layers/groups are pruned.
+- `group_order`: list every current group ID exactly once in the desired reading
+  order. Replacing groups does not otherwise move their existing positions.
+  Reauthor layer `related_tests` associations/summaries when their behavior changes;
+  preparation remaps unchanged file references alongside ordinary items.
 - `comments`: add or replace by stable comment ID; `remove_comments` removes
   IDs. Matching comments were only mechanically remapped: reassess their meaning
   if connected behavior changed. Inspect `comments_to_recheck`; re-anchor or

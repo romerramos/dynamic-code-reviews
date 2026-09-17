@@ -93,3 +93,12 @@ assert.deepEqual(tools.evidenceFlows(evidenceQA,evidenceComment),[0]);
 assert.equal(tools.flowOwner({comment_id:'c1',assets:[{comment_id:'c2'}]}),'c1');
 assert.equal(tools.flowOwner({assets:[{comment_id:'c1'},{comment_id:'c2'}]}),'c1');
 console.log('PASS posting and LLM copies retain reproduction; general and anchored user comments combine safely');
+
+const testLayer = {items:[{file:'capture'}, {file:'capture-test'}, {file:'send'}, {file:'send-test'}, {file:'display'}],
+  related_tests:[{title:'Reply acceptance',summary:'Accepted replies create one event.',entities:['capture','send'],files:['capture-test','send-test']}]};
+const walkthrough = tools.walkthroughSections(testLayer);
+assert.deepEqual(walkthrough.map(section => section.item?.file || section.tests.title), ['capture','send','Reply acceptance','display']);
+assert.deepEqual(walkthrough[2].items.map(item=>item.file), ['capture-test','send-test']);
+assert.deepEqual(walkthrough.flatMap(section=>section.items || [section.item]).map(item=>item.file).sort(), testLayer.items.map(item=>item.file).sort());
+assert.deepEqual(tools.walkthroughSections({items:testLayer.items}), testLayer.items.map(item=>({item})));
+console.log('PASS related tests follow their last entity and retain every file exactly once');

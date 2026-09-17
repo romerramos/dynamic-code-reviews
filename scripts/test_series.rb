@@ -47,6 +47,23 @@ module SeriesChecks
 
   def run
     checks = {}
+    checks['reorders existing groups explicitly and remaps related tests by file identity'] = lambda do
+      draft = {'groups' => [{'id' => 'consumer', 'layers' => [{'id' => 'display', 'items' => [{'file' => 'f1'}]}]},
+                           {'id' => 'producer', 'layers' => [{'id' => 'capture', 'items' => [{'file' => 'f2'}]}]}], 'comments' => []}
+      reordered = ReviewSeries.apply_update(draft, {'group_order' => ['producer', 'consumer']})
+      assert(reordered['groups'].map { |group| group['id'] } == ['producer', 'consumer'], 'Existing groups did not move')
+      rejects('Accepted incomplete group order') { ReviewSeries.apply_update(draft, {'group_order' => ['producer']}) }
+      rejects('Accepted duplicate group IDs') { ReviewSeries.apply_update(draft, {'group_order' => ['producer', 'producer']}) }
+      panel = {'title' => 'Related tests', 'summary' => 'Values remain valid.', 'entities' => ['f1'], 'files' => ['f2']}
+      old = {'groups' => [{'layers' => [{'items' => [{'file' => 'f1', 'summaries' => {'h1' => 'Value'}}, {'file' => 'f2', 'summaries' => {'h2' => 'Coverage'}}], 'related_tests' => [panel]}]}]}
+      current = {'files' => [{'id' => 'f8', 'hunks' => [{'id' => 'h8'}]}, {'id' => 'f9', 'hunks' => [{'id' => 'h9'}]}]}
+      changes = {'files' => [{'previous_file' => 'f1', 'file' => 'f8'}, {'previous_file' => 'f2', 'file' => 'f9'}],
+                 'mapping' => {'h1' => {'hunk' => 'h8'}, 'h2' => {'hunk' => 'h9'}}}
+      remapped = ReviewSeries.draft_review(old, current, changes).dig('groups', 0, 'layers', 0, 'related_tests', 0)
+      assert(remapped['entities'] == ['f8'] && remapped['files'] == ['f9'], 'Related tests kept stale file IDs')
+      changes['mapping'].delete('h2')
+      assert(!ReviewSeries.draft_review(old, current, changes).dig('groups', 0, 'layers', 0).key?('related_tests'), 'Removed test ranges kept an empty panel')
+    end
     checks['matches ranges despite changed IDs/offsets; rejects ambiguous content'] = lambda do
       old_hunk = DynamicReviews.hunks("@@ -10,2 +10,2 @@\n-old\n+new\n same\n", 'f2').first
       new_hunk = DynamicReviews.hunks("@@ -20,2 +22,2 @@\n-old\n+new\n same\n", 'f9').first

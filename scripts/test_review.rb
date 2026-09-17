@@ -49,6 +49,19 @@ module ReviewChecks
       assert(rows['split'][3]['old'].nil? && rows['split'][3]['new']['new'] == 13, 'Extra addition needs an empty old cell')
       assert(rows['split'].last['old']['old'] == 13 && rows['split'].last['new']['new'] == 14, 'Context line numbers drifted')
     end
+    checks['validates related tests without losing or duplicating coverage'] = lambda do
+      snapshot = {'files' => [{'id' => 'f1', 'path' => 'app/value.rb', 'hunks' => []}, {'id' => 'f2', 'path' => 'test/value_test.rb', 'hunks' => []}]}
+      panel = {'title' => 'Related tests · Values', 'summary' => 'Invalid inputs retain the existing value.', 'entities' => ['f1'], 'files' => ['f2']}
+      layer = {'items' => [{'file' => 'f1'}, {'file' => 'f2'}], 'related_tests' => [panel]}
+      review = {'groups' => [{'layers' => [layer]}]}
+      DynamicReviews.validate(snapshot, review)
+      [panel.merge('entities' => ['missing']), panel.merge('files' => ['f1']), panel.merge('summary' => '')].each do |bad|
+        rejects('Accepted invalid related tests') { DynamicReviews.validate(snapshot, {'groups' => [{'layers' => [layer.merge('related_tests' => [bad])]}]}) }
+      end
+      rejects('Duplicated tests in two panels') { DynamicReviews.validate(snapshot, {'groups' => [{'layers' => [layer.merge('related_tests' => [panel, panel])]}]}) }
+      rejects('Silently left test files unassigned') { DynamicReviews.validate(snapshot, {'groups' => [{'layers' => [layer.merge('related_tests' => [])]}]}) }
+      DynamicReviews.validate(snapshot, {'groups' => [{'layers' => [layer.reject { |key, _| key == 'related_tests' }]}]})
+    end
     checks['handles pure additions, deletions and missing final newline'] = lambda do
       addition = DynamicReviews.hunks("@@ -0,0 +1,2 @@\n+one\n+two\n\\ No newline at end of file\n", 'f1').first
       rows = DynamicReviews.diff_rows(addition)

@@ -18,6 +18,18 @@ globalThis.ReviewTools = (() => {
     if (/\.(?:rb|rake|gemspec|py|go|rs|java|php|ex|exs)$/i.test(path)) return 'Backend';
     return 'Other';
   }
+  // Tests stay assigned to their owning layer, but follow the last related entity.
+  function walkthroughSections(layer) {
+    const panels = layer.related_tests || [];
+    const hidden = new Set(panels.flatMap(panel => panel.files));
+    return layer.items.flatMap((item, index) => {
+      const sections = hidden.has(item.file) ? [] : [{item}];
+      panels.filter(panel => Math.max(...panel.entities.map(file => layer.items.findIndex(item => item.file === file))) === index).forEach(panel => {
+        sections.push({tests:panel, items:panel.files.map(file => layer.items.find(item => item.file === file))});
+      });
+      return sections;
+    });
+  }
   function anchor(snapshot, comment) {
     const file = snapshot.files.find(file => file.hunks.some(hunk => hunk.id === comment.hunk));
     const hunk = file?.hunks.find(hunk => hunk.id === comment.hunk);
@@ -93,5 +105,5 @@ globalThis.ReviewTools = (() => {
     });
     return {comments, findings:remaining};
   }
-  return {categories, category, anchor, sourceText, commentText, reviewText, overviewFeedback, comparisonText, evidenceFlows, flowOwner, commentBody, postingText};
+  return {categories, category, walkthroughSections, anchor, sourceText, commentText, reviewText, overviewFeedback, comparisonText, evidenceFlows, flowOwner, commentBody, postingText};
 })();

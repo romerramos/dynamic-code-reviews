@@ -170,6 +170,10 @@ module DynamicReviews
     result
   end
 
+  def self.test_path?(path)
+    path.match?(%r{(^|/)(test|tests|spec|specs|fixtures|__tests__)(/|$)|\.(test|spec)\.[^.]+$}i)
+  end
+
   def self.validate(snapshot, review)
     ReviewQA.validate(review['qa'], snapshot, review)
     files = snapshot.fetch('files').to_h { |file| [file.fetch('id'), file] }
@@ -177,6 +181,22 @@ module DynamicReviews
     covered, seen = [], []
     review.fetch('groups').each do |group|
       group.fetch('layers').each do |layer|
+        layer_files = layer.fetch('items').map { |item| item.fetch('file') }
+        grouped_tests = []
+        Array(layer['related_tests']).each do |panel|
+          unless %w[title summary].all? { |key| panel[key].is_a?(String) && !panel[key].strip.empty? } &&
+                 %w[entities files].all? { |key| panel[key].is_a?(Array) && !panel[key].empty? && panel[key].uniq == panel[key] && (panel[key] - layer_files).empty? }
+            raise ArgumentError, 'Related tests need a title, behavior summary and distinct file/entity references in their layer'
+          end
+          unless panel['files'].all? { |fid| files[fid] && test_path?(files[fid]['path']) } &&
+                 panel['entities'].all? { |fid| files[fid] && !test_path?(files[fid]['path']) } && (panel['files'] & grouped_tests).empty?
+            raise ArgumentError, 'Related test panels must contain test files once, separate from their entities'
+          end
+          grouped_tests.concat(panel['files'])
+        end
+        if layer.key?('related_tests') && (layer_files.select { |fid| files[fid] && test_path?(files[fid]['path']) } - grouped_tests).any?
+          raise ArgumentError, 'Assign every test item to a related test panel'
+        end
         layer.fetch('items').each do |item|
           fid = item.fetch('file')
           raise ArgumentError, "Unknown file: #{fid}" unless files.key?(fid)

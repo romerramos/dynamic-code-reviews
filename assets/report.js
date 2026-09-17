@@ -385,6 +385,15 @@
     expandedViewer.open();
     renderExpandedCode();
   }
+  const expandedTests = new Set();
+  function renderWalkthroughFiles(layer) {
+    return ReviewTools.walkthroughSections(layer).map(section => {
+      if (section.item) return renderFile(section.item);
+      const count = section.items.reduce((sum, item) => sum + Object.keys(item.summaries || {}).length, 0);
+      const panel = `${layer.id}-tests-${layer.related_tests.indexOf(section.tests)}`;
+      return `<details class="related-tests" data-test-panel="${panel}" ${expandedTests.has(panel) ? 'open' : ''}><summary><span class="related-tests-heading">${escape(section.tests.title)} <span class="badge neutral">${section.items.length} file${section.items.length === 1 ? '' : 's'} · ${count} changed range${count === 1 ? '' : 's'}</span></span><span class="related-tests-summary">${escape(section.tests.summary)}</span></summary><div class="related-tests-content">${section.items.map(renderFile).join('')}</div></details>`;
+    }).join('');
+  }
   function qaDetails(flow) {
     return `<details class="qa-steps"><summary>View steps${flow.assets?.length ? ' and screenshots' : ''}</summary><ol>${flow.steps.map(step => `<li>${escape(step)}</li>`).join('')}</ol>${(flow.assets || []).map(renderQAAsset).join('')}</details>`;
   }
@@ -437,7 +446,7 @@
   }
 
   function renderStep(layer) {
-    return `<div class="step-overview"><div class="page-intro"><div class="eyebrow">${escape(titleWithoutNumber(layer.group.title))} / Step ${layers.indexOf(layer) + 1}</div><h1>${escape(layer.title)}</h1><p class="lead">${escape(layer.summary || layer.group.summary)}</p></div><label class="viewed-control"><input class="checkbox checkbox-sm checkbox-primary" id="viewed" type="checkbox" ${state.viewed.includes(layer.id) ? 'checked' : ''}> Mark as reviewed</label></div><details class="context-details"><summary>Why these files belong together & what to check</summary><p>${escape(layer.group.summary)}</p>${bulletList(layer.checks)}</details>${flow(layer.flow)}${layer.items.map(renderFile).join('')}<details class="local-notes"><summary>Your notes for this step</summary><textarea id="notes" aria-label="Notes for this step" placeholder="Anything to revisit…"></textarea><small>Stored in this browser when available. Export from Review details to keep a copy.</small></details>`;
+    return `<div class="step-overview"><div class="page-intro"><div class="eyebrow">${escape(titleWithoutNumber(layer.group.title))} / Step ${layers.indexOf(layer) + 1}</div><h1>${escape(layer.title)}</h1><p class="lead">${escape(layer.summary || layer.group.summary)}</p></div><label class="viewed-control"><input class="checkbox checkbox-sm checkbox-primary" id="viewed" type="checkbox" ${state.viewed.includes(layer.id) ? 'checked' : ''}> Mark as reviewed</label></div><details class="context-details"><summary>Why these files belong together & what to check</summary><p>${escape(layer.group.summary)}</p>${bulletList(layer.checks)}</details>${flow(layer.flow)}${renderWalkthroughFiles(layer)}<details class="local-notes"><summary>Your notes for this step</summary><textarea id="notes" aria-label="Notes for this step" placeholder="Anything to revisit…"></textarea><small>Stored in this browser when available. Export from Review details to keep a copy.</small></details>`;
   }
 
   function renderFiles() {
@@ -500,6 +509,7 @@
     if (state.view === 'files') { categoryFilter = 'All'; $('search').value = ''; render(); } else select(layer.id, false);
     const trigger = commentID ? [...document.querySelectorAll('.comment-trigger')].find(button => button.dataset.notes.split(' ').includes(commentID)) : null;
     const target = trigger || $(hunk);
+    for (let parent = target?.parentElement; parent; parent = parent.parentElement) { if (parent.tagName === 'DETAILS') parent.open = true; }
     target?.scrollIntoView({block:'center', behavior:'instant'});
     if (trigger) { trigger.focus({preventScroll:true}); openComment(trigger); }
   }
@@ -509,6 +519,14 @@
     $('details-dialog').showModal();
   }
 
+  $('content').addEventListener('toggle', event => {
+    const panel = event.target;
+    if (!panel.matches('.related-tests') || !panel.isConnected) return;
+    if (panel.open) { expandedTests.add(panel.dataset.testPanel); return; }
+    expandedTests.delete(panel.dataset.testPanel);
+    if (panel.contains(commentAnchor)) closeComments();
+    if (selection && panel.contains($(selection.hunk))) clearSelection();
+  }, true);
   document.addEventListener('click', async event => {
     const image = event.target.closest('[data-expand-image]');
     if (image) { expandImage(image); return; }

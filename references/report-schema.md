@@ -213,3 +213,24 @@ Copy for comment is plain paste-ready feedback for GitHub/Linear; Copy for LLMs
 adds captured source context. Both include the complete structured QA reproduction.
 General comments have no fabricated source range. Copy all includes general,
 anchored and resolved user comments plus step notes, and excludes generated comments.
+
+## Related tests
+
+Test files remain ordinary `items` with hunk summaries, retaining complete
+coverage. Each layer can supply `related_tests` to present them in collapsed
+panels beside their owning implementation:
+
+```json
+{"related_tests": [{"title": "Related tests · Reply acceptance",
+  "summary": "Accepted replies create one event; held mail and retries create none.",
+  "entities": ["f1", "f2"], "files": ["f3", "f4"]}]}
+```
+
+References are file IDs from that layer's items. Entities identify one or more
+related implementation files; files contains distinct test files, each assigned
+to exactly one panel in the layer. When present, include every test item in a
+panel. The renderer inserts each panel after its last entity, without duplicating
+its test cards elsewhere in the step. Hunk coverage rules still apply. Title and
+summary describe the concept and concrete behaviors protected, not test paths or
+execution results. Expanded panels use the existing diff UI. All changes is
+unaffected. Legacy layers without this metadata retain their original layout.

@@ -175,6 +175,15 @@ module ReviewSeries
           next if file['metadata_recheck']
           item.merge('file' => file['file'], 'summaries' => summaries)
         end
+        if layer.key?('related_tests')
+          remaining = layer['items'].map { |item| item['file'] }
+          layer['related_tests'] = layer['related_tests'].filter_map do |panel|
+            refs = %w[entities files].to_h { |key| [key, panel[key].filter_map { |fid| lookup.dig(fid, 'file') }.select { |fid| remaining.include?(fid) }] }
+            panel.merge(refs) if refs.values.all?(&:any?)
+          end
+          # Changed test ranges need newly authored summaries and associations.
+          layer.delete('related_tests') if layer['related_tests'].empty?
+        end
       end
     end
     review['comments'] = Array(review['comments']).filter_map do |comment|
@@ -261,6 +270,13 @@ module ReviewSeries
     end
     review['groups'].each { |g| g['layers'].reject! { |l| l['items'].empty? } }
     review['groups'].reject! { |g| g['layers'].empty? }
+    if update.key?('group_order')
+      order = update['group_order']
+      unless order.is_a?(Array) && order.uniq == order && order.sort == review['groups'].map { |group| group['id'] }.sort
+        raise ArgumentError, 'Group order must list every current group ID exactly once'
+      end
+      review['groups'].sort_by! { |group| order.index(group['id']) }
+    end
     ids = review['groups'].flat_map { |g| [g.fetch('id')] + g['layers'].map { |l| l.fetch('id') } }
     raise ArgumentError, 'Group/layer IDs must be unique' unless ids.uniq == ids
     review

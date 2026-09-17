@@ -203,3 +203,15 @@ separate image file at runtime. Preserve captions as escaped plain text. Check
 click and Enter/Space activation, image zoom/pan, Escape and close-button dismissal,
 focus return, and narrow viewport sizing. Review shortcuts must not change the
 underlying step while the viewer is open. Videos retain their inline controls.
+
+## Related tests in the walkthrough
+
+Keep tests in their concept's layer, inside native details panels collapsed by
+default and inserted immediately after the last associated entity. The closed
+summary names the concept and the important outcomes verified, with quiet file
+and changed-range counts. Do not enumerate paths or imply a test run. Opening
+reveals the usual initially expanded file cards, real unified/split diffs,
+comments and line selection. All changes shows test files directly. Hunk/comment
+navigation must open closed ancestors before scrolling/focusing its target.
+Check keyboard disclosure, a panel shared by multiple entities, comment links,
+source-range selection inside tests and responsive layout.

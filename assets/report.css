@@ -96,6 +96,13 @@
 .expanded-diff-header .eyebrow { margin-bottom: 6px; }
 .expanded-diff-body { flex: 1; min-height: 0; overflow: auto; padding: 16px; }
 .expanded-diff-body .diff-scroll { overflow: visible; }
+.related-tests { margin: 16px 0 24px; border: 1px solid var(--line); border-radius: 8px; background: #fafbfd; }
+.related-tests > summary { padding: 16px 20px; cursor: pointer; }
+.related-tests-heading { display: inline; font-weight: 650; }
+.related-tests-heading .badge { margin-left: 8px; font-weight: 400; }
+.related-tests-summary { display: block; margin: 8px 0 0 16px; font-size: 14px; line-height: 1.6; color: var(--muted); }
+.related-tests-content { padding: 0 16px 8px; }
+.related-tests .file-card { background: #fff; }
 button.thread-source { display: flex; width: calc(100% - 56px); justify-content: space-between; padding: 12px 14px; text-align: left; }
 @media(max-width:767px) { .expanded-diff-header { padding: 16px 56px 14px 16px; } .expanded-diff-header h2 { font-size: 15px; } .expanded-diff-body { padding: 8px; } }
 
