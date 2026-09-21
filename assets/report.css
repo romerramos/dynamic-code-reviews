@@ -199,11 +199,15 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 .file-card:not([open]) > summary { border-bottom: 0; }
 .step-progress { flex-shrink: 0; margin-top: 4px; }
 .sidebar .group-progress { display: block; margin: 5px 0 0 15px; font-size: 11px; font-weight: 400; letter-spacing: 0; text-transform: none; }
+.sidebar nav .menu > li { width: 100%; min-width: 0; }
 .sidebar nav .nav-files { display: block; margin: 4px 0 12px 12px; padding: 0 0 0 10px; border-left: 1px solid var(--line); list-style: none; }
 .sidebar nav .nav-files::before { display: none; }
 .sidebar nav .nav-files li { display: block; min-width: 0; padding: 0; }
 .sidebar nav button.nav-file { display: flex; align-items: flex-start; gap: 7px; min-height: 32px; padding: 6px; margin: 0; font: 11px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; border-radius: 5px; }
-.nav-file > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.nav-file-label { display: block; flex: 1; min-width: 0; overflow: hidden; }
+.nav-file-name, .sidebar nav .nav-file-directory { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
+.nav-file-name { font-size: 12px; font-weight: 500; }
+.sidebar nav .nav-file-directory { margin-top: 1px; font-size: 10px; line-height: 1.5; color: var(--muted); }
 .file-status { flex: 0 0 14px; width: 14px; height: 14px; margin-top: 2px; border: 1px solid #b9c0cc; border-radius: 3px; }
 .nav-file.is-viewed .file-status { color: #28713e; border-color: #92b49c; background: #e9f5ed; }
 .file-status .review-icon { width: 12px; height: 12px; vertical-align: top; }

@@ -64,7 +64,10 @@
         const completed = progress(layer.items);
         const links = [...new Set(layer.items.map(item => item.file))].map(id => {
           const file = files.get(id);
-          return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}"><span class="file-status" aria-hidden="true">${fileViewed(file) ? icon('check') : ''}</span><span>${escape(file.path)}</span></button></li>`;
+          const slash = file.path.lastIndexOf('/');
+          const filename = file.path.slice(slash + 1);
+          const directory = slash < 0 ? '' : file.path.slice(0, slash);
+          return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" title="${escape(file.path)}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}"><span class="file-status" aria-hidden="true">${fileViewed(file) ? icon('check') : ''}</span><span class="nav-file-label"><span class="nav-file-name">${escape(filename)}</span>${directory ? `<small class="nav-file-directory">${escape(directory)}</small>` : ''}</span></button></li>`;
         }).join('');
         html += `<li><button data-view="${layer.id}" aria-current="${state.view === layer.id ? 'page' : 'false'}"><span class="step-number">${completed.total && completed.viewed === completed.total ? icon('check') : layers.indexOf(layer) + 1}</span><span class="step-body"><strong>${escape(layer.title)}</strong><small>${progressText(completed)}${count ? ` · ${count} comments` : ''}${revisionState ? ` · ${escape(revisionState)}` : ''}</small></span></button><ul class="nav-files">${links}</ul></li>`;
       });

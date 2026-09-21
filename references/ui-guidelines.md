@@ -23,8 +23,11 @@ from its original snapshot and analysis when refreshing presentation only.
   background tile. Do not substitute emoji or regenerate the logo per review.
 - Desktop sidebar: 320px, increasing to 340px on wide screens. Each step occupies
   the available sidebar width and wraps its title. Keep viewed-file counts and comment
-  counts subordinate to the title. List clickable full file paths beneath each
-  step, including related test files; paths wrap inside the sidebar. File links
+  counts subordinate to the title. List clickable filenames beneath each
+  step, including related test files, with their directory in a smaller subtitle.
+  Keep both lines unbroken and truncate with ellipsis inside the sidebar; omit
+  the subtitle for root files. Expose the full path in a native tooltip and the
+  accessible button label. File links
   open their step, expand the file and any containing test panel, and focus its
   header. Group disclosure state persists, while search reveals matching groups. Do not shrink step buttons into narrow pills.
 - Code is the main surface. Split tables use two equal code columns, separate
