@@ -189,3 +189,23 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 #my-review .section-heading{flex-wrap:wrap;gap:16px}
 #my-review .section-heading p{font-size:14px;max-width:60ch;line-height:1.6}
 .thread-footer{flex-wrap:wrap;gap:12px}
+
+/* File progress is shared by the walkthrough and All changes. */
+.file-card > summary { flex-wrap: wrap; }
+.file-card > summary .filename { flex-basis: 200px; }
+.file-viewed { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); white-space: nowrap; cursor: pointer; }
+.file-viewed input { flex-shrink: 0; }
+.file-card.is-viewed > summary { background: #f3f8f4; }
+.file-card:not([open]) > summary { border-bottom: 0; }
+.step-progress { flex-shrink: 0; margin-top: 4px; }
+.sidebar .group-progress { display: block; margin: 5px 0 0 15px; font-size: 11px; font-weight: 400; letter-spacing: 0; text-transform: none; }
+.sidebar nav .nav-files { display: block; margin: 4px 0 12px 12px; padding: 0 0 0 10px; border-left: 1px solid var(--line); list-style: none; }
+.sidebar nav .nav-files::before { display: none; }
+.sidebar nav .nav-files li { display: block; min-width: 0; padding: 0; }
+.sidebar nav button.nav-file { display: flex; align-items: flex-start; gap: 7px; min-height: 32px; padding: 6px; margin: 0; font: 11px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; border-radius: 5px; }
+.nav-file > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.file-status { flex: 0 0 14px; width: 14px; height: 14px; margin-top: 2px; border: 1px solid #b9c0cc; border-radius: 3px; }
+.nav-file.is-viewed .file-status { color: #28713e; border-color: #92b49c; background: #e9f5ed; }
+.file-status .review-icon { width: 12px; height: 12px; vertical-align: top; }
+@media(max-width: 767px) { .file-card > summary { padding: 11px; gap: 8px; } .file-card > summary .filename { flex-basis: calc(100% - 45px); } }
+@media print { .file-viewed, .step-progress { display: none; } }

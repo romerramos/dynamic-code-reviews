@@ -452,11 +452,20 @@ module ReviewSeries
     end
   end
 
-  def refresh(repo:, name:, **_unused)
+  def refresh(repo:, name:, record: false, **_unused)
     path = directory(repo, name)
     locked(path) do
       history = manifest(path)
-      refresh_views(path, history)
+      if record
+        payload = latest(path, history)
+        review = payload.fetch('review')
+        increment = copy(review.fetch('history')).except('series', 'revision', 'entries', 'preview', 'origin_mode')
+        increment.merge!('summary' => 'Presentation refreshed; captured code, review conclusions and original validation evidence are unchanged.',
+                         'files' => [], 'groups' => {}, 'changed_context' => [], 'inspected_ranges' => 0)
+        append(path, history, payload.fetch('snapshot'), review, increment)
+      else
+        refresh_views(path, history)
+      end
       File.join(path, 'current.html')
     end
   end
@@ -467,7 +476,7 @@ module ReviewSeries
     parser = OptionParser.new do |p|
       p.banner = 'ruby series.rb start|prepare|publish|qa|refresh|list [options]'
       %w[repo name report snapshot review out head base prepared update revision].each { |key| p.on("--#{key} VALUE") { |value| options[key.to_sym] = value } }
-      p.on('--record', 'Save an intentional reassessment without code changes') { options[:record] = true }
+      p.on('--record', 'Save an intentional reassessment or a presentation-only refresh revision') { options[:record] = true }
     end
     parser.parse!(argv)
     raise ArgumentError, parser.to_s unless %w[start prepare publish qa refresh list].include?(command)

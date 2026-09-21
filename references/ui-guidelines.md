@@ -22,8 +22,11 @@ from its original snapshot and analysis when refreshing presentation only.
   code-and-checkmark mark in the header; keep it crisp at 38px, without a second
   background tile. Do not substitute emoji or regenerate the logo per review.
 - Desktop sidebar: 320px, increasing to 340px on wide screens. Each step occupies
-  the available sidebar width and wraps its title. Keep file counts and comment
-  counts subordinate to the title. Do not shrink step buttons into narrow pills.
+  the available sidebar width and wraps its title. Keep viewed-file counts and comment
+  counts subordinate to the title. List clickable full file paths beneath each
+  step, including related test files; paths wrap inside the sidebar. File links
+  open their step, expand the file and any containing test panel, and focus its
+  header. Group disclosure state persists, while search reveals matching groups. Do not shrink step buttons into narrow pills.
 - Code is the main surface. Split tables use two equal code columns, separate
   60px line-number gutters and one shared row per pair. Empty opposite cells have
   no invented source numbers. Additions and deletions retain their source-side
@@ -44,7 +47,7 @@ from its original snapshot and analysis when refreshing presentation only.
 - All changes displays actual full-file diffs under responsibility headings and
   filter buttons. Use `ReviewTools.category` plus explicit `file_categories`
   overrides from the review. Design/UI excludes behavior code even when the
-  behavior affects the UI. Keep diff cards collapsible, but initially expanded;
+  behavior affects the UI. Keep diff cards collapsible, initially expanded for unread files;
   do not reduce this view to links back to walkthrough steps.
 - Series revisions also show a compact revision selector, a one-sentence revision update. Detailed updated/reused group labels and finding lifecycle states belong in Review details. Unanchored concerns needing rechecking must not receive a
   green clean-review verdict. Original snapshot HTML stays immutable.
@@ -215,3 +218,23 @@ comments and line selection. All changes shows test files directly. Hunk/comment
 navigation must open closed ancestors before scrolling/focusing its target.
 Check keyboard disclosure, a panel shared by multiple entities, comment links,
 source-range selection inside tests and responsive layout.
+
+## Per-file review progress
+
+Each file header has a labelled Viewed checkbox. Checking it collapses the file;
+unchecking reopens it. Manual expansion/collapse does not change viewed status
+and survives navigation and reload. Progress counts unique file paths across the
+whole snapshot, including files without text hunks, and stays shared between
+walkthrough steps and All changes. Step/group counts derive from those file
+marks, with no whole-step checkbox. Existing step marks migrate only when every
+step containing a file was marked reviewed. Notes and comments remain intact.
+
+Verify partial group completion, mark/unmark, manual disclosure, reload, layout
+switching, All changes and search. Check a file shared by multiple steps counts
+once overall; related tests remain reachable through sidebar file links. Finding
+navigation must reveal collapsed files without clearing their viewed mark. Use
+keyboard controls and check narrow-width wrapping and checkbox focus.
+
+`series.rb refresh --record` creates an explicitly requested presentation revision
+without collecting source or altering conclusions or QA evidence. The default
+refresh still updates browsing pages only; original snapshots stay immutable.

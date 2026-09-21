@@ -30,6 +30,22 @@ globalThis.ReviewTools = (() => {
       return sections;
     });
   }
+  // Old reports stored completed layers. A file split across layers is complete
+  // only when every owning layer was reviewed; new marks always use full paths.
+  function viewedFiles(snapshot, layers, saved) {
+    if (Array.isArray(saved.viewedFiles)) {
+      return snapshot.files.filter(file => saved.viewedFiles.includes(file.path)).map(file => file.path);
+    }
+    const viewed = Array.isArray(saved.viewed) ? saved.viewed : [];
+    return snapshot.files.filter(file => {
+      const owners = layers.filter(layer => layer.items.some(item => item.file === file.id));
+      return owners.length > 0 && owners.every(layer => viewed.includes(layer.id));
+    }).map(file => file.path);
+  }
+  function fileProgress(paths, viewed) {
+    const unique = [...new Set(paths)];
+    return {total:unique.length, viewed:unique.filter(path => viewed.includes(path)).length};
+  }
   function anchor(snapshot, comment) {
     const file = snapshot.files.find(file => file.hunks.some(hunk => hunk.id === comment.hunk));
     const hunk = file?.hunks.find(hunk => hunk.id === comment.hunk);
@@ -105,5 +121,5 @@ globalThis.ReviewTools = (() => {
     });
     return {comments, findings:remaining};
   }
-  return {categories, category, walkthroughSections, anchor, sourceText, commentText, reviewText, overviewFeedback, comparisonText, evidenceFlows, flowOwner, commentBody, postingText};
+  return {categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, sourceText, commentText, reviewText, overviewFeedback, comparisonText, evidenceFlows, flowOwner, commentBody, postingText};
 })();

@@ -212,6 +212,23 @@ module SeriesChecks
         end
       end
     end
+    checks['recorded presentation refresh preserves captured code, evidence and immutable history'] = lambda do
+      ReviewChecks.fixture do |root, _commit|
+        first = ReviewSeries.start(repo: root, name: 'presentation', report: initial(root))
+        before = File.binread(first)
+        original = DynamicReviews.extract(first)
+        # A presentation revision must not silently collect newer working code.
+        File.write(File.join(root, 'sample.rb'), "unreviewed local change\n")
+        current = ReviewSeries.refresh(repo: root, name: 'presentation', record: true)
+        after = DynamicReviews.extract(current)
+        assert(after['snapshot'] == original['snapshot'], 'Presentation refresh recollected code')
+        assert(after['review'].reject { |k, _| k == 'history' } == original['review'].reject { |k, _| k == 'history' }, 'Presentation refresh changed analysis or evidence')
+        assert(File.binread(first) == before, 'Presentation refresh rewrote original snapshot')
+        assert(after['review']['history']['revision'] == 2, 'Presentation revision not recorded')
+        assert(after['review']['history']['finding_states'] == original['review']['history']['finding_states'], 'Finding state was lost')
+        assert(ReviewSeries.manifest(File.dirname(current))['revisions'].length == 2, 'Presentation history missing')
+      end
+    end
     checks.each { |description, check| check.call; puts "PASS #{description}" }
     puts "#{checks.length} series checks passed"
   end

@@ -15,7 +15,9 @@ The helpers do not call an LLM or generate review conclusions on their own.
 - Unified/split comparison, syntax highlighting and compact range comments.
 - Conventional Comments types, blocking badges, local Resolve/Reopen and
   Copy for LLMs with file, source range and code context.
-- Personal line/range comments, combined copying and browser-local progress.
+- Personal line/range comments, combined copying, and persistent per-file viewed
+  progress. File headers collapse when marked viewed; sidebar file paths jump
+  directly to their diffs and show where a partially reviewed group stands.
 - Immutable review snapshots and refreshable browsing pages with complete revision
   navigation. Incremental review
   reuses explanations only when the captured ranges and recorded context match.

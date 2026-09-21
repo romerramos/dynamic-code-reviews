@@ -102,3 +102,16 @@ assert.deepEqual(walkthrough[2].items.map(item=>item.file), ['capture-test','sen
 assert.deepEqual(walkthrough.flatMap(section=>section.items || [section.item]).map(item=>item.file).sort(), testLayer.items.map(item=>item.file).sort());
 assert.deepEqual(tools.walkthroughSections({items:testLayer.items}), testLayer.items.map(item=>({item})));
 console.log('PASS related tests follow their last entity and retain every file exactly once');
+
+const progressSnapshot = {files:[{id:'a',path:'app/shared.rb'},{id:'b',path:'test/shared_test.rb'},{id:'c',path:'docs/notes.md'}]};
+const progressLayers = [{id:'g0l0',items:[{file:'a'},{file:'b'}]},{id:'g1l0',items:[{file:'a'},{file:'c'}]}];
+assert.deepEqual(tools.viewedFiles(progressSnapshot,progressLayers,{viewed:['g0l0']}), ['test/shared_test.rb']);
+assert.deepEqual(tools.viewedFiles(progressSnapshot,progressLayers,{viewed:['g0l0','g1l0']}), progressSnapshot.files.map(f=>f.path));
+assert.deepEqual(tools.viewedFiles(progressSnapshot,progressLayers,{viewed:['g0l0'],viewedFiles:[]}), []);
+const restored = JSON.parse(JSON.stringify({viewedFiles:['app/shared.rb','app/shared.rb','no-longer-present.rb'],fileOpen:{'app/shared.rb':false},notes:{g0l0:'Resume here'}}));
+const viewed = tools.viewedFiles(progressSnapshot,progressLayers,restored);
+assert.deepEqual(viewed,['app/shared.rb']);
+assert.deepEqual(tools.fileProgress(['app/shared.rb','app/shared.rb','test/shared_test.rb'],viewed),{total:2,viewed:1});
+assert.deepEqual(tools.fileProgress([],viewed),{total:0,viewed:0});
+assert.equal(restored.notes.g0l0,'Resume here');
+console.log('PASS file progress survives storage, deduplicates shared files and migrates only fully reviewed legacy files');

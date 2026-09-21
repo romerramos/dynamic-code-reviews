@@ -14,7 +14,13 @@
   const storageKey = `dynamic-review:${snapshot.fingerprint}${review.history ? `:${review.history.series}:${review.history.revision}` : ""}`;
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { /* file:// storage may be disabled */ }
-  const state = {view:'overview', viewed:[], notes:{}, personalComments:[], resolvedComments:[], ...saved};
+  const state = {view:'overview', notes:{}, personalComments:[], resolvedComments:[], fileOpen:{}, groupOpen:{}, ...saved};
+  state.viewedFiles = ReviewTools.viewedFiles(snapshot, layers, saved);
+  delete state.viewed;
+  const fileViewed = file => state.viewedFiles.includes(file.path);
+  const fileOpen = file => Object.hasOwn(state.fileOpen, file.path) ? state.fileOpen[file.path] : !fileViewed(file);
+  const progress = items => ReviewTools.fileProgress(items.map(item => files.get(item.file).path), state.viewedFiles);
+  const progressText = value => `${value.viewed} of ${value.total} files viewed`;
   state.resolvedComments = Array.isArray(state.resolvedComments) ? state.resolvedComments.filter(id => typeof id === 'string') : [];
   state.personalComments = Array.isArray(state.personalComments) ? state.personalComments.filter(comment => typeof comment.id === 'string' && comment.id.startsWith('mine-') && typeof comment.subject === 'string' && (comment.general === true || ReviewTools.anchor(snapshot, comment))) : [];
   function refreshComments() { comments = [...generatedComments.map(comment => ({...comment, personal:false})), ...state.personalComments.map(comment => ({...comment, personal:true}))].map(comment => ({...comment, resolved:state.resolvedComments.includes(comment.id)})); }
@@ -32,9 +38,9 @@
   function persist() {
     let stored = true;
     try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch { stored = false; }
-    $('progress').textContent = `${state.viewed.length} of ${layers.length} steps reviewed`;
-    $('progress-bar').max = Math.max(1, layers.length);
-    $('progress-bar').value = state.viewed.length;
+    $('progress').textContent = progressText({viewed:state.viewedFiles.length, total:files.size});
+    $('progress-bar').max = Math.max(1, files.size);
+    $('progress-bar').value = state.viewedFiles.length;
     return stored;
   }
   const bulletList = items => items?.length ? `<ul>${items.map(item => `<li>${escape(item)}</li>`).join('')}</ul>` : '';
@@ -46,14 +52,21 @@
   function renderNavigation() {
     const query = $('search').value.trim().toLowerCase();
     let html = `<ul class="menu"><li><button data-view="overview" aria-current="${state.view === 'overview' ? 'page' : 'false'}"><span class="step-number">☷</span><span class="step-body"><strong>Overview</strong><small>Comments & evidence</small></span></button></li><li><button data-view="files" aria-current="${state.view === 'files' ? 'page' : 'false'}"><span class="step-number">⌘</span><span class="step-body"><strong>All changes</strong><small>Diffs by responsibility · ${files.size} files</small></span></button></li></ul>`;
-    review.groups.forEach(group => {
-      const matching = layers.filter(layer => layer.group === group && `${layer.title} ${layer.items.map(item => files.get(item.file).path).join(' ')}`.toLowerCase().includes(query));
+    review.groups.forEach((group, groupIndex) => {
+      const matching = layers.filter(layer => layer.group === group && `${group.title} ${layer.title} ${layer.items.map(item => files.get(item.file).path).join(' ')}`.toLowerCase().includes(query));
       if (!matching.length) return;
-      html += `<details open><summary>${escape(titleWithoutNumber(group.title))}</summary><ul class="menu">`;
+      const groupKey = group.id || `group-${groupIndex}`;
+      const groupProgress = progress(group.layers.flatMap(layer => layer.items));
+      html += `<details data-nav-group="${escape(groupKey)}" ${query || state.groupOpen[groupKey] !== false ? 'open' : ''}><summary>${escape(titleWithoutNumber(group.title))}<small class="group-progress">${progressText(groupProgress)}</small></summary><ul class="menu">`;
       matching.forEach(layer => {
         const count = layerComments(layer).length;
         const revisionState = review.history?.groups?.[layer.group.id];
-        html += `<li><button data-view="${layer.id}" aria-current="${state.view === layer.id ? 'page' : 'false'}"><span class="step-number">${state.viewed.includes(layer.id) ? '✓' : layers.indexOf(layer) + 1}</span><span class="step-body"><strong>${escape(layer.title)}</strong><small>${new Set(layer.items.map(item => item.file)).size} files${count ? ` · ${count} comments` : ''}${revisionState ? ` · ${escape(revisionState)}` : ''}</small></span></button></li>`;
+        const completed = progress(layer.items);
+        const links = [...new Set(layer.items.map(item => item.file))].map(id => {
+          const file = files.get(id);
+          return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}"><span class="file-status" aria-hidden="true">${fileViewed(file) ? icon('check') : ''}</span><span>${escape(file.path)}</span></button></li>`;
+        }).join('');
+        html += `<li><button data-view="${layer.id}" aria-current="${state.view === layer.id ? 'page' : 'false'}"><span class="step-number">${completed.total && completed.viewed === completed.total ? icon('check') : layers.indexOf(layer) + 1}</span><span class="step-body"><strong>${escape(layer.title)}</strong><small>${progressText(completed)}${count ? ` · ${count} comments` : ''}${revisionState ? ` · ${escape(revisionState)}` : ''}</small></span></button><ul class="nav-files">${links}</ul></li>`;
       });
       html += '</ul></details>';
     });
@@ -263,7 +276,7 @@
     const added = changes.filter(line => line.kind === 'add').length;
     const removed = changes.filter(line => line.kind === 'del').length;
     const table = renderDiffTable(file, hunks, item.summaries);
-    return `<details class="file-card" open><summary><span class="file-icon" aria-hidden="true">&lt;/&gt;</span><span class="filename">${escape(file.path)}</span><span class="badge success">+${added}</span><span class="badge blocking">−${removed}</span></summary>${item.summary || file.note ? `<div class="file-summary">${escape(item.summary || '')}${file.note ? ` · ${escape(file.note)}` : ''}</div>` : ''}${hunks.length ? table : `<div class="file-summary"><pre>${escape(file.patch || 'No text diff available.')}</pre></div>`}</details>`;
+    return `<details class="file-card ${fileViewed(file) ? 'is-viewed' : ''}" data-file="${file.id}" ${fileOpen(file) ? 'open' : ''}><summary><span class="file-icon" aria-hidden="true">&lt;/&gt;</span><span class="filename">${escape(file.path)}</span><span class="badge success">+${added}</span><span class="badge blocking">−${removed}</span><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" aria-label="${escape(`Mark ${file.path} as viewed`)}" ${fileViewed(file) ? 'checked' : ''}> Viewed</label></summary>${item.summary || file.note ? `<div class="file-summary">${escape(item.summary || '')}${file.note ? ` · ${escape(file.note)}` : ''}</div>` : ''}${hunks.length ? table : `<div class="file-summary"><pre>${escape(file.patch || 'No text diff available.')}</pre></div>`}</details>`;
   }
 
   const commentTypes = {
@@ -446,7 +459,7 @@
   }
 
   function renderStep(layer) {
-    return `<div class="step-overview"><div class="page-intro"><div class="eyebrow">${escape(titleWithoutNumber(layer.group.title))} / Step ${layers.indexOf(layer) + 1}</div><h1>${escape(layer.title)}</h1><p class="lead">${escape(layer.summary || layer.group.summary)}</p></div><label class="viewed-control"><input class="checkbox checkbox-sm checkbox-primary" id="viewed" type="checkbox" ${state.viewed.includes(layer.id) ? 'checked' : ''}> Mark as reviewed</label></div><details class="context-details"><summary>Why these files belong together & what to check</summary><p>${escape(layer.group.summary)}</p>${bulletList(layer.checks)}</details>${flow(layer.flow)}${renderWalkthroughFiles(layer)}<details class="local-notes"><summary>Your notes for this step</summary><textarea id="notes" aria-label="Notes for this step" placeholder="Anything to revisit…"></textarea><small>Stored in this browser when available. Export from Review details to keep a copy.</small></details>`;
+    return `<div class="step-overview"><div class="page-intro"><div class="eyebrow">${escape(titleWithoutNumber(layer.group.title))} / Step ${layers.indexOf(layer) + 1}</div><h1>${escape(layer.title)}</h1><p class="lead">${escape(layer.summary || layer.group.summary)}</p></div><span class="step-progress badge neutral">${progressText(progress(layer.items))}</span></div><details class="context-details"><summary>Why these files belong together & what to check</summary><p>${escape(layer.group.summary)}</p>${bulletList(layer.checks)}</details>${flow(layer.flow)}${renderWalkthroughFiles(layer)}<details class="local-notes"><summary>Your notes for this step</summary><textarea id="notes" aria-label="Notes for this step" placeholder="Anything to revisit…"></textarea><small>Stored in this browser when available. Export from Review details to keep a copy.</small></details>`;
   }
 
   function renderFiles() {
@@ -479,11 +492,6 @@
     if (layer) {
       $('notes').value = state.notes[layer.id] || '';
       $('notes').addEventListener('input', event => { state.notes[layer.id] = event.target.value; persist(); });
-      $('viewed').addEventListener('change', event => {
-        state.viewed = state.viewed.filter(id => id !== layer.id);
-        if (event.target.checked) state.viewed.push(layer.id);
-        persist(); renderNavigation();
-      });
     }
   }
 
@@ -519,8 +527,44 @@
     $('details-dialog').showModal();
   }
 
+  $('navigation').addEventListener('toggle', event => {
+    if (!event.target.matches('[data-nav-group]') || !event.target.isConnected || $('search').value.trim()) return;
+    state.groupOpen[event.target.dataset.navGroup] = event.target.open;
+    persist();
+  }, true);
+  $('content').addEventListener('change', event => {
+    const control = event.target.closest('[data-file-viewed]');
+    if (!control) return;
+    const file = files.get(control.dataset.fileViewed);
+    state.viewedFiles = state.viewedFiles.filter(path => path !== file.path);
+    if (control.checked) state.viewedFiles.push(file.path);
+    state.fileOpen[file.path] = !control.checked;
+    closeComments(); clearSelection();
+    document.querySelectorAll('.file-card').forEach(card => {
+      if (card.dataset.file !== file.id) return;
+      card.open = !control.checked;
+      card.classList.toggle('is-viewed', control.checked);
+      card.querySelector('[data-file-viewed]').checked = control.checked;
+    });
+    const layer = layers.find(layer => layer.id === state.view);
+    const count = document.querySelector('.step-progress');
+    if (count && layer) count.textContent = progressText(progress(layer.items));
+    if (!persist()) toast('Browser storage is unavailable. Export local notes to keep your file progress.');
+    const scroll = $('navigation').parentElement.scrollTop;
+    renderNavigation();
+    $('navigation').parentElement.scrollTop = scroll;
+  });
   $('content').addEventListener('toggle', event => {
     const panel = event.target;
+    if (panel.matches('.file-card') && panel.isConnected) {
+      state.fileOpen[files.get(panel.dataset.file).path] = panel.open;
+      if (!panel.open) {
+        if (panel.contains(commentAnchor)) closeComments();
+        if (selection && panel.contains($(selection.hunk))) clearSelection();
+      }
+      persist();
+      return;
+    }
     if (!panel.matches('.related-tests') || !panel.isConnected) return;
     if (panel.open) { expandedTests.add(panel.dataset.testPanel); return; }
     expandedTests.delete(panel.dataset.testPanel);
@@ -528,6 +572,19 @@
     if (selection && panel.contains($(selection.hunk))) clearSelection();
   }, true);
   document.addEventListener('click', async event => {
+    // Keep the checkbox independent from the native disclosure summary.
+    if (event.target.closest('.file-viewed')) { event.stopPropagation(); return; }
+    const fileLink = event.target.closest('[data-file-link]');
+    if (fileLink) {
+      const file = files.get(fileLink.dataset.fileLink);
+      state.fileOpen[file.path] = true;
+      select(fileLink.dataset.fileLayer, false);
+      const card = document.querySelector(`.file-card[data-file="${file.id}"]`);
+      for (let parent = card?.parentElement; parent; parent = parent.parentElement) if (parent.tagName === 'DETAILS') parent.open = true;
+      card?.scrollIntoView({block:'start', behavior:'instant'});
+      card?.querySelector('summary').focus({preventScroll:true});
+      return;
+    }
     const image = event.target.closest('[data-expand-image]');
     if (image) { expandImage(image); return; }
     const code = event.target.closest('[data-open-code]');
