@@ -293,3 +293,5 @@ Keep the file-reader header compact: group, file position, changed-section arrow
 Keep header controls clustered rather than stretching them across the available width. Copy path and About this file sit directly beside the path. Make Mark viewed a visibly clickable checkbox action, with a separate Next file button; checking it must not advance automatically. Wrap these clusters naturally on mobile.
 
 Reading mode is a browser preference separate from the current destination. Overview and All changes must not change File by file / Walkthrough. Persist explicit mode choices in local storage and apply them when returning to a review group or file; default to File by file when no preference is saved.
+
+Position File by file review notes beside their own changed-line marker, flipping above or to the left when space is tight and clamping to the viewport. Reposition on scroll and resize, and close when the marker leaves the code viewport. Do not park notes in a screen corner.

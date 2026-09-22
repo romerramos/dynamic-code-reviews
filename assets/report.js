@@ -301,7 +301,7 @@
         const id = index === 0 ? hunk.id : `${hunk.id}-change-${index + 1}`;
         rows[rowIndex] = rows[rowIndex].replace('<tr class="code-row">', `<tr class="code-row change-anchor" id="${id}">`);
       });
-      const note = `<button class="review-note-trigger" popovertarget="note-${hunk.id}" aria-label="Read review note for this change" title="Review note">${icon('message-square')}</button><aside id="note-${hunk.id}" class="review-note-popover" popover="auto" aria-label="Review note"><button class="btn btn-sm btn-ghost" popovertarget="note-${hunk.id}" popovertargetaction="hide" aria-label="Close review note">✕</button><strong>Review note</strong><p>${escape(summary || 'Changed section')}</p><small>Before ${range('old')} · After ${range('new')}</small></aside>`;
+      const note = `<button class="review-note-trigger" aria-expanded="false" aria-haspopup="dialog" popovertarget="note-${hunk.id}" aria-label="Read review note for this change" title="Review note">${icon('message-square')}</button><aside id="note-${hunk.id}" class="review-note-popover" popover="auto" role="dialog" aria-label="Review note"><button class="btn btn-sm btn-ghost" popovertarget="note-${hunk.id}" popovertargetaction="hide" aria-label="Close review note">✕</button><strong>Review note</strong><p>${escape(summary || 'Changed section')}</p><small>Before ${range('old')} · After ${range('new')}</small></aside>`;
       rows[firstChange] = rows[firstChange]?.replace(/(<td class="code[^>]*>)/, `$1${note}`);
     }
     return heading + rows.join('');
@@ -843,6 +843,38 @@
     closeComments();
     if (restoreFocus) anchor?.focus({preventScroll:true});
   });
+  let activeReviewNote = null;
+  function positionReviewNote() {
+    if (!activeReviewNote?.trigger.isConnected || !activeReviewNote.panel.matches(':popover-open')) return;
+    const marker = activeReviewNote.trigger.getBoundingClientRect();
+    const viewport = $('content').getBoundingClientRect();
+    if (marker.bottom < viewport.top || marker.top > viewport.bottom) { activeReviewNote.panel.hidePopover(); return; }
+    const panel = activeReviewNote.panel.getBoundingClientRect();
+    const gap = 8, edge = 12;
+    const left = marker.left - panel.width - gap >= edge ? marker.left - panel.width - gap
+      : marker.right + panel.width + gap <= innerWidth - edge ? marker.right + gap
+      : Math.max(edge, Math.min(marker.left, innerWidth - panel.width - edge));
+    const top = marker.bottom + gap + panel.height <= innerHeight - edge ? marker.bottom + gap
+      : marker.top - panel.height - gap >= edge ? marker.top - panel.height - gap
+      : Math.max(edge, Math.min(marker.top, innerHeight - panel.height - edge));
+    activeReviewNote.panel.style.left = `${left}px`;
+    activeReviewNote.panel.style.top = `${top}px`;
+  }
+  document.addEventListener('toggle', event => {
+    const panel = event.target;
+    if (!panel.matches?.('.review-note-popover')) return;
+    const trigger = document.querySelector(`[popovertarget="${panel.id}"]`);
+    if (event.newState === 'open') {
+      activeReviewNote = {panel, trigger};
+      trigger?.setAttribute('aria-expanded', 'true');
+      positionReviewNote();
+    } else {
+      trigger?.setAttribute('aria-expanded', 'false');
+      if (activeReviewNote?.panel === panel) activeReviewNote = null;
+    }
+  }, true);
+  document.addEventListener('scroll', () => requestAnimationFrame(positionReviewNote), true);
+  window.addEventListener('resize', positionReviewNote);
   let positionFrame;
   const schedulePosition = () => { cancelAnimationFrame(positionFrame); positionFrame = requestAnimationFrame(positionComment); };
   document.addEventListener('scroll', schedulePosition, true);
