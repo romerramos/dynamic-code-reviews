@@ -275,3 +275,41 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 .change-anchor.is-current-change > .gutter:first-child{box-shadow:inset 3px 0 #8b70bd}
 
 .focus-component{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}.focus-component>span{font-size:11px;color:var(--muted);overflow-wrap:anywhere}.focus-component .btn{font-size:11px;min-height:28px;height:28px;padding:3px 10px}.focus-component [aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:#c5c3e9}
+
+/* Keep controls close to the information they act on, regardless of width. */
+body.reading-focus main#content{padding-top:12px}
+.focus-file-header{display:block;padding:10px 0;top:-12px}
+.focus-meta{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:6px 14px;font-size:11px;line-height:1.5}
+.focus-group{flex:0 1 auto;min-width:0;color:var(--accent);font-weight:600;overflow-wrap:anywhere}
+.focus-meta .focus-file-position{margin:0;font-size:11px;white-space:nowrap}
+.focus-meta .focus-file-actions{width:auto;flex-wrap:nowrap;gap:2px;flex:none;border-left:1px solid var(--line);padding-left:10px}
+.focus-file-actions .btn{width:28px;min-height:28px;height:28px;padding:0}
+.focus-file-actions #change-position{white-space:nowrap;min-width:82px;text-align:center}
+.focus-meta .file-viewed{margin:0;display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border:1px solid #b9a3d8;border-radius:6px;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.focus-meta .file-viewed:hover{border-color:var(--accent)}
+.focus-meta .file-viewed:has(input:checked){border-color:#92b49c;background:#e9f5ed;color:#28713e}
+.focus-meta .file-viewed input{width:15px;height:15px;border-radius:3px}
+.focus-progress-actions>[data-focus-next]{height:29px;min-height:29px;font-size:11px;padding:4px 8px}
+.focus-identity{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin-top:6px;min-width:0}
+.focus-file-header .current-file{flex:0 1 auto;min-width:0;margin:0;gap:6px;align-items:center}
+.current-file code{flex:0 1 auto;min-width:0;font-size:12px;line-height:1.65;overflow-wrap:anywhere}
+.current-file .copy-file-path{flex:none;width:auto;height:28px;min-height:28px;padding:4px 6px;font-size:11px;display:inline-flex;gap:4px}
+.copy-file-path svg{width:14px;height:14px}
+.focus-identity .focus-component{margin:0;flex:none}.focus-identity .focus-component>span{display:none}
+.focus-file-header .file-about{flex:0 1 auto;min-width:95px;font-size:11px}
+.file-about summary{width:fit-content;color:var(--muted);padding:4px 0}
+.focus-file-header .file-about[open]{flex-basis:100%}.file-about p{font-size:13px}
+@media(max-width:650px){
+ .focus-file-header{top:-12px}
+ .focus-meta{gap:6px 10px}.focus-group{flex-basis:100%}
+ .focus-meta .focus-file-actions{padding-left:8px}
+ .focus-meta .file-viewed{font-size:11px;padding:5px 7px}
+ .focus-file-header .current-file{flex-wrap:wrap;column-gap:8px;row-gap:0}
+ .current-file code{flex-basis:100%;font-size:11px}
+ .focus-identity{gap:2px 12px}
+ .review-toolbar{flex-wrap:wrap;padding:8px 12px;gap:6px}.toolbar-options{gap:6px}
+ .toolbar-options fieldset button{padding:4px 8px}
+}
+
+.focus-progress-actions{display:flex;align-items:center;gap:8px}
+@media(max-width:650px){.focus-file-header .current-file{display:contents}.focus-identity> .file-about{min-width:95px}.focus-progress-actions{flex-basis:100%}}

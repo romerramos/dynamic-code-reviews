@@ -550,7 +550,7 @@
       full.forEach(hunk => highlightCache.set(hunk.id, colored));
       fullContextCache.set(`${file.id}:highlighted`, true);
     }
-    return `<section class="focus-reader"><header class="focus-file-header"><div class="focus-location"><span class="eyebrow">Group ${review.groups.indexOf(entry.layer.group) + 1} of ${review.groups.length} · ${escape(entry.layer.group.title)}${entry.layer.title === entry.layer.group.title ? '' : ` · ${escape(entry.layer.title)}`}</span><span class="focus-file-position">File ${focusIndex + 1} of ${focusOrder.length}</span><div class="current-file"><code>${escape(file.path)}</code><button class="btn btn-sm btn-ghost copy-file-path" data-copy-file title="Copy the full relative file path">Copy path</button></div>${componentLinks}</div><div class="focus-file-actions"><span id="change-position" class="muted">${file.hunks.length} changed sections</span><button class="btn btn-sm btn-ghost" data-change-step="-1" disabled title="Scroll to the previous changed block in this file">Previous changed section</button><button class="btn btn-sm btn-ghost" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} title="Scroll to the next changed block in this file">Next changed section</button><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" ${fileViewed(file) ? 'checked' : ''}> Viewed</label></div><details><summary>Why this file matters</summary><p>${escape(entry.layer.summary || entry.layer.group.summary)}</p>${items.map(item => item.summary ? `<p>${escape(item.summary)}</p>` : '').join('')}</details></header>${!full ? '<p class="focus-unavailable">Full source was not captured or exceeds the text limit. Showing the saved diff; no current working files have been substituted.</p>' : ''}${file.hunks.length || full?.length ? renderDiffTable(file, full || file.hunks, summaries) : `<pre>${escape(file.note || file.patch || 'No text diff available.')}</pre>`}<footer class="focus-end"><span>${focusIndex + 1 === focusOrder.length ? 'End of the review' : `Next: ${escape(files.get(focusOrder[focusIndex + 1].file).path)}`}</span><button class="btn btn-sm btn-primary" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></footer></section>`;
+    return `<section class="focus-reader"><header class="focus-file-header"><div class="focus-meta"><span class="focus-group" title="${escape(entry.layer.group.title)}">Group ${review.groups.indexOf(entry.layer.group) + 1} of ${review.groups.length} · ${escape(entry.layer.group.title)}${entry.layer.title === entry.layer.group.title ? '' : ` · ${escape(entry.layer.title)}`}</span><span class="focus-file-position">File ${focusIndex + 1} of ${focusOrder.length}</span><div class="focus-file-actions"><button class="btn btn-sm btn-ghost" data-change-step="-1" disabled aria-label="Previous changed section" title="Previous changed section">←</button><span id="change-position" class="muted">${file.hunks.length} changes</span><button class="btn btn-sm btn-ghost" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} aria-label="Next changed section" title="Next changed section">→</button></div><div class="focus-progress-actions"><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" ${fileViewed(file) ? 'checked' : ''}> <span>${fileViewed(file) ? 'Viewed' : 'Mark viewed'}</span></label><button class="btn btn-sm btn-ghost" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></div></div><div class="focus-identity"><div class="current-file"><code>${escape(file.path)}</code><button class="btn btn-sm btn-ghost copy-file-path" data-copy-file title="Copy the full relative file path" aria-label="Copy file path">${icon('copy')}<span>Copy path</span></button></div>${componentLinks}<details class="file-about"><summary>About this file</summary><p>${escape(entry.layer.summary || entry.layer.group.summary)}</p>${items.map(item => item.summary ? `<p>${escape(item.summary)}</p>` : '').join('')}</details></div></header>${!full ? '<p class="focus-unavailable">Full source was not captured or exceeds the text limit. Showing the saved diff; no current working files have been substituted.</p>' : ''}${file.hunks.length || full?.length ? renderDiffTable(file, full || file.hunks, summaries) : `<pre>${escape(file.note || file.patch || 'No text diff available.')}</pre>`}<footer class="focus-end"><span>${focusIndex + 1 === focusOrder.length ? 'End of the review' : `Next: ${escape(files.get(focusOrder[focusIndex + 1].file).path)}`}</span><button class="btn btn-sm btn-primary" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></footer></section>`;
   }
   function focusFile(index) {
     document.body.classList.remove('navigation-open'); $('nav-toggle').setAttribute('aria-expanded', 'false');
@@ -611,6 +611,7 @@
   }
   function render() {
     closeComments();
+    document.body.classList.toggle('reading-focus', focusMode);
     $('focus').textContent = 'File by file';
     $('walkthrough').setAttribute('aria-pressed', !focusMode);
     $('focus').setAttribute('aria-pressed', focusMode);
@@ -622,8 +623,6 @@
     $('prev').disabled = !layer;
     $('next').disabled = !!layer && layers.indexOf(layer) === layers.length - 1;
     ['unified','split'].forEach(mode => { $(mode).setAttribute('aria-pressed', layoutChoice === mode); });
-    $('auto-layout').setAttribute('aria-pressed', layoutChoice === 'auto');
-    $('auto-layout').textContent = layoutChoice === 'auto' ? `Auto · ${layout}` : 'Auto';
     if (focusMode) {
       $('position').textContent = `File ${focusIndex + 1} of ${focusOrder.length}`;
       $('prev').disabled = focusIndex === 0; $('next').disabled = focusIndex === focusOrder.length - 1;
@@ -709,6 +708,7 @@
     state.viewedFiles = state.viewedFiles.filter(path => path !== file.path);
     if (control.checked) state.viewedFiles.push(file.path);
     state.fileOpen[file.path] = !control.checked;
+    if (focusMode) control.parentElement.querySelector('span').textContent = control.checked ? 'Viewed' : 'Mark viewed';
     closeComments(); clearSelection();
     document.querySelectorAll('.file-card').forEach(card => {
       if (card.dataset.file !== file.id) return;
@@ -847,8 +847,8 @@
   window.addEventListener('resize', schedulePosition);
   $('prev').onclick = () => step(-1);
   $('next').onclick = () => step(1);
-  ['auto','unified','split'].forEach(mode => { $(mode === 'auto' ? 'auto-layout' : mode).onclick = () => { const scroll = $('content').scrollTop; layoutChoice = mode; layout = mode === 'auto' ? (tabletLayout.matches ? 'unified' : 'split') : mode; render(); $('content').scrollTop = scroll; }; });
-  tabletLayout.addEventListener('change', () => { renderExpandedCode(); if (layoutChoice === 'auto') { const scroll = $('content').scrollTop; layout = tabletLayout.matches ? 'unified' : 'split'; render(); $('content').scrollTop = scroll; } });
+  ['unified','split'].forEach(mode => { $(mode).onclick = () => { const scroll = $('content').scrollTop; layoutChoice = layout = mode; render(); $('content').scrollTop = scroll; }; });
+  tabletLayout.addEventListener('change', renderExpandedCode);
   $('nav-toggle').onclick = () => { const open = document.body.classList.toggle('navigation-open'); $('nav-toggle').setAttribute('aria-expanded', open); };
   $('comments-toggle').onchange = event => { const scroll = $('content').scrollTop; showComments = event.target.checked; render(); $('content').scrollTop = scroll; };
   function chooseReadingMode(enabled) {
