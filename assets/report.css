@@ -225,12 +225,26 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 .sidebar nav .nav-section { margin: 14px 0; }
 .sidebar nav .nav-group-title { margin: 16px 8px 6px; font-size: 11px; line-height: 1.5; color: var(--muted); }
 .sidebar nav .nav-component { border: 1px solid var(--line); border-radius: 7px; margin: 6px 0; background: white; }
-.sidebar nav .nav-component.is-current { border-color: #b4ace0; }
-.sidebar nav .nav-component-title { width: 100%; padding: 8px 10px 4px; margin: 0; align-items: flex-start; }
+.sidebar nav .nav-component.is-current { border-color: #94a3b8; box-shadow: inset 3px 0 #64748b; }
+.sidebar nav .nav-component-title { width: calc(100% - 8px); padding: 4px 6px; margin: 4px 4px 0; border-radius: 4px; align-items: flex-start; }
 .sidebar nav .nav-component strong { display: block; white-space: normal; overflow-wrap: anywhere; font-size: 12px; line-height: 1.5; }
 .sidebar nav .nav-component-count { flex: none; font-size: 11px; padding-top: 2px; font-variant-numeric: tabular-nums; }
 .sidebar nav .nav-component-files { display: flex; gap: 6px; padding: 4px 10px 8px; }
 .sidebar nav .nav-component-files button { width: auto; min-height: 28px; margin: 0; padding: 3px 7px; gap: 5px; font-size: 11px; border: 1px solid var(--line); }
 .sidebar nav button[aria-current="location"] { background: var(--accent-soft); color: var(--accent); }
+/* The shortcut container is not a menu action. Neutralize daisyUI's li > div
+   hover/active treatment, which otherwise paints it with the dark menu color. */
+.sidebar nav .nav-component > .nav-component-files,
+.sidebar nav .nav-component > .nav-component-files:is(:hover, :active, :focus-within) { background: transparent; background-image: none; color: #475569; box-shadow: none; cursor: default; }
+/* Purple identifies review steps; component destinations use a quieter slate
+   palette and a side marker, including when their selected file is active. */
+.sidebar nav .nav-component-title,
+.sidebar nav .nav-component-title[aria-current="location"] { background: transparent; color: #334155; }
+.sidebar nav .nav-component-title:is(:hover, :active) { background: #f1f5f9; color: #1e293b; }
+.sidebar nav .nav-component strong { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; }
+.sidebar nav .nav-component-files button { background: #fff; color: #475569; border-color: #d8dee8; }
+.sidebar nav .nav-component-files button:is(:hover, :active) { background: #f1f5f9; color: #1e293b; border-color: #94a3b8; }
+.sidebar nav .nav-component-files button[aria-current="location"] { background: #e2e8f0; color: #1e293b; border-color: #94a3b8; }
+.sidebar nav .nav-component button:focus-visible { outline: 2px solid #64748b; outline-offset: -2px; }
 .file-status.is-viewed { color: #28713e; border-color: #92b49c; background: #e9f5ed; }
 @media print { .file-viewed, .step-progress { display: none; } .component-card [role="tabpanel"][hidden] { display: block; } .component-card > header { position: static; } }

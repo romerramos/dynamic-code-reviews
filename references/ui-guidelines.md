@@ -33,7 +33,15 @@ from its original snapshot and analysis when refreshing presentation only.
   or repeat the same namespace as a directory. File links reveal containing test
   disclosures. Component links and their file shortcuts focus and scroll to the
   component header above its tabs; ordinary files focus their summary. Indicate the
-  selected destination. Do not shrink step buttons into narrow pills.
+  selected destination. Reserve purple selected/hover treatment for review steps;
+  distinguish component cards with slate text, monospace names, a selected side
+  marker and neutral file shortcuts. Inset the title's hover/focus surface inside
+  the card so it cannot cover the outer border or selected side marker.
+  Keep shortcut containers transparent in hover,
+  pressed and focus-within states: daisyUI's menu styles otherwise treat a direct
+  `li > div` as an action and can paint it dark when a child is pressed. Check both
+  pointer-down and keyboard focus, not only the final selected state. Do not shrink
+  step buttons into narrow pills.
 - Code is the main surface. Split tables use two equal code columns, separate
   60px line-number gutters and one shared row per pair. Empty opposite cells have
   no invented source numbers. Additions and deletions retain their source-side
