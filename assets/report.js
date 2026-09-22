@@ -17,6 +17,8 @@
   const state = {view:'overview', notes:{}, personalComments:[], resolvedComments:[], fileOpen:{}, groupOpen:{}, componentFiles:{}, ...saved};
   const focusOrder = ReviewTools.focusFiles(layers);
   let focusMode = true;
+  try { focusMode = localStorage.getItem('dynamic-review:reading-mode') !== 'walkthrough'; } catch { /* Keep the default when storage is unavailable. */ }
+  const fileReadingActive = () => focusMode && layers.some(layer => layer.id === state.view);
   let focusIndex = 0;
   let selectedChange = null;
   const fullContextCache = new Map();
@@ -281,7 +283,7 @@
     const columns = mode === 'split' ? 4 : 3;
     const colored = highlights(hunk, path);
     const range = (side) => hunk[`${side}_count`] === 0 ? '—' : `${hunk[`${side}_start`]}–${hunk[`${side}_start`] + hunk[`${side}_count`] - 1}`;
-    const inlineNote = focusMode && !comment && !hunk.contextOnly;
+    const inlineNote = fileReadingActive() && !comment && !hunk.contextOnly;
     const heading = hunk.contextOnly || inlineNote ? '' : `<tr class="range-heading" id="${comment ? 'expanded-' : ''}${hunk.id}"><td colspan="${columns}"><div class="range-label"><span>CHANGED RANGE</span><span>Before ${range('old')} &nbsp; / &nbsp; After ${range('new')}</span></div><p>${escape(summary)}</p></td></tr>`;
     const rows = hunk.rows[mode].map(row => {
       if (mode === 'split') return `<tr class="code-row">${splitCells(hunk, row.old, 'old', colored, comment)}${splitCells(hunk, row.new, 'new', colored, comment)}</tr>`;
@@ -588,7 +590,7 @@
     updateChangeNavigation();
   }
   function updateChangeNavigation() {
-    if (!focusMode) return;
+    if (!fileReadingActive()) return;
     const {headings, current} = changedSectionPosition();
     headings.forEach((node, index) => node.classList.toggle('is-current-change', index === current));
     const label = $('change-position');
@@ -611,11 +613,11 @@
   }
   function render() {
     closeComments();
-    document.body.classList.toggle('reading-focus', focusMode);
+    document.body.classList.toggle('reading-focus', fileReadingActive());
     $('focus').textContent = 'File by file';
     $('walkthrough').setAttribute('aria-pressed', !focusMode);
     $('focus').setAttribute('aria-pressed', focusMode);
-    if (focusMode && focusOrder[focusIndex]) { state.navFile = focusOrder[focusIndex].file; state.view = focusOrder[focusIndex].layer.id; }
+    if (fileReadingActive() && focusOrder[focusIndex]) { state.navFile = focusOrder[focusIndex].file; state.view = focusOrder[focusIndex].layer.id; }
     renderNavigation();
     persist();
     const layer = layers.find(layer => layer.id === state.view);
@@ -623,23 +625,23 @@
     $('prev').disabled = !layer;
     $('next').disabled = !!layer && layers.indexOf(layer) === layers.length - 1;
     ['unified','split'].forEach(mode => { $(mode).setAttribute('aria-pressed', layoutChoice === mode); });
-    if (focusMode) {
+    if (fileReadingActive()) {
       $('position').textContent = `File ${focusIndex + 1} of ${focusOrder.length}`;
       $('prev').disabled = focusIndex === 0; $('next').disabled = focusIndex === focusOrder.length - 1;
     }
-    $('prev').setAttribute('aria-label', focusMode ? 'Previous file' : 'Previous step');
-    $('next').setAttribute('aria-label', focusMode ? 'Next file' : 'Next step');
-    $('content').innerHTML = focusMode ? renderFocus() : layer ? renderStep(layer) : state.view === 'files' ? renderFiles() : renderOverview();
+    $('prev').setAttribute('aria-label', fileReadingActive() ? 'Previous file' : 'Previous step');
+    $('next').setAttribute('aria-label', fileReadingActive() ? 'Next file' : 'Next step');
+    $('content').innerHTML = fileReadingActive() ? renderFocus() : layer ? renderStep(layer) : state.view === 'files' ? renderFiles() : renderOverview();
     paintSelection();
     requestAnimationFrame(updateChangeNavigation);
-    if (layer && !focusMode) {
+    if (layer && !fileReadingActive()) {
       $('notes').value = state.notes[layer.id] || '';
       $('notes').addEventListener('input', event => { state.notes[layer.id] = event.target.value; persist(); });
     }
   }
 
   function select(view, scroll = true) {
-    if (focusMode) { const index = focusOrder.findIndex(entry => entry.layer.id === view); if (index >= 0) focusIndex = index; else { focusMode = false; document.body.classList.remove('reading-focus'); $('focus').setAttribute('aria-pressed', 'false'); } }
+    if (focusMode) { const index = focusOrder.findIndex(entry => entry.layer.id === view); if (index >= 0) focusIndex = index; }
     clearSelection();
     document.body.classList.remove('navigation-open'); $('nav-toggle').setAttribute('aria-expanded', 'false');
     if (state.view !== view || scroll) state.navFile = null;
@@ -674,7 +676,7 @@
     target?.focus({preventScroll:true});
   }
   function step(delta) {
-    if (focusMode) { focusFile(focusIndex + delta); return; }
+    if (fileReadingActive()) { focusFile(focusIndex + delta); return; }
     const index = layers.findIndex(layer => layer.id === state.view);
     if (index === 0 && delta < 0) return select('overview');
     const target = layers[Math.max(0, Math.min(layers.length - 1, index + delta))];
@@ -708,7 +710,7 @@
     state.viewedFiles = state.viewedFiles.filter(path => path !== file.path);
     if (control.checked) state.viewedFiles.push(file.path);
     state.fileOpen[file.path] = !control.checked;
-    if (focusMode) control.parentElement.querySelector('span').textContent = control.checked ? 'Viewed' : 'Mark viewed';
+    if (fileReadingActive()) control.parentElement.querySelector('span').textContent = control.checked ? 'Viewed' : 'Mark viewed';
     closeComments(); clearSelection();
     document.querySelectorAll('.file-card').forEach(card => {
       if (card.dataset.file !== file.id) return;
@@ -853,8 +855,9 @@
   $('comments-toggle').onchange = event => { const scroll = $('content').scrollTop; showComments = event.target.checked; render(); $('content').scrollTop = scroll; };
   function chooseReadingMode(enabled) {
     focusMode = enabled;
+    try { localStorage.setItem('dynamic-review:reading-mode', enabled ? 'file' : 'walkthrough'); } catch { /* Choice still applies to this page session. */ }
     if (focusMode) { const index = focusOrder.findIndex(entry => state.navFile ? entry.file === state.navFile : entry.layer.id === state.view); if (index >= 0) focusIndex = index; }
-    document.body.classList.toggle('reading-focus', focusMode);
+    document.body.classList.toggle('reading-focus', fileReadingActive());
     $('focus').setAttribute('aria-pressed', focusMode);
     $('focus').textContent = 'File by file';
     $('walkthrough').setAttribute('aria-pressed', !focusMode);
@@ -946,7 +949,7 @@
     const view = location.hash.slice(1);
     if (['overview','files', ...layers.map(layer => layer.id)].includes(view)) select(view);
   });
-  if (hash === 'overview' || hash === 'files') focusMode = false;
+  if (!hash && !saved.view && focusMode && layers.length) state.view = layers[0].id;
   const initialFile = focusOrder.findIndex(entry => state.navFile ? entry.file === state.navFile : entry.layer.id === state.view);
   if (initialFile >= 0) focusIndex = initialFile;
   setFontSize(state.codeFontSize);

@@ -47,7 +47,7 @@ const sandbox = {
   document:{getElementById:get,querySelector:selector=>selector.includes('f2') ? plainCard : pairedCard,querySelectorAll:()=>[],body:node('body'),
     addEventListener(type,fn){(listeners[type] ||= []).push(fn);}},
   window:{ReviewIcons:{},addEventListener(){}},
-  localStorage:{getItem:()=>null,setItem:(key,value)=>{stored=JSON.parse(value);}},
+  localStorage:{getItem:key=>key === 'dynamic-review:reading-mode' ? 'walkthrough' : null,setItem:(key,value)=>{stored=JSON.parse(value);}},
   matchMedia:()=>({matches:false,addEventListener(){}}),
   location:{hash:'#overview'},history:{replaceState(){}},
   GLightbox:()=>({on(){},close(){},lightboxOpen:false}),
@@ -102,7 +102,8 @@ console.log('PASS navigation reveals component controls, restores selection and 
 // A fresh report opens in full-file focus with Unified selected, while explicit
 // Overview links retain their destination.
 sandbox.location.hash = '';
-vm.runInContext(source.replace(/  render\(\);\n\}\)\(\);\s*$/, '  globalThis.focusTest = {render, renderHunk, hunkFiles, changedSectionPosition, updateChangeNavigation, jumpChangedSection};\n})();'), sandbox);
+sandbox.localStorage.getItem = () => null;
+vm.runInContext(source.replace(/  render\(\);\n\}\)\(\);\s*$/, '  globalThis.focusTest = {render, renderHunk, hunkFiles, select, chooseReadingMode, fileReadingActive, selectedReadingMode:()=>focusMode, changedSectionPosition, updateChangeNavigation, jumpChangedSection};\n})();'), sandbox);
 sandbox.focusTest.render();
 assert.equal(get('focus').textContent, 'File by file');
 assert(get('content').innerHTML.includes('focus-reader'));
@@ -158,3 +159,18 @@ assert.equal(get('change-position').textContent, 'Section 1 of 2');
 sampleHunk.rows.unified.push({kind:'context',text:'gap',old:3,new:3},{kind:'add',text:'later',new:4});
 const multipleBlocks = sandbox.focusTest.renderHunk(sampleHunk,'Explanation','file.txt','unified');
 assert.equal((multipleBlocks.match(/code-row change-anchor/g)||[]).length,2, 'Separate changes within one hunk need separate destinations');
+
+// Overview and All changes are destinations, not changes to the reading preference.
+content.querySelectorAll = () => [];
+sandbox.document.querySelector = () => null;
+sandbox.focusTest.select('files');
+assert.equal(sandbox.focusTest.selectedReadingMode(), true);
+assert.equal(sandbox.focusTest.fileReadingActive(), false);
+sandbox.focusTest.select('g0l0');
+assert.equal(sandbox.focusTest.fileReadingActive(), true);
+sandbox.focusTest.chooseReadingMode(false);
+sandbox.focusTest.select('files');
+sandbox.focusTest.select('g0l0');
+assert.equal(sandbox.focusTest.selectedReadingMode(), false);
+assert.equal(sandbox.focusTest.fileReadingActive(), false);
+console.log('PASS destination navigation preserves the selected reading mode');
