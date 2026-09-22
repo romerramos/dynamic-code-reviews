@@ -6,7 +6,10 @@
   const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const icon = name => (window.ReviewIcons[name] || '').replace('class="lucide', 'class="review-icon lucide').replace('<svg', '<svg aria-hidden="true" focusable="false"');
   const files = new Map(snapshot.files.map(file => [file.id, file]));
+  const filesByPath = new Map(snapshot.files.map(file => [file.path, file]));
   const hunkFiles = new Map(snapshot.files.flatMap(file => file.hunks.map(hunk => [hunk.id, file])));
+  const fullAnchor = file => file ? `full:${file.id}` : '';
+  snapshot.files.forEach(file => hunkFiles.set(fullAnchor(file), file));
   const layers = review.groups.flatMap((group, groupIndex) => group.layers.map((layer, layerIndex) => ({...layer, group, id:`g${groupIndex}l${layerIndex}`})));
   const feedback = ReviewTools.overviewFeedback(review);
   const generatedComments = feedback.comments;
@@ -15,7 +18,7 @@
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { /* file:// storage may be disabled */ }
   const state = {view:'overview', notes:{}, personalComments:[], resolvedComments:[], fileOpen:{}, groupOpen:{}, componentFiles:{}, ...saved};
-  const focusOrder = ReviewTools.focusFiles(layers);
+  const focusOrder = ReviewTools.focusFiles(layers, files);
   let focusMode = true;
   try { focusMode = localStorage.getItem('dynamic-review:reading-mode') !== 'walkthrough'; } catch { /* Keep the default when storage is unavailable. */ }
   const fileReadingActive = () => focusMode && layers.some(layer => layer.id === state.view);
@@ -61,7 +64,7 @@
   const bulletList = items => items?.length ? `<ul>${items.map(item => `<li>${escape(item)}</li>`).join('')}</ul>` : '';
   const flow = steps => steps?.length ? `<div class="flow" role="img" aria-label="${escape(steps.join(' → '))}">${steps.map((step, index) => `${index ? '<b aria-hidden="true">→</b>' : ''}<span>${escape(step)}</span>`).join('')}</div>` : '';
   const hunkIDs = layer => layer.items.flatMap(item => Object.keys(item.summaries || {}));
-  const layerComments = layer => comments.filter(comment => hunkIDs(layer).includes(comment.hunk));
+  const layerComments = layer => comments.filter(comment => hunkIDs(layer).includes(comment.hunk) || layer.items.some(item => comment.hunk === fullAnchor(files.get(item.file))));
   const titleWithoutNumber = title => title.replace(/^\d+\s*[·.]\s*/, '');
 
   function renderNavigation() {
@@ -72,21 +75,22 @@
       if (!matching.length) return;
       // A single-step group needs one heading, not the same title twice.
       html += `<section class="nav-section">${group.layers.length > 1 ? `<h3 class="nav-group-title">${escape(titleWithoutNumber(group.title))}</h3>` : ''}<ul class="menu">`;
+      const fileLink = (id, layer) => {
+        const file = files.get(id);
+        const slash = file.path.lastIndexOf('/');
+        const filename = file.path.slice(slash + 1);
+        const directory = slash < 0 ? '' : file.path.slice(0, slash);
+        return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" aria-current="${state.navFile === id && state.view === layer.id ? 'location' : 'false'}" title="${escape(file.path)}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}"><span class="file-status" aria-hidden="true">${fileViewed(file) ? icon('check') : ''}</span><span class="nav-file-label"><span class="nav-file-name">${escape(filename)}</span>${directory ? `<small class="nav-file-directory">${escape(directory)}</small>` : ''}</span></button></li>`;
+      };
       matching.forEach(layer => {
         const count = layerComments(layer).length;
         const completed = progress(layer.items);
         const pairs = components(layer);
-        const fileLink = id => {
-          const file = files.get(id);
-          const slash = file.path.lastIndexOf('/');
-          const filename = file.path.slice(slash + 1);
-          const directory = slash < 0 ? '' : file.path.slice(0, slash);
-          return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" aria-current="${state.navFile === id && state.view === layer.id ? 'location' : 'false'}" title="${escape(file.path)}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}"><span class="file-status" aria-hidden="true">${fileViewed(file) ? icon('check') : ''}</span><span class="nav-file-label"><span class="nav-file-name">${escape(filename)}</span>${directory ? `<small class="nav-file-directory">${escape(directory)}</small>` : ''}</span></button></li>`;
-        };
-        const links = [...new Set(layer.items.map(item => item.file))].map(id => {
+        const ordered = ReviewTools.layerFiles(layer, files);
+        const links = ordered.code.map(id => {
           const component = pairs.find(pair => pair.items.some(item => item.file === id));
-          if (!component) return fileLink(id);
-          if (id !== layer.items.find(item => component.items.includes(item)).file) return '';
+          if (!component) return fileLink(id, layer);
+          if (id !== component.items[0].file) return '';
           const current = state.view === layer.id && component.items.some(item => item.file === state.navFile);
           const viewed = progress(component.items);
           return `<li class="nav-component ${current ? 'is-current' : ''}"><button class="nav-component-title" data-component-link="${escape(component.key)}" data-file-layer="${layer.id}" aria-current="${current ? 'location' : 'false'}" title="${escape(component.directory)}" aria-label="${escape(`Open ${component.namespace}::${component.name}, ${component.directory}`)}"><span class="nav-file-label"><strong>${escape(component.name)}</strong>${component.namespace ? `<small class="nav-file-directory">${escape(component.namespace)}</small>` : ''}</span><small class="nav-component-count" aria-label="${progressText(viewed)}">${viewed.viewed}/${viewed.total}</small></button><div class="nav-component-files" role="group" aria-label="${escape(component.name)} files">${component.items.map(item => {
@@ -94,8 +98,9 @@
             return `<button data-file-link="${item.file}" data-file-layer="${layer.id}" title="${escape(file.path)}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}" aria-current="${current && activeComponentFile(layer, component) === item.file ? 'location' : 'false'}"><span class="file-status ${fileViewed(file) ? 'is-viewed' : ''}" aria-hidden="true">${fileViewed(file) ? icon('check') : ''}</span>${file.path.endsWith('.rb') ? 'Ruby' : 'Template'}</button>`;
           }).join('')}</div></li>`;
         }).join('');
+        const tests = ordered.tests.length ? `<li class="nav-tests-label" role="presentation">Tests</li>${ordered.tests.map(id => fileLink(id, layer)).join('')}` : '';
         const expanded = state.view === layer.id || !!query;
-        html += `<li><button data-view="${layer.id}" aria-current="${state.view === layer.id ? 'page' : 'false'}" aria-expanded="${expanded}" aria-controls="nav-files-${layer.id}"><span class="step-number">${completed.total && completed.viewed === completed.total ? icon('check') : layers.indexOf(layer) + 1}</span><span class="step-body"><strong>${escape(titleWithoutNumber(group.layers.length === 1 ? group.title : layer.title))}</strong><small>${progressText(completed)}${count ? ` · ${count} comments` : ''}</small></span></button>${expanded ? `<ul id="nav-files-${layer.id}" class="nav-files">${links}</ul>` : `<ul id="nav-files-${layer.id}" hidden></ul>`}</li>`;
+        html += `<li><button data-view="${layer.id}" aria-current="${state.view === layer.id ? 'page' : 'false'}" aria-expanded="${expanded}" aria-controls="nav-files-${layer.id}"><span class="step-number">${completed.total && completed.viewed === completed.total ? icon('check') : layers.indexOf(layer) + 1}</span><span class="step-body"><strong>${escape(titleWithoutNumber(group.layers.length === 1 ? group.title : layer.title))}</strong><small>${progressText(completed)}${count ? ` · ${count} comments` : ''}</small></span></button>${expanded ? `<ul id="nav-files-${layer.id}" class="nav-files">${links}${tests}</ul>` : `<ul id="nav-files-${layer.id}" hidden></ul>`}</li>`;
       });
       html += '</ul></section>';
     });
@@ -143,10 +148,12 @@
 
   let commentAnchor = null;
 
-  function lineButton(hunk, side, number, comment = null) {
+  function lineButton(hunk, side, number, comment = null, path) {
     if (number === undefined) return '';
-    if (comment || hunk.contextOnly) return `<span class="line-number">${number}</span>`;
-    return `<button class="line-number" type="button" data-select-line="${number}" data-range-hunk="${hunk.id}" data-range-side="${side}" aria-label="Select ${side === 'new' ? 'after' : 'before'} line ${number} in ${escape(hunkFiles.get(hunk.id).path)}" title="Select line to comment">${number}</button>`;
+    const file = filesByPath.get(path);
+    const rangeHunk = fileReadingActive() && fullContextCache.get(file?.id) ? fullAnchor(file) : hunk.id;
+    if (comment || (hunk.contextOnly && rangeHunk === hunk.id)) return `<span class="line-number">${number}</span>`;
+    return `<button class="line-number" type="button" data-select-line="${number}" data-range-hunk="${rangeHunk}" data-range-side="${side}" aria-label="Select ${side === 'new' ? 'after' : 'before'} line ${number} in ${escape(path)}" title="Select line to comment">${number}</button>`;
   }
   function clearSelection() {
     selection = null;
@@ -157,7 +164,7 @@
     document.querySelectorAll('.user-range-selected').forEach(cell => cell.classList.remove('user-range-selected'));
     if (!selection) return;
     document.querySelectorAll('.gutter[data-line]').forEach(cell => {
-      if (cell.dataset.hunk !== selection.hunk || cell.dataset.side !== selection.side || Number(cell.dataset.line) < selection.start || Number(cell.dataset.line) > selection.end) return;
+      if (![cell.dataset.hunk, cell.dataset.fullHunk].includes(selection.hunk) || cell.dataset.side !== selection.side || Number(cell.dataset.line) < selection.start || Number(cell.dataset.line) > selection.end) return;
       cell.classList.add('user-range-selected');
       (layout === 'split' ? cell.nextElementSibling : cell.parentElement.querySelector('.code'))?.classList.add('user-range-selected');
     });
@@ -205,9 +212,10 @@
     return `<section class="popover-comment"><p class="comment-location">${escape(ReviewTools.anchor(snapshot, comment)?.file.path || '')}</p><div class="thread-badges">${threadBadges(comment)}</div><p class="comment-location">${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}</p><h4>${escape(comment.subject)}</h4>${ReviewTools.commentBody(comment, review.qa) ? `<p class="comment-discussion">${escape(ReviewTools.commentBody(comment, review.qa))}</p>` : ''}${ReviewTools.evidenceFlows(review.qa, comment).length ? `<button class="btn btn-xs btn-soft" data-evidence="${escape(comment.id)}">See visual evidence</button>` : ''}<div class="comment-actions"><button class="btn btn-xs btn-ghost" data-copy="${escape(comment.id)}">${icon('copy')} Copy for LLMs</button>${comment.personal ? `<button class="btn btn-xs btn-ghost" data-edit="${escape(comment.id)}">${icon('pencil')} Edit</button><button class="btn btn-xs btn-ghost" data-delete="${escape(comment.id)}">${icon('trash-2')} Delete</button>` : ""}</div></section>`;
   }
 
-  function commentTrigger(hunk, side, number, comment = null) {
+  function commentTrigger(hunk, side, number, comment = null, path) {
     if (comment || !showComments || number === undefined) return '';
-    const anchored = comments.filter(comment => comment.hunk === hunk.id && comment.side === side && comment.start === number);
+    const file = filesByPath.get(path);
+    const anchored = comments.filter(comment => [hunk.id, fullAnchor(file)].includes(comment.hunk) && comment.side === side && comment.start === number);
     if (!anchored.length) return '';
     const label = anchored.length === 1 ? `Read ${anchored[0].label}: ${anchored[0].subject}` : `Read ${anchored.length} comments on ${side === 'new' ? 'after' : 'before'} line ${number}`;
     return `<button class="comment-trigger" type="button" data-notes="${anchored.map(comment => escape(comment.id)).join(' ')}" aria-label="${escape(label)}" title="${escape(label)}" aria-haspopup="dialog" aria-controls="comment-popover" aria-expanded="false">${icon('message-square')}</button>`;
@@ -217,7 +225,7 @@
     $('content').querySelectorAll('.range-selected').forEach(cell => cell.classList.remove('range-selected'));
     const selected = comments.filter(comment => ids.includes(comment.id));
     $('content').querySelectorAll('.gutter[data-line]').forEach(cell => {
-      if (!selected.some(comment => comment.hunk === cell.dataset.hunk && comment.side === cell.dataset.side && Number(cell.dataset.line) >= comment.start && Number(cell.dataset.line) <= comment.end)) return;
+      if (!selected.some(comment => [cell.dataset.hunk, cell.dataset.fullHunk].includes(comment.hunk) && comment.side === cell.dataset.side && Number(cell.dataset.line) >= comment.start && Number(cell.dataset.line) <= comment.end)) return;
       cell.classList.add('range-selected');
       const code = layout === 'split' ? cell.nextElementSibling : cell.parentElement.querySelector('.code');
       code?.classList.add('range-selected');
@@ -232,18 +240,20 @@
     highlightComments([]);
   }
 
-  function positionComment() {
-    const popover = $('comment-popover');
-    if (!commentAnchor?.isConnected || !popover.matches(':popover-open')) return;
-    const anchor = commentAnchor.getBoundingClientRect();
+  function positionAnnotation(popover, trigger, close) {
+    if (!trigger?.isConnected || !popover.matches(':popover-open')) return;
+    const anchor = trigger.getBoundingClientRect();
     const content = $('content').getBoundingClientRect();
-    if (anchor.bottom < content.top || anchor.top > Math.min(content.bottom, innerHeight) || anchor.right < content.left || anchor.left > innerWidth) { closeComments(); return; }
+    if (anchor.bottom < content.top || anchor.top > Math.min(content.bottom, innerHeight) || anchor.right < content.left || anchor.left > innerWidth) { close(); return; }
     const box = popover.getBoundingClientRect();
     const left = Math.max(12, Math.min(anchor.right + 8, innerWidth - box.width - 12));
     const below = anchor.bottom + 8;
     const top = below + box.height <= innerHeight - 12 ? below : Math.max(12, anchor.top - box.height - 8);
     popover.style.left = `${left}px`;
     popover.style.top = `${top}px`;
+  }
+  function positionComment() {
+    positionAnnotation($('comment-popover'), commentAnchor, closeComments);
   }
 
   function openComment(trigger) {
@@ -261,22 +271,23 @@
     popover.querySelector('[data-close-comment]').focus({preventScroll:true});
   }
 
-  function rangeClasses(hunk, side, number, comment = null) {
-    if (comment) return comment.side === side && number >= comment.start && number <= comment.end ? ' range-selected' : '';
+  function rangeClasses(hunk, side, number, comment = null, path) {
+    const file = filesByPath.get(path);
+    if (comment) return [hunk.id, fullAnchor(file)].includes(comment.hunk) && comment.side === side && number >= comment.start && number <= comment.end ? ' range-selected' : '';
     if (!showComments || number === undefined) return '';
-    const matches = comments.filter(comment => comment.hunk === hunk.id && comment.side === side && number >= comment.start && number <= comment.end);
+    const matches = comments.filter(comment => [hunk.id, fullAnchor(file)].includes(comment.hunk) && comment.side === side && number >= comment.start && number <= comment.end);
     if (!matches.length) return '';
     return ` annotated${matches.some(comment => comment.start === number) ? ' range-start' : ''}${matches.some(comment => comment.end === number) ? ' range-end' : ''}`;
   }
 
-  function splitCells(hunk, line, side, colored, comment = null) {
+  function splitCells(hunk, line, side, colored, comment = null, path) {
     const divider = side === 'new' ? ' side-divider' : '';
     if (!line) return `<td class="gutter empty${divider}"></td><td class="code empty" aria-label="No corresponding line"></td>`;
     const number = line[side];
-    const marked = rangeClasses(hunk, side, number, comment);
+    const marked = rangeClasses(hunk, side, number, comment, path);
     const kind = line.kind === 'context' ? '' : line.kind;
     const sign = line.kind === 'del' ? '−' : line.kind === 'add' ? '+' : ' ';
-    return `<td class="gutter ${kind}${divider}${marked}" data-hunk="${hunk.id}" data-side="${side}" data-line="${number}">${commentTrigger(hunk, side, number, comment)}${lineButton(hunk, side, number, comment)}</td><td class="code ${kind}${marked}"><code><span class="sign" aria-hidden="true">${sign}</span>${colored[side].get(number) || ''}</code>${line.no_newline ? '<span class="newline-marker">No newline at end of file</span>' : ''}</td>`;
+    return `<td class="gutter ${kind}${divider}${marked}" data-hunk="${hunk.id}" data-full-hunk="${fullAnchor(filesByPath.get(path))}" data-side="${side}" data-line="${number}">${commentTrigger(hunk, side, number, comment, path)}${lineButton(hunk, side, number, comment, path)}</td><td class="code ${kind}${marked}"><code><span class="sign" aria-hidden="true">${sign}</span>${colored[side].get(number) || ''}</code>${line.no_newline ? '<span class="newline-marker">No newline at end of file</span>' : ''}</td>`;
   }
 
   function renderHunk(hunk, summary, path, mode = layout, comment = null) {
@@ -286,12 +297,12 @@
     const inlineNote = fileReadingActive() && !comment && !hunk.contextOnly;
     const heading = hunk.contextOnly || inlineNote ? '' : `<tr class="range-heading" id="${comment ? 'expanded-' : ''}${hunk.id}"><td colspan="${columns}"><div class="range-label"><span>CHANGED RANGE</span><span>Before ${range('old')} &nbsp; / &nbsp; After ${range('new')}</span></div><p>${escape(summary)}</p></td></tr>`;
     const rows = hunk.rows[mode].map(row => {
-      if (mode === 'split') return `<tr class="code-row">${splitCells(hunk, row.old, 'old', colored, comment)}${splitCells(hunk, row.new, 'new', colored, comment)}</tr>`;
+      if (mode === 'split') return `<tr class="code-row">${splitCells(hunk, row.old, 'old', colored, comment, path)}${splitCells(hunk, row.new, 'new', colored, comment, path)}</tr>`;
       const side = row.kind === 'del' ? 'old' : 'new';
-      const marked = rangeClasses(hunk, 'old', row.old, comment) + rangeClasses(hunk, 'new', row.new, comment);
+      const marked = rangeClasses(hunk, 'old', row.old, comment, path) + rangeClasses(hunk, 'new', row.new, comment, path);
       const kind = row.kind === 'context' ? '' : row.kind;
       const sign = row.kind === 'del' ? '−' : row.kind === 'add' ? '+' : ' ';
-      return `<tr class="code-row"><td class="gutter ${kind}${rangeClasses(hunk,'old',row.old,comment)}" data-hunk="${hunk.id}" data-side="old" ${row.old !== undefined ? `data-line="${row.old}"` : ''}>${commentTrigger(hunk, 'old', row.old, comment)}${lineButton(hunk, 'old', row.old, comment)}</td><td class="gutter ${kind}${rangeClasses(hunk,'new',row.new,comment)}" data-hunk="${hunk.id}" data-side="new" ${row.new !== undefined ? `data-line="${row.new}"` : ''}>${commentTrigger(hunk, 'new', row.new, comment)}${lineButton(hunk, 'new', row.new, comment)}</td><td class="code ${kind}${marked}"><code><span class="sign" aria-hidden="true">${sign}</span>${colored[side].get(row[side]) || ''}</code>${row.no_newline ? '<span class="newline-marker">No newline at end of file</span>' : ''}</td></tr>`;
+      return `<tr class="code-row"><td class="gutter ${kind}${rangeClasses(hunk,'old',row.old,comment,path)}" data-hunk="${hunk.id}" data-full-hunk="${fullAnchor(filesByPath.get(path))}" data-side="old" ${row.old !== undefined ? `data-line="${row.old}"` : ''}>${commentTrigger(hunk, 'old', row.old, comment, path)}${lineButton(hunk, 'old', row.old, comment, path)}</td><td class="gutter ${kind}${rangeClasses(hunk,'new',row.new,comment,path)}" data-hunk="${hunk.id}" data-full-hunk="${fullAnchor(filesByPath.get(path))}" data-side="new" ${row.new !== undefined ? `data-line="${row.new}"` : ''}>${commentTrigger(hunk, 'new', row.new, comment, path)}${lineButton(hunk, 'new', row.new, comment, path)}</td><td class="code ${kind}${marked}"><code><span class="sign" aria-hidden="true">${sign}</span>${colored[side].get(row[side]) || ''}</code>${row.no_newline ? '<span class="newline-marker">No newline at end of file</span>' : ''}</td></tr>`;
     });
     if (inlineNote) {
       const changed = row => mode === 'unified' ? row.kind !== 'context' : row.old?.kind === 'del' || row.new?.kind === 'add';
@@ -301,8 +312,15 @@
         const id = index === 0 ? hunk.id : `${hunk.id}-change-${index + 1}`;
         rows[rowIndex] = rows[rowIndex].replace('<tr class="code-row">', `<tr class="code-row change-anchor" id="${id}">`);
       });
-      const note = `<button class="review-note-trigger" aria-expanded="false" aria-haspopup="dialog" popovertarget="note-${hunk.id}" aria-label="Read review note for this change" title="Review note">${icon('message-square')}</button><aside id="note-${hunk.id}" class="review-note-popover" popover="auto" role="dialog" aria-label="Review note"><button class="btn btn-sm btn-ghost" popovertarget="note-${hunk.id}" popovertargetaction="hide" aria-label="Close review note">✕</button><strong>Review note</strong><p>${escape(summary || 'Changed section')}</p><small>Before ${range('old')} · After ${range('new')}</small></aside>`;
-      rows[firstChange] = rows[firstChange]?.replace(/(<td class="code[^>]*>)/, `$1${note}`);
+      const note = `<button class="review-note-trigger" aria-expanded="false" aria-haspopup="dialog" popovertarget="note-${hunk.id}" aria-label="Read review note for this change" title="Review note">${icon('sticky-note')}</button><aside id="note-${hunk.id}" class="review-note-popover comment-popover" popover="auto" role="dialog" aria-label="Review note"><header class="popover-heading"><strong>Review note</strong><button class="btn btn-xs btn-circle btn-ghost" popovertarget="note-${hunk.id}" popovertargetaction="hide" aria-label="Close review note">✕</button></header><section class="popover-comment"><p>${escape(summary || 'Changed section')}</p><small>Before ${range('old')} · After ${range('new')}</small></section></aside>`;
+      if (firstChange !== undefined) {
+        const row = rows[firstChange];
+        const gutters = [...row.matchAll(/<td class="gutter[^>]*>[\s\S]*?<\/td>/g)];
+        const available = gutters.find(cell => !cell[0].includes('comment-trigger'));
+        rows[firstChange] = available
+          ? row.replace(available[0], available[0].replace(/(<td class="gutter[^>]*>)/, `$1${note}`))
+          : row.replace(/(<td class="code[^>]*>)/, `$1${note}`);
+      }
     }
     return heading + rows.join('');
   }
@@ -344,7 +362,7 @@
     if (!found && !comment.general) return '';
     const id = escape(comment.id);
     const range = found ? `${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}` : '';
-    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${escape(found?.file.path || 'General comment')}</span><span class="thread-range">${found ? range : ''}</span></div><details class="thread-details" ${comment.resolved ? '' : 'open'}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}"><span class="thread-badges">${threadBadges(comment)}</span><strong>${escape(comment.subject)}</strong><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${comment.discussion ? `<p class="comment-discussion">${escape(comment.discussion)}</p>` : ''}${commentEvidence(comment)}</div>${found ? `<button class="thread-source btn btn-sm btn-ghost" type="button" data-open-code="${id}" aria-haspopup="dialog" aria-label="${escape(`View code for ${found.file.path}, ${range}: ${comment.subject}`)}">View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : ''}</details><div class="thread-footer"><div class="comment-actions"><button class="btn btn-sm btn-soft" data-copy-comment="${id}">${icon('copy')} Copy for comment</button><button class="btn btn-sm btn-ghost" data-copy="${id}">${icon('copy')} Copy for LLMs</button>${found ? `<button class="btn btn-sm btn-ghost" data-comment="${id}">Open in diff ${icon('arrow-right')}</button>` : ''}${comment.personal ? `<button class="btn btn-sm btn-ghost" data-edit="${id}">${icon('pencil')} Edit</button><button class="btn btn-sm btn-ghost" data-delete="${id}">${icon('trash-2')} Delete</button>` : ''}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
+    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${escape(found?.file.path || 'General comment')}</span><span class="thread-range">${found ? range : ''}</span></div><details class="thread-details" ${comment.resolved ? '' : 'open'}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}"><span class="thread-badges">${threadBadges(comment)}</span><strong>${escape(comment.subject)}</strong><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${comment.discussion ? `<p class="comment-discussion">${escape(comment.discussion)}</p>` : ''}${commentEvidence(comment)}</div>${found ? found.fullFile ? `<button class="thread-source btn btn-sm btn-ghost" type="button" data-comment="${id}">View in file · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : `<button class="thread-source btn btn-sm btn-ghost" type="button" data-open-code="${id}" aria-haspopup="dialog" aria-label="${escape(`View code for ${found.file.path}, ${range}: ${comment.subject}`)}">View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : ''}</details><div class="thread-footer"><div class="comment-actions"><button class="btn btn-sm btn-soft" data-copy-comment="${id}">${icon('copy')} Copy for comment</button><button class="btn btn-sm btn-ghost" data-copy="${id}">${icon('copy')} Copy for LLMs</button>${found && !found.fullFile ? `<button class="btn btn-sm btn-ghost" data-comment="${id}">Open in diff ${icon('arrow-right')}</button>` : ''}${comment.personal ? `<button class="btn btn-sm btn-ghost" data-edit="${id}">${icon('pencil')} Edit</button><button class="btn btn-sm btn-ghost" data-delete="${id}">${icon('trash-2')} Delete</button>` : ''}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
   }
   function toggleResolved(id) {
     const comment = comments.find(comment => comment.id === id);
@@ -570,7 +588,7 @@
     const top = document.querySelector('.focus-file-header')?.getBoundingClientRect().bottom + 8;
     let current = headings.length ? 0 : -1;
     headings.forEach((node, index) => { if (node.getBoundingClientRect().top <= top + 4) current = index; });
-    if (selectedChange?.file === focusOrder[focusIndex]?.file && Math.abs($('content').scrollTop - selectedChange.scrollTop) < 2) {
+    if (selectedChange?.file === focusOrder[focusIndex]?.file && Math.abs(reviewScrollTop() - selectedChange.scrollTop) < 2) {
       const selected = headings.findIndex(node => node.id === selectedChange.id);
       if (selected >= 0) current = selected;
     } else selectedChange = null;
@@ -578,21 +596,31 @@
   }
   function jumpChangedSection(delta) {
     const {headings, current} = changedSectionPosition();
-    const target = headings[current + delta];
+    selectChangedSection(headings[current + delta]);
+  }
+  function reviewScrollTop() {
+    return getComputedStyle($('content')).overflowY === 'visible' ? window.scrollY : $('content').scrollTop;
+  }
+  function selectChangedSection(target) {
     if (!target) return;
     // First pin the header, then correct for its final position. Use instant
     // scrolling so a second click never observes an unfinished animation.
     for (let pass = 0; pass < 2; pass++) {
       const top = document.querySelector('.focus-file-header').getBoundingClientRect().bottom + 8;
-      $('content').scrollTo({top: $('content').scrollTop + target.getBoundingClientRect().top - top, behavior:'instant'});
+      const delta = target.getBoundingClientRect().top - top;
+      if (getComputedStyle($('content')).overflowY === 'visible') window.scrollTo({top:window.scrollY + delta, behavior:'instant'});
+      else $('content').scrollTo({top:$('content').scrollTop + delta, behavior:'instant'});
     }
-    selectedChange = {file:focusOrder[focusIndex]?.file, id:target.id, scrollTop:$('content').scrollTop};
+    selectedChange = {file:focusOrder[focusIndex]?.file, id:target.id, scrollTop:reviewScrollTop()};
     updateChangeNavigation();
   }
   function updateChangeNavigation() {
     if (!fileReadingActive()) return;
     const {headings, current} = changedSectionPosition();
-    headings.forEach((node, index) => node.classList.toggle('is-current-change', index === current));
+    $('content').querySelectorAll('.code-row.is-current-change').forEach(row => row.classList.remove('is-current-change'));
+    for (let row = headings[current]; row?.classList.contains('code-row') && row.querySelector('td.code.add, td.code.del'); row = row.nextElementSibling) {
+      row.classList.add('is-current-change');
+    }
     const label = $('change-position');
     if (!label) return;
     label.textContent = current < 0 ? `${headings.length} changed sections` : `Section ${current + 1} of ${headings.length}`;
@@ -602,6 +630,7 @@
     if (next) next.disabled = current >= headings.length - 1;
   }
   $('content').addEventListener('scroll', updateChangeNavigation, {passive:true});
+  window.addEventListener('scroll', updateChangeNavigation, {passive:true});
   function setFontSize(size) {
     state.codeFontSize = Math.max(10, Math.min(20, Number(size) || 13));
     document.body.style.setProperty('--code-font-size', `${state.codeFontSize}px`);
@@ -683,13 +712,16 @@
     if (target) select(target.id);
   }
   function jump(hunk, commentID) {
-    const layer = layers.find(layer => hunkIDs(layer).includes(hunk));
+    const file = hunkFiles.get(hunk);
+    const fullFile = hunk === fullAnchor(file);
+    const layer = layers.find(layer => fullFile ? layer.items.some(item => item.file === file.id) : hunkIDs(layer).includes(hunk));
     if (!layer) return;
-    activateComponentFile(layer, hunkFiles.get(hunk).id);
+    activateComponentFile(layer, file.id);
     if ($('details-dialog').open) $('details-dialog').close();
     showComments = true; $('comments-toggle').checked = true;
-    if (focusMode) { focusFile(focusOrder.findIndex(entry => entry.file === hunkFiles.get(hunk).id)); } else if (state.view === 'files') { categoryFilter = 'All'; $('search').value = ''; render(); } else select(layer.id, false);
-    state.navFile = hunkFiles.get(hunk).id;
+    if (fullFile && !focusMode) chooseReadingMode(true);
+    if (focusMode) { focusFile(focusOrder.findIndex(entry => entry.file === file.id)); } else if (state.view === 'files') { categoryFilter = 'All'; $('search').value = ''; render(); } else select(layer.id, false);
+    state.navFile = file.id;
     renderNavigation(); persist();
     const trigger = commentID ? [...document.querySelectorAll('.comment-trigger')].find(button => button.dataset.notes.split(' ').includes(commentID)) : null;
     const target = trigger || $(hunk);
@@ -807,6 +839,8 @@
     if (finding) jump(finding.dataset.hunk);
     const marker = event.target.closest('.comment-trigger');
     if (marker) openComment(marker);
+    const reviewNote = event.target.closest('.review-note-trigger');
+    if (reviewNote) selectChangedSection(reviewNote.closest('.change-anchor'));
     if (event.target.closest('[data-close-comment]')) { const anchor = commentAnchor; closeComments(); anchor?.focus({preventScroll:true}); }
     const commentLink = event.target.closest('[data-comment]');
     if (commentLink) {
@@ -845,20 +879,8 @@
   });
   let activeReviewNote = null;
   function positionReviewNote() {
-    if (!activeReviewNote?.trigger.isConnected || !activeReviewNote.panel.matches(':popover-open')) return;
-    const marker = activeReviewNote.trigger.getBoundingClientRect();
-    const viewport = $('content').getBoundingClientRect();
-    if (marker.bottom < viewport.top || marker.top > viewport.bottom) { activeReviewNote.panel.hidePopover(); return; }
-    const panel = activeReviewNote.panel.getBoundingClientRect();
-    const gap = 8, edge = 12;
-    const left = marker.left - panel.width - gap >= edge ? marker.left - panel.width - gap
-      : marker.right + panel.width + gap <= innerWidth - edge ? marker.right + gap
-      : Math.max(edge, Math.min(marker.left, innerWidth - panel.width - edge));
-    const top = marker.bottom + gap + panel.height <= innerHeight - edge ? marker.bottom + gap
-      : marker.top - panel.height - gap >= edge ? marker.top - panel.height - gap
-      : Math.max(edge, Math.min(marker.top, innerHeight - panel.height - edge));
-    activeReviewNote.panel.style.left = `${left}px`;
-    activeReviewNote.panel.style.top = `${top}px`;
+    if (!activeReviewNote) return;
+    positionAnnotation(activeReviewNote.panel, activeReviewNote.trigger, () => activeReviewNote?.panel.hidePopover());
   }
   document.addEventListener('toggle', event => {
     const panel = event.target;

@@ -122,10 +122,12 @@ from its original snapshot and analysis when refreshing presentation only.
 
 ## Personal review and tablets
 
-- Source line numbers are buttons. Select one, then optionally another in the
-  same hunk/side, to highlight a range. The selection bar offers Comment and
-  Clear. Consecutive taps work on tablets; Shift is not required. Never infer
-  source text across omitted context. Different hunks or sides start a new range.
+- Source line numbers are buttons. In File by file with captured full source,
+  select any old/new line and another on the same side of that file to highlight
+  a range, even across unchanged context and hunk boundaries. The selection bar
+  offers Comment and Clear. Consecutive taps work on tablets; Shift is not
+  required. Walkthrough and diff-only fallback remain hunk-bounded; never infer
+  source text across omitted context.
 - The comment editor shows the exact path/range/snippet, type, subject, optional
   details and blocking choice. Saving adds a personal gutter marker and an entry
   in User comments. Edit and Delete affect only personal comments. Keep modal text
@@ -265,7 +267,7 @@ refresh still updates browsing pages only; original snapshots stay immutable.
 ## File-by-file reading
 
 File by file follows the existing walkthrough groups and steps, with each unique
-file at its first occurrence and related tests in their existing reading position.
+file at its first occurrence in the sidebar order, including related tests at the sidebar position.
 It is a reading mode, not a new grouping strategy. Preserve group labels in the
 sidebar, show the file position and explanation, and offer Previous/Next file,
 Previous/Next changed section and a separate Viewed checkbox. Keep navigation keyboard accessible and
@@ -284,7 +286,7 @@ Verify complete old/new line coverage, additions/deletions, no-final-newline fil
 existing comment navigation, file boundaries, viewed state, font limits/reload,
 group order, and desktop/tablet geometry. A UI refresh preserves analysis and QA.
 
-File by file and Unified are the main review defaults. Place explicit File by file / Walkthrough reading controls beside Unified/Split; the main diff has no Auto option. Walkthrough retains the existing group steps; do not imply it is one infinite list. Keep the existing grouped sidebar visible on desktop and the current group, step and file position in the sticky file header. Keep hunk explanations out of the source flow: a small note marker on the first changed line opens a clearly labeled Review note popover. Use only the grouped sidebar for file selection; show a selectable current file path with Copy path in the reading header, without a competing file dropdown. Hide the unified table header visually while retaining accessible before/after line-number labels. Changed-section buttons navigate contiguous changed blocks separated by unchanged lines, including multiple blocks inside one Git hunk. Track the selected block explicitly across clicks, including when scrolling is clamped at the file bottom; resynchronize after manual scrolling. Use instant scrolling corrected for the sticky header, without wrapping, show the current section count and disable at boundaries. Viewed records progress without advancing or hiding the focused file; Next file remains a separate action. Explicit Overview/All changes links still open their respective screens.
+File by file and Unified are the main review defaults. Place explicit File by file / Walkthrough reading controls beside Unified/Split; the main diff has no Auto option. Walkthrough retains the existing group steps; do not imply it is one infinite list. Keep the existing grouped sidebar visible on desktop and the current group, step and file position in the sticky file header. Keep hunk explanations out of the source flow: a small note marker beside the line-number gutter on the first changed line opens a clearly labeled Review note popover. Use only the grouped sidebar for file selection; show a selectable current file path with Copy path in the reading header, without a competing file dropdown. Hide the unified table header visually while retaining accessible before/after line-number labels. Changed-section buttons navigate contiguous changed blocks separated by unchanged lines, including multiple blocks inside one Git hunk. Track the selected block explicitly across clicks, including when scrolling is clamped at the file bottom; resynchronize after manual scrolling. Use instant scrolling corrected for the sticky header, without wrapping, show the current section count and disable at boundaries. Viewed records progress without advancing or hiding the focused file; Next file remains a separate action. Explicit Overview/All changes links still open their respective screens.
 
 In File by file, paired ViewComponents expose compact Ruby / Template navigation beside the current path, using the same component pairing within the existing review layer. Indicate the current file and preserve group order, viewed state and full-path copying. Show shortcuts only when both files exist in the reviewed scope; do not invent or load an unchanged companion.
 
@@ -295,3 +297,11 @@ Keep header controls clustered rather than stretching them across the available 
 Reading mode is a browser preference separate from the current destination. Overview and All changes must not change File by file / Walkthrough. Persist explicit mode choices in local storage and apply them when returning to a review group or file; default to File by file when no preference is saved.
 
 Position File by file review notes beside their own changed-line marker, flipping above or to the left when space is tight and clamping to the viewport. Reposition on scroll and resize, and close when the marker leaves the code viewport. Do not park notes in a screen corner.
+
+Place the File by file Review note marker at the left of the first changed line's line-number gutter, beside the current-section stripe and aligned with comment markers. If that gutter has a comment marker, use the other line-number gutter; never overlap a comment or line number.
+
+Review notes use the same bounded popover shell and below/right placement as review comments, with the same close affordance and viewport behavior. Use a distinct note icon and a subtle popover tint drawn from the current-section gutter color. Keep the comment-only source-range highlight out of review notes.
+
+Inside each numbered review step, show implementation files first, then one quiet Tests divider and that step’s test files. Keep File by file navigation in the same order. Extend the current-section gutter stripe through every changed row in the selected contiguous block, stopping at unchanged context.
+
+With complete captured source, File by file lets personal comments select any old/new line or same-side range across the full file, including unchanged context between hunks. The diff-only fallback keeps hunk-bounded selection. Clicking a Review note selects and scrolls to its changed section. Give an active user selection visual priority over the current-section stripe and diff colors.

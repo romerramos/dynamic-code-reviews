@@ -224,6 +224,8 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 .component-card .file-card { margin: 0; border-radius: 0; }
 .sidebar nav .nav-section { margin: 14px 0; }
 .sidebar nav .nav-group-title { margin: 16px 8px 6px; font-size: 11px; line-height: 1.5; color: var(--muted); }
+.sidebar nav .nav-files li.nav-tests-label{display:flex;align-items:center;gap:9px;margin:12px 6px 4px;color:#7b8493;font-size:10px;font-weight:650;letter-spacing:.07em;text-transform:uppercase}
+.sidebar nav .nav-tests-label::after{content:"";height:1px;flex:1;background:#dce1eb}
 .sidebar nav .nav-component { border: 1px solid var(--line); border-radius: 7px; margin: 6px 0; background: white; }
 .sidebar nav .nav-component.is-current { border-color: #94a3b8; box-shadow: inset 3px 0 #64748b; }
 .sidebar nav .nav-component-title { width: calc(100% - 8px); padding: 4px 6px; margin: 4px 4px 0; border-radius: 4px; align-items: flex-start; }
@@ -266,13 +268,25 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 
 /* Keep line-number semantics available without a table banner above the code. */
 .diff-table .line-number-headings th{height:0;padding:0;border:0;line-height:0}.line-number-headings span{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-.focus-location .copy-file-path{margin-top:5px;font-size:11px}.focus-reader td.code{position:relative;padding-right:36px}
-.review-note-trigger{position:absolute;right:4px;top:2px;width:22px;height:22px;padding:3px;border:1px solid #c4c9d6;border-radius:5px;background:#f8f9fc;color:#69578b;line-height:1}.review-note-trigger svg{width:14px;height:14px}
-.review-note-popover{position:fixed;inset:auto auto auto auto;margin:0;width:min(390px,calc(100vw - 24px));max-height:50vh;overflow:auto;padding:18px;border:1px solid #cbd0df;border-radius:10px;background:white;color:#344155;box-shadow:0 8px 32px #1d28442b;font:13px/1.6 system-ui,sans-serif;white-space:normal}.review-note-popover>button{float:right}.review-note-popover strong{display:block;margin-bottom:8px;color:#71528c}.review-note-popover p{margin:0 0 10px}
+.focus-location .copy-file-path{margin-top:5px;font-size:11px}.focus-reader td.code{position:relative;padding-right:12px}
+.review-note-trigger{position:absolute;left:5px;top:3px;display:grid;place-items:center;width:19px;height:19px;padding:0;margin:0;border:1px solid #cbbce6;border-radius:4px;background:#f4f0fb;color:#7655a3;cursor:pointer}
+.review-note-trigger:hover,.review-note-trigger[aria-expanded=true]{background:#e9e0f6;border-color:#9f83ca;color:#5e3f8d}
+.review-note-trigger:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.review-note-trigger .review-icon{width:14px;height:14px}
+.review-note-popover[popover]{border-color:#d8c8ec;background:#fdfbff}
+.review-note-popover .popover-heading{border-bottom-color:#e8def3;background:#f4effb}
+.review-note-popover .popover-heading strong{color:#694a96}
+.review-note-popover .popover-comment p{color:#554d65}
+.review-note-popover .popover-comment small{color:#817393}
+.focus-reader td.code:has(>.review-note-trigger){padding-left:36px}
+.diff-table td.code:has(>.review-note-trigger)::before{content:"";position:absolute;left:0;top:3px;bottom:3px;width:1px;background:#d8dbe5}
+@media(max-width:650px){.review-note-trigger{left:2px}}
 
 .current-file{display:flex;align-items:center;gap:10px;min-width:0}.current-file code{font:13px/1.6 ui-monospace,monospace;overflow-wrap:anywhere;user-select:text}.current-file .copy-file-path{flex:none;margin:0}.focus-file-position{font-size:12px;display:block;margin-bottom:5px}
 
-.change-anchor.is-current-change > .gutter:first-child{box-shadow:inset 3px 0 #8b70bd}
+.code-row.is-current-change > .gutter:first-child{box-shadow:inset 3px 0 #8b70bd}
+.diff-table td.user-range-selected{position:relative;z-index:2;background:#e5dcff!important;box-shadow:inset 4px 0 #694bcc!important}
+.diff-table td.user-range-selected .line-number{color:#5334a8;font-weight:700}
 
 .focus-component{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}.focus-component>span{font-size:11px;color:var(--muted);overflow-wrap:anywhere}.focus-component .btn{font-size:11px;min-height:28px;height:28px;padding:3px 10px}.focus-component [aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:#c5c3e9}
 

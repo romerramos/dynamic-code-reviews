@@ -136,12 +136,34 @@ const focusLayers = [
   {id:'first', items:[{file:'b'},{file:'test'},{file:'a'}], related_tests:[{entities:['a'],files:['test']}]},
   {id:'second',items:[{file:'a'},{file:'c'}]}
 ];
-assert.deepEqual(tools.focusFiles(focusLayers).map(entry => [entry.layer.id,entry.file]), [['first','b'],['first','a'],['first','test'],['second','c']]);
+const focusFiles = new Map([['b',{path:'app/b.rb'}],['test',{path:'test/b_test.rb'}],['a',{path:'app/a.rb'}],['c',{path:'app/c.rb'}]]);
+assert.deepEqual(tools.focusFiles(focusLayers,focusFiles).map(entry => [entry.layer.id,entry.file]), [['first','b'],['first','a'],['first','test'],['second','c']]);
+const sharedGroup = {title:'One review group'};
+const groupedLayers = [
+  {id:'code-step',group:sharedGroup,items:[{file:'test'},{file:'b'}]},
+  {id:'more-code',group:sharedGroup,items:[{file:'c'},{file:'a'}]}
+];
+const firstStep = tools.layerFiles(groupedLayers[0],focusFiles);
+assert.deepEqual(firstStep.code, ['b']);
+assert.deepEqual(firstStep.tests, ['test']);
+assert.deepEqual(tools.focusFiles(groupedLayers,focusFiles).map(entry=>entry.file), ['b','test','c','a']);
+const componentOrder = {items:[{file:'template'},{file:'controller'},{file:'test'}], related_tests:[{entities:['controller'],files:['test']}]} ;
+const componentOrderFiles = new Map([['template',{path:'app/components/example_component.html.erb'}],['controller',{path:'app/components/example_component.rb'}],['test',{path:'test/components/example_component_test.rb'}]]);
+assert.deepEqual(tools.sidebarFiles(componentOrder,componentOrderFiles), ['controller','template','test']);
+assert.deepEqual(tools.focusFiles([{id:'component',...componentOrder}],componentOrderFiles).map(entry=>entry.file), ['controller','template','test']);
+console.log('PASS file-by-file order matches each step-end Tests divider and paired components');
 const middleHunk = {id:'fh1',old_start:3,old_count:1,new_start:3,new_count:2,rows:{unified:[{kind:'del',old:3,text:'old'},{kind:'add',new:3,text:'new'},{kind:'add',new:4,text:'extra'}]}};
 const full = tools.fullFileHunks({id:'f',source:{old:'one\ntwo\nold\nfour',new:'one\ntwo\nnew\nextra\nfour'},hunks:[middleHunk]});
 assert.equal(full[1],middleHunk);
 assert.deepEqual(full.flatMap(h => h.rows.unified).filter(r=>r.old).map(r=>[r.old,r.text]), [[1,'one'],[2,'two'],[3,'old'],[4,'four']]);
 assert.deepEqual(full.flatMap(h => h.rows.unified).filter(r=>r.new).map(r=>r.new),[1,2,3,4,5]);
+const fullSnapshot = {files:[{id:'f',path:'app/example.rb',source:{old:'one\ntwo\nold\nfour',new:'one\ntwo\nnew\nextra\nfour'},hunks:[middleHunk]}]};
+const fullRange = {hunk:'full:f',side:'new',start:2,end:5};
+assert.deepEqual(tools.anchor(fullSnapshot,fullRange).lines.map(line=>line.text),['two','new','extra','four']);
+assert.match(tools.sourceText(fullSnapshot,fullRange),/2 \| two\n3 \| new\n4 \| extra\n5 \| four/);
+assert.equal(tools.anchor(fullSnapshot,{...fullRange,end:6}),null);
+assert.equal(tools.anchor({files:[{...fullSnapshot.files[0],source:null}]},fullRange),null);
+console.log('PASS full-file comment anchors cross changed and unchanged lines without extending past captured source');
 assert.equal(tools.fullFileHunks({hunks:[]}),null);
 assert.throws(()=>tools.fullFileHunks({id:'x',source:{old:'wrong',new:'other'},hunks:[]}));
 for (const [oldText,newText,oldCount,newCount] of [['','new',0,1],['old','',1,0]]) {

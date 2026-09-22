@@ -1,15 +1,44 @@
 /* Pure helpers shared by the offline UI and its Node checks. */
 'use strict';
 globalThis.ReviewTools = (() => {
-  function focusFiles(layers) {
+  // The sidebar and File by file share this order. A paired component occupies
+  // one sidebar entry, with Ruby and Template in its visible shortcut order.
+  function sidebarFiles(layer, files) {
+    const pairs = componentGroups(layer.items, files);
+    const emitted = new Set();
+    return layer.items.flatMap(item => {
+      const pair = pairs.find(pair => pair.items.some(member => member.file === item.file));
+      if (pair) {
+        if (emitted.has(pair.key)) return [];
+        emitted.add(pair.key);
+        return pair.items.map(member => member.file);
+      }
+      if (emitted.has(item.file)) return [];
+      emitted.add(item.file);
+      return [item.file];
+    });
+  }
+  function layerFiles(layer, files) {
+    const ordered = {code:[], tests:[]};
+    sidebarFiles(layer, files).forEach(file => {
+      ordered[category(files.get(file).path) === 'Tests' ? 'tests' : 'code'].push(file);
+    });
+    return ordered;
+  }
+  function focusFiles(layers, files) {
     const seen = new Set();
-    return layers.flatMap(layer => walkthroughSections(layer).flatMap(section => section.item ? [section.item] : section.items || [])
-      .flatMap(item => { if (seen.has(item.file)) return []; seen.add(item.file); return [{file:item.file, layer}]; }));
+    return layers.flatMap(layer => {
+      const ordered = layerFiles(layer, files);
+      return [...ordered.code, ...ordered.tests].map(file => ({file, layer}));
+    }).filter(entry => {
+      if (seen.has(entry.file)) return false;
+      seen.add(entry.file);
+      return true;
+    });
   }
   function fullFileHunks(file) {
     if (!file.source) return null;
-    const lines = side => file.source[side] === '' ? [] : file.source[side].replace(/\n$/, '').split('\n');
-    const old = lines('old'), after = lines('new');
+    const old = sourceLines(file, 'old'), after = sourceLines(file, 'new');
     const result = [];
     let oi = 0, ni = 0;
     const context = (oe, ne) => {
@@ -91,7 +120,18 @@ globalThis.ReviewTools = (() => {
     const unique = [...new Set(paths)];
     return {total:unique.length, viewed:unique.filter(path => viewed.includes(path)).length};
   }
+  function sourceLines(file, side) {
+    return file.source[side] === '' ? [] : file.source[side].replace(/\n$/, '').split('\n');
+  }
   function anchor(snapshot, comment) {
+    const fullFile = snapshot.files.find(file => comment.hunk === `full:${file.id}`);
+    if (fullFile) {
+      if (!fullFile.source || !['old','new'].includes(comment.side) || !Number.isInteger(comment.start) || !Number.isInteger(comment.end) || comment.start < 1 || comment.start > comment.end) return null;
+      const source = sourceLines(fullFile, comment.side);
+      if (comment.end > source.length) return null;
+      const lines = source.slice(comment.start - 1, comment.end).map((text, index) => ({text, [comment.side]:comment.start + index}));
+      return {file:fullFile, lines, fullFile:true};
+    }
     const file = snapshot.files.find(file => file.hunks.some(hunk => hunk.id === comment.hunk));
     const hunk = file?.hunks.find(hunk => hunk.id === comment.hunk);
     if (!hunk || !['old','new'].includes(comment.side) || !Number.isInteger(comment.start) || !Number.isInteger(comment.end) || comment.start > comment.end) return null;
@@ -166,5 +206,5 @@ globalThis.ReviewTools = (() => {
     });
     return {comments, findings:remaining};
   }
-  return {focusFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, sourceText, commentText, reviewText, overviewFeedback, comparisonText, evidenceFlows, flowOwner, commentBody, postingText};
+  return {focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, sourceText, commentText, reviewText, overviewFeedback, comparisonText, evidenceFlows, flowOwner, commentBody, postingText};
 })();
