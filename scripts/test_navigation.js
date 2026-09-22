@@ -7,7 +7,7 @@ require('../assets/review-tools.js');
 const calls = [];
 const nodes = new Map();
 function node(name) {
-  return {value:'', textContent:'', innerHTML:'', dataset:{}, scrollTop:0,
+  return {style:{setProperty(){}}, value:'', textContent:'', innerHTML:'', dataset:{}, scrollTop:0,
     classList:{remove(){},add(){},toggle(){}},
     addEventListener(){}, setAttribute(){}, matches(){return false;},
     querySelectorAll(){return [];}, querySelector(){return null;},
@@ -41,13 +41,15 @@ const plainCard = {parentElement:parentPanel,closest(){return null;},querySelect
 let stored;
 const listeners = {};
 const sandbox = {
+  cancelAnimationFrame(){}, requestAnimationFrame(){return 1;},
   ReviewTools:globalThis.ReviewTools,
+  Prism:{languages:{}},
   document:{getElementById:get,querySelector:selector=>selector.includes('f2') ? plainCard : pairedCard,querySelectorAll:()=>[],body:node('body'),
     addEventListener(type,fn){(listeners[type] ||= []).push(fn);}},
   window:{ReviewIcons:{},addEventListener(){}},
   localStorage:{getItem:()=>null,setItem:(key,value)=>{stored=JSON.parse(value);}},
   matchMedia:()=>({matches:false,addEventListener(){}}),
-  location:{hash:''},history:{replaceState(){}},
+  location:{hash:'#overview'},history:{replaceState(){}},
   GLightbox:()=>({on(){},close(){},lightboxOpen:false}),
   setTimeout,clearTimeout,console,
   getComputedStyle:()=>({paddingTop:String(paddingTop)})
@@ -97,3 +99,62 @@ get('search').value='LongMessageComponent';
 ui.renderNavigation();
 assert(get('navigation').innerHTML.includes('data-component-link='),'Component-name search must reveal its step');
 console.log('PASS navigation reveals component controls, restores selection and keeps the sidebar shallow');
+// A fresh report opens in full-file focus with Unified selected, while explicit
+// Overview links retain their destination.
+sandbox.location.hash = '';
+vm.runInContext(source.replace(/  render\(\);\n\}\)\(\);\s*$/, '  globalThis.focusTest = {render, renderHunk, hunkFiles, changedSectionPosition, updateChangeNavigation, jumpChangedSection};\n})();'), sandbox);
+sandbox.focusTest.render();
+assert.equal(get('focus').textContent, 'File by file');
+assert(get('content').innerHTML.includes('focus-reader'));
+assert(get('content').innerHTML.includes('Group 1 of 2'));
+assert(get('content').innerHTML.includes('data-file-viewed="f0"'));
+assert(!get('content').innerHTML.includes('Viewed & next'));
+const headings = [100, 400, 700].map((top,i) => ({id:`anchor-${i}`,classList:{toggle(){}},getBoundingClientRect:()=>({top})}));
+content.querySelectorAll = () => headings;
+const previous = node('previous section'), next = node('next section');
+sandbox.document.querySelector = selector => selector === '.focus-file-header' ? {getBoundingClientRect:()=>({bottom:192})} : selector.includes('"-1"') ? previous : next;
+sandbox.focusTest.updateChangeNavigation();
+assert(previous.disabled);
+assert(!next.disabled);
+assert.equal(get('change-position').textContent, 'Section 1 of 3');
+headings.forEach((heading,i)=>heading.getBoundingClientRect=()=>({top:-500+i*300}));
+sandbox.focusTest.updateChangeNavigation();
+assert(!previous.disabled);
+assert(next.disabled, 'Last section must not wrap to the beginning');
+assert.equal(get('change-position').textContent, 'Section 3 of 3');
+console.log('PASS focus defaults, original group orientation, independent Viewed and section boundaries');
+
+assert(!get('content').innerHTML.includes('focus-file-picker'));
+assert(get('content').innerHTML.includes('data-copy-file'));
+// Reproduce an initially unpinned header and a long file with two changes.
+content.scrollTop = 0;
+content.clientHeight = 600;
+content.scrollHeight = 3000;
+const anchors = [250, 1100].map((top,i) => ({id:`anchor-${i}`,classList:{toggle(){}},getBoundingClientRect:()=>({top:top-content.scrollTop})}));
+content.querySelectorAll = () => anchors;
+sandbox.document.querySelector = selector => selector === '.focus-file-header' ? {getBoundingClientRect:()=>({bottom:content.scrollTop ? 192 : 222})} : selector.includes('"-1"') ? previous : next;
+sandbox.focusTest.jumpChangedSection(1);
+assert.equal(content.scrollTop, 900, 'One click must reach the second change and correct the moving sticky header');
+assert(next.disabled, 'Second of two sections must be the final destination');
+sandbox.focusTest.jumpChangedSection(-1);
+assert.equal(content.scrollTop, 50, 'Previous returns directly to the first changed line');
+const sampleHunk = {id:'test-hunk',old_start:1,new_start:1,old_count:2,new_count:2,rows:{unified:[{kind:'context',text:'context',old:1,new:1},{kind:'del',text:'before',old:2},{kind:'add',text:'after',new:2}]}};
+sandbox.focusTest.hunkFiles.set(sampleHunk.id, {path:'file.txt'});
+const sampleHtml = sandbox.focusTest.renderHunk(sampleHunk,'Explanation','file.txt','unified');
+assert(!sampleHtml.includes('range-heading'), 'Notes must not insert rows into the source');
+assert(sampleHtml.includes('class="code-row change-anchor" id="test-hunk"><td class="gutter del'));
+assert(sampleHtml.includes('popover="auto"'));
+assert(sampleHtml.includes('Read review note for this change'));
+console.log('PASS one-click hunk navigation with sticky header, sidebar-only file selection and on-demand notes');
+
+// Reaching the scroll limit must retain the clicked block, not infer another one.
+content.scrollTop = 0;
+content.scrollTo = options => { content.scrollTop = Math.max(0, Math.min(600, options.top)); };
+sandbox.focusTest.jumpChangedSection(1);
+assert.equal(get('change-position').textContent, 'Section 2 of 2');
+assert(!previous.disabled, 'Previous stays usable when the final block cannot reach the sticky header');
+sandbox.focusTest.jumpChangedSection(-1);
+assert.equal(get('change-position').textContent, 'Section 1 of 2');
+sampleHunk.rows.unified.push({kind:'context',text:'gap',old:3,new:3},{kind:'add',text:'later',new:4});
+const multipleBlocks = sandbox.focusTest.renderHunk(sampleHunk,'Explanation','file.txt','unified');
+assert.equal((multipleBlocks.match(/code-row change-anchor/g)||[]).length,2, 'Separate changes within one hunk need separate destinations');

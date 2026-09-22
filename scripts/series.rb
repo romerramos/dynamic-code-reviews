@@ -202,7 +202,7 @@ module ReviewSeries
     review
   end
 
-  def prepare(repo:, name:, out:, head: nil, base: nil, **_unused)
+  def prepare(repo:, name:, out:, head: nil, base: nil, working_tree: false, **_unused)
     path = directory(repo, name)
     history = manifest(path)
     raise ArgumentError, 'Series belongs to another checkout' unless history['repo'] == File.realpath(repo)
@@ -213,7 +213,10 @@ module ReviewSeries
       current_base = DynamicReviews.git(repo, 'merge-base', DynamicReviews.sha(repo, base), DynamicReviews.sha(repo, head)).strip
       raise ArgumentError, 'PR base changed; start a new baseline series' unless current_base == history['base']
     end
-    current = DynamicReviews.collect(repo: repo, mode: 'series', base: history.fetch('base'), head: head)
+    if working_tree && head && DynamicReviews.sha(repo, 'HEAD') != DynamicReviews.sha(repo, head)
+      raise ArgumentError, 'Working-tree PR review requires the checkout HEAD to match the verified PR head'
+    end
+    current = DynamicReviews.collect(repo: repo, mode: 'series', base: history.fetch('base'), head: working_tree ? nil : head)
     common = DynamicReviews.git(repo, 'merge-base', previous['snapshot']['head'], current['head'], allowed: [0, 1]).strip
     raise ArgumentError, 'History was rewritten; start a new baseline series and reassess the full scope' unless common == previous['snapshot']['head']
     old_context = previous['review'].fetch('context', {})
@@ -476,6 +479,7 @@ module ReviewSeries
     parser = OptionParser.new do |p|
       p.banner = 'ruby series.rb start|prepare|publish|qa|refresh|list [options]'
       %w[repo name report snapshot review out head base prepared update revision].each { |key| p.on("--#{key} VALUE") { |value| options[key.to_sym] = value } }
+      p.on('--working-tree', 'Include current working files with the verified PR head') { options[:working_tree] = true }
       p.on('--record', 'Save an intentional reassessment or a presentation-only refresh revision') { options[:record] = true }
     end
     parser.parse!(argv)

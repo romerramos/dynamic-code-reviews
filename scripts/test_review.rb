@@ -168,6 +168,29 @@ module ReviewChecks
       qa['flows'][0]['result'] = 'not-run'
       rejects('Unrun flow accepted as complete') { ReviewQA.validate(qa, snapshot) }
     end
+    checks['captures complete source and restores only immutable historical context'] = lambda do
+      Dir.mktmpdir do |repo|
+        git = ->(*args) { DynamicReviews.git(repo, *args) }
+        git.call('init', '-q')
+        git.call('config', 'user.name', 'Fixture')
+        git.call('config', 'user.email', 'fixture@example.test')
+        before = (1..50).map { |n| "line #{n}\n" }.join
+        File.write(File.join(repo, 'sample.txt'), before)
+        git.call('add', '.'); git.call('commit', '-qm', 'base')
+        after = before.sub('line 25', 'changed 25')
+        File.write(File.join(repo, 'sample.txt'), after)
+        working = DynamicReviews.collect(repo: repo)
+        assert(working['files'][0]['source'] == {'old' => before, 'new' => after}, 'Full source missing')
+        git.call('add', '.'); git.call('commit', '-qm', 'change')
+        captured = DynamicReviews.collect(repo: repo, mode: 'commit', commit: 'HEAD')
+        captured['files'][0].delete('source')
+        File.write(File.join(repo, 'sample.txt'), 'later working edit')
+        DynamicReviews.add_sources(captured)
+        assert(captured['files'][0]['source']['new'] == after, 'Historical source substituted current worktree')
+        omitted = DynamicReviews.collect(repo: repo, max_bytes: 10)
+        assert(!omitted['files'][0].key?('source'), 'Oversize source embedded')
+      end
+    end
     checks.each do |description, check|
       check.call
       puts "PASS #{description}"

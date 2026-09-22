@@ -40,7 +40,7 @@ review fit.
 
 For a PR-origin series, resolve live provider metadata again and pass both
 `--base <verified-base-ref> --head <verified-head-ref>`. Working edits are then
-excluded. If the effective merge base changed, start a new baseline series;
+excluded unless the user explicitly requests PR plus current local edits: add `--working-tree` with the verified base/head. The checkout HEAD must match that PR head; capture the current working files, label the mixed scope, and do not carry previous QA forward as current evidence. If the effective merge base changed, start a new baseline series;
 never present an old-base cumulative review as a current full PR review.
 
 ## Write only the increment

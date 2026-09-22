@@ -22,7 +22,7 @@ module DynamicReviews
   LANGUAGES = %w[core markup clike javascript css ruby sql json yaml bash typescript].freeze
 
   def self.git(root, *args, allowed: [0])
-    literal = %w[diff ls-files].include?(args.first) ? ['--literal-pathspecs'] : []
+    literal = %w[diff ls-files ls-tree].include?(args.first) ? ['--literal-pathspecs'] : []
     output, error, status = Open3.capture3('git', *literal, '-C', root.to_s, *args)
     raise ArgumentError, error.strip unless allowed.include?(status.exitstatus)
     output
@@ -167,7 +167,35 @@ module DynamicReviews
     result = {'version' => 2, 'repo' => root, 'mode' => mode, 'base' => base, 'head' => head,
               'created' => Time.now.utc.iso8601, 'fingerprint' => fingerprint, 'files' => files}
     result['working_tree'] = working_tree if mode == 'series'
-    result
+    add_sources(result, working_tree: working_tree, max_bytes: max_bytes)
+  end
+
+  # Full context is captured separately from patch identity. Legacy committed
+  # reports can recover it from immutable Git objects, never today's worktree.
+  def self.add_sources(snapshot, working_tree: false, max_bytes: 300_000)
+    snapshot['files'].each do |file|
+      next if file.key?('source') || sensitive?(file['path']) || file['patch'].empty? || file['note'].include?('omitted')
+      root, path = snapshot['repo'], file['path']
+      source = %w[old new].to_h do |side|
+        ref = snapshot[side == 'old' ? 'base' : 'head']
+        entry = git(root, 'ls-tree', ref, '--', path).split
+        data = if side == 'new' && working_tree
+                 target = File.join(root, path)
+                 next [side, nil] if File.symlink?(target) || (File.file?(target) && File.size(target) > max_bytes)
+                 File.file?(target) ? File.binread(target) : ''
+               elsif entry.empty?
+                 ''
+               elsif entry[1] == 'blob' && %w[100644 100755].include?(entry[0]) && git(root, 'cat-file', '-s', entry[2]).to_i <= max_bytes
+                 git(root, 'cat-file', 'blob', entry[2])
+               end
+        [side, data && !data.include?("\0") ? text(data) : nil]
+      end
+      file['source'] = source if source.values.all?
+    rescue ArgumentError, Errno::ENOENT
+      # Exported reports remain usable if the original repository is absent.
+      next
+    end
+    snapshot
   end
 
   def self.test_path?(path)
@@ -271,6 +299,7 @@ module DynamicReviews
     review['sections'] = Array(review['sections']).reject { |section| section['title'].to_s.match?(/\Areview standard/i) } if review.key?('sections')
     # Derived rows are render data. They do not alter the captured fingerprint.
     snapshot = Marshal.load(Marshal.dump(snapshot))
+    add_sources(snapshot) unless snapshot['mode'] == 'uncommitted' || snapshot['working_tree']
     snapshot['files'].each { |file| file['hunks'].each { |hunk| hunk['rows'] = diff_rows(hunk) } }
     payload = JSON.generate({'snapshot' => snapshot, 'review' => review}).gsub('<', '\\u003c').gsub('>', '\\u003e').gsub('&', '\\u0026')
     licenses = %w[DAISYUI-LICENSE PRISM-LICENSE lucide/LICENSE glightbox/LICENSE].map { |name| File.read(File.join(ASSETS, 'vendor', name)) }.join("\n")

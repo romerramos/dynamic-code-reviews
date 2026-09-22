@@ -171,6 +171,11 @@ module SeriesChecks
           rejects('PR continued without verified refs') { ReviewSeries.prepare(repo: root, name: 'pr-values', out: out) }
           unchanged = ReviewSeries.prepare(repo: root, name: 'pr-values', out: out, base: first, head: second)
           assert(unchanged['status'] == 'unchanged', 'PR included dirty worktree content')
+          mixed = ReviewSeries.prepare(repo: root, name: 'pr-values', out: out, base: first, head: second, working_tree: true)
+          captured = ReviewSeries.read(File.join(out, 'snapshot.json'))
+          assert(mixed['status'] == 'changed' && captured['working_tree'], 'Explicit local scope was not captured')
+          assert(captured['files'].any? { |file| file['patch'].include?('dirty working content') }, 'Current file content missing')
+          rejects('Mismatched checkout accepted') { ReviewSeries.prepare(repo: root, name: 'pr-values', out: out, base: first, head: first, working_tree: true) }
           rejects('Moved PR base was accepted') { ReviewSeries.prepare(repo: root, name: 'pr-values', out: out, base: second, head: second) }
           rejects('Rewound PR head was accepted') { ReviewSeries.prepare(repo: root, name: 'pr-values', out: out, base: first, head: first) }
           old = original['snapshot']

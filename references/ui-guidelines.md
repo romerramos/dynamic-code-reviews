@@ -261,3 +261,29 @@ keyboard controls and check narrow-width wrapping and checkbox focus.
 `series.rb refresh --record` creates an explicitly requested presentation revision
 without collecting source or altering conclusions or QA evidence. The default
 refresh still updates browsing pages only; original snapshots stay immutable.
+
+## File-by-file reading
+
+File by file follows the existing walkthrough groups and steps, with each unique
+file at its first occurrence and related tests in their existing reading position.
+It is a reading mode, not a new grouping strategy. Preserve group labels in the
+sidebar, show the file position and explanation, and offer Previous/Next file,
+Previous/Next changed section and a separate Viewed checkbox. Keep navigation keyboard accessible and
+use J/K for files while File by file is active. Existing comment anchors remain stable.
+
+Render all captured source lines, including context before, between and after
+hunks. Capture bounded text at collection; legacy committed snapshots may recover
+context only from their immutable Git objects. Historical working-tree snapshots
+must never read today's working files. Label unavailable/oversized context clearly.
+Context outside saved hunks has plain line numbers rather than misleading comment
+controls that would create invalid anchors.
+
+A−/A+ changes code font size from 10–20px (13px default), updating row spacing
+without changing the surrounding UI. Persist this with revision-local preferences.
+Verify complete old/new line coverage, additions/deletions, no-final-newline files,
+existing comment navigation, file boundaries, viewed state, font limits/reload,
+group order, and desktop/tablet geometry. A UI refresh preserves analysis and QA.
+
+File by file and Unified are the main review defaults. Place explicit File by file / Walkthrough reading controls beside Auto/Unified/Split. Walkthrough retains the existing group steps; do not imply it is one infinite list. Keep the existing grouped sidebar visible on desktop and the current group, step and file position in the sticky file header. Keep hunk explanations out of the source flow: a small note marker on the first changed line opens a clearly labeled Review note popover. Use only the grouped sidebar for file selection; show a selectable current file path with Copy path in the reading header, without a competing file dropdown. Hide the unified table header visually while retaining accessible before/after line-number labels. Changed-section buttons navigate contiguous changed blocks separated by unchanged lines, including multiple blocks inside one Git hunk. Track the selected block explicitly across clicks, including when scrolling is clamped at the file bottom; resynchronize after manual scrolling. Use instant scrolling corrected for the sticky header, without wrapping, show the current section count and disable at boundaries. Viewed records progress without advancing or hiding the focused file; Next file remains a separate action. Explicit Overview/All changes links still open their respective screens.
+
+In File by file, paired ViewComponents expose compact Ruby / Template navigation beside the current path, using the same component pairing within the existing review layer. Indicate the current file and preserve group order, viewed state and full-path copying. Show shortcuts only when both files exist in the reviewed scope; do not invent or load an unchanged companion.

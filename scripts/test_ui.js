@@ -131,3 +131,21 @@ assert.deepEqual(tools.fileProgress(['app/shared.rb','app/shared.rb','test/share
 assert.deepEqual(tools.fileProgress([],viewed),{total:0,viewed:0});
 assert.equal(restored.notes.g0l0,'Resume here');
 console.log('PASS file progress survives storage, deduplicates shared files and migrates only fully reviewed legacy files');
+
+const focusLayers = [
+  {id:'first', items:[{file:'b'},{file:'test'},{file:'a'}], related_tests:[{entities:['a'],files:['test']}]},
+  {id:'second',items:[{file:'a'},{file:'c'}]}
+];
+assert.deepEqual(tools.focusFiles(focusLayers).map(entry => [entry.layer.id,entry.file]), [['first','b'],['first','a'],['first','test'],['second','c']]);
+const middleHunk = {id:'fh1',old_start:3,old_count:1,new_start:3,new_count:2,rows:{unified:[{kind:'del',old:3,text:'old'},{kind:'add',new:3,text:'new'},{kind:'add',new:4,text:'extra'}]}};
+const full = tools.fullFileHunks({id:'f',source:{old:'one\ntwo\nold\nfour',new:'one\ntwo\nnew\nextra\nfour'},hunks:[middleHunk]});
+assert.equal(full[1],middleHunk);
+assert.deepEqual(full.flatMap(h => h.rows.unified).filter(r=>r.old).map(r=>[r.old,r.text]), [[1,'one'],[2,'two'],[3,'old'],[4,'four']]);
+assert.deepEqual(full.flatMap(h => h.rows.unified).filter(r=>r.new).map(r=>r.new),[1,2,3,4,5]);
+assert.equal(tools.fullFileHunks({hunks:[]}),null);
+assert.throws(()=>tools.fullFileHunks({id:'x',source:{old:'wrong',new:'other'},hunks:[]}));
+for (const [oldText,newText,oldCount,newCount] of [['','new',0,1],['old','',1,0]]) {
+ const h = {id:'add-delete',old_start:oldCount,old_count:oldCount,new_start:newCount,new_count:newCount};
+ assert.deepEqual(tools.fullFileHunks({id:'edge',source:{old:oldText,new:newText},hunks:[h]}),[h]);
+}
+console.log('PASS focus preserves walkthrough order and complete source line coverage');

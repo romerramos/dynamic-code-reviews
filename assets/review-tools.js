@@ -1,6 +1,34 @@
 /* Pure helpers shared by the offline UI and its Node checks. */
 'use strict';
 globalThis.ReviewTools = (() => {
+  function focusFiles(layers) {
+    const seen = new Set();
+    return layers.flatMap(layer => walkthroughSections(layer).flatMap(section => section.item ? [section.item] : section.items || [])
+      .flatMap(item => { if (seen.has(item.file)) return []; seen.add(item.file); return [{file:item.file, layer}]; }));
+  }
+  function fullFileHunks(file) {
+    if (!file.source) return null;
+    const lines = side => file.source[side] === '' ? [] : file.source[side].replace(/\n$/, '').split('\n');
+    const old = lines('old'), after = lines('new');
+    const result = [];
+    let oi = 0, ni = 0;
+    const context = (oe, ne) => {
+      const before = old.slice(oi, oe), next = after.slice(ni, ne);
+      if (before.length !== next.length || before.some((text, i) => text !== next[i])) throw new Error('Captured source does not match diff context');
+      if (before.length) {
+        const unified = before.map((text, i) => ({kind:'context', text, old:oi + i + 1, new:ni + i + 1}));
+        result.push({id:`${file.id}-context-${result.length}`, contextOnly:true, rows:{unified, split:unified.map(line => ({old:line, new:line}))}});
+      }
+    };
+    file.hunks.forEach(hunk => {
+      context(hunk.old_count ? hunk.old_start - 1 : hunk.old_start, hunk.new_count ? hunk.new_start - 1 : hunk.new_start);
+      result.push(hunk);
+      oi = hunk.old_count ? hunk.old_start - 1 + hunk.old_count : hunk.old_start;
+      ni = hunk.new_count ? hunk.new_start - 1 + hunk.new_count : hunk.new_start;
+    });
+    context(old.length, after.length);
+    return result;
+  }
   const categories = ['Design / UI', 'Frontend', 'Backend', 'Documentation', 'Tests', 'Platform', 'Security', 'AI', 'Other'];
   const designFile = path => /(?:\.html(?:\.erb)?|\.(?:css|scss|sass))$/i.test(path);
   // Pair only conventional, changed sidecars within this walkthrough layer.
@@ -138,5 +166,5 @@ globalThis.ReviewTools = (() => {
     });
     return {comments, findings:remaining};
   }
-  return {componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, sourceText, commentText, reviewText, overviewFeedback, comparisonText, evidenceFlows, flowOwner, commentBody, postingText};
+  return {focusFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, sourceText, commentText, reviewText, overviewFeedback, comparisonText, evidenceFlows, flowOwner, commentBody, postingText};
 })();

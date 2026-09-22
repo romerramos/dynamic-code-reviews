@@ -15,6 +15,11 @@
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { /* file:// storage may be disabled */ }
   const state = {view:'overview', notes:{}, personalComments:[], resolvedComments:[], fileOpen:{}, groupOpen:{}, componentFiles:{}, ...saved};
+  const focusOrder = ReviewTools.focusFiles(layers);
+  let focusMode = true;
+  let focusIndex = 0;
+  let selectedChange = null;
+  const fullContextCache = new Map();
   const components = layer => ReviewTools.componentGroups(layer.items, files);
   const componentKey = (layer, component) => `${layer.id}:${component.key}`;
   const activeComponentFile = (layer, component) => component.items.find(item => item.file === state.componentFiles[componentKey(layer, component)])?.file || component.items[0].file;
@@ -34,8 +39,8 @@
   function refreshComments() { comments = [...generatedComments.map(comment => ({...comment, personal:false})), ...state.personalComments.map(comment => ({...comment, personal:true}))].map(comment => ({...comment, resolved:state.resolvedComments.includes(comment.id)})); }
   refreshComments();
   const tabletLayout = matchMedia('(max-width: 1199px)');
-  let layoutChoice = 'auto';
-  let layout = tabletLayout.matches ? 'unified' : 'split';
+  let layoutChoice = 'unified';
+  let layout = 'unified';
   let categoryFilter = 'All';
   let selection = null;
   let editorRange = null;
@@ -138,7 +143,7 @@
 
   function lineButton(hunk, side, number, comment = null) {
     if (number === undefined) return '';
-    if (comment) return `<span class="line-number">${number}</span>`;
+    if (comment || hunk.contextOnly) return `<span class="line-number">${number}</span>`;
     return `<button class="line-number" type="button" data-select-line="${number}" data-range-hunk="${hunk.id}" data-range-side="${side}" aria-label="Select ${side === 'new' ? 'after' : 'before'} line ${number} in ${escape(hunkFiles.get(hunk.id).path)}" title="Select line to comment">${number}</button>`;
   }
   function clearSelection() {
@@ -276,19 +281,32 @@
     const columns = mode === 'split' ? 4 : 3;
     const colored = highlights(hunk, path);
     const range = (side) => hunk[`${side}_count`] === 0 ? '—' : `${hunk[`${side}_start`]}–${hunk[`${side}_start`] + hunk[`${side}_count`] - 1}`;
-    const heading = `<tr class="range-heading" id="${comment ? 'expanded-' : ''}${hunk.id}"><td colspan="${columns}"><div class="range-label"><span>CHANGED RANGE</span><span>Before ${range('old')} &nbsp; / &nbsp; After ${range('new')}</span></div><p>${escape(summary)}</p></td></tr>`;
-    return heading + hunk.rows[mode].map(row => {
+    const inlineNote = focusMode && !comment && !hunk.contextOnly;
+    const heading = hunk.contextOnly || inlineNote ? '' : `<tr class="range-heading" id="${comment ? 'expanded-' : ''}${hunk.id}"><td colspan="${columns}"><div class="range-label"><span>CHANGED RANGE</span><span>Before ${range('old')} &nbsp; / &nbsp; After ${range('new')}</span></div><p>${escape(summary)}</p></td></tr>`;
+    const rows = hunk.rows[mode].map(row => {
       if (mode === 'split') return `<tr class="code-row">${splitCells(hunk, row.old, 'old', colored, comment)}${splitCells(hunk, row.new, 'new', colored, comment)}</tr>`;
       const side = row.kind === 'del' ? 'old' : 'new';
       const marked = rangeClasses(hunk, 'old', row.old, comment) + rangeClasses(hunk, 'new', row.new, comment);
       const kind = row.kind === 'context' ? '' : row.kind;
       const sign = row.kind === 'del' ? '−' : row.kind === 'add' ? '+' : ' ';
       return `<tr class="code-row"><td class="gutter ${kind}${rangeClasses(hunk,'old',row.old,comment)}" data-hunk="${hunk.id}" data-side="old" ${row.old !== undefined ? `data-line="${row.old}"` : ''}>${commentTrigger(hunk, 'old', row.old, comment)}${lineButton(hunk, 'old', row.old, comment)}</td><td class="gutter ${kind}${rangeClasses(hunk,'new',row.new,comment)}" data-hunk="${hunk.id}" data-side="new" ${row.new !== undefined ? `data-line="${row.new}"` : ''}>${commentTrigger(hunk, 'new', row.new, comment)}${lineButton(hunk, 'new', row.new, comment)}</td><td class="code ${kind}${marked}"><code><span class="sign" aria-hidden="true">${sign}</span>${colored[side].get(row[side]) || ''}</code>${row.no_newline ? '<span class="newline-marker">No newline at end of file</span>' : ''}</td></tr>`;
-    }).join('');
+    });
+    if (inlineNote) {
+      const changed = row => mode === 'unified' ? row.kind !== 'context' : row.old?.kind === 'del' || row.new?.kind === 'add';
+      const starts = hunk.rows[mode].flatMap((row, index, all) => changed(row) && (index === 0 || !changed(all[index - 1])) ? [index] : []);
+      const firstChange = starts[0];
+      starts.forEach((rowIndex, index) => {
+        const id = index === 0 ? hunk.id : `${hunk.id}-change-${index + 1}`;
+        rows[rowIndex] = rows[rowIndex].replace('<tr class="code-row">', `<tr class="code-row change-anchor" id="${id}">`);
+      });
+      const note = `<button class="review-note-trigger" popovertarget="note-${hunk.id}" aria-label="Read review note for this change" title="Review note">${icon('message-square')}</button><aside id="note-${hunk.id}" class="review-note-popover" popover="auto" aria-label="Review note"><button class="btn btn-sm btn-ghost" popovertarget="note-${hunk.id}" popovertargetaction="hide" aria-label="Close review note">✕</button><strong>Review note</strong><p>${escape(summary || 'Changed section')}</p><small>Before ${range('old')} · After ${range('new')}</small></aside>`;
+      rows[firstChange] = rows[firstChange]?.replace(/(<td class="code[^>]*>)/, `$1${note}`);
+    }
+    return heading + rows.join('');
   }
 
   function renderDiffTable(file, hunks, summaries, mode = layout, comment = null) {
-    return `<div class="diff-scroll"><table class="diff-table ${mode}" aria-label="${escape(file.path)} ${mode} diff"><colgroup><col class="gutter">${mode === 'split' ? '<col><col class="gutter"><col>' : '<col class="gutter"><col>'}</colgroup><thead><tr>${mode === 'split' ? `<th colspan="2">BEFORE · ${escape(snapshot.base.slice(0,8))}</th><th colspan="2" class="after">AFTER · ${escape(snapshot.mode === 'uncommitted' || snapshot.working_tree ? 'working tree' : snapshot.head.slice(0,8))}</th>` : '<th>OLD</th><th>NEW</th><th>CODE</th>'}</tr></thead><tbody>${hunks.map(hunk => renderHunk(hunk, summaries[hunk.id], file.path, mode, comment)).join('')}</tbody></table></div>`;
+    return `<div class="diff-scroll"><table class="diff-table ${mode}" aria-label="${escape(file.path)} ${mode} diff"><colgroup><col class="gutter">${mode === 'split' ? '<col><col class="gutter"><col>' : '<col class="gutter"><col>'}</colgroup><thead class="${mode === 'unified' ? 'line-number-headings' : ''}"><tr>${mode === 'split' ? `<th colspan="2">BEFORE · ${escape(snapshot.base.slice(0,8))}</th><th colspan="2" class="after">AFTER · ${escape(snapshot.mode === 'uncommitted' || snapshot.working_tree ? 'working tree' : snapshot.head.slice(0,8))}</th>` : '<th scope="col"><span>Before line number</span></th><th scope="col"><span>After line number</span></th><th scope="col"><span>Code</span></th>'}</tr></thead><tbody>${hunks.map(hunk => renderHunk(hunk, summaries[hunk.id], file.path, mode, comment)).join('')}</tbody></table></div>`;
   }
 
   function renderFile(item) {
@@ -507,8 +525,96 @@
     }).join('')}</section>`).join('') || '<p class="empty-state">No matching files.</p>'}`;
   }
 
+  function renderFocus() {
+    const entry = focusOrder[focusIndex];
+    if (!entry) return '<p>No files in this review.</p>';
+    const file = files.get(entry.file);
+    const component = components(entry.layer).find(pair => pair.items.some(item => item.file === file.id));
+    const componentLinks = component ? `<div class="focus-component"><span>${escape(component.name)}</span><div class="join" role="group" aria-label="${escape(component.name)} files">${component.items.map(item => {
+      const sibling = files.get(item.file);
+      return `<button class="btn btn-sm join-item" data-focus-component-file="${sibling.id}" aria-pressed="${sibling.id === file.id}" title="${escape(sibling.path)}" aria-label="Open ${escape(sibling.path)}">${sibling.path.endsWith('.rb') ? 'Ruby' : 'Template'}</button>`;
+    }).join('')}</div></div>` : '';
+    const items = layers.flatMap(layer => layer.items).filter(item => item.file === file.id);
+    const summaries = Object.assign({}, ...items.map(item => item.summaries || {}));
+    if (!fullContextCache.has(file.id)) {
+      try { fullContextCache.set(file.id, ReviewTools.fullFileHunks(file)); }
+      catch { fullContextCache.set(file.id, null); }
+    }
+    const full = fullContextCache.get(file.id);
+    if (full && !fullContextCache.has(`${file.id}:highlighted`)) {
+      const colored = {};
+      ['old', 'new'].forEach(side => {
+        const lines = file.source[side] === '' ? [] : file.source[side].replace(/\n$/, '').split('\n').map(text => ({text}));
+        colored[side] = new Map(highlightedLines(lines, language(file.path)).map((text, i) => [i + 1, text]));
+      });
+      full.forEach(hunk => highlightCache.set(hunk.id, colored));
+      fullContextCache.set(`${file.id}:highlighted`, true);
+    }
+    return `<section class="focus-reader"><header class="focus-file-header"><div class="focus-location"><span class="eyebrow">Group ${review.groups.indexOf(entry.layer.group) + 1} of ${review.groups.length} · ${escape(entry.layer.group.title)}${entry.layer.title === entry.layer.group.title ? '' : ` · ${escape(entry.layer.title)}`}</span><span class="focus-file-position">File ${focusIndex + 1} of ${focusOrder.length}</span><div class="current-file"><code>${escape(file.path)}</code><button class="btn btn-sm btn-ghost copy-file-path" data-copy-file title="Copy the full relative file path">Copy path</button></div>${componentLinks}</div><div class="focus-file-actions"><span id="change-position" class="muted">${file.hunks.length} changed sections</span><button class="btn btn-sm btn-ghost" data-change-step="-1" disabled title="Scroll to the previous changed block in this file">Previous changed section</button><button class="btn btn-sm btn-ghost" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} title="Scroll to the next changed block in this file">Next changed section</button><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" ${fileViewed(file) ? 'checked' : ''}> Viewed</label></div><details><summary>Why this file matters</summary><p>${escape(entry.layer.summary || entry.layer.group.summary)}</p>${items.map(item => item.summary ? `<p>${escape(item.summary)}</p>` : '').join('')}</details></header>${!full ? '<p class="focus-unavailable">Full source was not captured or exceeds the text limit. Showing the saved diff; no current working files have been substituted.</p>' : ''}${file.hunks.length || full?.length ? renderDiffTable(file, full || file.hunks, summaries) : `<pre>${escape(file.note || file.patch || 'No text diff available.')}</pre>`}<footer class="focus-end"><span>${focusIndex + 1 === focusOrder.length ? 'End of the review' : `Next: ${escape(files.get(focusOrder[focusIndex + 1].file).path)}`}</span><button class="btn btn-sm btn-primary" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></footer></section>`;
+  }
+  function focusFile(index) {
+    document.body.classList.remove('navigation-open'); $('nav-toggle').setAttribute('aria-expanded', 'false');
+    focusIndex = Math.max(0, Math.min(focusOrder.length - 1, index));
+    state.navFile = focusOrder[focusIndex]?.file;
+    if (focusOrder[focusIndex]) {
+      state.view = focusOrder[focusIndex].layer.id;
+      activateComponentFile(focusOrder[focusIndex].layer, focusOrder[focusIndex].file);
+    }
+    selectedChange = null;
+    clearSelection(); render(); $('content').scrollTo({top:0, behavior:'instant'}); updateChangeNavigation();
+  }
+  function changedSectionPosition() {
+    const headings = [...$('content').querySelectorAll('.change-anchor')];
+    const top = document.querySelector('.focus-file-header')?.getBoundingClientRect().bottom + 8;
+    let current = headings.length ? 0 : -1;
+    headings.forEach((node, index) => { if (node.getBoundingClientRect().top <= top + 4) current = index; });
+    if (selectedChange?.file === focusOrder[focusIndex]?.file && Math.abs($('content').scrollTop - selectedChange.scrollTop) < 2) {
+      const selected = headings.findIndex(node => node.id === selectedChange.id);
+      if (selected >= 0) current = selected;
+    } else selectedChange = null;
+    return {headings, top, current};
+  }
+  function jumpChangedSection(delta) {
+    const {headings, current} = changedSectionPosition();
+    const target = headings[current + delta];
+    if (!target) return;
+    // First pin the header, then correct for its final position. Use instant
+    // scrolling so a second click never observes an unfinished animation.
+    for (let pass = 0; pass < 2; pass++) {
+      const top = document.querySelector('.focus-file-header').getBoundingClientRect().bottom + 8;
+      $('content').scrollTo({top: $('content').scrollTop + target.getBoundingClientRect().top - top, behavior:'instant'});
+    }
+    selectedChange = {file:focusOrder[focusIndex]?.file, id:target.id, scrollTop:$('content').scrollTop};
+    updateChangeNavigation();
+  }
+  function updateChangeNavigation() {
+    if (!focusMode) return;
+    const {headings, current} = changedSectionPosition();
+    headings.forEach((node, index) => node.classList.toggle('is-current-change', index === current));
+    const label = $('change-position');
+    if (!label) return;
+    label.textContent = current < 0 ? `${headings.length} changed sections` : `Section ${current + 1} of ${headings.length}`;
+    const previous = document.querySelector('[data-change-step="-1"]');
+    const next = document.querySelector('[data-change-step="1"]');
+    if (previous) previous.disabled = current <= 0;
+    if (next) next.disabled = current >= headings.length - 1;
+  }
+  $('content').addEventListener('scroll', updateChangeNavigation, {passive:true});
+  function setFontSize(size) {
+    state.codeFontSize = Math.max(10, Math.min(20, Number(size) || 13));
+    document.body.style.setProperty('--code-font-size', `${state.codeFontSize}px`);
+    document.body.style.setProperty('--code-line-height', `${Math.round(state.codeFontSize * 1.8)}px`);
+    $('font-size').textContent = `${state.codeFontSize}px`;
+    $('font-smaller').disabled = state.codeFontSize === 10;
+    $('font-larger').disabled = state.codeFontSize === 20;
+    persist(); schedulePosition();
+  }
   function render() {
     closeComments();
+    $('focus').textContent = 'File by file';
+    $('walkthrough').setAttribute('aria-pressed', !focusMode);
+    $('focus').setAttribute('aria-pressed', focusMode);
+    if (focusMode && focusOrder[focusIndex]) { state.navFile = focusOrder[focusIndex].file; state.view = focusOrder[focusIndex].layer.id; }
     renderNavigation();
     persist();
     const layer = layers.find(layer => layer.id === state.view);
@@ -518,15 +624,23 @@
     ['unified','split'].forEach(mode => { $(mode).setAttribute('aria-pressed', layoutChoice === mode); });
     $('auto-layout').setAttribute('aria-pressed', layoutChoice === 'auto');
     $('auto-layout').textContent = layoutChoice === 'auto' ? `Auto · ${layout}` : 'Auto';
-    $('content').innerHTML = layer ? renderStep(layer) : state.view === 'files' ? renderFiles() : renderOverview();
+    if (focusMode) {
+      $('position').textContent = `File ${focusIndex + 1} of ${focusOrder.length}`;
+      $('prev').disabled = focusIndex === 0; $('next').disabled = focusIndex === focusOrder.length - 1;
+    }
+    $('prev').setAttribute('aria-label', focusMode ? 'Previous file' : 'Previous step');
+    $('next').setAttribute('aria-label', focusMode ? 'Next file' : 'Next step');
+    $('content').innerHTML = focusMode ? renderFocus() : layer ? renderStep(layer) : state.view === 'files' ? renderFiles() : renderOverview();
     paintSelection();
-    if (layer) {
+    requestAnimationFrame(updateChangeNavigation);
+    if (layer && !focusMode) {
       $('notes').value = state.notes[layer.id] || '';
       $('notes').addEventListener('input', event => { state.notes[layer.id] = event.target.value; persist(); });
     }
   }
 
   function select(view, scroll = true) {
+    if (focusMode) { const index = focusOrder.findIndex(entry => entry.layer.id === view); if (index >= 0) focusIndex = index; else { focusMode = false; document.body.classList.remove('reading-focus'); $('focus').setAttribute('aria-pressed', 'false'); } }
     clearSelection();
     document.body.classList.remove('navigation-open'); $('nav-toggle').setAttribute('aria-expanded', 'false');
     if (state.view !== view || scroll) state.navFile = null;
@@ -536,6 +650,7 @@
     if (scroll) $('content').scrollTop = 0;
   }
   function navigateFile(layer, id) {
+    if (focusMode) { focusFile(focusOrder.findIndex(entry => entry.file === id)); return; }
     const file = files.get(id);
     activateComponentFile(layer, id);
     state.fileOpen[file.path] = true;
@@ -560,6 +675,7 @@
     target?.focus({preventScroll:true});
   }
   function step(delta) {
+    if (focusMode) { focusFile(focusIndex + delta); return; }
     const index = layers.findIndex(layer => layer.id === state.view);
     if (index === 0 && delta < 0) return select('overview');
     const target = layers[Math.max(0, Math.min(layers.length - 1, index + delta))];
@@ -571,7 +687,7 @@
     activateComponentFile(layer, hunkFiles.get(hunk).id);
     if ($('details-dialog').open) $('details-dialog').close();
     showComments = true; $('comments-toggle').checked = true;
-    if (state.view === 'files') { categoryFilter = 'All'; $('search').value = ''; render(); } else select(layer.id, false);
+    if (focusMode) { focusFile(focusOrder.findIndex(entry => entry.file === hunkFiles.get(hunk).id)); } else if (state.view === 'files') { categoryFilter = 'All'; $('search').value = ''; render(); } else select(layer.id, false);
     state.navFile = hunkFiles.get(hunk).id;
     renderNavigation(); persist();
     const trigger = commentID ? [...document.querySelectorAll('.comment-trigger')].find(button => button.dataset.notes.split(' ').includes(commentID)) : null;
@@ -735,7 +851,34 @@
   tabletLayout.addEventListener('change', () => { renderExpandedCode(); if (layoutChoice === 'auto') { const scroll = $('content').scrollTop; layout = tabletLayout.matches ? 'unified' : 'split'; render(); $('content').scrollTop = scroll; } });
   $('nav-toggle').onclick = () => { const open = document.body.classList.toggle('navigation-open'); $('nav-toggle').setAttribute('aria-expanded', open); };
   $('comments-toggle').onchange = event => { const scroll = $('content').scrollTop; showComments = event.target.checked; render(); $('content').scrollTop = scroll; };
-  $('focus').onclick = () => { document.body.classList.toggle('focus'); $('focus').setAttribute('aria-pressed', document.body.classList.contains('focus')); schedulePosition(); };
+  function chooseReadingMode(enabled) {
+    focusMode = enabled;
+    if (focusMode) { const index = focusOrder.findIndex(entry => state.navFile ? entry.file === state.navFile : entry.layer.id === state.view); if (index >= 0) focusIndex = index; }
+    document.body.classList.toggle('reading-focus', focusMode);
+    $('focus').setAttribute('aria-pressed', focusMode);
+    $('focus').textContent = 'File by file';
+    $('walkthrough').setAttribute('aria-pressed', !focusMode);
+    $('focus').setAttribute('aria-pressed', focusMode);
+    clearSelection(); render(); $('content').scrollTop = 0;
+  };
+  $('focus').onclick = () => chooseReadingMode(true);
+  $('walkthrough').onclick = () => chooseReadingMode(false);
+  $('font-smaller').onclick = () => setFontSize(state.codeFontSize - 1);
+  $('font-larger').onclick = () => setFontSize(state.codeFontSize + 1);
+  $('content').addEventListener('click', event => {
+    const sibling = event.target.closest('[data-focus-component-file]');
+    if (sibling) {
+      const id = sibling.dataset.focusComponentFile;
+      focusFile(focusOrder.findIndex(entry => entry.file === id));
+      document.querySelector(`[data-focus-component-file="${id}"]`)?.focus({preventScroll:true});
+    }
+    if (event.target.closest('[data-focus-next]')) step(1);
+    if (event.target.closest('[data-copy-file]')) copyText(files.get(focusOrder[focusIndex].file).path);
+    const button = event.target.closest('[data-change-step]');
+    if (button) {
+      jumpChangedSection(Number(button.dataset.changeStep));
+    }
+  });
   $('search').oninput = () => { renderNavigation(); if (state.view === 'files') render(); };
   $('context-toggle').onclick = context;
   $('write-comment').onclick = () => openEditor();
@@ -782,7 +925,7 @@
     if (/INPUT|TEXTAREA|SELECT/.test(event.target.tagName) || event.metaKey || event.ctrlKey || event.altKey || $('details-dialog').open || $('comment-editor').open || $('copy-dialog').open || $('comment-popover').matches(':popover-open')) return;
     const key = event.key.toLowerCase();
     if (key === 'j' || key === 'k') { event.preventDefault(); step(key === 'j' ? 1 : -1); }
-    if (key === 'z') $('focus').click();
+    if (key === 'z') chooseReadingMode(!focusMode);
   });
   $('title').textContent = review.title;
   if (review.history) {
@@ -803,5 +946,9 @@
     const view = location.hash.slice(1);
     if (['overview','files', ...layers.map(layer => layer.id)].includes(view)) select(view);
   });
+  if (hash === 'overview' || hash === 'files') focusMode = false;
+  const initialFile = focusOrder.findIndex(entry => state.navFile ? entry.file === state.navFile : entry.layer.id === state.view);
+  if (initialFile >= 0) focusIndex = initialFile;
+  setFontSize(state.codeFontSize);
   render();
 })();
