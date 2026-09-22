@@ -14,7 +14,15 @@
   const storageKey = `dynamic-review:${snapshot.fingerprint}${review.history ? `:${review.history.series}:${review.history.revision}` : ""}`;
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { /* file:// storage may be disabled */ }
-  const state = {view:'overview', notes:{}, personalComments:[], resolvedComments:[], fileOpen:{}, groupOpen:{}, ...saved};
+  const state = {view:'overview', notes:{}, personalComments:[], resolvedComments:[], fileOpen:{}, groupOpen:{}, componentFiles:{}, ...saved};
+  const components = layer => ReviewTools.componentGroups(layer.items, files);
+  const componentKey = (layer, component) => `${layer.id}:${component.key}`;
+  const activeComponentFile = (layer, component) => component.items.find(item => item.file === state.componentFiles[componentKey(layer, component)])?.file || component.items[0].file;
+  function activateComponentFile(layer, file) {
+    const component = components(layer).find(component => component.items.some(item => item.file === file));
+    if (component) state.componentFiles[componentKey(layer, component)] = file;
+  }
+  const componentScroll = new Map();
   state.viewedFiles = ReviewTools.viewedFiles(snapshot, layers, saved);
   delete state.viewed;
   const fileViewed = file => state.viewedFiles.includes(file.path);
@@ -52,26 +60,37 @@
   function renderNavigation() {
     const query = $('search').value.trim().toLowerCase();
     let html = `<ul class="menu"><li><button data-view="overview" aria-current="${state.view === 'overview' ? 'page' : 'false'}"><span class="step-number">☷</span><span class="step-body"><strong>Overview</strong><small>Comments & evidence</small></span></button></li><li><button data-view="files" aria-current="${state.view === 'files' ? 'page' : 'false'}"><span class="step-number">⌘</span><span class="step-body"><strong>All changes</strong><small>Diffs by responsibility · ${files.size} files</small></span></button></li></ul>`;
-    review.groups.forEach((group, groupIndex) => {
-      const matching = layers.filter(layer => layer.group === group && `${group.title} ${layer.title} ${layer.items.map(item => files.get(item.file).path).join(' ')}`.toLowerCase().includes(query));
+    review.groups.forEach(group => {
+      const matching = layers.filter(layer => layer.group === group && `${group.title} ${layer.title} ${layer.items.map(item => files.get(item.file).path).join(' ')} ${components(layer).map(pair => pair.name).join(' ')}`.toLowerCase().includes(query));
       if (!matching.length) return;
-      const groupKey = group.id || `group-${groupIndex}`;
-      const groupProgress = progress(group.layers.flatMap(layer => layer.items));
-      html += `<details data-nav-group="${escape(groupKey)}" ${query || state.groupOpen[groupKey] !== false ? 'open' : ''}><summary>${escape(titleWithoutNumber(group.title))}<small class="group-progress">${progressText(groupProgress)}</small></summary><ul class="menu">`;
+      // A single-step group needs one heading, not the same title twice.
+      html += `<section class="nav-section">${group.layers.length > 1 ? `<h3 class="nav-group-title">${escape(titleWithoutNumber(group.title))}</h3>` : ''}<ul class="menu">`;
       matching.forEach(layer => {
         const count = layerComments(layer).length;
-        const revisionState = review.history?.groups?.[layer.group.id];
         const completed = progress(layer.items);
-        const links = [...new Set(layer.items.map(item => item.file))].map(id => {
+        const pairs = components(layer);
+        const fileLink = id => {
           const file = files.get(id);
           const slash = file.path.lastIndexOf('/');
           const filename = file.path.slice(slash + 1);
           const directory = slash < 0 ? '' : file.path.slice(0, slash);
-          return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" title="${escape(file.path)}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}"><span class="file-status" aria-hidden="true">${fileViewed(file) ? icon('check') : ''}</span><span class="nav-file-label"><span class="nav-file-name">${escape(filename)}</span>${directory ? `<small class="nav-file-directory">${escape(directory)}</small>` : ''}</span></button></li>`;
+          return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" aria-current="${state.navFile === id && state.view === layer.id ? 'location' : 'false'}" title="${escape(file.path)}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}"><span class="file-status" aria-hidden="true">${fileViewed(file) ? icon('check') : ''}</span><span class="nav-file-label"><span class="nav-file-name">${escape(filename)}</span>${directory ? `<small class="nav-file-directory">${escape(directory)}</small>` : ''}</span></button></li>`;
+        };
+        const links = [...new Set(layer.items.map(item => item.file))].map(id => {
+          const component = pairs.find(pair => pair.items.some(item => item.file === id));
+          if (!component) return fileLink(id);
+          if (id !== layer.items.find(item => component.items.includes(item)).file) return '';
+          const current = state.view === layer.id && component.items.some(item => item.file === state.navFile);
+          const viewed = progress(component.items);
+          return `<li class="nav-component ${current ? 'is-current' : ''}"><button class="nav-component-title" data-component-link="${escape(component.key)}" data-file-layer="${layer.id}" aria-current="${current ? 'location' : 'false'}" title="${escape(component.directory)}" aria-label="${escape(`Open ${component.namespace}::${component.name}, ${component.directory}`)}"><span class="nav-file-label"><strong>${escape(component.name)}</strong>${component.namespace ? `<small class="nav-file-directory">${escape(component.namespace)}</small>` : ''}</span><small class="nav-component-count" aria-label="${progressText(viewed)}">${viewed.viewed}/${viewed.total}</small></button><div class="nav-component-files" role="group" aria-label="${escape(component.name)} files">${component.items.map(item => {
+            const file = files.get(item.file);
+            return `<button data-file-link="${item.file}" data-file-layer="${layer.id}" title="${escape(file.path)}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}" aria-current="${current && activeComponentFile(layer, component) === item.file ? 'location' : 'false'}"><span class="file-status ${fileViewed(file) ? 'is-viewed' : ''}" aria-hidden="true">${fileViewed(file) ? icon('check') : ''}</span>${file.path.endsWith('.rb') ? 'Ruby' : 'Template'}</button>`;
+          }).join('')}</div></li>`;
         }).join('');
-        html += `<li><button data-view="${layer.id}" aria-current="${state.view === layer.id ? 'page' : 'false'}"><span class="step-number">${completed.total && completed.viewed === completed.total ? icon('check') : layers.indexOf(layer) + 1}</span><span class="step-body"><strong>${escape(layer.title)}</strong><small>${progressText(completed)}${count ? ` · ${count} comments` : ''}${revisionState ? ` · ${escape(revisionState)}` : ''}</small></span></button><ul class="nav-files">${links}</ul></li>`;
+        const expanded = state.view === layer.id || !!query;
+        html += `<li><button data-view="${layer.id}" aria-current="${state.view === layer.id ? 'page' : 'false'}" aria-expanded="${expanded}" aria-controls="nav-files-${layer.id}"><span class="step-number">${completed.total && completed.viewed === completed.total ? icon('check') : layers.indexOf(layer) + 1}</span><span class="step-body"><strong>${escape(titleWithoutNumber(group.layers.length === 1 ? group.title : layer.title))}</strong><small>${progressText(completed)}${count ? ` · ${count} comments` : ''}</small></span></button>${expanded ? `<ul id="nav-files-${layer.id}" class="nav-files">${links}</ul>` : `<ul id="nav-files-${layer.id}" hidden></ul>`}</li>`;
       });
-      html += '</ul></details>';
+      html += '</ul></section>';
     });
     $('navigation').innerHTML = html;
   }
@@ -402,9 +421,18 @@
     renderExpandedCode();
   }
   const expandedTests = new Set();
+  function renderComponent(layer, component) {
+    const active = activeComponentFile(layer, component);
+    return `<section class="component-card" data-component="${escape(component.key)}"><header class="component-header" tabindex="-1"><strong>${escape([component.namespace, component.name].filter(Boolean).join('::'))}</strong><small>${escape(component.directory)}</small><small class="component-progress">${progressText(progress(component.items))}</small><div class="component-tabs" role="tablist" aria-label="${escape(component.name)} files">${component.items.map(item => `<button role="tab" id="tab-${layer.id}-${item.file}" aria-controls="panel-${layer.id}-${item.file}" aria-selected="${item.file === active}" tabindex="${item.file === active ? 0 : -1}" data-component-tab="${item.file}" title="${escape(files.get(item.file).path)}">${escape(files.get(item.file).path.split('/').pop())}</button>`).join('')}</div></header>${component.items.map(item => `<div role="tabpanel" id="panel-${layer.id}-${item.file}" aria-labelledby="tab-${layer.id}-${item.file}" ${item.file === active ? '' : 'hidden'}>${renderFile(item)}</div>`).join('')}</section>`;
+  }
   function renderWalkthroughFiles(layer) {
+    const pairs = components(layer);
     return ReviewTools.walkthroughSections(layer).map(section => {
-      if (section.item) return renderFile(section.item);
+      if (section.item) {
+        const component = pairs.find(pair => pair.items.includes(section.item));
+        if (!component) return renderFile(section.item);
+        return section.item === layer.items.find(item => component.items.includes(item)) ? renderComponent(layer, component) : '';
+      }
       const count = section.items.reduce((sum, item) => sum + Object.keys(item.summaries || {}).length, 0);
       const panel = `${layer.id}-tests-${layer.related_tests.indexOf(section.tests)}`;
       return `<details class="related-tests" data-test-panel="${panel}" ${expandedTests.has(panel) ? 'open' : ''}><summary><span class="related-tests-heading">${escape(section.tests.title)} <span class="badge neutral">${section.items.length} file${section.items.length === 1 ? '' : 's'} · ${count} changed range${count === 1 ? '' : 's'}</span></span><span class="related-tests-summary">${escape(section.tests.summary)}</span></summary><div class="related-tests-content">${section.items.map(renderFile).join('')}</div></details>`;
@@ -501,10 +529,35 @@
   function select(view, scroll = true) {
     clearSelection();
     document.body.classList.remove('navigation-open'); $('nav-toggle').setAttribute('aria-expanded', 'false');
+    if (state.view !== view || scroll) state.navFile = null;
     state.view = view;
     history.replaceState(null, '', `#${view}`);
     render();
     if (scroll) $('content').scrollTop = 0;
+  }
+  function navigateFile(layer, id) {
+    const file = files.get(id);
+    activateComponentFile(layer, id);
+    state.fileOpen[file.path] = true;
+    select(layer.id, false);
+    state.navFile = id;
+    renderNavigation(); persist();
+    const card = document.querySelector(`.file-card[data-file="${id}"]`);
+    for (let parent = card?.parentElement; parent; parent = parent.parentElement) if (parent.tagName === 'DETAILS') parent.open = true;
+    // The sticky header may already be pinned at the viewport top. Scroll its
+    // non-sticky section to return to the real beginning, then focus the header.
+    const component = card?.closest('[data-component]');
+    const target = component?.querySelector('.component-header') || card?.querySelector('summary');
+    if (component) {
+      const content = $('content');
+      // Keep the section below the padded scrollport's sticky boundary. A bare
+      // scrollIntoView can pin the header over the first file's toolbar.
+      const inset = (parseFloat(getComputedStyle(content).paddingTop) || 0) + 8;
+      const top = content.scrollTop + component.getBoundingClientRect().top
+        - content.getBoundingClientRect().top - content.clientTop - inset;
+      content.scrollTo({top: Math.max(0, top), behavior:'instant'});
+    } else target?.scrollIntoView({block:'start', behavior:'instant'});
+    target?.focus({preventScroll:true});
   }
   function step(delta) {
     const index = layers.findIndex(layer => layer.id === state.view);
@@ -515,9 +568,12 @@
   function jump(hunk, commentID) {
     const layer = layers.find(layer => hunkIDs(layer).includes(hunk));
     if (!layer) return;
+    activateComponentFile(layer, hunkFiles.get(hunk).id);
     if ($('details-dialog').open) $('details-dialog').close();
     showComments = true; $('comments-toggle').checked = true;
     if (state.view === 'files') { categoryFilter = 'All'; $('search').value = ''; render(); } else select(layer.id, false);
+    state.navFile = hunkFiles.get(hunk).id;
+    renderNavigation(); persist();
     const trigger = commentID ? [...document.querySelectorAll('.comment-trigger')].find(button => button.dataset.notes.split(' ').includes(commentID)) : null;
     const target = trigger || $(hunk);
     for (let parent = target?.parentElement; parent; parent = parent.parentElement) { if (parent.tagName === 'DETAILS') parent.open = true; }
@@ -530,11 +586,6 @@
     $('details-dialog').showModal();
   }
 
-  $('navigation').addEventListener('toggle', event => {
-    if (!event.target.matches('[data-nav-group]') || !event.target.isConnected || $('search').value.trim()) return;
-    state.groupOpen[event.target.dataset.navGroup] = event.target.open;
-    persist();
-  }, true);
   $('content').addEventListener('change', event => {
     const control = event.target.closest('[data-file-viewed]');
     if (!control) return;
@@ -552,6 +603,10 @@
     const layer = layers.find(layer => layer.id === state.view);
     const count = document.querySelector('.step-progress');
     if (count && layer) count.textContent = progressText(progress(layer.items));
+    if (layer) document.querySelectorAll('[data-component]').forEach(card => {
+      const component = components(layer).find(pair => pair.key === card.dataset.component);
+      card.querySelector('.component-progress').textContent = progressText(progress(component.items));
+    });
     if (!persist()) toast('Browser storage is unavailable. Export local notes to keep your file progress.');
     const scroll = $('navigation').parentElement.scrollTop;
     renderNavigation();
@@ -574,18 +629,46 @@
     if (panel.contains(commentAnchor)) closeComments();
     if (selection && panel.contains($(selection.hunk))) clearSelection();
   }, true);
+  document.addEventListener('keydown', event => {
+    if (!event.target.matches('[data-component-tab]') || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const tabs = [...event.target.parentElement.querySelectorAll('[role="tab"]')];
+    const index = tabs.indexOf(event.target);
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    tabs[next].click(); tabs[next].focus({preventScroll:true});
+  });
   document.addEventListener('click', async event => {
     // Keep the checkbox independent from the native disclosure summary.
     if (event.target.closest('.file-viewed')) { event.stopPropagation(); return; }
+    const componentLink = event.target.closest('[data-component-link]');
+    if (componentLink) {
+      const layer = layers.find(layer => layer.id === componentLink.dataset.fileLayer);
+      const component = components(layer).find(pair => pair.key === componentLink.dataset.componentLink);
+      navigateFile(layer, activeComponentFile(layer, component));
+      return;
+    }
     const fileLink = event.target.closest('[data-file-link]');
     if (fileLink) {
-      const file = files.get(fileLink.dataset.fileLink);
-      state.fileOpen[file.path] = true;
-      select(fileLink.dataset.fileLayer, false);
-      const card = document.querySelector(`.file-card[data-file="${file.id}"]`);
-      for (let parent = card?.parentElement; parent; parent = parent.parentElement) if (parent.tagName === 'DETAILS') parent.open = true;
-      card?.scrollIntoView({block:'start', behavior:'instant'});
-      card?.querySelector('summary').focus({preventScroll:true});
+      navigateFile(layers.find(layer => layer.id === fileLink.dataset.fileLayer), fileLink.dataset.fileLink);
+      return;
+    }
+    const componentTab = event.target.closest('[data-component-tab]');
+    if (componentTab) {
+      const layer = layers.find(layer => layer.id === state.view);
+      const card = componentTab.closest('[data-component]');
+      const active = card.querySelector('[role="tab"][aria-selected="true"]');
+      const scrollKey = id => `${layer.id}:${id}`;
+      componentScroll.set(scrollKey(active.dataset.componentTab), $('content').scrollTop);
+      activateComponentFile(layer, componentTab.dataset.componentTab);
+      state.navFile = componentTab.dataset.componentTab;
+      clearSelection(); closeComments();
+      card.querySelectorAll('[role="tab"]').forEach(tab => {
+        const selected = tab === componentTab;
+        tab.setAttribute('aria-selected', selected); tab.tabIndex = selected ? 0 : -1;
+        $(tab.getAttribute('aria-controls')).hidden = !selected;
+      });
+      renderNavigation(); persist();
+      $('content').scrollTop = componentScroll.get(scrollKey(componentTab.dataset.componentTab)) ?? $('content').scrollTop;
       return;
     }
     const image = event.target.closest('[data-expand-image]');

@@ -200,16 +200,37 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 .step-progress { flex-shrink: 0; margin-top: 4px; }
 .sidebar .group-progress { display: block; margin: 5px 0 0 15px; font-size: 11px; font-weight: 400; letter-spacing: 0; text-transform: none; }
 .sidebar nav .menu > li { width: 100%; min-width: 0; }
-.sidebar nav .nav-files { display: block; margin: 4px 0 12px 12px; padding: 0 0 0 10px; border-left: 1px solid var(--line); list-style: none; }
+.sidebar nav .nav-files { display: block; margin: 6px 0 16px; padding: 0; list-style: none; }
 .sidebar nav .nav-files::before { display: none; }
 .sidebar nav .nav-files li { display: block; min-width: 0; padding: 0; }
 .sidebar nav button.nav-file { display: flex; align-items: flex-start; gap: 7px; min-height: 32px; padding: 6px; margin: 0; font: 11px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; border-radius: 5px; }
 .nav-file-label { display: block; flex: 1; min-width: 0; overflow: hidden; }
-.nav-file-name, .sidebar nav .nav-file-directory { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
+.nav-file-name, .sidebar nav .nav-file-directory { display: block; white-space: normal; overflow-wrap: anywhere; }
 .nav-file-name { font-size: 12px; font-weight: 500; }
 .sidebar nav .nav-file-directory { margin-top: 1px; font-size: 10px; line-height: 1.5; color: var(--muted); }
 .file-status { flex: 0 0 14px; width: 14px; height: 14px; margin-top: 2px; border: 1px solid #b9c0cc; border-radius: 3px; }
 .nav-file.is-viewed .file-status { color: #28713e; border-color: #92b49c; background: #e9f5ed; }
 .file-status .review-icon { width: 12px; height: 12px; vertical-align: top; }
 @media(max-width: 767px) { .file-card > summary { padding: 11px; gap: 8px; } .file-card > summary .filename { flex-basis: calc(100% - 45px); } }
-@media print { .file-viewed, .step-progress { display: none; } }
+.component-card { border: 1px solid var(--line); border-radius: 10px; margin: 18px 0; scroll-margin-top: 8px; }
+.component-card > header { padding: 12px 16px; overflow-wrap: anywhere; position: sticky; top: 0; z-index: 4; background: var(--surface); border-bottom: 1px solid var(--line); border-radius: 10px 10px 0 0; scroll-margin-top: 8px; }
+.component-header:focus { outline: 2px solid var(--accent); outline-offset: -2px; }
+.component-card > header small { display: block; color: var(--muted); margin-top: 4px; }
+.component-tabs { display: flex; gap: 6px; padding: 10px 0 0; overflow-x: auto; }
+.component-tabs button { flex: 0 0 auto; padding: 8px 12px; border: 1px solid #d8dce5; border-radius: 6px; font: 12px ui-monospace, monospace; }
+.component-tabs button[aria-selected="true"] { background: #eee8ff; border-color: #8862c6; color: #513087; }
+.component-tabs button:focus-visible { outline: 2px solid #7851b0; outline-offset: 2px; }
+.component-card [role="tabpanel"][hidden] { display: none; }
+.component-card .file-card { margin: 0; border-radius: 0; }
+.sidebar nav .nav-section { margin: 14px 0; }
+.sidebar nav .nav-group-title { margin: 16px 8px 6px; font-size: 11px; line-height: 1.5; color: var(--muted); }
+.sidebar nav .nav-component { border: 1px solid var(--line); border-radius: 7px; margin: 6px 0; background: white; }
+.sidebar nav .nav-component.is-current { border-color: #b4ace0; }
+.sidebar nav .nav-component-title { width: 100%; padding: 8px 10px 4px; margin: 0; align-items: flex-start; }
+.sidebar nav .nav-component strong { display: block; white-space: normal; overflow-wrap: anywhere; font-size: 12px; line-height: 1.5; }
+.sidebar nav .nav-component-count { flex: none; font-size: 11px; padding-top: 2px; font-variant-numeric: tabular-nums; }
+.sidebar nav .nav-component-files { display: flex; gap: 6px; padding: 4px 10px 8px; }
+.sidebar nav .nav-component-files button { width: auto; min-height: 28px; margin: 0; padding: 3px 7px; gap: 5px; font-size: 11px; border: 1px solid var(--line); }
+.sidebar nav button[aria-current="location"] { background: var(--accent-soft); color: var(--accent); }
+.file-status.is-viewed { color: #28713e; border-color: #92b49c; background: #e9f5ed; }
+@media print { .file-viewed, .step-progress { display: none; } .component-card [role="tabpanel"][hidden] { display: block; } .component-card > header { position: static; } }

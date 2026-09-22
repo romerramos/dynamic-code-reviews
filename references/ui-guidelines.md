@@ -23,13 +23,17 @@ from its original snapshot and analysis when refreshing presentation only.
   background tile. Do not substitute emoji or regenerate the logo per review.
 - Desktop sidebar: 320px, increasing to 340px on wide screens. Each step occupies
   the available sidebar width and wraps its title. Keep viewed-file counts and comment
-  counts subordinate to the title. List clickable filenames beneath each
-  step, including related test files, with their directory in a smaller subtitle.
-  Keep both lines unbroken and truncate with ellipsis inside the sidebar; omit
-  the subtitle for root files. Expose the full path in a native tooltip and the
-  accessible button label. File links
-  open their step, expand the file and any containing test panel, and focus its
-  header. Group disclosure state persists, while search reveals matching groups. Do not shrink step buttons into narrow pills.
+  counts subordinate to the title. A single-step group has one heading, not duplicate
+  group and step labels. Only the active step expands its flat file/component list;
+  search reveals matching steps, including matches on component names. Ordinary
+  files retain actual filenames and a smaller directory subtitle (omit for root
+  files). Wrap names and subtitles without ellipsis. Expose full paths in tooltips
+  and accessible labels. Component rows use one name, one namespace line, compact
+  per-file Ruby/Template shortcuts and a viewed count; do not nest another file list
+  or repeat the same namespace as a directory. File links reveal containing test
+  disclosures. Component links and their file shortcuts focus and scroll to the
+  component header above its tabs; ordinary files focus their summary. Indicate the
+  selected destination. Do not shrink step buttons into narrow pills.
 - Code is the main surface. Split tables use two equal code columns, separate
   60px line-number gutters and one shared row per pair. Empty opposite cells have
   no invented source numbers. Additions and deletions retain their source-side
@@ -223,6 +227,14 @@ Check keyboard disclosure, a panel shared by multiple entities, comment links,
 source-range selection inside tests and responsive layout.
 
 ## Per-file review progress
+
+### ViewComponent sidecars
+
+Pair conventional changed Ruby/HTML ERB sidecars only within the same walkthrough layer. The component link restores its selected file (Ruby initially); compact Ruby/Template shortcuts select that file. Both actions land on the component header, never its inner file summary. The diff card shows its full directory and actual filenames in keyboard-operable tabs. Keep this header and tabs sticky within the component while its diff scrolls; remember selection and per-file scroll position. Finding navigation selects the containing tab before revealing the range. Keep progress and disclosure per file, and derive component completion from both files. Search includes both paths and the component name. Related tests keep their own disclosures; All changes retains responsibility categories. A lone changed sidecar stays a normal file. Do not infer custom acronyms, sidecar directories or other template engines in this first convention-based implementation.
+
+Scroll the non-sticky component section within the code pane, accounting for the pane's computed top padding plus a small gap, then focus its sticky header with `preventScroll`. A bare section `scrollIntoView` with a smaller fixed margin can leave its header pinned over the first file toolbar; scrolling the sticky header itself can leave the reviewer mid-file. Repeated clicks from the middle or end must return to the section's real start while preserving the selected file. Verify that the header, tabs, and entire first file toolbar are visible without overlap at desktop and narrow widths; DOM doubles alone do not verify sticky layout.
+
+Verify paired and lone files, same-named components in different namespaces, keyboard tab navigation, findings targeting an inactive tab, partial viewed progress, reload and narrow layouts. Print both files even when a tab is inactive.
 
 Each file header has a labelled Viewed checkbox. Checking it collapses the file;
 unchecking reopens it. Manual expansion/collapse does not change viewed status

@@ -3,6 +3,22 @@
 const assert = require('node:assert/strict');
 require('../assets/review-tools.js');
 const tools = globalThis.ReviewTools;
+require('./test_navigation');
+const componentFiles = new Map([
+  ['ruby', {path:'app/components/back_office/message_component.rb'}],
+  ['erb', {path:'app/components/back_office/message_component.html.erb'}],
+  ['other', {path:'app/components/customer/message_component.html.erb'}],
+  ['view', {path:'app/views/message_component.html.erb'}]
+]);
+const componentItems = ['erb','other','ruby','view'].map(file => ({file}));
+const pairs = tools.componentGroups(componentItems, componentFiles);
+assert.equal(pairs.length, 1);
+assert.equal(pairs[0].name, 'MessageComponent');
+assert.equal(pairs[0].namespace, 'BackOffice');
+assert.deepEqual(pairs[0].items.map(item => item.file), ['ruby','erb']);
+assert.equal(tools.componentGroups([componentItems[0]], componentFiles).length, 0);
+assert.deepEqual(componentItems.map(item => item.file), ['erb','other','ruby','view']);
+console.log('PASS component pairs respect directory and layer boundaries without changing source order');
 assert.equal(tools.category('app/views/rentals/show.html.erb'), 'Design / UI');
 assert.equal(tools.category('app/assets/stylesheets/rentals.scss'), 'Design / UI');
 assert.equal(tools.category('app/javascript/controllers/rental_controller.js'), 'Frontend');

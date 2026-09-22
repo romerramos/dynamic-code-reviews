@@ -3,6 +3,23 @@
 globalThis.ReviewTools = (() => {
   const categories = ['Design / UI', 'Frontend', 'Backend', 'Documentation', 'Tests', 'Platform', 'Security', 'AI', 'Other'];
   const designFile = path => /(?:\.html(?:\.erb)?|\.(?:css|scss|sass))$/i.test(path);
+  // Pair only conventional, changed sidecars within this walkthrough layer.
+  function componentGroups(items, files) {
+    const pairs = new Map();
+    items.forEach(item => {
+      const path = files.get(item.file).path;
+      const match = path.match(/^app\/components\/(.+_component)\.(rb|html\.erb)$/);
+      if (!match) return;
+      const key = match[1];
+      if (!pairs.has(key)) pairs.set(key, []);
+      pairs.get(key).push(item);
+    });
+    return [...pairs].filter(([, members]) => members.length === 2).map(([key, members]) => {
+      const parts = key.split('/').map(part => part.split('_').map(word => word[0].toUpperCase() + word.slice(1)).join(''));
+      const path = files.get(members[0].file).path;
+      return {key, name:parts.pop(), namespace:parts.join('::'), directory:path.slice(0, path.lastIndexOf('/')), items:members.sort((a,b) => Number(!files.get(a.file).path.endsWith('.rb')) - Number(!files.get(b.file).path.endsWith('.rb')))};
+    });
+  }
   function category(path, overrides = {}) {
     const requested = overrides[path];
     if (categories.includes(requested) && (requested !== 'Design / UI' || designFile(path))) return requested;
@@ -121,5 +138,5 @@ globalThis.ReviewTools = (() => {
     });
     return {comments, findings:remaining};
   }
-  return {categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, sourceText, commentText, reviewText, overviewFeedback, comparisonText, evidenceFlows, flowOwner, commentBody, postingText};
+  return {componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, sourceText, commentText, reviewText, overviewFeedback, comparisonText, evidenceFlows, flowOwner, commentBody, postingText};
 })();
