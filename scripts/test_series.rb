@@ -193,9 +193,12 @@ module SeriesChecks
           payload = DynamicReviews.extract(first)
           png = Base64.strict_decode64('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jWZkAAAAASUVORK5CYII=')
           File.binwrite(File.join(out, 'state.png'), png)
+          gif = Base64.strict_decode64('R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=')
+          File.binwrite(File.join(out, 'motion.gif'), gif)
           qa = {'status' => 'complete', 'fingerprint' => payload['snapshot']['fingerprint'], 'summary' => 'A synthetic state was captured.', 'environment' => 'Synthetic fixture, not an application test.',
                 'flows' => [{'title' => 'Inspect state', 'steps' => ['Inspect a synthetic state'], 'expected' => 'A sample image', 'observed' => 'Sample image attached', 'result' => 'passed',
-                             'assets' => [{'path' => 'state.png', 'caption' => 'Synthetic fixture', 'comment_id' => 'value-note'}]}]}
+                             'assets' => [{'path' => 'state.png', 'caption' => 'Synthetic fixture', 'comment_id' => 'value-note'},
+                                          {'path' => 'motion.gif', 'caption' => 'Synthetic animation'}]}]}
           input = File.join(out, 'qa.json')
           File.write(input, JSON.generate(qa))
           second = ReviewSeries.qa(repo: root, name: 'qa-check', revision: 1, update: input)
@@ -204,6 +207,7 @@ module SeriesChecks
           assert(File.binread(first) == before, 'QA overwrote the first review')
           assert(after['snapshot'] == payload['snapshot'] && after['review']['findings'] == payload['review']['findings'], 'QA changed code conclusions')
           assert(after['review']['qa']['flows'][0]['assets'][0]['data_uri'].start_with?('data:image/png;base64,'), 'Media not embedded')
+          assert(after['review']['qa']['flows'][0]['assets'][1]['data_uri'].start_with?('data:image/gif;base64,'), 'GIF not embedded')
           assert(!after['review']['qa']['flows'][0]['assets'][0].key?('path'), 'Scratch path leaked into report')
           rejects('Stale revision accepted') { ReviewSeries.qa(repo: root, name: 'qa-check', revision: 1, update: input) }
           qa['fingerprint'] = 'wrong'; File.write(input, JSON.generate(qa))

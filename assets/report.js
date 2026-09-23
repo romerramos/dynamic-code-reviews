@@ -399,7 +399,15 @@
     return `<article class="review-comment"><span class="badge blocking">${escape(finding.severity)}</span><p class="comment-location">${escape(hunkFiles.get(finding.hunk).path)}</p><h3>${escape(finding.title)}</h3><p class="comment-discussion">${escape(finding.body)}</p><div class="comment-actions"><button class="btn btn-sm btn-ghost" data-hunk="${escape(finding.hunk)}">See changed code →</button><button class="btn btn-sm btn-soft" data-post-finding="${index}">${icon('copy')} Copy for comment</button><button class="btn btn-sm btn-ghost" data-copy-finding="${index}">${icon('copy')} Copy for LLMs</button></div></article>`;
   }
   function renderQAAsset(asset) {
-    return `<figure class="qa-asset">${asset.data_uri.startsWith('data:video/') ? `<video controls preload="none" playsinline aria-label="${escape(asset.caption)}" src="${escape(asset.data_uri)}"></video>` : `<button class="qa-image-button" type="button" data-expand-image aria-label="${escape(`Expand screenshot: ${asset.caption}`)}" aria-haspopup="dialog"><img loading="lazy" alt="${escape(asset.caption)}" src="${escape(asset.data_uri)}"><span class="qa-image-hint">Click to expand</span></button>`}<figcaption>${escape(asset.caption)}</figcaption></figure>`;
+    let media;
+    if (asset.data_uri.startsWith('data:video/')) {
+      media = `<video controls preload="none" playsinline aria-label="${escape(asset.caption)}" src="${escape(asset.data_uri)}"></video>`;
+    } else if (asset.data_uri.startsWith('data:image/gif;')) {
+      media = `<details class="qa-animation"><summary>Play animated GIF (close to stop)</summary><button class="qa-image-button" type="button" data-expand-image aria-label="${escape(`Expand animation: ${asset.caption}`)}" aria-haspopup="dialog"><img loading="lazy" alt="${escape(asset.caption)}" data-gif-source="${escape(asset.data_uri)}"><span class="qa-image-hint">Click to expand</span></button></details>`;
+    } else {
+      media = `<button class="qa-image-button" type="button" data-expand-image aria-label="${escape(`Expand screenshot: ${asset.caption}`)}" aria-haspopup="dialog"><img loading="lazy" alt="${escape(asset.caption)}" src="${escape(asset.data_uri)}"><span class="qa-image-hint">Click to expand</span></button>`;
+    }
+    return `<figure class="qa-asset">${media}<figcaption>${escape(asset.caption)}</figcaption></figure>`;
   }
   let viewerAnchor;
   let viewerCode = null;
@@ -423,7 +431,7 @@
   function expandImage(button) {
     const image = button.querySelector('img');
     viewerAnchor = button;
-    viewerLabel = 'Screenshot viewer';
+    viewerLabel = image.dataset.gifSource ? 'Animation viewer' : 'Screenshot viewer';
     viewerCode = null;
     expandedViewer.setElements([{href:image.src, type:'image', alt:image.alt, title:escape(image.alt),
       description:'Click or pinch the image to zoom; drag to pan.'}]);
@@ -882,6 +890,13 @@
     if (!activeReviewNote) return;
     positionAnnotation(activeReviewNote.panel, activeReviewNote.trigger, () => activeReviewNote?.panel.hidePopover());
   }
+  document.addEventListener('toggle', event => {
+    const animation = event.target;
+    if (!animation.matches?.('.qa-animation')) return;
+    const image = animation.querySelector('img[data-gif-source]');
+    if (animation.open) image.src = image.dataset.gifSource;
+    else image.removeAttribute('src');
+  }, true);
   document.addEventListener('toggle', event => {
     const panel = event.target;
     if (!panel.matches?.('.review-note-popover')) return;

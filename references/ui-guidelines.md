@@ -207,7 +207,8 @@ source dumps, local resolution status, data URIs or broken local image links.
 Clipboard failure must expose selectable text. Test copying actual text as well
 as adding, editing, deleting, reloading and combining both kinds of user comment.
 
-Screenshots and controls must fit narrow widths. No autoplay, remote media or
+Screenshots and controls must fit narrow widths. Keep animated GIFs stopped until
+the reader opens a Play GIF disclosure, and unload them when it closes. No autoplay, remote media or
 simulated background worker. Test evidence navigation from the diff, collapsed
 steps, unmatched failed flows, text-only evidence, loaded media, and narrow layouts
 using synthetic captures without implying they validate the reviewed application.

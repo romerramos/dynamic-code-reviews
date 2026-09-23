@@ -81,6 +81,8 @@
 .qa-asset { margin: 1rem 0; }
 .qa-asset img, .qa-asset video { display: block; max-width: 100%; max-height: 560px; border: 1px solid #e5e7eb; border-radius: 8px; }
 .qa-asset figcaption { margin-top: .5rem; font-size: 14px; line-height: 1.6; }
+.qa-animation summary { width: fit-content; margin-bottom: .5rem; color: var(--accent); cursor: pointer; }
+.qa-animation summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .qa-image-button { display: block; width: 100%; padding: 0; border: 0; border-radius: 8px; background: transparent; white-space: normal; text-align: left; cursor: zoom-in; }
 .qa-image-hint { display: block; margin-top: 6px; color: var(--accent); font-size: 12px; }
 .glightbox-container .gslide-title { margin: 0; font-size: 16px; line-height: 1.5; letter-spacing: normal; }

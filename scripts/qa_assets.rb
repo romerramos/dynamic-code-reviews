@@ -5,16 +5,17 @@ require 'base64'
 # Small, portable media bundles. No URLs, fetches, runtime installs or sidecars.
 module ReviewQA
   LIMIT = 24 * 1024 * 1024
-  TYPES = %w[image/png image/jpeg image/webp video/mp4 video/webm].freeze
+  TYPES = %w[image/png image/jpeg image/webp image/gif video/mp4 video/webm].freeze
   module_function
 
   def media_type(bytes)
     return 'image/png' if bytes.start_with?("\x89PNG\r\n\x1a\n".b)
     return 'image/jpeg' if bytes.start_with?("\xff\xd8\xff".b)
     return 'image/webp' if bytes.start_with?('RIFF') && bytes.byteslice(8, 4) == 'WEBP'
+    return 'image/gif' if bytes.start_with?('GIF87a', 'GIF89a')
     return 'video/mp4' if bytes.byteslice(4, 4) == 'ftyp'
     return 'video/webm' if bytes.start_with?("\x1a\x45\xdf\xa3".b)
-    raise ArgumentError, 'QA media must be PNG, JPEG, WebP, MP4 or WebM'
+    raise ArgumentError, 'QA media must be PNG, JPEG, WebP, GIF, MP4 or WebM'
   end
 
   def pack(qa, directory:)
@@ -45,7 +46,7 @@ module ReviewQA
       raise ArgumentError, 'Recorded QA needs environment/source evidence and at least one flow' if qa['environment'].to_s.strip.empty? || flows.empty?
     end
     if qa['status'] == 'complete' && flows.none? { |flow| Array(flow['assets']).any? }
-      raise ArgumentError, 'Completed visual QA needs at least one embedded screenshot or video; use partial or blocked when capture failed'
+      raise ArgumentError, 'Completed visual QA needs at least one embedded image or video; use partial or blocked when capture failed'
     end
     total = 0
     flows.each do |flow|
@@ -68,7 +69,7 @@ module ReviewQA
         raise ArgumentError, 'QA asset caption is required' if asset['caption'].to_s.strip.empty?
         uri = asset['data_uri'].to_s
         raise ArgumentError, 'QA media exceeds 24 MiB' if uri.bytesize > (LIMIT * 4 / 3 + 128)
-        match = uri.match(%r{\Adata:(image/png|image/jpeg|image/webp|video/mp4|video/webm);base64,([A-Za-z0-9+/=]+)\z})
+        match = uri.match(%r{\Adata:(image/png|image/jpeg|image/webp|image/gif|video/mp4|video/webm);base64,([A-Za-z0-9+/=]+)\z})
         raise ArgumentError, 'Use packed QA media; external URLs and file paths are not supported' unless match && !asset.key?('path')
         bytes = Base64.strict_decode64(match[2])
         raise ArgumentError, 'QA media type does not match its bytes' unless media_type(bytes) == match[1]

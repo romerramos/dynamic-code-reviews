@@ -112,18 +112,20 @@ while waiting for that choice, and “QA assets are being generated” only once
 capture is actually planned. Omit QA for changes with no meaningful visual flow.
 
 Use an isolated browser tab/session through the available harness. Save its native
-screenshot output directly as report evidence; screenshots do not require video
-recording support or a separate capture system. Capture a few
-important states with short action captions. Present a few useful QA flows with a short action journey, an explicit Passed/Failed/Blocked/Not run result and one sentence describing what happened. Merge failed flows into their issue comment using flow comment_id (or legacy asset comment_id). Show the journey and expected/actual result once, and fold numbered steps and screenshots beneath it. When the flow explains the defect, leave comment discussion empty; add only distinct context there. Copying must still include the complete reproduction. Successful flows are useful when they demonstrate a meaningful outcome. Do not create a separate QA failure summary or duplicate images in Review details. When a single result image does not explain a multi-step failure,
+captures directly as report evidence. For interaction-heavy flows, prefer a short
+animated GIF made from actual browser frames when supported; use native isolated
+video if available, or screenshots when motion adds little or capture is unavailable.
+Never present sampled frames as continuous video. Capture a few
+important states with short action captions. Present a few useful QA flows with a short action journey, an explicit Passed/Failed/Blocked/Not run result and one sentence describing what happened. Merge failed flows into their issue comment using flow comment_id (or legacy asset comment_id). Show the journey and expected/actual result once, and fold numbered steps and media beneath it. When the flow explains the defect, leave comment discussion empty; add only distinct context there. Copying must still include the complete reproduction. Successful flows are useful when they demonstrate a meaningful outcome. Do not create a separate QA failure summary or duplicate images in Review details. When a single result image does not explain a multi-step failure,
 capture the starting state and decisive intermediate/result states in order.
 Number captions to match the reproduction steps, name the action and visible
 change, and keep expected versus actual behavior explicit. Use existing evidence
 when it already makes the sequence clear; do not add screenshots just for volume.
 Prefer these pictures over long descriptions of visible defects.
 Never record the user's desktop or require them to keep a window foregrounded.
-Background video is optional: use it only if the tool explicitly supports
-isolated recording. Otherwise deliver an honestly labelled screenshot walkthrough,
-not a simulated screencast. Finish with complete, partial, blocked or skipped
+Use only the active browser harness to obtain real frames, and use an offline encoder
+only to package those frames into a GIF. A Mac event-stream recording plugin does
+not provide browser video or GIF frames. Finish with complete, partial, blocked or skipped
 status; never leave pending as the final status of an attempted QA pass. A completed
 visual QA pass must contain embedded media. Verify the current HTML includes the
 expected assets, then link it again and remind the user to reload an open report.

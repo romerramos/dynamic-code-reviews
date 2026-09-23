@@ -159,6 +159,14 @@ module ReviewChecks
       end
       qa['flows'][0].delete('journey')
       ReviewQA.validate(qa, snapshot)
+      gif = Base64.strict_decode64('R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=')
+      asset['data_uri'] = 'data:image/gif;base64,' + Base64.strict_encode64(gif)
+      ReviewQA.validate(qa, snapshot)
+      asset['data_uri'] = 'data:image/png;base64,' + Base64.strict_encode64(gif)
+      rejects('GIF with a spoofed media type accepted') { ReviewQA.validate(qa, snapshot) }
+      asset['data_uri'] = 'data:image/gif;base64,' + Base64.strict_encode64('<svg>not a GIF</svg>')
+      rejects('Spoofed GIF accepted') { ReviewQA.validate(qa, snapshot) }
+      asset['data_uri'] = 'data:image/gif;base64,' + Base64.strict_encode64(gif)
       qa['flows'][0]['assets'] = []
       rejects('Completed visual QA without media accepted') { ReviewQA.validate(qa, snapshot) }
       qa['status'] = 'partial'
