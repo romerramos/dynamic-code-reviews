@@ -21,7 +21,7 @@ module ReviewPreviews
 
   # Renders every visual preview of the spec with the app's own runner (for example
   # `docker exec -i web bin/rails runner -`), each in a rolled-back transaction.
-  def render(spec:, runner:, css: [], stand_ins: ReviewPreviewStandIns::Source.new)
+  def render(spec:, runner:, css: [], stand_ins: ReviewPreviewStandIns::Source.new, base_dir: Dir.pwd)
     rendered = run_app(spec, runner)
     # Parse bytes: character indexing into a large UTF-8 string is quadratic.
     stylesheet = parse(css.map { |path| File.binread(path) }.join("\n"))
@@ -40,7 +40,7 @@ module ReviewPreviews
         twin['note'] = [twin['note'], "“#{preview['title'] || preview['id']}” renders the same markup, so it is shown once."].compact.join(' ')
         nil
       else
-        body, mocks = ReviewPreviewStandIns.apply(strip_scripts((preview['wrap'] || '%s').sub('%s') { html }), stand_ins, spec.fetch('icon_map', {}))
+        body, mocks = ReviewPreviewStandIns.apply(strip_scripts((preview['wrap'] || '%s').sub('%s') { html }), stand_ins, spec.fetch('icon_map', {}), spec.fetch('image_map', {}), base_dir: base_dir)
         body_class = preview['body_class'] || spec['body_class']
         css = fixed_viewport(prune(stylesheet, %(<body class="#{body_class}">#{body})), preview['viewport_height'] || spec['viewport_height'] || 900)
         entry = entry.merge('status' => 'rendered', 'html' => document(body, css, preview, body_class))
@@ -267,7 +267,7 @@ module ReviewPreviews
       raise ArgumentError, "Preview #{id} must include HTML only when rendered" unless (preview['status'] == 'rendered') == html.is_a?(String)
       raise ArgumentError, "Preview #{id} contains a script" if html&.match?(/<script\b/i)
       mocks = preview['mocks']
-      unless mocks.nil? || (mocks.is_a?(Hash) && mocks.all? { |key, value| %w[credits unmatched].include?(key) ? value.is_a?(Array) && value.all?(String) : value.is_a?(Integer) })
+      unless mocks.nil? || (mocks.is_a?(Hash) && mocks.all? { |key, value| %w[credits unmatched unmatched_images].include?(key) ? value.is_a?(Array) && value.all?(String) : value.is_a?(Integer) })
         raise ArgumentError, "Preview #{id} has malformed stand-in details"
       end
       total += html.to_s.bytesize
@@ -290,12 +290,15 @@ if $PROGRAM_NAME == __FILE__
   abort 'Usage: ruby previews.rb render --spec <spec.json> --runner "<command>" [--css <file>]... [--offline] --out <previews.json>' unless command == 'render' && options.values_at(:spec, :runner, :out).all?
   begin
     result = ReviewPreviews.render(spec: JSON.parse(File.read(options[:spec])), runner: options[:runner], css: options[:css],
-                                   stand_ins: ReviewPreviewStandIns::Source.new(network: !options[:offline]))
+                                   stand_ins: ReviewPreviewStandIns::Source.new(network: !options[:offline]),
+                                   base_dir: File.dirname(File.expand_path(options[:spec])))
     File.write(options[:out], JSON.generate(result))
     unmatched = result['previews'].flat_map { |preview| preview.dig('mocks', 'unmatched') || [] }.uniq
     puts "Icons without a Lucide match (add spec icon_map entries by meaning, then re-render): #{unmatched.join(', ')}" if unmatched.any?
+    images = result['previews'].flat_map { |preview| preview.dig('mocks', 'unmatched_images') || [] }.uniq
+    puts "Images needing a stand-in (find a fitting freely licensed photo with your tools, save a small copy beside the spec, add spec image_map entries, then re-render):", images.map { |image| "  #{image}" } if images.any?
     result['previews'].each do |preview|
-      stand_ins = preview['mocks']&.reject { |key, _| %w[credits unmatched].include?(key) }&.map { |key, count| "#{count} #{key.tr('_', ' ')}" }&.join(', ')
+      stand_ins = preview['mocks']&.reject { |key, _| %w[credits unmatched unmatched_images].include?(key) }&.map { |key, count| "#{count} #{key.tr('_', ' ')}" }&.join(', ')
       puts "#{preview['status'].ljust(11)} #{preview['id']} #{preview['html'] ? "#{preview['html'].bytesize / 1024} KiB" : preview['note']}#{stand_ins ? " · stand-ins: #{stand_ins}" : ''}"
     end
   rescue ArgumentError, KeyError, SystemCallError, JSON::ParserError => error

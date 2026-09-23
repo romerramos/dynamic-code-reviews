@@ -383,7 +383,7 @@
     if (!mocks) return '';
     const parts = [];
     if (mocks.icons || mocks.placeholders) parts.push(`icons are ${mocks.placeholders ? 'Lucide stand-ins or placeholders' : 'Lucide stand-ins'} for the app's icon font`);
-    if (mocks.images) parts.push(`images are openly licensed stand-in photos (${(mocks.credits || []).join('; ')})`);
+    if (mocks.images) parts.push(`images are stand-in photos picked for this preview${mocks.credits?.length ? ` (${mocks.credits.join('; ')})` : ''}`);
     if (mocks.image_placeholders) parts.push('some images are placeholders');
     return parts.length ? `<small class="preview-stand-ins">Not final: ${escape(parts.join('; '))}.</small>` : '';
   }

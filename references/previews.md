@@ -97,12 +97,18 @@ not survive into it. While rendering, the builder swaps them for labelled stand-
   the spec, then re-render. Each chosen name is verified against the Lucide CDN;
   unknown names and anything unmapped become a dashed placeholder. There is no
   built-in library-to-library table to go stale.
-- **Images:** `data:` images already render and are kept. URL or relative images
-  become an openly licensed photo matched by alt text (avatars search for a portrait):
-  Pexels when `PEXELS_API_KEY` is set in the environment, otherwise Openverse (no key;
-  CC0, public domain, CC BY or CC BY-SA only), otherwise a local placeholder.
-  Attribution is kept.
-- Downloads are cached under `~/.cache/dynamic-code-reviews` and sanitized (icons
-  must be plain shape SVG). `--offline` fetches nothing; a failing CDN or API only
-  degrades to placeholders. The report marks every affected example “Stand-in
+- **Images:** `data:` images already render and are kept. URL or relative images are
+  listed as `Images needing a stand-in` with their alt text, size and classes. Use
+  your own tools at that moment (web search, a browser or fetch) to pick a fitting
+  photo from a free-to-use library such as Pexels or Unsplash, matching the image's
+  role (an avatar needs a portrait, a hero a wide scene). Save a small copy beside the
+  spec (about twice the rendered width, under 500 KiB), following your harness's
+  download permissions, and add
+  `"image_map": {"/assets/team/jane.png": {"path": "jane.jpg", "credit": "Photo by … on Unsplash"}}`,
+  keyed by the listed `src`, then re-render. The builder embeds only real JPEG, PNG,
+  WebP or GIF files; anything without a choice becomes a placeholder. No image API or
+  key is involved.
+- Lucide icons are cached under `~/.cache/dynamic-code-reviews` and must be plain
+  shape SVG. `--offline` fetches nothing; a failing icon CDN only degrades to
+  placeholders. The report marks every affected example “Stand-in
   assets” and states which icons/images are not final.

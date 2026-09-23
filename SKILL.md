@@ -114,7 +114,8 @@ error, or `not_visual` with a reason the report shows. File by file opens a stic
 side pane by itself only from 1600px; on laptop widths a Visual preview button in
 the file header opens it, and narrow screens and file cards show a collapsed Preview
 section above the code. Each example is a sandboxed, script-less frame. App icon fonts and URL images become labelled stand-ins (Lucide icons chosen by
-name or by the agent, openly licensed photos, or placeholders); look-alike examples
+name or by the agent, photos the agent finds with its own tools, or placeholders);
+look-alike examples
 are folded by the report. Inspect them in a browser before delivery and fix clipped or
 broken examples.
 
