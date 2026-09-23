@@ -56,6 +56,10 @@ module QACapture
         # One thread per connection so the page's long poll never blocks uploads or commands.
         Thread.new(@socket.accept) do |client|
           Timeout.timeout(15) { serve(client) }
+        rescue Timeout::Error
+          # Browsers open idle connections ahead of time; answering one with an error would
+          # show that error for whichever navigation later reuses the socket.
+          nil
         rescue StandardError => error
           respond(client, 400, JSON.generate(error: error.message), 'application/json') rescue nil
         ensure
