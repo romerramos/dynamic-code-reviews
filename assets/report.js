@@ -108,7 +108,7 @@
   }
 
   function language(path) {
-    if (/\.html\.erb$/i.test(path)) return 'markup';
+    if (/\.erb$/i.test(path)) return 'erb';
     if (/\.(scss|sass)$/i.test(path)) return 'css';
     const extension = path.split('.').pop().toLowerCase();
     return ({rb:'ruby',rake:'ruby',gemspec:'ruby',js:'javascript',mjs:'javascript',cjs:'javascript',ts:'typescript',json:'json',yml:'yaml',yaml:'yaml',sql:'sql',html:'markup',xml:'markup',svg:'markup',css:'css',sh:'bash',bash:'bash'})[extension] || (/\b(Gemfile|Rakefile)$/.test(path) ? 'ruby' : 'none');
@@ -116,10 +116,30 @@
 
   // Tokenize a whole side of a hunk, then distribute escaped tokens across its
   // physical lines. This preserves multiline strings/comments and exact text.
+  // ERB: swap each <% %> tag for a placeholder so markup still sees whole HTML tags
+  // (including attributes holding ERB), then put the tags back as Ruby tokens.
+  function erbTokens(source) {
+    const tags = [];
+    const masked = source.replace(/<%[\s\S]*?%>/g, tag => `___ERB${tags.push(tag) - 1}___`);
+    const tag = text => {
+      const [, open, code, close] = text.match(/^(<%[=#-]?)([\s\S]*?)(-?%>)$/);
+      if (open === '<%#') return new Prism.Token('comment', text);
+      return new Prism.Token('erb', [new Prism.Token('erb-delimiter', open), ...Prism.tokenize(code, Prism.languages.ruby), new Prism.Token('erb-delimiter', close)]);
+    };
+    const restore = tokens => tokens.flatMap(token => {
+      if (typeof token === 'string') {
+        return token.split(/(___ERB\d+___)/).filter(Boolean).map(part => /^___ERB\d+___$/.test(part) ? tag(tags[part.slice(6, -3)]) : part);
+      }
+      token.content = restore(Array.isArray(token.content) ? token.content : [token.content]);
+      return [token];
+    });
+    return restore(Prism.tokenize(masked, Prism.languages.markup));
+  }
+
   function highlightedLines(lines, lang) {
     if (!lines.length) return [];
     const source = lines.map(line => line.text).join('\n');
-    const tokens = Prism.languages[lang] ? Prism.tokenize(source, Prism.languages[lang]) : [source];
+    const tokens = lang === 'erb' ? erbTokens(source) : Prism.languages[lang] ? Prism.tokenize(source, Prism.languages[lang]) : [source];
     const result = [''];
     function append(token, ancestors = []) {
       if (Array.isArray(token)) { token.forEach(item => append(item, ancestors)); return; }

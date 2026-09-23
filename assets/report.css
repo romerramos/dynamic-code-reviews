@@ -367,3 +367,5 @@ body.reading-focus main#content{padding-top:12px}
 
 .focus-progress-actions{display:flex;align-items:center;gap:8px}
 @media(max-width:650px){.focus-file-header .current-file{display:contents}.focus-identity> .file-about{min-width:95px}.focus-progress-actions{flex-basis:100%}}
+
+.token.erb-delimiter{color:#b4532a;font-weight:600}
