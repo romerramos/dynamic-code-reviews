@@ -415,16 +415,15 @@ body.reading-focus main#content{padding-top:12px}
 .preview-example figcaption .preview-stand-ins{color:#8a5a1c}
 .preview-twin-note{flex-basis:100%;color:var(--muted);font-size:11px}.preview-twin-note .btn{font-size:11px;min-height:0;height:auto;padding:0 6px}
 
-/* Sidebar location, two distinct levels. The active step reads as a heading: a filled
-   number, an accent title and a guide rail down its files, but no box. The file being
-   read is the only filled card: white, an accent bar, a lift and a bolder name. */
+/* Sidebar location, two distinct levels without extra lines. The active step reads as a
+   heading (filled number, accent title, no box) with its files indented beneath it;
+   the file being read is the only tinted row, with a bolder accent name. */
 .sidebar nav .menu>li>button[data-view][aria-current="page"]{background:transparent;border-color:transparent;color:#35308f}
 .sidebar nav .menu>li>button[data-view][aria-current="page"]:hover{background:#f0f2f7}
 .sidebar nav .menu>li>button[data-view][aria-current="page"] .step-number{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:650;box-shadow:0 0 0 3px var(--accent-soft)}
 .sidebar nav .menu>li>button[data-view][aria-current="page"] .step-number svg{color:#fff}
 .sidebar nav .menu>li>button[data-view][aria-current="page"] .step-body strong{color:#35308f;font-weight:620}
-.sidebar nav li:has(>button[data-view][aria-current="page"])>.nav-files{margin:0 0 16px 23px;padding-left:9px;border-left:2px solid #dcd8fa}
-.sidebar nav button.nav-file[aria-current="location"],.sidebar nav .nav-component.is-current{background:#fff;color:#1f2544;border:1px solid #d3cdf6;box-shadow:inset 3px 0 var(--accent),0 1px 3px #2a246624}
-.sidebar nav button.nav-file[aria-current="location"]{padding-left:9px}
-.sidebar nav button.nav-file[aria-current="location"] .nav-file-name,.sidebar nav .nav-component.is-current strong{color:#1f2544;font-weight:650}
-.sidebar nav .nav-component-files button[aria-current="location"]{background:var(--accent-soft);color:#35308f;border-color:#bdb5f1}
+.sidebar nav li:has(>button[data-view][aria-current="page"])>.nav-files{margin:2px 0 16px 34px}
+.sidebar nav button.nav-file[aria-current="location"],.sidebar nav .nav-component.is-current{background:var(--accent-soft);color:#35308f;border-color:transparent;box-shadow:none}
+.sidebar nav button.nav-file[aria-current="location"] .nav-file-name,.sidebar nav .nav-component.is-current strong{color:#35308f;font-weight:650}
+.sidebar nav .nav-component-files button[aria-current="location"]{background:#fff;color:#35308f;border-color:#c9c2f3}
