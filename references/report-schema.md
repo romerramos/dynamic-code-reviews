@@ -171,6 +171,11 @@ awaiting-environment, complete, partial, blocked, skipped), the exact snapshot `
 `observed`, `result` (passed, failed, blocked, not-run) and `assets`. The attachment
 helper turns local asset `path` into a validated embedded `data_uri`; each asset
 needs a `caption` and may reference an existing generated `comment_id`.
+For an interaction, set flow `motion_preview` to a local WebM/MP4 asset with a
+caption and put PNG stills in `assets`. The final still supplies the thumbnail
+and video poster. A video-only flow is valid, but a useful poster is preferred.
+`motion_preview` also accepts legacy GIFs. Videos play after the evidence click,
+with controls/fullscreen; stills open at their saved pixel dimensions.
 See [visual-qa.md](visual-qa.md) for report-first capture and the attachment command.
 `complete` requires at least one embedded media asset and no unfinished flows.
 Use `partial` or `blocked` when capture fails; DOM-only checks do not constitute
@@ -204,7 +209,7 @@ as `["Open inbox", "Select conversation", "Close", "Reopen"]`. `steps` holds the
 full numbered instructions. Keep `observed` to one plain-language outcome sentence;
 record capture provenance and material qualifications in `qa.environment` or
 validation. Result labels remain explicit even without color. Older flows without
-`journey` fall back to their steps. Use flow `comment_id` to assign evidence to an existing generated comment, including text-only flows. Legacy asset `comment_id` remains supported; the first association owns the flow. A comment can own multiple flows. Screenshots appear once inside the owning comment. Leave its discussion empty when the flow already explains the defect; only add distinct context. The renderer combines the flow steps and expected/actual results into both copy formats. Unmatched failed flows stay visible; other flows sit in a collapsed disclosure.
+`journey` fall back to their steps. Use flow `comment_id` to assign evidence to an existing generated comment, including text-only flows. Legacy asset `comment_id` remains supported; the first association owns the flow. A comment can own multiple flows. Screenshots appear once inside the owning comment. Leave its discussion empty when the flow already explains the defect; only add distinct context. The renderer combines the flow steps and expected/actual results into both copy formats. Unmatched failed flows stay visible; useful successful flows appear in the compact preview list, with extra flows disclosed.
 
 
 User comments supports both anchored code comments and general comments added

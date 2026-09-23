@@ -195,9 +195,10 @@ module SeriesChecks
           File.binwrite(File.join(out, 'state.png'), png)
           gif = Base64.strict_decode64('R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=')
           File.binwrite(File.join(out, 'motion.gif'), gif)
+          File.binwrite(File.join(out, 'motion.webm'), "\x1a\x45\xdf\xa3".b + 'video fixture')
           qa = {'status' => 'complete', 'fingerprint' => payload['snapshot']['fingerprint'], 'summary' => 'A synthetic state was captured.', 'environment' => 'Synthetic fixture, not an application test.',
                 'flows' => [{'title' => 'Inspect state', 'steps' => ['Inspect a synthetic state'], 'expected' => 'A sample image', 'observed' => 'Sample image attached', 'result' => 'passed',
-                             'motion_preview' => {'path' => 'motion.gif', 'caption' => 'Synthetic GIF preview'},
+                             'motion_preview' => {'path' => 'motion.webm', 'caption' => 'Synthetic video fixture'},
                              'assets' => [{'path' => 'state.png', 'caption' => 'Synthetic fixture', 'comment_id' => 'value-note'},
                                           {'path' => 'motion.gif', 'caption' => 'Synthetic animation'}]}]}
           input = File.join(out, 'qa.json')
@@ -209,7 +210,7 @@ module SeriesChecks
           assert(after['snapshot'] == payload['snapshot'] && after['review']['findings'] == payload['review']['findings'], 'QA changed code conclusions')
           assert(after['review']['qa']['flows'][0]['assets'][0]['data_uri'].start_with?('data:image/png;base64,'), 'Media not embedded')
           assert(after['review']['qa']['flows'][0]['assets'][1]['data_uri'].start_with?('data:image/gif;base64,'), 'GIF not embedded')
-          assert(after['review']['qa']['flows'][0]['motion_preview']['data_uri'].start_with?('data:image/gif;base64,'), 'Motion preview not embedded')
+          assert(after['review']['qa']['flows'][0]['motion_preview']['data_uri'].start_with?('data:video/webm;base64,'), 'Motion preview not embedded')
           assert(!after['review']['qa']['flows'][0]['assets'][0].key?('path'), 'Scratch path leaked into report')
           rejects('Stale revision accepted') { ReviewSeries.qa(repo: root, name: 'qa-check', revision: 1, update: input) }
           qa['fingerprint'] = 'wrong'; File.write(input, JSON.generate(qa))

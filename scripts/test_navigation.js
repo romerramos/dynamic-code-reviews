@@ -191,3 +191,19 @@ assert.match(viewerElements[0].content.innerHTML, /Inspect 2 original frames/);
 assert.doesNotMatch(viewerElements[0].content.innerHTML, /data-qa-sequence=/);
 assert.match(viewerElements[0].content.innerHTML, /Steps checked/);
 console.log('PASS overview previews open animated evidence and steps in one click');
+
+// Video uses the existing preview, carries a PNG poster, and never enters an img src.
+flow.motion_preview = {data_uri:'data:video/webm;base64,GkXfow==',caption:'Continuous interaction'};
+const videoPreview = sandbox.focusTest.qaPreview(flow,0);
+assert.match(videoPreview, /Watch video/);
+assert.doesNotMatch(videoPreview, /data-motion-source=/);
+assert.doesNotMatch(videoPreview, /<img[^>]+src="data:video/);
+listeners.click[1]({target:{closest:selector=>selector==='[data-open-evidence]' ? evidenceButton : null}});
+const videoEvidence = viewerElements[0].content.innerHTML;
+assert.match(videoEvidence, /<video controls/);
+assert.match(videoEvidence, /poster="data:image\/png;base64,cG5n"/);
+assert.match(videoEvidence, /src="data:video\/webm;base64,GkXfow=="/);
+assert.match(videoEvidence, /Steps checked/);
+assert.match(videoEvidence, /Inspect 2 original frames/);
+assert.doesNotMatch(videoEvidence, /data-qa-sequence=/);
+console.log('PASS video evidence retains one-click previews, native controls, PNG posters and readable stills');

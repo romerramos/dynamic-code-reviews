@@ -179,6 +179,12 @@ module ReviewChecks
       ReviewQA.validate(qa, snapshot)
       qa['flows'][0]['motion_preview']['data_uri'] = 'data:image/png;base64,' + Base64.strict_encode64(gif)
       rejects('Non-GIF motion preview accepted') { ReviewQA.validate(qa, snapshot) }
+      webm = "\x1a\x45\xdf\xa3".b + 'video fixture'
+      qa['flows'][0]['motion_preview'] = {'caption' => 'Recorded interaction', 'data_uri' => 'data:video/webm;base64,' + Base64.strict_encode64(webm)}
+      qa['flows'][0]['assets'] = []
+      ReviewQA.validate(qa, snapshot)
+      qa['flows'][0]['motion_preview']['data_uri'] = 'data:video/webm;base64,' + Base64.strict_encode64(gif)
+      rejects('Spoofed video preview accepted') { ReviewQA.validate(qa, snapshot) }
       qa['flows'][0].delete('motion_preview')
       qa['flows'][0]['assets'] = []
       rejects('Completed visual QA without media accepted') { ReviewQA.validate(qa, snapshot) }

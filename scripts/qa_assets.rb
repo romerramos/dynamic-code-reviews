@@ -47,7 +47,7 @@ module ReviewQA
     if %w[complete partial].include?(qa['status'])
       raise ArgumentError, 'Recorded QA needs environment/source evidence and at least one flow' if qa['environment'].to_s.strip.empty? || flows.empty?
     end
-    if qa['status'] == 'complete' && flows.none? { |flow| Array(flow['assets']).any? }
+    if qa['status'] == 'complete' && flows.none? { |flow| Array(flow['assets']).any? || flow['motion_preview'] }
       raise ArgumentError, 'Completed visual QA needs at least one embedded image or video; use partial or blocked when capture failed'
     end
     total = 0
@@ -90,10 +90,10 @@ module ReviewQA
         raise ArgumentError, 'Motion preview needs a caption' if preview['caption'].to_s.strip.empty?
         uri = preview['data_uri'].to_s
         raise ArgumentError, 'QA media exceeds 24 MiB' if uri.bytesize > (LIMIT * 4 / 3 + 128)
-        match = uri.match(%r{\Adata:image/gif;base64,([A-Za-z0-9+/=]+)\z})
-        raise ArgumentError, 'Motion preview must be a packed GIF' unless match && !preview.key?('path')
-        bytes = Base64.strict_decode64(match[1])
-        raise ArgumentError, 'Motion preview is not a GIF' unless media_type(bytes) == 'image/gif'
+        match = uri.match(%r{\Adata:(image/gif|video/webm|video/mp4);base64,([A-Za-z0-9+/=]+)\z})
+        raise ArgumentError, 'Motion preview must be packed WebM, MP4 or GIF' unless match && !preview.key?('path')
+        bytes = Base64.strict_decode64(match[2])
+        raise ArgumentError, 'Motion preview type does not match its bytes' unless media_type(bytes) == match[1]
         total += bytes.bytesize
         raise ArgumentError, 'QA media exceeds 24 MiB; shorten or compress the capture' if total > LIMIT
       end

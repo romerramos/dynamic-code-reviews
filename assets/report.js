@@ -398,11 +398,11 @@
   function findingCard(finding, index) {
     return `<article class="review-comment"><span class="badge blocking">${escape(finding.severity)}</span><p class="comment-location">${escape(hunkFiles.get(finding.hunk).path)}</p><h3>${escape(finding.title)}</h3><p class="comment-discussion">${escape(finding.body)}</p><div class="comment-actions"><button class="btn btn-sm btn-ghost" data-hunk="${escape(finding.hunk)}">See changed code →</button><button class="btn btn-sm btn-soft" data-post-finding="${index}">${icon('copy')} Copy for comment</button><button class="btn btn-sm btn-ghost" data-copy-finding="${index}">${icon('copy')} Copy for LLMs</button></div></article>`;
   }
-  function renderQAAsset(asset) {
+  function renderQAAsset(asset, poster = null) {
     const media = asset.data_uri.startsWith('data:video/')
-      ? `<video controls preload="none" playsinline aria-label="${escape(asset.caption)}" src="${escape(asset.data_uri)}"></video>`
+      ? `<video controls preload="metadata" playsinline${poster?.data_uri?.startsWith('data:image/') ? ` poster="${escape(poster.data_uri)}"` : ''} aria-label="${escape(asset.caption)}" src="${escape(asset.data_uri)}"></video>`
       : `<img loading="lazy" alt="${escape(asset.caption)}" src="${escape(asset.data_uri)}">`;
-    return `<figure class="qa-asset">${media}<figcaption>${escape(asset.caption)}</figcaption></figure>`;
+    return `<figure class="qa-asset${asset.data_uri.startsWith('data:video/') ? ' qa-video' : ''}">${media}<figcaption>${escape(asset.caption)}</figcaption></figure>`;
   }
   function renderQASequence(flow, index) {
     const first = flow.assets[0];
@@ -410,12 +410,13 @@
   }
   function qaPreview(flow, index, compact = false) {
     const assets = flow.assets || [];
-    const poster = assets.length ? assets[assets.length - 1] : null;
+    const poster = assets.filter(asset => asset.data_uri.startsWith('data:image/')).at(-1) || null;
     const isGif = poster?.data_uri.startsWith('data:image/gif;');
-    const motion = flow.motion_preview?.data_uri || (isGif ? poster.data_uri : null);
+    const motion = flow.motion_preview?.data_uri || assets.find(asset => asset.data_uri.startsWith('data:video/'))?.data_uri || (isGif ? poster.data_uri : null);
+    const video = motion?.startsWith('data:video/');
     const posterUri = isGif ? null : poster?.data_uri.startsWith('data:image/') ? poster.data_uri : null;
-    const image = posterUri ? `<img loading="lazy" alt="" src="${escape(posterUri)}"${motion ? ` data-poster-source="${escape(posterUri)}" data-motion-source="${escape(motion)}"` : ''}>` : motion ? `<span class="qa-preview-placeholder">GIF preview</span><img alt="" data-poster-source="" data-motion-source="${escape(motion)}">` : '<span class="qa-preview-placeholder">No image</span>';
-    const action = motion ? 'Watch GIF' : flow.presentation === 'sequence' ? `Watch ${assets.length} steps` : poster?.data_uri.startsWith('data:video/') ? 'Watch video' : assets.length ? `View ${assets.length} image${assets.length === 1 ? '' : 's'}` : 'Read check';
+    const image = posterUri ? `<img loading="lazy" alt="" src="${escape(posterUri)}"${motion && !video ? ` data-poster-source="${escape(posterUri)}" data-motion-source="${escape(motion)}"` : ''}>` : video ? '<span class="qa-preview-placeholder">Video preview</span>' : motion ? `<span class="qa-preview-placeholder">GIF preview</span><img alt="" data-poster-source="" data-motion-source="${escape(motion)}">` : '<span class="qa-preview-placeholder">No image</span>';
+    const action = video ? 'Watch video' : motion ? 'Watch GIF' : flow.presentation === 'sequence' ? `Watch ${assets.length} steps` : poster?.data_uri.startsWith('data:video/') ? 'Watch video' : assets.length ? `View ${assets.length} image${assets.length === 1 ? '' : 's'}` : 'Read check';
     return `<button type="button" class="qa-preview ${compact ? 'qa-preview-compact' : ''}" data-open-evidence="${index}" aria-haspopup="dialog" aria-label="${escape(`${action}: ${flow.title}`)}"><span class="qa-preview-image">${image}<span class="qa-preview-play" aria-hidden="true">▶</span></span><span class="qa-preview-copy">${compact ? `<strong>${escape(flow.title)}</strong><span class="qa-preview-status ${escape(flow.result)}">${escape(flow.result)}</span>` : '<strong>Visual evidence</strong>'}<span class="qa-preview-action">${escape(action)} →</span>${compact ? `<small>${escape(flow.observed)}</small>` : ''}</span></button>`;
   }
   let playingSequence = null;
@@ -465,6 +466,7 @@
       viewer.querySelector('.gclose').focus({preventScroll:true});
     },
     onClose:() => {
+      document.querySelectorAll('.qa-evidence-modal video').forEach(video => video.pause());
       stopQASequence();
       const anchor = viewerAnchor?.isConnected ? viewerAnchor : [...document.querySelectorAll('button[aria-haspopup="dialog"]')].find(button => button.getAttribute('aria-label') === viewerAnchor?.getAttribute('aria-label'));
       anchor?.focus({preventScroll:true});
@@ -568,10 +570,13 @@
     viewerLabel = `Visual evidence: ${flow.title}`;
     const content = document.createElement('section');
     content.className = 'qa-evidence-modal';
-    const media = flow.motion_preview ? `${renderQAAsset(flow.motion_preview)}${flow.assets?.length ? `<details class="qa-original-frames"><summary>Inspect ${flow.assets.length} original frame${flow.assets.length === 1 ? '' : 's'}</summary>${flow.assets.map(renderQAAsset).join('')}</details>` : ''}` : flow.presentation === 'sequence' ? renderQASequence(flow,index) : (flow.assets || []).map(renderQAAsset).join('');
+    const media = flow.motion_preview ? `${renderQAAsset(flow.motion_preview, (flow.assets || []).filter(asset => asset.data_uri.startsWith('data:image/')).at(-1))}${flow.assets?.length ? `<details class="qa-original-frames"><summary>Inspect ${flow.assets.length} original frame${flow.assets.length === 1 ? '' : 's'}</summary>${flow.assets.map(renderQAAsset).join('')}</details>` : ''}` : flow.presentation === 'sequence' ? renderQASequence(flow,index) : (flow.assets || []).map(renderQAAsset).join('');
     content.innerHTML = `<header><span class="qa-preview-status ${escape(flow.result)}">${escape(flow.result)}</span><h2>${escape(flow.title)}</h2><p>${(flow.journey || []).map(escape).join(' → ')}</p></header><div class="qa-evidence-scroll">${media}<div class="qa-evidence-explanation"><p><strong>Actual:</strong> ${escape(flow.observed)}</p><p><strong>Expected:</strong> ${escape(flow.expected)}</p><h3>Steps checked</h3><ol>${flow.steps.map(step => `<li>${escape(step)}</li>`).join('')}</ol></div></div>`;
     expandedViewer.setElements([{type:'inline', content, width:'min(96vw, 1080px)', height:'92vh', draggable:false}]);
     expandedViewer.open();
+    // Playback follows the explicit evidence click, never overview hover/load.
+    const clip = document.querySelector('.gslide.current .qa-video video');
+    if (clip) clip.play().catch(() => {});
     if (flow.presentation === 'sequence' && !flow.motion_preview) requestAnimationFrame(() => {
       const sequence = document.querySelector('.gslide.current .qa-sequence');
       if (sequence) playQASequence(sequence);

@@ -210,8 +210,10 @@ as adding, editing, deleting, reloading and combining both kinds of user comment
 
 Screenshots and controls must fit narrow widths. Previews are small invitations,
 not the reading surface; the viewer shows images at their original pixel size in
-a scrollable area without stretching. Interaction GIFs open directly in the viewer,
-with original frames available for close inspection. Older frame sequences retain
+a scrollable area without stretching. Native videos open and play after an explicit
+evidence click, with controls, fullscreen and a PNG poster from the same flow.
+Closing the viewer stops playback. PNG stills remain available for close inspection.
+Legacy GIFs open directly in the viewer. Older frame sequences retain
 Previous, Next and Play again controls. No overview autoplay, remote media or simulated background
 worker. Test evidence navigation from the diff, matched and unmatched failed flows,
 text-only evidence, loaded media, preview lists and narrow layouts

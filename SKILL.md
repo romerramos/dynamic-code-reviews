@@ -111,35 +111,45 @@ is not a reason to stop without offering these paths. Use `awaiting-environment`
 while waiting for that choice, and “QA assets are being generated” only once
 capture is actually planned. Omit QA for changes with no meaningful visual flow.
 
-Use an isolated browser tab/session through the available harness. Save its native
-captures directly as report evidence. For a UI interaction with meaningful state
-changes, make a short actual GIF the default using `scripts/qa_gif.rb`; retain
-the original frames for readable inspection. The script bundles pure Ruby PNG
-and JPEG decoding plus GIF encoding, so it needs no extra install on macOS,
-Linux or WSL Ubuntu beyond the skill's existing Ruby requirement. A GIF opens
-directly in the one-click viewer; original frames are available there. Use a
-single still when motion adds no value, and native isolated video if available.
-Never manufacture intermediate frames or a pointer path.
-Never present sampled frames as continuous video. Capture a few
-important states with short action captions. Present a few useful QA flows with a short action journey, an explicit Passed/Failed/Blocked/Not run result and one sentence describing what happened. Merge failed flows into their issue comment using flow comment_id (or legacy asset comment_id). Show the journey and expected/actual result once, with a visible preview that opens numbered steps and media in one action. When the flow explains the defect, leave comment discussion empty; add only distinct context there. Copying must still include the complete reproduction. Successful flows are useful when they demonstrate a meaningful outcome. Do not create a separate QA failure summary or duplicate images in Review details. When a single result image does not explain a multi-step failure,
-capture the starting state and decisive intermediate/result states in order.
-Number captions to match the reproduction steps, name the action and visible
-change, and keep expected versus actual behavior explicit. Use existing evidence
-when it already makes the sequence clear; do not add screenshots just for volume.
-Prefer these pictures over long descriptions of visible defects.
-Never record the user's desktop or require them to keep a window foregrounded.
-Use only the active browser harness to obtain real frames in its own tab. Crop
-at capture time around the relevant controls and text; inspect the saved pixels
-at their original size and at the report's display size. Prefer a lossless browser
-capture when the documented harness offers one; inspect the actual MIME type.
-Never relabel a compressed JPEG as PNG or upscale it to claim better quality.
-If text is unreadable, use a tighter capture, a clear caption, or mark that visual
-check as limited. The viewer keeps frames at native resolution and animates them
-after the reader opens the preview. A Mac event-stream recording plugin does
-not provide browser video or GIF frames. Finish with complete, partial, blocked or skipped
-status; never leave pending as the final status of an attempted QA pass. A completed
-visual QA pass must contain embedded media. Verify the current HTML includes the
-expected assets, then link it again and remind the user to reload an open report.
+Use a dedicated QA tab through the available browser harness. For UI interactions,
+**continuous tab video is the default**. Use the bundled, harness-independent
+[tab capture helper](references/tab-capture.md), or an already available native
+recorder with equivalent output. Save lossless PNG stills from that same capture
+stream for decisive states and evidence thumbnails. Prepare before recording,
+show actions at a normal human-readable pace, pause briefly on the result, and
+keep clips focused (usually 5–20 seconds). Trim idle portions with the browser
+helper when needed; never accelerate a clip just to meet a duration target. Do not use compressed tool
+screenshots as the default published evidence, sampled GIFs, frame slideshows,
+or hand-positioned cursors. Existing GIF reports remain readable.
+
+The helper uses browser APIs for video and PNG capture, plus the existing Ruby
+runtime to save files locally. It needs no extension, FFmpeg, package install,
+provider SDK or second automation connection. Any harness that can operate its
+browser controls can use it. Chrome requires an initial tab-sharing choice;
+follow the harness's permission policy. Record only the QA tab, never the desktop.
+Verify pointer visibility with a short real interaction. A selected QA tab in a
+background Chrome window can retain the automation pointer while the user works
+in another app; an unselected tab may lose it. Do not confuse the user's system
+cursor with the agent's interaction, or generalize one harness/OS probe to others.
+Never add a synthetic pointer or require the user to babysit the recording.
+If capture or pointer visibility cannot be established, report the specific limit
+and use readable still evidence where useful; do not quietly substitute an animation.
+
+Keep the approved evidence UI: one visible thumbnail per flow, one click to open
+its media and numbered steps, compact Other flows checked previews, and native
+video controls/fullscreen. Video playback follows the reader's explicit click,
+never overview autoplay. Embed every WebM/MP4 and PNG in the single offline HTML;
+source capture files and a running capture helper are not needed to share it.
+Present a few useful flows with a short journey, explicit result, and concise
+expected/observed outcome. Assign each failed flow to its issue using comment_id;
+do not duplicate its reproduction in comment discussion or a separate QA section.
+Keep stills at their real pixel dimensions in the viewer. Inspect small text and
+clicks before attaching; format conversion or upscaling cannot restore detail.
+
+Finish an attempted QA pass with complete, partial, blocked or skipped; complete
+requires embedded media and means checks finished, not that they all passed.
+Verify the current HTML contains the expected playable video and sharp stills,
+then link it again and remind the user to reload an already-open report.
 
 ## Render and verify
 

@@ -109,7 +109,8 @@
 .qa-evidence-scroll { min-height: 0; overflow: auto; padding: 18px 28px 28px; }
 .qa-evidence-modal .qa-asset { width: max-content; max-width: none; margin: 0 0 18px; }
 .qa-evidence-modal .qa-asset img { width: auto; height: auto; max-width: none; max-height: none; }
-.qa-evidence-modal .qa-asset video { width: auto; max-width: min(100%, 900px); max-height: 65vh; }
+.qa-evidence-modal .qa-video { width: 100%; max-width: 100%; }
+.qa-evidence-modal .qa-asset video { width: 100%; max-width: 100%; max-height: 65vh; }
 .qa-evidence-modal .qa-asset figcaption { max-width: 750px; color: #5f6b80; }
 .qa-original-frames { max-width: 800px; margin: 0 0 18px; }
 .qa-original-frames>summary { cursor: pointer; color: var(--accent); font-weight: 600; margin-bottom: 12px; }

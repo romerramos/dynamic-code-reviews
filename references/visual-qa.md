@@ -39,70 +39,37 @@ states and a short flow; avoid exhaustive screenshots or full-session recordings
    capture in this turn. On a setup failure, record the actual blocker and the
    practical next step; do not label a merely unprovisioned environment as an
    unexplained dead end.
-3. Use the available browser skill and its supported harness. Work in a dedicated
-   tab/session, avoid the user's tabs, and verify capture/actions work without
-   focus or stealing the user's interaction. Do not use OS desktop/window
-   recording, macOS screencapture, an ffmpeg screen-input device, raw CDP, or a
-   second automation connection as a substitute for an unsupported harness API.
-   Respect access blocks; do not relay blocked private content through localhost.
-4. Start with the active browser tool’s ordinary screenshots: save the returned
-   image bytes or supported artifact path and inspect the image. Reuse frames
-   already taken while checking the same flow and build. For an interaction where
-   movement or state changes matter, capture a short sequence of actual frames
-   through that same isolated browser tab before, during and after the action.
-   Prefer a documented lossless screenshot option when available, and inspect
-   the actual output type and pixel dimensions. Some harnesses return compressed
-   JPEGs with no quality control; changing their extension to PNG or converting
-   them cannot restore lost text detail. Prefer the harness's native crop option
-   so the important UI stays legible at original resolution. Inspect each frame
-   at native size and in the report; retain enough surrounding context to identify
-   the page and result. If text remains unreadable, narrow the capture or describe
-   the verified state in its caption and qualify the visual evidence. Attach frames in order
-   in the report and create a GIF with the bundled `scripts/qa_gif.rb` for an
-   interaction flow. Label sampled frames as steps, never continuous recording;
-   do not invent intermediate states or cursor movement. If a verified click
-   coordinate is known in the cropped frame, use `--click FRAME:X:Y` to mark it.
-   The pointer and ring annotate the click target; they are not a recorded pointer path.
-   Keep a still screenshot when it makes a decisive state easier to inspect.
-   For a static result, ordinary screenshots remain sufficient. Follow the tool’s
-   instructions instead of assuming identical APIs. A screenshot displayed in
-   the conversation is not automatically embedded in the report. If a session
-   is stale or a dialog blocks it, try supported recovery or a fresh review tab
-   before declaring capture blocked. Reuse the browser connection, obtain a fresh
-   review tab if needed, and perform authentication actions separately so failures
-   can be localized. Use known local test credentials through the normal login UI.
-   If the expected flow is missing, check documented feature flags and fixture
-   prerequisites in the authorized workspace; a reachable login page is not proof
-   the flow is ready. Restore any temporary fixture edits after capture.
-   If supported recovery fails, ask for the specific missing access or user action
-   and offer to skip; do not repeatedly retry the same failing operation.
-
-   Check native recording capability once, using documented tool/capability discovery.
-   Video discovery must not hold up browser frame capture.
-   If isolated recording is available, probe a few seconds on a harmless test
-   page. Confirm playback, framing, cursor/click visibility and background operation.
-   Prefer native pointer indicators; never fabricate a cursor path. If unavailable
-   or the probe fails, proceed with a **GIF of captured browser frames** and briefly state
-   that continuous background video is unavailable. Do not install extensions/dependencies or
-   build a recording service to finish an ordinary review.
-5. Exercise the actual relevant page on the reviewed build with test data. Use
-   semantic actions and cheap state checks; capture only key states such as before
-   the action, the resulting layout, and a meaningful edge case. Verify viewport
-   size. Screenshots of the report or a synthetic mockup do not prove app behavior.
-   For supported browser-client sessions, `tab.screenshot(...)` returns bytes that
-   can be saved to a scratch file using node:fs/promises through the same Node tool.
-   The attachment helper detects the actual image type; do not assume the harness
-   returns PNG. Inspect captions/element geometry instead of dumping media URLs.
-   Do not put images/base64/video frames in model-authored JSON or reread them as
-   text; save bytes and reference the files. Inspect selected images before use.
-6. Write a small QA JSON in scratch storage and attach it with the command below.
-   Captions describe the action and visible result, plus frame cadence or timestamps
-   for animations when useful. For a failure that depends on several actions, use
-   a GIF of captured frames when the final image alone is ambiguous. Align captions with the
-   reproduction steps and say what should have changed versus what actually did.
-   A sampled-frame GIF is not a continuous recording. Videos need native
-   controls, no autoplay, and a text walkthrough for accessibility. Cropping is
-   fine if labelled; never fabricate an app state or silently hide a failed result.
+3. Use a dedicated QA tab through the active browser harness. Read
+   [tab-capture.md](tab-capture.md) and start the bundled capture helper, unless
+   an equivalent native recorder is already available. The helper captures a
+   selected browser tab through standard Web APIs; it does not automate Chrome,
+   require an extension, or record the desktop. Respect browser access blocks
+   and the harness's permission policy. Do not relay blocked content through a
+   server or connect an alternate browser automation client to bypass a limit.
+4. Probe a short interaction before the real flow. Confirm the intended tab is
+   captured, native agent input is visible, video continues while the user works
+   elsewhere, and PNG text is readable at its saved dimensions. Keep the QA tab
+   selected in its browser window when native pointer capture needs that; do not
+   claim the same behavior for an unselected tab. Never paint a pointer into the
+   page or reconstruct clicks after capture. Stop after one supported recovery
+   if recording is blocked, explain the missing permission/capability, and offer
+   readable still evidence instead. Do not silently fall back to a sampled GIF.
+5. Exercise the relevant page on the reviewed build with safe test data. Record
+   short continuous clips around the actual actions. Save PNG stills from the
+   same capture stream for the before state, decisive result and thumbnail.
+   Use semantic browser actions and cheap state checks. A synthetic test or a
+   screenshot of the report does not prove application behavior. Verify the
+   runtime build, feature flags and fixtures; restore temporary fixture changes.
+   Supported harness screenshots remain useful for agent navigation, but do not
+   attach blurry tool images when the native capture stream is available.
+   Save returned bytes/files and reference their paths; do not put base64 in
+   model-authored JSON or dump it into tool output. Inspect the real saved pixels.
+6. Write small QA JSON and attach it with the command below. Use WebM/MP4 as the
+   flow's motion_preview and PNG stills as assets. Omit presentation: sequence.
+   Captions explain the action and visible result; steps provide the accessible
+   text equivalent. A single decisive static state may use PNG only. Use a PNG
+   poster from the same flow, not an unrelated image. The overview stays quiet;
+   one evidence click opens and plays the video with controls and fullscreen.
 7. Verify attachment before announcing success: extract the saved current report
    with `DynamicReviews.extract`, check the QA status, expected asset count and
    embedded data URIs without printing their contents. Check that comment links
@@ -125,34 +92,18 @@ historical pending status. No background task is promised after the agent stops.
 
 ## Media input and attachment
 
-Save numbered native browser crops from one short interaction in scratch storage,
-including a before and result frame. Keep the actual capture order and add an
-action/result caption to each image. For an interaction, create a GIF by running:
-
-```sh
-ruby <skill>/scripts/qa_gif.rb --out <scratch>/flow.gif \
-  --click 1:420:190 <scratch>/frame-01.jpg <scratch>/frame-02.jpg <scratch>/frame-03.jpg
-```
-
-`--click` is optional and uses a zero-based frame index plus coordinates in the
-cropped image. Use only a target whose location was confirmed during the browser
-interaction; annotate the action frame and identify the pointer and ring in the caption.
-The GIF uses captured frames and approximate per-frame delays, so label it a
-sampled interaction rather than continuous video. The encoder accepts PNG and
-JPEG directly using bundled Ruby codecs; it needs no ffmpeg, OS image tool,
-package install, desktop capture or foreground window. Keep original frames as
-assets, set `"motion_preview": {"path": "flow.gif", "caption": "Sampled steps; pointers and orange rings mark verified click targets."}`,
-and omit `presentation`. The overview uses a still thumbnail and animates the GIF
-on hover or focus. One click opens the GIF directly, with original frames in a
-disclosure for close reading. For a static result, attach the decisive screenshot
-without a GIF. Inspect all output at original size: GIF palette conversion cannot
-repair compression already present in the browser capture.
+Save continuous WebM clips and PNG stills with the bundled helper described in
+[tab-capture.md](tab-capture.md). Recording and encoding happen in the browser;
+no FFmpeg or image decoder package is needed. Attach a short clip as
+motion_preview and its readable stills as assets. For static evidence, omit
+motion_preview. Existing GIFs and legacy sequences remain supported for history,
+but are not the default capture workflow.
 
 ```json
 {
   "status": "partial",
   "fingerprint": "<exact snapshot fingerprint>",
-  "summary": "Checked the last-row dropdown. The GIF shows sampled browser states; continuous video is unavailable.",
+  "summary": "Checked the last-row dropdown with a continuous tab recording and native PNG stills.",
   "environment": "Local test app; build SHA verified against the reviewed head; Chrome, 1280 x 800; synthetic account.",
   "flows": [{
     "title": "Open the assignment menu on the last row",
@@ -162,7 +113,7 @@ repair compression already present in the browser capture.
     "observed": "The menu clears the footer; a long name requires horizontal scrolling.",
     "result": "failed",
     "comment_id": "wrap-assignment-names",
-    "motion_preview": {"path": "menu.gif", "caption": "Sampled interaction; pointer and orange ring mark the verified click target."},
+    "motion_preview": {"path": "menu.webm", "caption": "Open the assignment menu; the long unit-type name extends past the visible boundary."},
     "assets": [
       {"path": "before.png", "caption": "Step 1: the last row is visible above the footer."},
       {"path": "last-row.png", "caption": "Step 2: the long unit-type name extends past its visible width."}
@@ -191,7 +142,7 @@ ruby <skill>/scripts/series.rb qa --repo <root> --name <series> \
 The helper checks the expected revision, snapshot, unchanged code/context, media
 type and total size; embeds media; saves a new revision; and refreshes the current
 report. PNG/JPEG/WebP/GIF and MP4/WebM are accepted, with a 24 MiB total input budget.
-Shorten/compress clips using an already-installed offline encoder if necessary;
+Prefer shorter clips and fewer duplicate stills to stay within the budget;
 do not add external media URLs, SVG/HTML images or unbounded full-session video.
 The helper does not prove the runtime build identity: record how it was verified,
 or state uncertainty and do not present a different build as reviewed-head QA.
@@ -206,11 +157,10 @@ reused: `prepare` drops it, leaving the evidence accessible in historical HTML.
 
 ## Capability limits
 
-The current browser harness exposes tab screenshots and interactions, but no
-isolated continuous recording. Capture cropped browser frames through its supported
-screenshot API and encode a GIF with the bundled script. The Record & Replay
-plugin records a user's Mac action and accessibility event stream for skill
-creation; it does not supply browser image frames. Future browser harnesses may
-offer isolated recording, so inspect the current tool docs once rather than
-assuming this limit persists. An already configured harness with isolated
-recording or a user-supplied recording can provide MP4/WebM evidence.
+The capture helper is independent of Codex, Claude, Grok, OpenCode and Pi. Each
+harness still controls its browser using its own supported tools. Native pointer
+rendering is a property of that browser/automation arrangement; it is not
+implemented by this skill. Verify it instead of assuming it exists. The helper
+uses standard tab-sharing and media recording APIs in desktop Chromium; macOS
+is exercised, Linux/Omarchy and Windows Chrome with WSL still need live validation.
+See the capture reference for WSL paths and the one-time share interaction.
