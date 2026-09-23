@@ -235,7 +235,9 @@ ruby scripts/test_series.rb
 node scripts/test_ui.js
 node --check assets/report.js
 ruby scripts/test_qa_capture.rb
+ruby scripts/test_previews.rb
 node --check recorder/recorder.js
+node --check recorder/qa-panel.js
 ```
 
 The Ruby checks create temporary Git repositories using your existing configured

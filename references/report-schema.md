@@ -163,6 +163,16 @@ scripts/review.rb extract --report <file.html> --out <payload.json>` recovers a
 previous report's captured snapshot and analysis for reuse. Use `--replace` when
 refreshing an existing report's UI; otherwise filenames receive a timestamp.
 
+## Template previews
+
+Top-level `previews` is written by `scripts/previews.rb` and attached with
+`series.rb previews`; do not hand-author its HTML. Each entry has an `id`, the
+captured `files` it illustrates (a component's template and class together),
+`status` (`rendered`, `unavailable` or `not_visual`), `source` (`lookbook` or
+`example`), optional `title`, `note` and `width`, and a complete `html` document
+only when rendered. HTML must not contain scripts; the report shows it in a
+sandboxed frame. See [previews.md](previews.md).
+
 ## Optional visual QA
 
 Top-level `qa` is absent for nonvisual changes. It accepts `status` (pending,

@@ -199,6 +199,7 @@ module ReviewSeries
     review['coverage'] = ''
     review.delete('history')
     review.delete('qa') # Captures prove a particular runtime/snapshot, never an automatic increment.
+    review.delete('previews') # Rendered from one snapshot's templates; re-render after code changes.
     review
   end
 
@@ -377,6 +378,28 @@ module ReviewSeries
     end
   end
 
+  # Attach template previews rendered by the app for the exact reviewed snapshot.
+  def previews(repo:, name:, update:, revision:, **_unused)
+    rendered = read(File.expand_path(update)).fetch('previews')
+    path = directory(repo, name)
+    locked(path) do
+      history = manifest(path)
+      raise ArgumentError, 'Another revision was published; inspect it before attaching previews' unless history['revisions'].last['number'] == Integer(revision)
+      raise ArgumentError, 'Branch changed; use the original review checkout' unless history['branch'] == branch(repo)
+      payload = latest(path, history)
+      snapshot, review = payload.values_at('snapshot', 'review')
+      ReviewPreviews.validate(rendered, snapshot)
+      fresh = DynamicReviews.collect(repo: repo, mode: 'series', base: snapshot['base'], head: snapshot['mode'] == 'uncommitted' || snapshot['working_tree'] ? nil : snapshot['head'])
+      raise ArgumentError, 'Code changed; review the new snapshot before attaching previews' unless code_key(fresh) == code_key(snapshot) && fresh['head'] == snapshot['head']
+      raise ArgumentError, 'Previews are unchanged' if review['previews'] == rendered
+      review['previews'] = rendered
+      shown = rendered.count { |preview| preview['status'] == 'rendered' }
+      increment = {'summary' => "Template previews updated: #{shown} rendered of #{rendered.count { |preview| preview['status'] != 'not_visual' }} visual templates.", 'files' => [], 'groups' => {},
+                   'finding_states' => review.dig('history', 'finding_states') || []}
+      append(path, history, snapshot, review, increment)
+    end
+  end
+
   def start(repo:, name:, report: nil, snapshot: nil, review: nil, **_unused)
     raise ArgumentError, 'Provide --report or both --snapshot and --review' unless report || (snapshot && review)
     payload = report ? DynamicReviews.extract(report) : {'snapshot' => read(snapshot), 'review' => read(review)}
@@ -477,13 +500,13 @@ module ReviewSeries
     command = argv.shift
     options = {}
     parser = OptionParser.new do |p|
-      p.banner = 'ruby series.rb start|prepare|publish|qa|refresh|list [options]'
+      p.banner = 'ruby series.rb start|prepare|publish|qa|previews|refresh|list [options]'
       %w[repo name report snapshot review out head base prepared update revision].each { |key| p.on("--#{key} VALUE") { |value| options[key.to_sym] = value } }
       p.on('--working-tree', 'Include current working files with the verified PR head') { options[:working_tree] = true }
       p.on('--record', 'Save an intentional reassessment or a presentation-only refresh revision') { options[:record] = true }
     end
     parser.parse!(argv)
-    raise ArgumentError, parser.to_s unless %w[start prepare publish qa refresh list].include?(command)
+    raise ArgumentError, parser.to_s unless %w[start prepare publish qa previews refresh list].include?(command)
     result = public_send(command, **options)
     puts result.is_a?(String) ? result : JSON.pretty_generate(result)
   end

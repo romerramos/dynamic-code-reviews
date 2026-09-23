@@ -18,7 +18,7 @@ For ordinary reviews, **author review JSON only and run `scripts/review.rb`**. D
 Preserve these rules when the user explicitly requests a UI change:
 
 - Use the bundled daisyUI components, Prism syntax highlighting and Lucide SVG icons, embedded into the single offline HTML. Use Lucide for comment types and thread actions rather than improvised glyphs; retain the custom skill logo. Keep Ruby stdlib helpers; no project scripts, npm, gems or runtime CDN requests.
-- Keep the 320–340px desktop sidebar with full-width, wrapping step buttons. Give the remaining width to the code. Split mode has equal code columns, paired rows and independent real old/new source numbers; narrow screens scroll the comparison horizontally instead of stacking its sides.
+- Keep the 320–340px desktop sidebar with full-width, wrapping step buttons; its ☰ button collapses it in place on wide screens (remembered) and opens it as a drawer below 1200px. Give the remaining width to the code. Split mode has equal code columns, paired rows and independent real old/new source numbers; narrow screens scroll the comparison horizontally instead of stacking its sides.
 - Comments use visible, keyboard-operable gutter markers on the correct side and first source line. Open a bounded 390px popover near that marker, highlight the exact inclusive range, and preserve code row alignment. Never insert screen-wide comment rows. Support grouped comments, Copy comment, Escape, outside-click dismissal and returning keyboard focus.
 - File by file is a one-file reading mode using the existing walkthrough groups and steps, with tests last in each numbered step; File by file must use the exact sidebar file order while Walkthrough may show test panels after their owning code. Never introduce a second classification. Show full captured before/after source with diff colors and original comment anchors, the existing grouped sidebar and a selectable current file path, Previous/Next file and change navigation, and shared viewed progress. Font-size controls adjust code text and row spacing together and retain the preference locally. If complete source is unavailable, label the saved-hunk fallback honestly; never substitute current files for a historical snapshot.
 - Use readable monospace code, restrained diff colors, clear selected/focus states and progressive disclosure. Keep navigation, details, and notes. Track viewed progress per unique file, shared across walkthrough and All changes: checking Viewed collapses that file outside File by file, unchecking reopens it, and manual disclosure state persists independently. Keep sidebar navigation shallow: one heading for a single-step group, a flat file/component list for the active step, and search revealing matching steps. Wrap names and path subtitles instead of cutting them off; retain full-path tooltips/accessibility labels. Represent each component once with compact Ruby/Template shortcuts; keep actual filenames in the diff tabs. Component navigation must reveal its header and tabs, which stay visible while scrolling its diff. Derive group completion from its files; do not replace partial file progress with a group checkbox. Never add a control that pretends to have a backend.
@@ -98,6 +98,22 @@ Include:
 - Consult related/linked issues when available: met/partial/unmet/unknown with evidence, evaluated only within selected scope. Local uncommitted review is not whole-issue sign-off. Issue-tracker connectors can provide issue/spec context when configured; provider-specific guide/diff tools are optional, never prerequisites. Read linked sources only as needed. Bound optional enrichment to linked issues and a few precise history lookups; do not scan the organization's backlog.
 - Include related PRs, suggested labels and reviewers only when they change a review decision and are supported by live metadata, CODEOWNERS (last matching rule wins), or focused history. They are suggestions only; do not assign, comment, push or mutate external services. Omit routine metadata and unavailable optional enrichment.
 - Keep snapshot/coverage metadata in Review details. Mention before-merge/deployment actions only when they require a concrete decision not already covered by a finding. No simulated live CI, chat, native review submission, semantic symbol lookup or remote progress sync. Omit poems/fortunes by default because this is a focused review artifact; add only if requested.
+
+## Template previews for Rails partials and ViewComponents
+
+When the scope changes `.html.erb` partials or ViewComponent templates/classes and
+the app's development environment is available (reuse the visual QA environment
+answer), read [references/previews.md](references/previews.md) after publishing the
+review. Render every changed visual template with the app itself, reusing an
+existing Lookbook/ViewComponent preview's example when one exists and otherwise
+writing realistic example data. Mark stream-only or other non-visual templates
+`not_visual`. `scripts/previews.rb render` runs the examples through the app's
+runner in rolled-back savepoints, keeps only the CSS each preview uses, and
+`series.rb previews` attaches them to the latest revision. Every changed template must be accounted for: rendered, unavailable with its
+error, or `not_visual` with a reason the report shows. File by file opens a sticky
+side pane by itself only from 1600px; on laptop widths a Visual preview button in
+the file header opens it, and narrow screens and file cards show a collapsed Preview
+section above the code. Each example is a sandboxed, script-less frame. Inspect them in a browser before delivery and fix clipped or broken examples.
 
 ## Visual QA for UI changes: publish the review first
 

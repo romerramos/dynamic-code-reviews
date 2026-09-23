@@ -351,6 +351,62 @@
     return `<div class="diff-scroll"><table class="diff-table ${mode}" aria-label="${escape(file.path)} ${mode} diff"><colgroup><col class="gutter">${mode === 'split' ? '<col><col class="gutter"><col>' : '<col class="gutter"><col>'}</colgroup><thead class="${mode === 'unified' ? 'line-number-headings' : ''}"><tr>${mode === 'split' ? `<th colspan="2">BEFORE · ${escape(snapshot.base.slice(0,8))}</th><th colspan="2" class="after">AFTER · ${escape(snapshot.mode === 'uncommitted' || snapshot.working_tree ? 'working tree' : snapshot.head.slice(0,8))}</th>` : '<th scope="col"><span>Before line number</span></th><th scope="col"><span>After line number</span></th><th scope="col"><span>Code</span></th>'}</tr></thead><tbody>${hunks.map(hunk => renderHunk(hunk, summaries[hunk.id], file.path, mode, comment)).join('')}</tbody></table></div>`;
   }
 
+  // Template previews: static HTML the app rendered for this snapshot, shown in sandboxed,
+  // script-less frames so the app's CSS never touches the review and vice versa.
+  const previewById = new Map((review.previews || []).map(preview => [preview.id, preview]));
+  const previewsByPath = new Map();
+  const notVisualByPath = new Map();
+  (review.previews || []).forEach(preview => preview.files.forEach(path => {
+    const target = preview.status === 'not_visual' ? notVisualByPath : previewsByPath;
+    if (!target.has(path)) target.set(path, []);
+    target.get(path).push(preview);
+  }));
+  const previewSources = {lookbook: 'Lookbook example', example: 'Example data for this review'};
+  const wideScreen = () => matchMedia('(min-width: 1200px)').matches;
+  // The side pane opens by itself only on big screens; laptops keep the code wide and
+  // show the Preview button instead. An explicit open/close choice is remembered.
+  const previewPaneOpen = () => wideScreen() && (state.previewPane ? state.previewPane === 'open' : matchMedia('(min-width: 1600px)').matches);
+
+  function previewToggle(file) {
+    const list = previewsByPath.get(file.path);
+    if (!list?.length) return '';
+    return `<button type="button" class="preview-toggle" data-preview-toggle aria-controls="preview-pane" aria-expanded="${previewPaneOpen()}" title="Show how this template renders">${icon('scan-text')}<span>Visual preview</span><span class="preview-count">${list.length}</span></button>`;
+  }
+
+  function notVisualNote(file) {
+    const reasons = (notVisualByPath.get(file.path) || []).map(preview => preview.note).filter(Boolean);
+    return reasons.length && !previewsByPath.has(file.path) ? `<span class="preview-none">No preview · ${escape(reasons.join(' '))}</span>` : '';
+  }
+
+  function previewPanel(file, placement) {
+    const list = previewsByPath.get(file.path);
+    if (!list?.length) return '';
+    const rendered = list.filter(preview => preview.status === 'rendered').length;
+    const open = placement === 'side' && previewPaneOpen();
+    const examples = list.map(preview => `<figure class="preview-example"><figcaption><strong>${escape(preview.title || 'Preview')}</strong><span class="badge ${preview.source === 'lookbook' ? 'success' : 'neutral'}">${previewSources[preview.source] || previewSources.example}</span>${preview.note && preview.status === 'rendered' ? `<small>${escape(preview.note)}</small>` : ''}</figcaption>${preview.status === 'rendered' ? `<div class="preview-frame"><iframe sandbox="allow-same-origin" loading="lazy" title="${escape(`Preview: ${preview.title || file.path}`)}" data-preview-id="${escape(preview.id)}"${preview.width ? ` style="min-width:${Number(preview.width) + 32}px"` : ''}></iframe></div>` : `<p class="preview-unavailable">Preview unavailable. ${escape(preview.note || '')}</p>`}</figure>`).join('');
+    return `<details class="preview-panel ${placement}" ${placement === 'side' ? 'id="preview-pane"' : ''} data-preview-panel data-open-state="${open}" ${open ? 'open' : ''}><summary>${icon('scan-text')}<span class="preview-heading">Preview</span><span class="badge neutral">${rendered === list.length ? `${list.length} example${list.length === 1 ? '' : 's'}` : `${rendered} of ${list.length} rendered`}</span></summary><div class="preview-body"><p class="preview-caveat">Rendered by the app from the reviewed code with example data. Static: scripts, remote images and icon fonts are left out.</p>${examples}</div></details>`;
+  }
+
+  function fitPreview(frame) {
+    const root = frame.contentDocument?.documentElement;
+    if (root) frame.style.height = `${Math.ceil(root.scrollHeight)}px`;
+  }
+
+  let previewResize;
+  window.addEventListener('resize', () => {
+    clearTimeout(previewResize);
+    previewResize = setTimeout(() => document.querySelectorAll('iframe[data-preview-id]').forEach(fitPreview), 150);
+  });
+
+  function hydratePreviews(root) {
+    root.querySelectorAll('iframe[data-preview-id]').forEach(frame => {
+      const preview = previewById.get(frame.dataset.previewId);
+      if (!preview || frame.hasAttribute('srcdoc')) return;
+      frame.addEventListener('load', () => fitPreview(frame));
+      frame.srcdoc = preview.html;
+    });
+  }
+
   function renderFile(item) {
     const file = files.get(item.file);
     const hunks = file.hunks.filter(hunk => Object.hasOwn(item.summaries || {}, hunk.id));
@@ -358,7 +414,7 @@
     const added = changes.filter(line => line.kind === 'add').length;
     const removed = changes.filter(line => line.kind === 'del').length;
     const table = renderDiffTable(file, hunks, item.summaries);
-    return `<details class="file-card ${fileViewed(file) ? 'is-viewed' : ''}" data-file="${file.id}" ${fileOpen(file) ? 'open' : ''}><summary><span class="file-icon" aria-hidden="true">&lt;/&gt;</span><span class="filename">${escape(file.path)}</span><span class="badge success">+${added}</span><span class="badge blocking">−${removed}</span><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" aria-label="${escape(`Mark ${file.path} as viewed`)}" ${fileViewed(file) ? 'checked' : ''}> Viewed</label></summary>${item.summary || file.note ? `<div class="file-summary">${escape(item.summary || '')}${file.note ? ` · ${escape(file.note)}` : ''}</div>` : ''}${hunks.length ? table : `<div class="file-summary"><pre>${escape(file.patch || 'No text diff available.')}</pre></div>`}</details>`;
+    return `<details class="file-card ${fileViewed(file) ? 'is-viewed' : ''}" data-file="${file.id}" ${fileOpen(file) ? 'open' : ''}><summary><span class="file-icon" aria-hidden="true">&lt;/&gt;</span><span class="filename">${escape(file.path)}</span><span class="badge success">+${added}</span><span class="badge blocking">−${removed}</span><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" aria-label="${escape(`Mark ${file.path} as viewed`)}" ${fileViewed(file) ? 'checked' : ''}> Viewed</label></summary>${item.summary || file.note ? `<div class="file-summary">${escape(item.summary || '')}${file.note ? ` · ${escape(file.note)}` : ''}</div>` : ''}${previewPanel(file, 'inline')}${notVisualNote(file) ? `<div class="file-summary">${notVisualNote(file)}</div>` : ''}${hunks.length ? table : `<div class="file-summary"><pre>${escape(file.patch || 'No text diff available.')}</pre></div>`}</details>`;
   }
 
   const commentTypes = {
@@ -670,7 +726,7 @@
       full.forEach(hunk => highlightCache.set(hunk.id, colored));
       fullContextCache.set(`${file.id}:highlighted`, true);
     }
-    return `<section class="focus-reader"><header class="focus-file-header"><div class="focus-meta"><span class="focus-group" title="${escape(entry.layer.group.title)}">Group ${review.groups.indexOf(entry.layer.group) + 1} of ${review.groups.length} · ${escape(entry.layer.group.title)}${entry.layer.title === entry.layer.group.title ? '' : ` · ${escape(entry.layer.title)}`}</span><span class="focus-file-position">File ${focusIndex + 1} of ${focusOrder.length}</span><div class="focus-file-actions"><button class="btn btn-sm btn-ghost" data-change-step="-1" disabled aria-label="Previous changed section" title="Previous changed section">←</button><span id="change-position" class="muted">${file.hunks.length} changes</span><button class="btn btn-sm btn-ghost" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} aria-label="Next changed section" title="Next changed section">→</button></div><div class="focus-progress-actions"><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" ${fileViewed(file) ? 'checked' : ''}> <span>${fileViewed(file) ? 'Viewed' : 'Mark viewed'}</span></label><button class="btn btn-sm btn-ghost" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></div></div><div class="focus-identity"><div class="current-file"><code>${escape(file.path)}</code><button class="btn btn-sm btn-ghost copy-file-path" data-copy-file title="Copy the full relative file path" aria-label="Copy file path">${icon('copy')}<span>Copy path</span></button></div>${componentLinks}<details class="file-about"><summary>About this file</summary><p>${escape(entry.layer.summary || entry.layer.group.summary)}</p>${items.map(item => item.summary ? `<p>${escape(item.summary)}</p>` : '').join('')}</details></div></header>${!full ? '<p class="focus-unavailable">Full source was not captured or exceeds the text limit. Showing the saved diff; no current working files have been substituted.</p>' : ''}${file.hunks.length || full?.length ? renderDiffTable(file, full || file.hunks, summaries) : `<pre>${escape(file.note || file.patch || 'No text diff available.')}</pre>`}<footer class="focus-end"><span>${focusIndex + 1 === focusOrder.length ? 'End of the review' : `Next: ${escape(files.get(focusOrder[focusIndex + 1].file).path)}`}</span><button class="btn btn-sm btn-primary" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></footer></section>`;
+    return `<section class="focus-reader"><header class="focus-file-header"><div class="focus-meta"><span class="focus-group" title="${escape(entry.layer.group.title)}">Group ${review.groups.indexOf(entry.layer.group) + 1} of ${review.groups.length} · ${escape(entry.layer.group.title)}${entry.layer.title === entry.layer.group.title ? '' : ` · ${escape(entry.layer.title)}`}</span><span class="focus-file-position">File ${focusIndex + 1} of ${focusOrder.length}</span><div class="focus-file-actions"><button class="btn btn-sm btn-ghost" data-change-step="-1" disabled aria-label="Previous changed section" title="Previous changed section">←</button><span id="change-position" class="muted">${file.hunks.length} changes</span><button class="btn btn-sm btn-ghost" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} aria-label="Next changed section" title="Next changed section">→</button></div><div class="focus-progress-actions"><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" ${fileViewed(file) ? 'checked' : ''}> <span>${fileViewed(file) ? 'Viewed' : 'Mark viewed'}</span></label><button class="btn btn-sm btn-ghost" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></div></div><div class="focus-identity"><div class="current-file"><code>${escape(file.path)}</code><button class="btn btn-sm btn-ghost copy-file-path" data-copy-file title="Copy the full relative file path" aria-label="Copy file path">${icon('copy')}<span>Copy path</span></button></div>${componentLinks}${previewToggle(file)}${notVisualNote(file)}<details class="file-about"><summary>About this file</summary><p>${escape(entry.layer.summary || entry.layer.group.summary)}</p>${items.map(item => item.summary ? `<p>${escape(item.summary)}</p>` : '').join('')}</details></div></header>${!full ? '<p class="focus-unavailable">Full source was not captured or exceeds the text limit. Showing the saved diff; no current working files have been substituted.</p>' : ''}${(() => { const code = file.hunks.length || full?.length ? renderDiffTable(file, full || file.hunks, summaries) : `<pre>${escape(file.note || file.patch || 'No text diff available.')}</pre>`; const preview = previewPanel(file, 'side'); return preview ? `<div class="focus-body has-preview"><div class="focus-code">${code}</div>${preview}</div>` : code; })()}<footer class="focus-end"><span>${focusIndex + 1 === focusOrder.length ? 'End of the review' : `Next: ${escape(files.get(focusOrder[focusIndex + 1].file).path)}`}</span><button class="btn btn-sm btn-primary" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></footer></section>`;
   }
   function focusFile(index) {
     document.body.classList.remove('navigation-open'); $('nav-toggle').setAttribute('aria-expanded', 'false');
@@ -762,6 +818,7 @@
     $('prev').setAttribute('aria-label', fileReadingActive() ? 'Previous file' : 'Previous step');
     $('next').setAttribute('aria-label', fileReadingActive() ? 'Next file' : 'Next step');
     $('content').innerHTML = fileReadingActive() ? renderFocus() : layer ? renderStep(layer) : state.view === 'files' ? renderFiles() : renderOverview();
+    hydratePreviews($('content'));
     paintSelection();
     requestAnimationFrame(updateChangeNavigation);
     if (layer && !fileReadingActive()) {
@@ -865,6 +922,16 @@
   });
   $('content').addEventListener('toggle', event => {
     const panel = event.target;
+    if (panel.matches('.preview-panel') && panel.isConnected) {
+      // A details element rendered open fires toggle on insertion; remember only real
+      // user changes, on wide screens. Frames size themselves once visible.
+      const changed = String(panel.open) !== panel.dataset.openState;
+      panel.dataset.openState = String(panel.open);
+      if (changed && panel.matches('.side') && wideScreen()) { state.previewPane = panel.open ? 'open' : 'closed'; persist(); }
+      if (panel.matches('.side')) document.querySelectorAll('[data-preview-toggle]').forEach(button => button.setAttribute('aria-expanded', panel.open));
+      if (panel.open) requestAnimationFrame(() => panel.querySelectorAll('iframe[data-preview-id]').forEach(fitPreview));
+      return;
+    }
     if (panel.matches('.file-card') && panel.isConnected) {
       state.fileOpen[files.get(panel.dataset.file).path] = panel.open;
       if (!panel.open) {
@@ -1034,7 +1101,29 @@
   $('next').onclick = () => step(1);
   ['unified','split'].forEach(mode => { $(mode).onclick = () => { const scroll = $('content').scrollTop; layoutChoice = layout = mode; render(); $('content').scrollTop = scroll; }; });
   tabletLayout.addEventListener('change', renderExpandedCode);
-  $('nav-toggle').onclick = () => { const open = document.body.classList.toggle('navigation-open'); $('nav-toggle').setAttribute('aria-expanded', open); };
+  // Wide screens collapse the sidebar in place (remembered); narrow screens keep the drawer.
+  function applySidebar() {
+    const collapsed = wideScreen() && !!state.sidebarCollapsed;
+    document.body.classList.toggle('sidebar-collapsed', collapsed);
+    if (!wideScreen()) return;
+    const label = collapsed ? 'Show review navigation' : 'Hide review navigation';
+    $('nav-toggle').setAttribute('aria-expanded', !collapsed);
+    $('nav-toggle').setAttribute('aria-label', label);
+    $('nav-toggle').title = label;
+  }
+  $('nav-toggle').onclick = () => {
+    if (wideScreen()) { state.sidebarCollapsed = !state.sidebarCollapsed; persist(); applySidebar(); return; }
+    const open = document.body.classList.toggle('navigation-open');
+    $('nav-toggle').setAttribute('aria-expanded', open);
+  };
+  window.addEventListener('resize', applySidebar);
+  applySidebar();
+  $('content').addEventListener('click', event => {
+    const pane = event.target.closest('[data-preview-toggle]') && document.getElementById('preview-pane');
+    if (!pane) return;
+    pane.open = !pane.open;
+    if (pane.open && !wideScreen()) pane.scrollIntoView({block: 'nearest'});
+  });
   $('comments-toggle').onchange = event => { const scroll = $('content').scrollTop; showComments = event.target.checked; render(); $('content').scrollTop = scroll; };
   function chooseReadingMode(enabled) {
     focusMode = enabled;

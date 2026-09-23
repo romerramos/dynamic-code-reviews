@@ -15,6 +15,7 @@ require 'optparse'
 require 'pathname'
 require 'time'
 require_relative 'qa_assets'
+require_relative 'previews'
 
 module DynamicReviews
   ASSETS = File.expand_path('../assets', __dir__)
@@ -204,6 +205,7 @@ module DynamicReviews
 
   def self.validate(snapshot, review)
     ReviewQA.validate(review['qa'], snapshot, review)
+    ReviewPreviews.validate(review['previews'], snapshot)
     files = snapshot.fetch('files').to_h { |file| [file.fetch('id'), file] }
     hunks = files.values.flat_map { |file| file.fetch('hunks').map { |hunk| [hunk['id'], [file['id'], hunk]] } }.to_h
     covered, seen = [], []
