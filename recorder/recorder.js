@@ -1,20 +1,26 @@
 'use strict';
-const $ = id => document.getElementById(id);
+// Runs on the standalone recorder page or inside a served review, so it keeps its names local
+// and only touches the qa- prefixed elements that qa-panel.js creates.
+(() => {
+// Look elements up through the panel so they stay reachable while the review moves it.
+const panel = document.getElementById('qa-panel');
+const $ = id => panel.querySelector(`#qa-${id}`);
 const token = document.querySelector('meta[name="qa-token"]').content;
 const video = document.createElement('video');
 video.muted = true; video.playsInline = true;
 let stream, recorder, recorderFinished, chunks = [], clip, clipTimer, sessionTimer, stopping, ending, busy = false;
-let editSource, editUrl, trimming = false;
+let editSource, editUrl, trimming = false, offline = false;
 const editor = $('editor');
 const safeName = value => (value || 'qa-evidence').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').slice(0, 80) || 'qa-evidence';
+const setText = (id, text) => { if ($(id).textContent !== text) $(id).textContent = text; };
 function render() {
-  $('connect').disabled = busy || !!stream;
+  $('connect').disabled = busy || !!stream || offline;
   $('start').disabled = busy || !stream || !!recorder || !!stopping;
   $('stop').disabled = busy || !recorder;
   $('snapshot').disabled = busy || !stream || video.readyState < 2;
   $('end').disabled = busy || !stream;
   $('trim').disabled = busy || trimming || !!recorder || !editSource;
-  $('status').textContent = recorder ? `Recording · ${Math.floor((Date.now() - clip.startedAt) / 1000)} s · ${video.videoWidth} × ${video.videoHeight}` : stream ? `Capture ready · ${video.videoWidth} × ${video.videoHeight} · native browser capture` : 'No active capture';
+  setText('status', recorder ? `Recording · ${Math.floor((Date.now() - clip.startedAt) / 1000)} s · ${video.videoWidth} × ${video.videoHeight}` : stream ? `Capture ready · ${video.videoWidth} × ${video.videoHeight} · native browser capture` : offline ? 'The QA session has ended. Ask the agent to start a new one to record again.' : 'No active capture');
 }
 async function save(blob, name, extra = {}) {
   const response = await fetch(`/save/${name}`, {method: 'POST', headers: {'Content-Type': blob.type || 'application/octet-stream', 'X-QA-Token': token}, body: blob});
@@ -43,7 +49,7 @@ async function connect() {
   } catch (error) { stream.getTracks().forEach(item => item.stop()); stream = null; throw error; }
   track.addEventListener('ended', () => run(end), {once: true});
   sessionTimer = setTimeout(() => run(end), 600000);
-  $('notice').textContent = 'Capture ready. Use this control tab through the browser harness without selecting it. Keep the QA tab selected while interacting.';
+  $('notice').textContent = 'Capture ready. The agent records the checks and reloads this page with the evidence when it is done.';
 }
 function start() {
   if (!stream || recorder || stopping) throw new Error('Start capture and finish the current clip first.');
@@ -61,6 +67,7 @@ function start() {
   recorder.start(500);
   clipTimer = setTimeout(() => run(stop), 45000);
   $('notice').textContent = 'Recording. Interact with the QA tab.';
+  return {name: clip.name};
 }
 async function snapshot() {
   if (!stream || video.readyState < 2) throw new Error('No ready capture stream.');
@@ -68,8 +75,9 @@ async function snapshot() {
   canvas.getContext('2d').drawImage(video, 0, 0);
   const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
   if (!blob) throw new Error('PNG capture failed.');
-  await save(blob, `${safeName($('name').value)}.png`, {width: canvas.width, height: canvas.height});
+  const saved = await save(blob, `${safeName($('name').value)}.png`, {width: canvas.width, height: canvas.height});
   $('notice').textContent = 'PNG saved at the capture stream’s actual pixel dimensions.';
+  return saved;
 }
 async function stop() {
   if (stopping) return stopping;
@@ -85,13 +93,14 @@ async function stop() {
       const saved = await save(blob, `${metadata.name}.webm`, {width: metadata.width, height: metadata.height});
       await save(new Blob([JSON.stringify(metadata, null, 2)], {type: 'application/json'}), `${metadata.name}.json`);
       $('notice').textContent = `Saved ${saved.path}`;
+      return {...saved, durationMs: metadata.durationMs};
     } catch (error) {
       // Keep a local recovery download if the helper stops or rejects the file.
       const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${metadata.name}.webm`; link.textContent = 'Download unsaved clip'; $('artifacts').append(link);
       throw error;
     }
   })();
-  try { await stopping; } finally { stopping = null; }
+  try { return await stopping; } finally { stopping = null; }
 }
 async function end() {
   if (ending) return ending;
@@ -101,11 +110,48 @@ async function end() {
   })();
   try { await ending; } finally { ending = null; }
 }
-async function run(action) {
-  busy = true; render();
-  try { await action(); } catch (error) { $('notice').textContent = error.message; }
-  finally { busy = false; render(); }
+// Actions run one at a time, so a Stop sent while a PNG is still saving waits instead of being dropped.
+let queue = Promise.resolve();
+function run(action) {
+  const task = queue.then(async () => {
+    busy = true; render();
+    try { return await action(); } finally { busy = false; render(); }
+  });
+  queue = task.catch(() => {});
+  task.catch(error => { $('notice').textContent = error.message; });
+  return task;
 }
+const commands = {
+  start: name => { if (name) $('name').value = name; return start(); },
+  still: name => { if (name) $('name').value = name; return snapshot(); },
+  stop: async () => (await stop()) || {stopped: false},
+  end: async () => { await end(); return {ended: true}; },
+  // Ends any capture, then reloads so a served review shows its newly attached evidence.
+  reload: async () => { await end(); setTimeout(() => { location.hash = 'overview'; location.reload(); }, 300); return {reloading: true}; }
+};
+const status = () => ({ready: !!stream && video.readyState >= 2, recording: !!recorder, width: video.videoWidth, height: video.videoHeight});
+// Terminal commands arrive through the helper's long poll; results go back for the waiting client.
+async function poll() {
+  for (;;) {
+    try {
+      const response = await fetch('/next', {headers: {'X-QA-Token': token}, cache: 'no-store'});
+      offline = ![200, 204].includes(response.status);
+      if (response.status === 200) {
+        const command = await response.json();
+        let result;
+        try {
+          const value = command.action === 'status' ? status() : await run(() => commands[command.action](command.name));
+          result = {ok: true, value: value ?? null};
+        } catch (error) { result = {ok: false, error: error.message}; }
+        await fetch(`/result/${command.id}`, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-QA-Token': token}, body: JSON.stringify(result)});
+        continue;
+      }
+      if (response.status === 204) continue;
+    } catch { offline = true; /* The helper stopped; retry below. */ }
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+}
+poll();
 $('connect').onclick = () => run(connect);
 $('start').onclick = () => run(start);
 $('stop').onclick = () => run(stop);
@@ -181,3 +227,4 @@ $('trim').onclick = async () => {
     trimming = false; $('trim').disabled = false; $('source').disabled = false;
   }
 };
+})();

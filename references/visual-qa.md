@@ -40,8 +40,11 @@ states and a short flow; avoid exhaustive screenshots or full-session recordings
    practical next step; do not label a merely unprovisioned environment as an
    unexplained dead end.
 3. Use a dedicated QA tab through the active browser harness. Read
-   [tab-capture.md](tab-capture.md) and start the bundled capture helper, unless
-   an equivalent native recorder is already available. The helper captures a
+   [tab-capture.md](tab-capture.md) and start the bundled capture helper with
+   `--report` pointing at the just-published `current.html`, unless an equivalent
+   native recorder is already available. Open the served review beside the app
+   in the same QA window or tab group; its Visual QA panel is where the user
+   starts capture, and the same tab later shows the final report. The helper captures a
    selected browser tab through standard Web APIs; it does not automate Chrome,
    require an extension, or record the desktop. Respect browser access blocks
    and the harness's permission policy. Do not relay blocked content through a

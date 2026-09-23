@@ -5,33 +5,65 @@ stays with that harness; the helper only records the chosen tab and saves local
 media. It requires the skill's existing Ruby 3.1+ runtime and desktop Chromium
 with getDisplayMedia and MediaRecorder. No extension or media-tool installation.
 
-## Start once, then capture short flows
+## Review first, then capture from the review
+
+Publish the review without QA first. Then serve that review with the QA panel:
 
 ```sh
-ruby <skill>/scripts/qa_capture.rb --out <scratch-or-ignored-review-captures>
+ruby <skill>/scripts/qa_capture.rb --out <scratch-captures> --report <root>/.reviews/<series>/current.html
 ```
 
-Keep the process running during capture. It prints a loopback URL with an
-available port; never bind it publicly. Open that URL in a separate recorder tab
-through the current harness. Open the actual test app in a dedicated QA tab.
+Keep the process running during capture (a background shell task). It prints a
+loopback URL ending in `#overview`, with an available port; never bind it
+publicly. Open that exact URL so the review lands on its Overview, where a
+**Record visual QA evidence** section follows What changed, above the review
+comments and their videos. Its revision links keep working.
+The saved HTML file is not modified and stays a single shareable offline file.
+Without `--report` the helper serves a standalone recorder page with the same panel.
 
-1. Select the recorder tab once and click **Choose QA tab**. Follow the browser's
-   share prompt and the harness's approval policy. Select only the known test
-   application tab. The helper rejects desktop/window selections and disables
-   audio. Browser permission and user activation are required; do not promise
-   silent, permission-free setup. Do not install anything to skip the prompt.
-2. The captured tab should become selected. Keep it selected in its Chrome
-   window. The user can work in another app. Do not switch that Chrome window
-   to the recorder or another tab during the flow. Use the harness's background
-   DOM controls on the recorder tab, without activating it. If that harness
-   cannot do this, state the limitation instead of stealing focus repeatedly.
-3. Inspect **Capture ready · width × height**. The helper requests up to 3840 ×
+Use one browser window (or tab group) holding only the QA tabs: the app under
+review and the served review. A harness session group, such as Claude in
+Chrome's, qualifies. Open the app first, then the served review.
+
+Drive the recorder from the terminal, not through the browser harness. The
+recorder page polls the helper, runs each command in order and returns its result:
+
+```sh
+ruby <skill>/scripts/qa_capture.rb control --out <same-dir> <action> [--name NAME] [--timeout S]
+```
+
+Actions: `wait-ready` (block until a tab is shared; default 180 s), `status`,
+`start --name`, `still --name`, `stop`, `end` and `reload` (ends capture, then
+reloads the served review so it shows attached evidence). Each prints one JSON line
+(`{"ok":true,"value":…}`) and exits non-zero on failure; `stop` and `still`
+return the saved absolute path. A Stop sent while a PNG is still saving waits
+for it instead of being dropped. If no recorder page is polling, the command
+fails within a few seconds with "The recorder page is not open".
+
+1. Chrome's share prompt lists every open tab from every window by title, so a
+   user with several tabs of the same app cannot tell them apart. Just before
+   asking, mark the QA app tab through the harness:
+   `document.title = '[QA] ' + document.title.replace(/^\[QA\] /, '')`. A full
+   page load resets the title; set it again if the app tab navigated since.
+   Then tell the user, in one message, that the review is open in the QA window
+   and ask them to click **Choose QA tab** in the Overview's Record visual QA evidence section, pick the tab
+   titled `[QA] …` (give the full title) and click **Share**. Run `wait-ready`. Chrome shows the
+   share prompt only for a real click on a visible tab. A harness that clicks
+   background tabs (Claude in Chrome does) cannot open it; a harness whose tab is
+   in the foreground (as in Codex) may click Choose QA tab itself so the user
+   only answers the prompt. Do not promise silent, permission-free setup, launch
+   browsers with capture auto-approval flags, or install anything to skip it.
+   The helper rejects desktop/window selections and disables audio.
+2. Chrome focuses the captured app tab after sharing. Keep it selected in its
+   window; the user can return to other apps and must leave the review tab open.
+   Do not operate or reload the review tab through the harness while capturing.
+3. Check the `wait-ready` dimensions. The helper requests up to 3840 ×
    2160 at 30 fps; the actual dimensions are reported by the stream and may be
    lower. It never enlarges saved frames after capture. Use a short harmless
    click probe to check video, native agent pointer and sharp text. Inspect the
    pointer at the actual click, not just the user's physical cursor elsewhere.
 4. Prepare the page before recording so setup and permission waits stay out of
-   the clip. Fill **Evidence name**, then **Start clip** just before the relevant
+   the clip. Run `control start --name <flow>` just before the relevant
    action. Use a human-readable pace: one meaningful action at a time, roughly
    0.7–1.5 seconds to see menus/intermediate states, and 1–2 seconds on the result.
    Rehearse unfamiliar navigation before recording. Once controls are known,
@@ -39,22 +71,25 @@ through the current harness. Open the actual test app in a dedicated QA tab.
    tool invocation when possible; avoid long model/tool-planning gaps inside
    the clip. Wait for actual loading/animations, and never race through clicks
    or fabricate mouse motion. Aim for 5–20 useful seconds per flow.
-   Operate the app through the existing harness; click **Stop and save clip** promptly
+   Operate the app through the existing harness; run `control stop` promptly
    after the result. Each clip has a 45-second safety limit. Names are sanitized
    and saved with collision-resistant suffixes; read the resulting absolute path
-   from Saved evidence. A JSON sidecar records capture dimensions and timing for
+   from the command's JSON and check `durationMs` against the intended flow. A JSON sidecar records capture dimensions and timing for
    authoring; it does not need to be shared or attached to the report.
-5. Use **Save PNG still** for important before/result states, even when no video
+5. Use `control still --name <state>` for important before/result states, even when no video
    is recording. PNG comes directly from the live tab stream at its actual
    pixel dimensions via canvas. There is no JPEG re-encoding or screenshot
    upscaling. Match each PNG to its flow and include an informative caption.
-6. Finish with **End capture session**, then stop the helper process. Sessions
-   also expire after 10 minutes. If setup fails, close the unused recorder tab
-   and stop its helper; do not leave a pending capture indefinitely.
+6. Finish with `control end`, attach the evidence with `series.rb qa`, then run
+   `control reload` so the review tab shows the final report with its evidence.
+   Stop the helper afterwards; the reloaded page stays readable, and the shareable
+   result is the saved `current.html`. Sessions also expire after 10 minutes. If
+   setup fails, stop the helper; do not leave a pending capture indefinitely. The
+   panel's Manual controls remain available for manual use and trimming.
 
 A share permission can cover multiple short clips and stills, including app
-navigation, because the recorder lives in a separate tab. Verify capture survives
-navigation for the flow under review; do not navigate/reload the recorder itself
+navigation, because the review lives in a separate tab. Verify capture survives
+navigation for the flow under review; do not navigate/reload the review tab
 while its stream is active. If a clip cannot be saved, the helper exposes a local
 recovery download; do not discard a useful capture silently.
 

@@ -1,3 +1,30 @@
-*{box-sizing:border-box}body{margin:0;background:#f4f5f9;color:#19243b;font:16px/1.6 system-ui}main{max-width:860px;margin:40px auto;padding:32px;background:white;border:1px solid #d7deea;border-radius:16px}h1{margin:0;font-size:34px}.eyebrow{color:#6751b9;text-transform:uppercase;font-size:12px;font-weight:700;letter-spacing:1.2px}label{display:block;font-weight:600}input{font:inherit;border:1px solid #bfc8d8;border-radius:8px;padding:10px;width:100%;max-width:420px}.actions{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}button{font:inherit;border:0;border-radius:8px;background:#6048b5;color:white;padding:11px 16px;cursor:pointer}button:disabled{opacity:.4;cursor:default}.secondary{background:#eae7f3;color:#403260}button:focus-visible,input:focus-visible{outline:3px solid #e09a38;outline-offset:3px}#status{padding:14px;background:#f0edf9;border-radius:8px}#notice{color:#774223;white-space:pre-wrap}.muted{color:#697388;font-size:14px}li{overflow-wrap:anywhere;margin:12px 0}
-
-#editor{display:block;width:100%;max-height:400px;background:#20263b;border-radius:8px;margin:16px 0}#editor:not([src]){display:none}.range{display:flex;gap:16px;margin:16px 0}section{border-top:1px solid #d7deea;margin-top:24px;padding-top:12px}
+/* Scoped to #qa-panel so the served review keeps its own styles. */
+body.qa-standalone{margin:0;background:#f4f5f9;color:#19243b;font:16px/1.6 system-ui}
+#qa-panel{box-sizing:border-box;color:#19243b;font:14px/1.6 system-ui;background:#f6f4fe;border:1px solid #cfc8f3;border-left:4px solid #6048b5;border-radius:10px;padding:20px 22px;margin:22px 0 28px}
+#qa-panel *{box-sizing:border-box}
+main#qa-panel{max-width:760px;margin:40px auto;font-size:16px}
+#qa-panel header{margin-bottom:8px}
+#qa-panel .qa-eyebrow{font-size:11px;letter-spacing:.09em;text-transform:uppercase;font-weight:650;color:#6048b5;margin:0 0 4px}
+#qa-panel h2{font-size:19px;margin:0;color:#221a52}
+#qa-panel h3{font-size:14px;margin:18px 0 6px}
+#qa-panel p{margin:0 0 10px}
+#qa-panel label{display:block;font-weight:600;margin-top:8px}
+#qa-panel input{font:inherit;border:1px solid #bfc8d8;border-radius:8px;padding:8px;width:100%;background:white}
+#qa-panel button{font:inherit;font-size:13px;border:0;border-radius:8px;background:#6048b5;color:white;padding:8px 13px;cursor:pointer;white-space:nowrap}
+#qa-panel button:disabled{opacity:.4;cursor:default}
+#qa-panel .secondary{background:#eae7f3;color:#403260}
+#qa-panel button:focus-visible,#qa-panel input:focus-visible,#qa-panel summary:focus-visible{outline:3px solid #e09a38;outline-offset:2px}
+#qa-panel .qa-primary{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:14px 0 6px}
+#qa-connect{font-size:15px!important;font-weight:600;padding:11px 20px!important;box-shadow:0 4px 12px #6048b540}
+#qa-status{margin:0!important;padding:8px 12px;background:white;border:1px solid #ddd7f6;border-radius:8px;font-size:13px}
+#qa-notice{color:#774223;white-space:pre-wrap}
+#qa-notice:empty{display:none}
+#qa-panel .qa-muted{color:#697388;font-size:12px}
+#qa-panel .qa-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+#qa-panel details{margin-top:6px}
+#qa-panel summary{cursor:pointer;font-weight:600;color:#4f5869;font-size:13px}
+#qa-editor{display:block;width:100%;max-height:260px;background:#20263b;border-radius:8px;margin:12px 0}
+#qa-editor:not([src]){display:none}
+#qa-panel .qa-range{display:flex;gap:12px;margin:12px 0}
+#qa-artifacts{padding-left:18px;margin:0}
+#qa-artifacts li{overflow-wrap:anywhere;margin:6px 0;font-size:12px}

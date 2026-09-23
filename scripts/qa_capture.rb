@@ -8,21 +8,44 @@ require 'optparse'
 require 'securerandom'
 require 'fileutils'
 require 'timeout'
+require 'net/http'
 
 module QACapture
   LIMIT = 24 * 1024 * 1024
+  ACTIONS = %w[start stop still end status reload].freeze
+  SESSION = '.qa-session.json'
   ASSETS = File.expand_path('../recorder', __dir__)
+  PANEL_CSP = "default-src 'self'; script-src 'self'; style-src 'self'; media-src blob:; img-src 'self' blob:; frame-ancestors 'none'"
+  # The served review keeps its own inline scripts and embedded media, and may also load
+  # the QA panel and talk to this helper. The saved HTML file keeps its stricter offline policy.
+  REPORT_CSP = "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src data: blob:; media-src data: blob:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
   class Server
     attr_reader :port, :token
 
-    def initialize(directory:, port: 0)
+    # report: a review HTML (normally .reviews/<series>/current.html) served at / with the
+    # QA panel, so the reader starts capture from the review instead of a separate page.
+    def initialize(directory:, port: 0, report: nil)
       @directory = File.expand_path(directory)
       raise ArgumentError, 'Capture output must not be a symlink' if File.symlink?(@directory)
+      if report
+        @report = File.expand_path(report)
+        raise ArgumentError, 'The review report must be an existing HTML file' unless @report.end_with?('.html') && File.file?(@report) && !File.symlink?(@report)
+      end
       FileUtils.mkdir_p(@directory)
       @token = SecureRandom.hex(24)
       @socket = TCPServer.new('127.0.0.1', port)
       @port = @socket.addr[1]
       @origin = "http://127.0.0.1:#{@port}"
+      # Terminal commands queue here; the recorder page polls and runs them in order,
+      # so the agent never has to operate the recorder tab through a browser harness.
+      @commands = []
+      @results = {}
+      @last_poll = nil
+      @lock = Mutex.new
+      @signal = ConditionVariable.new
+      session = File.join(@directory, SESSION)
+      File.unlink(session) if File.file?(session)
+      File.open(session, File::WRONLY | File::CREAT | File::EXCL, 0o600) { |file| file.write(JSON.generate(url: @origin, token: @token)) }
     end
 
     def url = @origin
@@ -30,8 +53,8 @@ module QACapture
 
     def run
       loop do
-        client = @socket.accept
-        begin
+        # One thread per connection so the page's long poll never blocks uploads or commands.
+        Thread.new(@socket.accept) do |client|
           Timeout.timeout(15) { serve(client) }
         rescue StandardError => error
           respond(client, 400, JSON.generate(error: error.message), 'application/json') rescue nil
@@ -56,13 +79,16 @@ module QACapture
         headers[key.downcase] = value.strip
       end
       raise ArgumentError, 'Invalid Host' unless headers['host'] == "127.0.0.1:#{@port}"
-      if method == 'GET'
-        asset, type = {'/' => ['index.html', 'text/html; charset=utf-8'], '/recorder.js' => ['recorder.js', 'text/javascript'], '/style.css' => ['style.css', 'text/css']}[path]
+      if method == 'GET' && !path.start_with?('/next', '/result/')
+        return serve_report(client, path) if @report && (path == '/' || path.match?(%r{\A/(?:revisions/)?[a-z0-9_-]+\.html\z}))
+        asset, type = {'/' => ['index.html', 'text/html; charset=utf-8'], '/recorder.js' => ['recorder.js', 'text/javascript'], '/qa-panel.js' => ['qa-panel.js', 'text/javascript'], '/style.css' => ['style.css', 'text/css']}[path]
         return respond(client, 404, 'Not found', 'text/plain') unless asset
         content = File.binread(File.join(ASSETS, asset)).sub('__QA_TOKEN__', @token)
         return respond(client, 200, content, type)
       end
-      raise ArgumentError, 'Only same-origin capture uploads are accepted' unless method == 'POST' && headers['origin'] == @origin && headers['x-qa-token'] == @token
+      raise ArgumentError, 'Invalid capture token' unless headers['x-qa-token'] == @token
+      return control(client, method, path, headers) if path == '/next' || path == '/control' || path.start_with?('/result/')
+      raise ArgumentError, 'Only same-origin capture uploads are accepted' unless method == 'POST' && headers['origin'] == @origin
       match = path.match(%r{\A/save/([a-z0-9_-]{1,80})\.(png|webm|json)\z})
       raise ArgumentError, 'Invalid capture filename' unless match
       length = Integer(headers.fetch('content-length'))
@@ -85,25 +111,147 @@ module QACapture
       respond(client, 200, JSON.generate(path: output, bytes: length), 'application/json')
     end
 
-    def respond(client, code, body, type)
-      client.write("HTTP/1.1 #{code} #{code == 200 ? 'OK' : 'Error'}\r\nContent-Type: #{type}\r\nContent-Length: #{body.bytesize}\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nX-Frame-Options: DENY\r\nContent-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; media-src blob:; img-src 'self' blob:; frame-ancestors 'none'\r\n\r\n")
+    # GET /next and POST /result/<id> come from the recorder page; POST /control and
+    # GET /result/<id> come from the terminal client, which sends no Origin header.
+    def control(client, method, path, headers)
+      raise ArgumentError, 'Cross-origin control rejected' unless [nil, @origin].include?(headers['origin'])
+      id = path[%r{\A/result/([a-f0-9]{16})\z}, 1]
+      if method == 'GET' && path == '/next'
+        # Long poll: a hidden recorder tab's timers are throttled, but a pending fetch is not.
+        command = @lock.synchronize do
+          @last_poll = Time.now
+          @signal.wait(@lock, 10) if @commands.empty?
+          @last_poll = Time.now
+          @commands.shift
+        end
+        command ? respond(client, 200, JSON.generate(command), 'application/json') : respond(client, 204, '', 'text/plain')
+      elsif method == 'POST' && path == '/control'
+        request = JSON.parse(small_body(client, headers))
+        raise ArgumentError, 'Unknown recorder action' unless ACTIONS.include?(request['action'])
+        name = request['name'].to_s
+        raise ArgumentError, 'Invalid evidence name' unless name.empty? || name.match?(/\A[a-z0-9_-]{1,80}\z/)
+        command = {id: SecureRandom.hex(8), action: request['action'], name: name}
+        @lock.synchronize { @commands << command; @signal.signal }
+        respond(client, 200, JSON.generate(id: command[:id]), 'application/json')
+      elsif method == 'POST' && id
+        raise ArgumentError, 'Only the recorder page reports results' unless headers['origin'] == @origin
+        result = JSON.parse(small_body(client, headers))
+        @lock.synchronize { @results[id] = result }
+        respond(client, 200, '{}', 'application/json')
+      elsif method == 'GET' && id
+        result, connected = @lock.synchronize { [@results.delete(id), @last_poll && Time.now - @last_poll < 12] }
+        return respond(client, 200, JSON.generate(result), 'application/json') if result
+        respond(client, 202, JSON.generate(pending: true, page_connected: !!connected), 'application/json')
+      else
+        respond(client, 404, 'Not found', 'text/plain')
+      end
+    end
+
+    def small_body(client, headers)
+      length = Integer(headers.fetch('content-length'))
+      raise ArgumentError, 'Control message too large' unless length.between?(1, 65_536)
+      body = client.read(length)
+      raise ArgumentError, 'Incomplete control message' unless body&.bytesize == length
+      body
+    end
+
+    # / is the current review with the QA panel; sibling revision pages are served as
+    # saved, so the review's own history links keep working.
+    def serve_report(client, path)
+      file = path == '/' ? @report : File.join(File.dirname(@report), path.delete_prefix('/'))
+      return respond(client, 404, 'Not found', 'text/plain') unless File.file?(file) && !File.symlink?(file)
+      html = File.read(file, encoding: 'UTF-8').sub(/<meta http-equiv="Content-Security-Policy"[^>]*>/i) do
+        %(<meta http-equiv="Content-Security-Policy" content="#{REPORT_CSP}">)
+      end
+      if path == '/'
+        panel = %(<meta name="qa-token" content="#{@token}"><link rel="stylesheet" href="/style.css"><script src="/qa-panel.js"></script><script src="/recorder.js"></script>)
+        at = html.rindex('</body>') || html.length
+        html = html.dup.insert(at, panel)
+      end
+      respond(client, 200, html, 'text/html; charset=utf-8', REPORT_CSP)
+    end
+
+    def respond(client, code, body, type, csp = PANEL_CSP)
+      reason = {200 => 'OK', 202 => 'Accepted', 204 => 'No Content', 404 => 'Not Found'}.fetch(code, 'Error')
+      client.write("HTTP/1.1 #{code} #{reason}\r\nContent-Type: #{type}\r\nContent-Length: #{body.bytesize}\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nX-Frame-Options: DENY\r\nContent-Security-Policy: #{csp}\r\n\r\n")
       client.write(body)
+    end
+  end
+
+  # Terminal side of the command queue. Each call waits for the recorder page's result.
+  module Client
+    module_function
+
+    def call(directory:, action:, name: nil, timeout: 60)
+      session = JSON.parse(File.read(File.join(File.expand_path(directory), SESSION)))
+      uri = URI(session['url'])
+      http = Net::HTTP.new(uri.host, uri.port)
+      headers = {'X-QA-Token' => session['token'], 'Content-Type' => 'application/json'}
+      id = JSON.parse(http.post('/control', JSON.generate(action: action, name: name.to_s), headers).body)['id']
+      raise 'The capture helper rejected the command' unless id
+      started = Time.now
+      loop do
+        response = http.get("/result/#{id}", headers)
+        result = JSON.parse(response.body)
+        return result unless response.code == '202'
+        waited = Time.now - started
+        raise 'The recorder page is not open. Open the recorder URL in Chrome and keep that tab open.' if !result['page_connected'] && waited > 5
+        raise "The recorder did not finish #{action} within #{timeout} seconds" if waited > timeout
+        sleep 0.2
+      end
+    end
+
+    # Waits until the user has shared a tab from the recorder page.
+    def wait_ready(directory:, timeout: 180)
+      deadline = Time.now + timeout
+      loop do
+        status = call(directory: directory, action: 'status', timeout: 10)
+        return status if status['ok'] && status.dig('value', 'ready')
+        raise 'No tab was shared before the timeout' if Time.now > deadline
+        sleep 1
+      end
     end
   end
 end
 
-if $PROGRAM_NAME == __FILE__
+if $PROGRAM_NAME == __FILE__ && ARGV.first == 'control'
+  ARGV.shift
+  options = {}
+  OptionParser.new do |parser|
+    parser.banner = "Usage: ruby qa_capture.rb control --out <capture-directory> <#{QACapture::ACTIONS.join('|')}|wait-ready> [--name NAME] [--timeout SECONDS]"
+    parser.on('--out PATH') { |value| options[:directory] = value }
+    parser.on('--name NAME') { |value| options[:name] = value }
+    parser.on('--timeout SECONDS', Integer) { |value| options[:timeout] = value }
+  end.parse!
+  action = ARGV.shift
+  abort 'Provide --out <capture-directory> and an action' unless options[:directory] && action
+  abort "Unknown action #{action}" unless action == 'wait-ready' || QACapture::ACTIONS.include?(action)
+  begin
+    result = if action == 'wait-ready'
+      QACapture::Client.wait_ready(directory: options[:directory], timeout: options[:timeout] || 180)
+    else
+      QACapture::Client.call(directory: options[:directory], action: action, name: options[:name], timeout: options[:timeout] || 60)
+    end
+    puts JSON.generate(result)
+    exit(result['ok'] ? 0 : 1)
+  rescue StandardError => error
+    warn error.message
+    exit 1
+  end
+elsif $PROGRAM_NAME == __FILE__
   options = {port: 0}
   OptionParser.new do |parser|
-    parser.banner = 'Usage: ruby qa_capture.rb --out <capture-directory> [--port 0]'
+    parser.banner = 'Usage: ruby qa_capture.rb --out <capture-directory> [--report <review.html>] [--port 0]'
     parser.on('--out PATH') { |value| options[:directory] = value }
+    parser.on('--report PATH') { |value| options[:report] = value }
     parser.on('--port NUMBER', Integer) { |value| options[:port] = value }
   end.parse!
   abort 'Provide --out <capture-directory>' unless options[:directory]
   server = QACapture::Server.new(**options)
   $stdout.sync = true
-  puts "QA recorder: #{server.url}"
+  puts options[:report] ? "Review with QA panel: #{server.url}/#overview" : "QA recorder: #{server.url}"
   puts "Local capture files: #{File.expand_path(options[:directory])}"
+  puts "Control: ruby #{__FILE__} control --out #{File.expand_path(options[:directory])} <wait-ready|start|still|stop|end|status|reload> [--name NAME]"
   begin
     server.run
   rescue Interrupt
