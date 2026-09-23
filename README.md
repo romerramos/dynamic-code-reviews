@@ -21,6 +21,8 @@ The helpers do not call an LLM or generate review conclusions on their own.
 - Immutable review snapshots and refreshable browsing pages with complete revision
   navigation. Incremental review
   reuses explanations only when the captured ranges and recorded context match.
+- Reports open on Overview, with one-click video evidence previews. When served for
+  visual QA, the recorder's Choose QA tab action appears in that same section.
 
 ## Requirements
 

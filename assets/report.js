@@ -17,7 +17,9 @@
   const storageKey = `dynamic-review:${snapshot.fingerprint}${review.history ? `:${review.history.series}:${review.history.revision}` : ""}`;
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { /* file:// storage may be disabled */ }
-  const state = {view:'overview', notes:{}, personalComments:[], resolvedComments:[], fileOpen:{}, groupOpen:{}, componentFiles:{}, ...saved};
+  // Each opening starts at the review summary. Persist reading progress, not the last page;
+  // an explicit hash remains available for links directly to a walkthrough or All changes.
+  const state = {notes:{}, personalComments:[], resolvedComments:[], fileOpen:{}, groupOpen:{}, componentFiles:{}, ...saved, view:'overview'};
   const focusOrder = ReviewTools.focusFiles(layers, files);
   let focusMode = true;
   try { focusMode = localStorage.getItem('dynamic-review:reading-mode') !== 'walkthrough'; } catch { /* Keep the default when storage is unavailable. */ }
@@ -1126,12 +1128,12 @@
   $('file-total').textContent = `${files.size} files`;
   const hash = location.hash.slice(1);
   if (['overview','files', ...layers.map(layer => layer.id)].includes(hash)) state.view = hash;
+  if (state.view !== saved.view) state.navFile = null;
   window.addEventListener('hashchange', () => {
     const view = location.hash.slice(1);
     if (['overview','files', ...layers.map(layer => layer.id)].includes(view)) select(view);
   });
-  if (!hash && !saved.view && focusMode && layers.length) state.view = layers[0].id;
-  const initialFile = focusOrder.findIndex(entry => state.navFile ? entry.file === state.navFile : entry.layer.id === state.view);
+  const initialFile = focusOrder.findIndex(entry => entry.layer.id === state.view && (!state.navFile || entry.file === state.navFile));
   if (initialFile >= 0) focusIndex = initialFile;
   setFontSize(state.codeFontSize);
   render();

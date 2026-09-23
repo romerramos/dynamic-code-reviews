@@ -100,12 +100,11 @@ get('search').value='LongMessageComponent';
 ui.renderNavigation();
 assert(get('navigation').innerHTML.includes('data-component-link='),'Component-name search must reveal its step');
 console.log('PASS navigation reveals component controls, restores selection and keeps the sidebar shallow');
-// A fresh report opens in full-file focus with Unified selected, while explicit
-// Overview links retain their destination.
+// File-by-file remains the default reading mode when the reader enters a layer.
 sandbox.location.hash = '';
 sandbox.localStorage.getItem = () => null;
 vm.runInContext(source.replace(/  render\(\);\n\}\)\(\);\s*$/, '  globalThis.focusTest = {render, renderHunk, hunkFiles, select, chooseReadingMode, fileReadingActive, selectedReadingMode:()=>focusMode, changedSectionPosition, updateChangeNavigation, jumpChangedSection, review, qaPreview, renderOtherChecks};\n})();'), sandbox);
-sandbox.focusTest.render();
+sandbox.focusTest.select('g0l0');
 assert.equal(get('focus').textContent, 'File by file');
 assert(get('content').innerHTML.includes('focus-reader'));
 assert(get('content').innerHTML.includes('Group 1 of 2'));
@@ -207,3 +206,28 @@ assert.match(videoEvidence, /Steps checked/);
 assert.match(videoEvidence, /Inspect 2 original frames/);
 assert.doesNotMatch(videoEvidence, /data-qa-sequence=/);
 console.log('PASS video evidence retains one-click previews, native controls, PNG posters and readable stills');
+
+// Every normal opening starts on Overview, even when reading mode or a previous
+// destination was saved. Explicit links to a report section still work.
+const startup = () => {
+  vm.runInContext(source.replace(/  render\(\);\n\}\)\(\);\s*$/, '  globalThis.startupState = {view:state.view, navFile:state.navFile, focusIndex};\n})();'), sandbox);
+  return sandbox.startupState;
+};
+sandbox.location.hash = '';
+sandbox.localStorage.getItem = () => null;
+assert.equal(startup().view, 'overview');
+sandbox.localStorage.getItem = key => key === 'dynamic-review:reading-mode' ? 'walkthrough' : JSON.stringify({view:'g0l0',notes:{g0l0:'Saved note'}});
+assert.equal(startup().view, 'overview');
+sandbox.location.hash = '#files';
+assert.equal(startup().view, 'files');
+sandbox.location.hash = '#g0l0';
+assert.equal(startup().view, 'g0l0');
+sandbox.location.hash = '#unknown';
+assert.equal(startup().view, 'overview');
+sandbox.location.hash = '#g0l0';
+sandbox.localStorage.getItem = key => key === 'dynamic-review:reading-mode' ? null : JSON.stringify({view:'g1l0',navFile:'f2'});
+const linked = startup();
+assert.equal(linked.view, 'g0l0');
+assert.equal(linked.navFile, null);
+assert.equal(linked.focusIndex, 0);
+console.log('PASS reports open on Overview and honor explicit deep links');
