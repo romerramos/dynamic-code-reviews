@@ -50,9 +50,19 @@ states and a short flow; avoid exhaustive screenshots or full-session recordings
    already taken while checking the same flow and build. For an interaction where
    movement or state changes matter, capture a short sequence of actual frames
    through that same isolated browser tab before, during and after the action.
-   Encode those frames as a GIF with an already-installed offline encoder. State
-   the sample interval or that it is a step GIF; do not interpolate UI states,
-   invent cursor movement, or describe sampled frames as continuous recording.
+   Prefer a documented lossless screenshot option when available, and inspect
+   the actual output type and pixel dimensions. Some harnesses return compressed
+   JPEGs with no quality control; changing their extension to PNG or converting
+   them cannot restore lost text detail. Prefer the harness's native crop option
+   so the important UI stays legible at original resolution. Inspect each frame
+   at native size and in the report; retain enough surrounding context to identify
+   the page and result. If text remains unreadable, narrow the capture or describe
+   the verified state in its caption and qualify the visual evidence. Attach frames in order
+   in the report and create a GIF with the bundled `scripts/qa_gif.rb` for an
+   interaction flow. Label sampled frames as steps, never continuous recording;
+   do not invent intermediate states or cursor movement. If a verified click
+   coordinate is known in the cropped frame, use `--click FRAME:X:Y` to mark it.
+   The pointer and ring annotate the click target; they are not a recorded pointer path.
    Keep a still screenshot when it makes a decisive state easier to inspect.
    For a static result, ordinary screenshots remain sufficient. Follow the tool’s
    instructions instead of assuming identical APIs. A screenshot displayed in
@@ -72,7 +82,7 @@ states and a short flow; avoid exhaustive screenshots or full-session recordings
    If isolated recording is available, probe a few seconds on a harmless test
    page. Confirm playback, framing, cursor/click visibility and background operation.
    Prefer native pointer indicators; never fabricate a cursor path. If unavailable
-   or the probe fails, proceed with a **sampled GIF or screenshot walkthrough** and briefly state
+   or the probe fails, proceed with a **GIF of captured browser frames** and briefly state
    that continuous background video is unavailable. Do not install extensions/dependencies or
    build a recording service to finish an ordinary review.
 5. Exercise the actual relevant page on the reviewed build with test data. Use
@@ -88,9 +98,9 @@ states and a short flow; avoid exhaustive screenshots or full-session recordings
 6. Write a small QA JSON in scratch storage and attach it with the command below.
    Captions describe the action and visible result, plus frame cadence or timestamps
    for animations when useful. For a failure that depends on several actions, use
-   a short GIF or numbered screenshots when the final image alone is ambiguous. Align captions with the
+   a GIF of captured frames when the final image alone is ambiguous. Align captions with the
    reproduction steps and say what should have changed versus what actually did.
-   A sampled GIF is not a continuous recording. Videos need native
+   A sampled-frame GIF is not a continuous recording. Videos need native
    controls, no autoplay, and a text walkthrough for accessibility. Cropping is
    fine if labelled; never fabricate an app state or silently hide a failed result.
 7. Verify attachment before announcing success: extract the saved current report
@@ -115,30 +125,34 @@ historical pending status. No background task is promised after the agent stops.
 
 ## Media input and attachment
 
-For a sampled GIF, save numbered browser screenshots from one short interaction
-in scratch storage, including a before and result frame. Use the actual capture
-order; if capture is irregular, set each frame's duration from observed timing
-instead of implying an even frame rate. With evenly sampled PNG frames and an
-already-installed `ffmpeg`, a compact palette GIF can be made with:
+Save numbered native browser crops from one short interaction in scratch storage,
+including a before and result frame. Keep the actual capture order and add an
+action/result caption to each image. For an interaction, create a GIF by running:
 
 ```sh
-ffmpeg -framerate 2 -i 'frame-%03d.png' \
-  -filter_complex 'fps=2,scale=1200:-1:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse' \
-  -loop 0 interaction.gif
+ruby <skill>/scripts/qa_gif.rb --out <scratch>/flow.gif \
+  --click 1:420:190 <scratch>/frame-01.jpg <scratch>/frame-02.jpg <scratch>/frame-03.jpg
 ```
 
-Inspect playback and the first/last frames. If the browser action completes
-between captures, label the result a step GIF. Do not use an encoder to capture
-the desktop or another browser connection. If GIF conversion is unavailable,
-attach the original frames as numbered screenshots. When the user asks for the
-GIF files themselves, retain copies in the report's ignored directory as well
-as embedding them in its self-contained HTML.
+`--click` is optional and uses a zero-based frame index plus coordinates in the
+cropped image. Use only a target whose location was confirmed during the browser
+interaction; annotate the action frame and identify the pointer and ring in the caption.
+The GIF uses captured frames and approximate per-frame delays, so label it a
+sampled interaction rather than continuous video. The encoder accepts PNG and
+JPEG directly using bundled Ruby codecs; it needs no ffmpeg, OS image tool,
+package install, desktop capture or foreground window. Keep original frames as
+assets, set `"motion_preview": {"path": "flow.gif", "caption": "Sampled steps; pointers and orange rings mark verified click targets."}`,
+and omit `presentation`. The overview uses a still thumbnail and animates the GIF
+on hover or focus. One click opens the GIF directly, with original frames in a
+disclosure for close reading. For a static result, attach the decisive screenshot
+without a GIF. Inspect all output at original size: GIF palette conversion cannot
+repair compression already present in the browser capture.
 
 ```json
 {
   "status": "partial",
   "fingerprint": "<exact snapshot fingerprint>",
-  "summary": "Checked the last-row dropdown. Background video is unavailable; screenshots show the key states.",
+  "summary": "Checked the last-row dropdown. The GIF shows sampled browser states; continuous video is unavailable.",
   "environment": "Local test app; build SHA verified against the reviewed head; Chrome, 1280 x 800; synthetic account.",
   "flows": [{
     "title": "Open the assignment menu on the last row",
@@ -147,11 +161,12 @@ as embedding them in its self-contained HTML.
     "expected": "All menu items remain readable beyond the table boundary.",
     "observed": "The menu clears the footer; a long name requires horizontal scrolling.",
     "result": "failed",
-    "assets": [{
-      "path": "last-row.png",
-      "caption": "After opening the menu: the long unit-type name extends past its visible width.",
-      "comment_id": "wrap-assignment-names"
-    }]
+    "comment_id": "wrap-assignment-names",
+    "motion_preview": {"path": "menu.gif", "caption": "Sampled interaction; pointer and orange ring mark the verified click target."},
+    "assets": [
+      {"path": "before.png", "caption": "Step 1: the last row is visible above the footer."},
+      {"path": "last-row.png", "caption": "Step 2: the long unit-type name extends past its visible width."}
+    ]
   }]
 }
 ```
@@ -159,8 +174,8 @@ as embedding them in its self-contained HTML.
 Paths resolve relative to the QA JSON, not the current directory. `comment_id` is
 optional; it associates that generated comment with the evidence flow.
 Prefer flow comment_id to assign the evidence to one comment, including text-only
-flows. Legacy asset associations use the first linked comment as owner. Media
-appears only inside the owning comment’s expandable steps. Keep discussion empty
+flows. Legacy asset associations use the first linked comment as owner. The
+owning comment shows one compact preview; its viewer contains media and steps. Keep discussion empty
 when the flow already supplies the explanation; use journey and expected/observed
 for its concise visible summary. Unmatched failures remain visible; useful passed
 checks go in Other flows checked. Keep gutter popovers compact. New comments and
@@ -192,8 +207,8 @@ reused: `prepare` drops it, leaving the evidence accessible in historical HTML.
 ## Capability limits
 
 The current browser harness exposes tab screenshots and interactions, but no
-isolated continuous recording. Capture browser frames through its supported
-screenshot API and optionally encode them as a sampled GIF. The Record & Replay
+isolated continuous recording. Capture cropped browser frames through its supported
+screenshot API and encode a GIF with the bundled script. The Record & Replay
 plugin records a user's Mac action and accessibility event stream for skill
 creation; it does not supply browser image frames. Future browser harnesses may
 offer isolated recording, so inspect the current tool docs once rather than

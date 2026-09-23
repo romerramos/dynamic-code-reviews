@@ -54,7 +54,7 @@ from its original snapshot and analysis when refreshing presentation only.
   Detailed metadata belongs in Review details; file/context panels can collapse.
   Preserve Overview, All changes, search, J/K/Z, viewed state and local notes.
 - Keep company-size/reviewer calibration out of visible and embedded report
-  content. Overview starts with What changed: the exact review type/comparison and a short behavioral paragraph. Then show review comments with their QA evidence, optional collapsed successful checks, and User comments. Report-revision updates are separate from code changes. Keep the walkthrough in the sidebar, supporting metadata in Review details, and omit routine assessment boilerplate. Show each
+  content. Overview starts with What changed: the exact review type/comparison and a short behavioral paragraph. Then show review comments with their QA evidence, a compact preview list for successful checks, and User comments. Report-revision updates are separate from code changes. Keep the walkthrough in the sidebar, supporting metadata in Review details, and omit routine assessment boilerplate. Show each
   observation as an individual entry with its path, range, readable subject and
   full discussion. Other evidence sections use
   clear headings, 14px text, generous line spacing and roughly 80ch prose widths.
@@ -188,12 +188,13 @@ Native behavior reference (consult only when needed for maintenance):
 ## Optional QA media
 
 Each failed flow belongs inside its issue comment, not in a separate QA section.
-Show its short journey and expected/actual results once; native details disclose
-numbered steps and captioned media. Put useful successful checks in one collapsed
-Other flows checked disclosure. Unmatched failures remain visible under Review
+Show its short journey and expected/actual results once, followed by a visible
+evidence preview. One click opens the captioned media and numbered steps together.
+Put useful successful checks in a compact Other flows checked list with thumbnails,
+status and titles; disclose only checks beyond the first four. Unmatched failures remain visible under Review
 comments. A flow has one owner (flow comment_id, falling back to the first asset
 comment_id) so multiple associations never render the same flow twice. Gutter
-See visual evidence opens the owning thread and its steps without resolving it.
+See visual evidence opens the owning evidence viewer without resolving the thread.
 Preserve distinct comment discussion, but do not author a second copy of the QA
 reproduction there. Keep capture provenance in Review details.
 
@@ -207,10 +208,13 @@ source dumps, local resolution status, data URIs or broken local image links.
 Clipboard failure must expose selectable text. Test copying actual text as well
 as adding, editing, deleting, reloading and combining both kinds of user comment.
 
-Screenshots and controls must fit narrow widths. Keep animated GIFs stopped until
-the reader opens a Play GIF disclosure, and unload them when it closes. No autoplay, remote media or
-simulated background worker. Test evidence navigation from the diff, collapsed
-steps, unmatched failed flows, text-only evidence, loaded media, and narrow layouts
+Screenshots and controls must fit narrow widths. Previews are small invitations,
+not the reading surface; the viewer shows images at their original pixel size in
+a scrollable area without stretching. Interaction GIFs open directly in the viewer,
+with original frames available for close inspection. Older frame sequences retain
+Previous, Next and Play again controls. No overview autoplay, remote media or simulated background
+worker. Test evidence navigation from the diff, matched and unmatched failed flows,
+text-only evidence, loaded media, preview lists and narrow layouts
 using synthetic captures without implying they validate the reviewed application.
 
 Screenshot thumbnails and overview View code actions open the same bundled

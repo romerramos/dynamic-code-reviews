@@ -399,15 +399,57 @@
     return `<article class="review-comment"><span class="badge blocking">${escape(finding.severity)}</span><p class="comment-location">${escape(hunkFiles.get(finding.hunk).path)}</p><h3>${escape(finding.title)}</h3><p class="comment-discussion">${escape(finding.body)}</p><div class="comment-actions"><button class="btn btn-sm btn-ghost" data-hunk="${escape(finding.hunk)}">See changed code →</button><button class="btn btn-sm btn-soft" data-post-finding="${index}">${icon('copy')} Copy for comment</button><button class="btn btn-sm btn-ghost" data-copy-finding="${index}">${icon('copy')} Copy for LLMs</button></div></article>`;
   }
   function renderQAAsset(asset) {
-    let media;
-    if (asset.data_uri.startsWith('data:video/')) {
-      media = `<video controls preload="none" playsinline aria-label="${escape(asset.caption)}" src="${escape(asset.data_uri)}"></video>`;
-    } else if (asset.data_uri.startsWith('data:image/gif;')) {
-      media = `<details class="qa-animation"><summary>Play animated GIF (close to stop)</summary><button class="qa-image-button" type="button" data-expand-image aria-label="${escape(`Expand animation: ${asset.caption}`)}" aria-haspopup="dialog"><img loading="lazy" alt="${escape(asset.caption)}" data-gif-source="${escape(asset.data_uri)}"><span class="qa-image-hint">Click to expand</span></button></details>`;
-    } else {
-      media = `<button class="qa-image-button" type="button" data-expand-image aria-label="${escape(`Expand screenshot: ${asset.caption}`)}" aria-haspopup="dialog"><img loading="lazy" alt="${escape(asset.caption)}" src="${escape(asset.data_uri)}"><span class="qa-image-hint">Click to expand</span></button>`;
-    }
+    const media = asset.data_uri.startsWith('data:video/')
+      ? `<video controls preload="none" playsinline aria-label="${escape(asset.caption)}" src="${escape(asset.data_uri)}"></video>`
+      : `<img loading="lazy" alt="${escape(asset.caption)}" src="${escape(asset.data_uri)}">`;
     return `<figure class="qa-asset">${media}<figcaption>${escape(asset.caption)}</figcaption></figure>`;
+  }
+  function renderQASequence(flow, index) {
+    const first = flow.assets[0];
+    return `<figure class="qa-asset qa-sequence" data-qa-sequence="${index}" data-frame="0"><div class="qa-sequence-controls"><button type="button" data-sequence-prev aria-label="Previous evidence frame">← Previous</button><button type="button" data-sequence-play aria-pressed="false">Play again</button><button type="button" data-sequence-next aria-label="Next evidence frame">Next →</button><span data-sequence-count aria-live="polite">1 / ${flow.assets.length}</span></div><img alt="${escape(first.caption)}" src="${escape(first.data_uri)}"><figcaption data-sequence-caption>${escape(first.caption)}</figcaption></figure>`;
+  }
+  function qaPreview(flow, index, compact = false) {
+    const assets = flow.assets || [];
+    const poster = assets.length ? assets[assets.length - 1] : null;
+    const isGif = poster?.data_uri.startsWith('data:image/gif;');
+    const motion = flow.motion_preview?.data_uri || (isGif ? poster.data_uri : null);
+    const posterUri = isGif ? null : poster?.data_uri.startsWith('data:image/') ? poster.data_uri : null;
+    const image = posterUri ? `<img loading="lazy" alt="" src="${escape(posterUri)}"${motion ? ` data-poster-source="${escape(posterUri)}" data-motion-source="${escape(motion)}"` : ''}>` : motion ? `<span class="qa-preview-placeholder">GIF preview</span><img alt="" data-poster-source="" data-motion-source="${escape(motion)}">` : '<span class="qa-preview-placeholder">No image</span>';
+    const action = motion ? 'Watch GIF' : flow.presentation === 'sequence' ? `Watch ${assets.length} steps` : poster?.data_uri.startsWith('data:video/') ? 'Watch video' : assets.length ? `View ${assets.length} image${assets.length === 1 ? '' : 's'}` : 'Read check';
+    return `<button type="button" class="qa-preview ${compact ? 'qa-preview-compact' : ''}" data-open-evidence="${index}" aria-haspopup="dialog" aria-label="${escape(`${action}: ${flow.title}`)}"><span class="qa-preview-image">${image}<span class="qa-preview-play" aria-hidden="true">▶</span></span><span class="qa-preview-copy">${compact ? `<strong>${escape(flow.title)}</strong><span class="qa-preview-status ${escape(flow.result)}">${escape(flow.result)}</span>` : '<strong>Visual evidence</strong>'}<span class="qa-preview-action">${escape(action)} →</span>${compact ? `<small>${escape(flow.observed)}</small>` : ''}</span></button>`;
+  }
+  let playingSequence = null;
+  function stopQASequence() {
+    if (!playingSequence) return;
+    clearInterval(playingSequence.timer);
+    const button = playingSequence.container.querySelector('[data-sequence-play]');
+    if (button) { button.textContent = 'Play again'; button.setAttribute('aria-pressed', 'false'); }
+    playingSequence = null;
+  }
+  function setQASequenceFrame(container, position) {
+    const frames = review.qa.flows[Number(container.dataset.qaSequence)].assets;
+    const next = (position + frames.length) % frames.length;
+    const frame = frames[next];
+    container.dataset.frame = String(next);
+    const image = container.querySelector('img');
+    image.src = frame.data_uri;
+    image.alt = frame.caption;
+    container.querySelector('[data-sequence-caption]').textContent = frame.caption;
+    container.querySelector('[data-sequence-count]').textContent = `${next + 1} / ${frames.length}`;
+  }
+  function playQASequence(container) {
+    stopQASequence();
+    const frames = review.qa.flows[Number(container.dataset.qaSequence)].assets;
+    if (Number(container.dataset.frame) === frames.length - 1) setQASequenceFrame(container, 0);
+    const button = container.querySelector('[data-sequence-play]');
+    button.textContent = 'Pause'; button.setAttribute('aria-pressed', 'true');
+    const timer = setInterval(() => {
+      if (!container.isConnected || document.hidden) { stopQASequence(); return; }
+      const next = Number(container.dataset.frame) + 1;
+      setQASequenceFrame(container, next);
+      if (next === frames.length - 1) stopQASequence();
+    }, 1500);
+    playingSequence = {container, timer};
   }
   let viewerAnchor;
   let viewerCode = null;
@@ -423,6 +465,7 @@
       viewer.querySelector('.gclose').focus({preventScroll:true});
     },
     onClose:() => {
+      stopQASequence();
       const anchor = viewerAnchor?.isConnected ? viewerAnchor : [...document.querySelectorAll('button[aria-haspopup="dialog"]')].find(button => button.getAttribute('aria-label') === viewerAnchor?.getAttribute('aria-label'));
       anchor?.focus({preventScroll:true});
       viewerCode = null;
@@ -484,12 +527,9 @@
       return `<details class="related-tests" data-test-panel="${panel}" ${expandedTests.has(panel) ? 'open' : ''}><summary><span class="related-tests-heading">${escape(section.tests.title)} <span class="badge neutral">${section.items.length} file${section.items.length === 1 ? '' : 's'} · ${count} changed range${count === 1 ? '' : 's'}</span></span><span class="related-tests-summary">${escape(section.tests.summary)}</span></summary><div class="related-tests-content">${section.items.map(renderFile).join('')}</div></details>`;
     }).join('');
   }
-  function qaDetails(flow) {
-    return `<details class="qa-steps"><summary>View steps${flow.assets?.length ? ' and screenshots' : ''}</summary><ol>${flow.steps.map(step => `<li>${escape(step)}</li>`).join('')}</ol>${(flow.assets || []).map(renderQAAsset).join('')}</details>`;
-  }
   function qaFlow(flow, index, showTitle = true) {
     const labels = {passed:'Passed', failed:'Failed', blocked:'Blocked', 'not-run':'Not run'};
-    return `<div class="qa-journey" id="qa-flow-${index}" tabindex="-1">${showTitle ? `<h3>${escape(flow.title)}</h3>` : ''}<p class="qa-route">${(flow.journey || []).map(escape).join(' → ')}</p><p class="qa-result ${escape(flow.result)}">${showTitle ? `<strong>${labels[flow.result]}:</strong> ` : '<strong>Actual:</strong> '}${escape(flow.observed)}</p><p class="qa-expected"><strong>Expected:</strong> ${escape(flow.expected)}</p>${qaDetails(flow)}</div>`;
+    return `<div class="qa-journey" id="qa-flow-${index}" tabindex="-1">${showTitle ? `<h3>${escape(flow.title)}</h3>` : ''}<p class="qa-route">${(flow.journey || []).map(escape).join(' → ')}</p><p class="qa-result ${escape(flow.result)}">${showTitle ? `<strong>${labels[flow.result]}:</strong> ` : '<strong>Actual:</strong> '}${escape(flow.observed)}</p><p class="qa-expected"><strong>Expected:</strong> ${escape(flow.expected)}</p>${qaPreview(flow, index)}</div>`;
   }
   function commentEvidence(comment) {
     const indices = ReviewTools.evidenceFlows(review.qa, comment);
@@ -500,17 +540,42 @@
   }
   function renderOtherChecks() {
     const other = unlinkedFlows().filter(({flow}) => flow.result !== 'failed');
-    return other.length ? `<details class="other-checks"><summary>Other flows checked (${other.length})</summary>${other.map(({flow,index}) => qaFlow(flow,index)).join('')}</details>` : '';
+    const visible = other.slice(0, 4);
+    const more = other.slice(4);
+    return other.length ? `<section class="other-checks" aria-label="Other flows checked"><h2>Other flows checked <span class="badge neutral">${other.length}</span></h2><div class="qa-check-list">${visible.map(({flow,index}) => qaPreview(flow,index,true)).join('')}</div>${more.length ? `<details class="qa-more-checks"><summary>Show ${more.length} more check${more.length === 1 ? '' : 's'}</summary><div class="qa-check-list">${more.map(({flow,index}) => qaPreview(flow,index,true)).join('')}</div></details>` : ''}</section>` : '';
   }
   function showQA(index) {
     if ($('details-dialog').open) $('details-dialog').close();
     select('overview');
-    const target = $(`qa-flow-${index}`);
-    if (!target) return;
-    for (let node = target.parentElement; node; node = node.parentElement) if (node.tagName === 'DETAILS') node.open = true;
-    target.querySelector('details').open = true;
-    target.scrollIntoView({block:'center'});
-    target.focus({preventScroll:true});
+    const preview = document.querySelector(`[data-open-evidence="${index}"]`);
+    if (preview) {
+      for (let node = preview.parentElement; node; node = node.parentElement) if (node.tagName === 'DETAILS') node.open = true;
+      preview.scrollIntoView({block:'center'});
+      openEvidence(index, preview);
+    }
+  }
+  function openEvidence(index, anchor) {
+    const flow = review.qa?.flows[index];
+    if (!flow) return;
+    stopQASequence();
+    const previewImage = anchor?.querySelector?.('img[data-motion-source]');
+    if (previewImage) {
+      if (previewImage.dataset.posterSource) previewImage.src = previewImage.dataset.posterSource;
+      else previewImage.removeAttribute('src');
+    }
+    viewerAnchor = anchor;
+    viewerCode = null;
+    viewerLabel = `Visual evidence: ${flow.title}`;
+    const content = document.createElement('section');
+    content.className = 'qa-evidence-modal';
+    const media = flow.motion_preview ? `${renderQAAsset(flow.motion_preview)}${flow.assets?.length ? `<details class="qa-original-frames"><summary>Inspect ${flow.assets.length} original frame${flow.assets.length === 1 ? '' : 's'}</summary>${flow.assets.map(renderQAAsset).join('')}</details>` : ''}` : flow.presentation === 'sequence' ? renderQASequence(flow,index) : (flow.assets || []).map(renderQAAsset).join('');
+    content.innerHTML = `<header><span class="qa-preview-status ${escape(flow.result)}">${escape(flow.result)}</span><h2>${escape(flow.title)}</h2><p>${(flow.journey || []).map(escape).join(' → ')}</p></header><div class="qa-evidence-scroll">${media}<div class="qa-evidence-explanation"><p><strong>Actual:</strong> ${escape(flow.observed)}</p><p><strong>Expected:</strong> ${escape(flow.expected)}</p><h3>Steps checked</h3><ol>${flow.steps.map(step => `<li>${escape(step)}</li>`).join('')}</ol></div></div>`;
+    expandedViewer.setElements([{type:'inline', content, width:'min(96vw, 1080px)', height:'92vh', draggable:false}]);
+    expandedViewer.open();
+    if (flow.presentation === 'sequence' && !flow.motion_preview) requestAnimationFrame(() => {
+      const sequence = document.querySelector('.gslide.current .qa-sequence');
+      if (sequence) playQASequence(sequence);
+    });
   }
 
   function renderSections() {
@@ -649,6 +714,7 @@
     persist(); schedulePosition();
   }
   function render() {
+    stopQASequence();
     closeComments();
     document.body.classList.toggle('reading-focus', fileReadingActive());
     $('focus').textContent = 'File by file';
@@ -798,6 +864,20 @@
   document.addEventListener('click', async event => {
     // Keep the checkbox independent from the native disclosure summary.
     if (event.target.closest('.file-viewed')) { event.stopPropagation(); return; }
+    const evidencePreview = event.target.closest('[data-open-evidence]');
+    if (evidencePreview) { openEvidence(Number(evidencePreview.dataset.openEvidence), evidencePreview); return; }
+    const sequenceControl = event.target.closest('[data-sequence-prev], [data-sequence-play], [data-sequence-next]');
+    if (sequenceControl) {
+      const container = sequenceControl.closest('[data-qa-sequence]');
+      if (sequenceControl.hasAttribute('data-sequence-play')) {
+        if (playingSequence?.container === container) stopQASequence();
+        else playQASequence(container);
+      } else {
+        stopQASequence();
+        setQASequenceFrame(container, Number(container.dataset.frame) + (sequenceControl.hasAttribute('data-sequence-next') ? 1 : -1));
+      }
+      return;
+    }
     const componentLink = event.target.closest('[data-component-link]');
     if (componentLink) {
       const layer = layers.find(layer => layer.id === componentLink.dataset.fileLayer);
@@ -890,13 +970,20 @@
     if (!activeReviewNote) return;
     positionAnnotation(activeReviewNote.panel, activeReviewNote.trigger, () => activeReviewNote?.panel.hidePopover());
   }
-  document.addEventListener('toggle', event => {
-    const animation = event.target;
-    if (!animation.matches?.('.qa-animation')) return;
-    const image = animation.querySelector('img[data-gif-source]');
-    if (animation.open) image.src = image.dataset.gifSource;
-    else image.removeAttribute('src');
-  }, true);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stopQASequence(); });
+  function setPreviewMotion(event, active) {
+    const preview = event.target.closest?.('[data-open-evidence]');
+    if (!preview || (event.relatedTarget && preview.contains(event.relatedTarget))) return;
+    const image = preview.querySelector('img[data-motion-source]');
+    if (image) {
+      if (active || image.dataset.posterSource) image.src = active ? image.dataset.motionSource : image.dataset.posterSource;
+      else image.removeAttribute('src');
+    }
+  }
+  document.addEventListener('pointerover', event => setPreviewMotion(event, true));
+  document.addEventListener('pointerout', event => setPreviewMotion(event, false));
+  document.addEventListener('focusin', event => setPreviewMotion(event, true));
+  document.addEventListener('focusout', event => setPreviewMotion(event, false));
   document.addEventListener('toggle', event => {
     const panel = event.target;
     if (!panel.matches?.('.review-note-popover')) return;

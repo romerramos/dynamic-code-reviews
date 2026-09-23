@@ -159,6 +159,14 @@ module ReviewChecks
       end
       qa['flows'][0].delete('journey')
       ReviewQA.validate(qa, snapshot)
+      qa['flows'][0]['presentation'] = 'sequence'
+      rejects('Single-frame sequence accepted') { ReviewQA.validate(qa, snapshot) }
+      qa['flows'][0]['assets'] = [asset, asset.dup]
+      ReviewQA.validate(qa, snapshot)
+      qa['flows'][0]['presentation'] = 'unknown'
+      rejects('Unknown QA presentation accepted') { ReviewQA.validate(qa, snapshot) }
+      qa['flows'][0].delete('presentation')
+      qa['flows'][0]['assets'] = [asset]
       gif = Base64.strict_decode64('R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=')
       asset['data_uri'] = 'data:image/gif;base64,' + Base64.strict_encode64(gif)
       ReviewQA.validate(qa, snapshot)
@@ -167,6 +175,11 @@ module ReviewChecks
       asset['data_uri'] = 'data:image/gif;base64,' + Base64.strict_encode64('<svg>not a GIF</svg>')
       rejects('Spoofed GIF accepted') { ReviewQA.validate(qa, snapshot) }
       asset['data_uri'] = 'data:image/gif;base64,' + Base64.strict_encode64(gif)
+      qa['flows'][0]['motion_preview'] = {'caption' => 'Short step GIF', 'data_uri' => asset['data_uri']}
+      ReviewQA.validate(qa, snapshot)
+      qa['flows'][0]['motion_preview']['data_uri'] = 'data:image/png;base64,' + Base64.strict_encode64(gif)
+      rejects('Non-GIF motion preview accepted') { ReviewQA.validate(qa, snapshot) }
+      qa['flows'][0].delete('motion_preview')
       qa['flows'][0]['assets'] = []
       rejects('Completed visual QA without media accepted') { ReviewQA.validate(qa, snapshot) }
       qa['status'] = 'partial'

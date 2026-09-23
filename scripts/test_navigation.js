@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 require('../assets/review-tools.js');
 const calls = [];
+let viewerElements;
 const nodes = new Map();
 function node(name) {
   return {style:{setProperty(){}}, value:'', textContent:'', innerHTML:'', dataset:{}, scrollTop:0,
@@ -44,13 +45,13 @@ const sandbox = {
   cancelAnimationFrame(){}, requestAnimationFrame(){return 1;},
   ReviewTools:globalThis.ReviewTools,
   Prism:{languages:{}},
-  document:{getElementById:get,querySelector:selector=>selector.includes('f2') ? plainCard : pairedCard,querySelectorAll:()=>[],body:node('body'),
+  document:{getElementById:get,querySelector:selector=>selector.includes('f2') ? plainCard : pairedCard,querySelectorAll:()=>[],createElement:()=>node('inline evidence'),body:node('body'),
     addEventListener(type,fn){(listeners[type] ||= []).push(fn);}},
   window:{ReviewIcons:{},addEventListener(){}},
   localStorage:{getItem:key=>key === 'dynamic-review:reading-mode' ? 'walkthrough' : null,setItem:(key,value)=>{stored=JSON.parse(value);}},
   matchMedia:()=>({matches:false,addEventListener(){}}),
   location:{hash:'#overview'},history:{replaceState(){}},
-  GLightbox:()=>({on(){},close(){},lightboxOpen:false}),
+  GLightbox:()=>({on(){},close(){},open(){},setElements(elements){viewerElements=elements;},lightboxOpen:false}),
   setTimeout,clearTimeout,console,
   getComputedStyle:()=>({paddingTop:String(paddingTop)})
 };
@@ -103,7 +104,7 @@ console.log('PASS navigation reveals component controls, restores selection and 
 // Overview links retain their destination.
 sandbox.location.hash = '';
 sandbox.localStorage.getItem = () => null;
-vm.runInContext(source.replace(/  render\(\);\n\}\)\(\);\s*$/, '  globalThis.focusTest = {render, renderHunk, hunkFiles, select, chooseReadingMode, fileReadingActive, selectedReadingMode:()=>focusMode, changedSectionPosition, updateChangeNavigation, jumpChangedSection};\n})();'), sandbox);
+vm.runInContext(source.replace(/  render\(\);\n\}\)\(\);\s*$/, '  globalThis.focusTest = {render, renderHunk, hunkFiles, select, chooseReadingMode, fileReadingActive, selectedReadingMode:()=>focusMode, changedSectionPosition, updateChangeNavigation, jumpChangedSection, review, qaPreview, renderOtherChecks};\n})();'), sandbox);
 sandbox.focusTest.render();
 assert.equal(get('focus').textContent, 'File by file');
 assert(get('content').innerHTML.includes('focus-reader'));
@@ -174,3 +175,19 @@ sandbox.focusTest.select('g0l0');
 assert.equal(sandbox.focusTest.selectedReadingMode(), false);
 assert.equal(sandbox.focusTest.fileReadingActive(), false);
 console.log('PASS destination navigation preserves the selected reading mode');
+
+// A visual check should be visible in the overview and open its media in one click.
+const frame = {data_uri:'data:image/png;base64,cG5n',caption:'Inbox All'};
+const flow = {title:'Back skips Inbox All',journey:['Home','Inbox All','Back'],steps:['Open Inbox All','Press Back'],expected:'Inbox All',observed:'Home',result:'failed',motion_preview:{data_uri:'data:image/gif;base64,R0lGODlh',caption:'Sampled interaction; orange ring marks a click'},assets:[frame,{...frame,caption:'Back returned Home'}]};
+sandbox.focusTest.review.qa = {flows:[flow,{...flow,title:'Sidebar highlight',result:'passed',presentation:undefined}]};
+const preview = sandbox.focusTest.qaPreview(flow,0);
+assert.equal((preview.match(/data-open-evidence=/g)||[]).length,1);
+assert(!preview.includes('<details'), 'Visual evidence should not need another disclosure');
+assert.match(sandbox.focusTest.renderOtherChecks(), /Sidebar highlight/);
+const evidenceButton = {dataset:{openEvidence:'0'},getAttribute(){return null;}};
+listeners.click[1]({target:{closest:selector=>selector==='[data-open-evidence]' ? evidenceButton : null}});
+assert.match(viewerElements[0].content.innerHTML, /data:image\/gif;base64,R0lGODlh/);
+assert.match(viewerElements[0].content.innerHTML, /Inspect 2 original frames/);
+assert.doesNotMatch(viewerElements[0].content.innerHTML, /data-qa-sequence=/);
+assert.match(viewerElements[0].content.innerHTML, /Steps checked/);
+console.log('PASS overview previews open animated evidence and steps in one click');

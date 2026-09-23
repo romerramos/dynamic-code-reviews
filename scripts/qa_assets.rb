@@ -22,7 +22,9 @@ module ReviewQA
     qa = Marshal.load(Marshal.dump(qa))
     total = 0
     Array(qa['flows']).each do |flow|
-      Array(flow['assets']).each do |asset|
+      media = Array(flow['assets']).dup
+      media << flow['motion_preview'] if flow['motion_preview']
+      media.each do |asset|
         next unless asset.key?('path')
         path = File.expand_path(asset.delete('path'), directory)
         raise ArgumentError, 'QA asset must be a regular non-symlink file' if File.symlink?(path) || !File.file?(path)
@@ -62,6 +64,13 @@ module ReviewQA
       if flow.key?('journey') && (!flow['journey'].is_a?(Array) || flow['journey'].empty? || !flow['journey'].all? { |step| step.is_a?(String) && !step.strip.empty? })
         raise ArgumentError, 'QA journey must contain short text steps'
       end
+      if flow.key?('presentation')
+        assets = flow['assets']
+        unless flow['presentation'] == 'sequence' && assets.is_a?(Array) && assets.length >= 2 &&
+               assets.all? { |asset| asset['data_uri'].to_s.start_with?('data:image/png;', 'data:image/jpeg;', 'data:image/webp;') }
+          raise ArgumentError, 'QA sequence needs at least two PNG, JPEG or WebP frames'
+        end
+      end
       Array(flow['assets']).each do |asset|
         if asset['comment_id'] && review && !Array(review['comments']).any? { |comment| comment['id'] == asset['comment_id'] }
           raise ArgumentError, 'QA asset refers to an unknown review comment'
@@ -73,6 +82,18 @@ module ReviewQA
         raise ArgumentError, 'Use packed QA media; external URLs and file paths are not supported' unless match && !asset.key?('path')
         bytes = Base64.strict_decode64(match[2])
         raise ArgumentError, 'QA media type does not match its bytes' unless media_type(bytes) == match[1]
+        total += bytes.bytesize
+        raise ArgumentError, 'QA media exceeds 24 MiB; shorten or compress the capture' if total > LIMIT
+      end
+      if flow['motion_preview']
+        preview = flow['motion_preview']
+        raise ArgumentError, 'Motion preview needs a caption' if preview['caption'].to_s.strip.empty?
+        uri = preview['data_uri'].to_s
+        raise ArgumentError, 'QA media exceeds 24 MiB' if uri.bytesize > (LIMIT * 4 / 3 + 128)
+        match = uri.match(%r{\Adata:image/gif;base64,([A-Za-z0-9+/=]+)\z})
+        raise ArgumentError, 'Motion preview must be a packed GIF' unless match && !preview.key?('path')
+        bytes = Base64.strict_decode64(match[1])
+        raise ArgumentError, 'Motion preview is not a GIF' unless media_type(bytes) == 'image/gif'
         total += bytes.bytesize
         raise ArgumentError, 'QA media exceeds 24 MiB; shorten or compress the capture' if total > LIMIT
       end
