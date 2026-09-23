@@ -236,6 +236,7 @@ node scripts/test_ui.js
 node --check assets/report.js
 ruby scripts/test_qa_capture.rb
 ruby scripts/test_previews.rb
+ruby scripts/test_preview_stand_ins.rb
 node --check recorder/recorder.js
 node --check recorder/qa-panel.js
 ```

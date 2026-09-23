@@ -9,6 +9,7 @@ require 'optparse'
 require 'securerandom'
 require 'shellwords'
 require 'set'
+require_relative 'preview_stand_ins'
 
 module ReviewPreviews
   STATUSES = %w[rendered unavailable not_visual].freeze
@@ -20,25 +21,40 @@ module ReviewPreviews
 
   # Renders every visual preview of the spec with the app's own runner (for example
   # `docker exec -i web bin/rails runner -`), each in a rolled-back transaction.
-  def render(spec:, runner:, css: [])
+  def render(spec:, runner:, css: [], stand_ins: ReviewPreviewStandIns::Source.new)
     rendered = run_app(spec, runner)
     # Parse bytes: character indexing into a large UTF-8 string is quadratic.
     stylesheet = parse(css.map { |path| File.binread(path) }.join("\n"))
-    previews = spec.fetch('previews').map do |preview|
+    seen = {}
+    previews = spec.fetch('previews').filter_map do |preview|
       entry = preview.slice('id', 'files', 'title', 'source', 'note', 'width')
       entry['source'] ||= 'example'
+      html = rendered.dig(preview['id'], 'html')
       if preview['status'] == 'not_visual'
         entry.merge('status' => 'not_visual')
-      elsif (error = rendered.dig(preview['id'], 'error')) || !rendered.dig(preview['id'], 'html')
+      elsif (error = rendered.dig(preview['id'], 'error')) || !html
         entry.merge('status' => 'unavailable', 'note' => [preview['note'], error || 'The app returned no HTML.'].compact.join(' — '))
+      elsif (twin = seen[duplicate_key(preview, html)])
+        # Same template output twice (for example desktop and mobile variants that
+        # render alike): show it once and say so instead of two identical frames.
+        twin['note'] = [twin['note'], "“#{preview['title'] || preview['id']}” renders the same markup, so it is shown once."].compact.join(' ')
+        nil
       else
-        body = strip_scripts((preview['wrap'] || '%s').sub('%s') { rendered.dig(preview['id'], 'html') })
+        body, mocks = ReviewPreviewStandIns.apply(strip_scripts((preview['wrap'] || '%s').sub('%s') { html }), stand_ins, spec.fetch('icon_map', {}))
         body_class = preview['body_class'] || spec['body_class']
         css = fixed_viewport(prune(stylesheet, %(<body class="#{body_class}">#{body})), preview['viewport_height'] || spec['viewport_height'] || 900)
-        entry.merge('status' => 'rendered', 'html' => document(body, css, preview, body_class))
+        entry = entry.merge('status' => 'rendered', 'html' => document(body, css, preview, body_class))
+        entry['mocks'] = mocks if mocks
+        seen[duplicate_key(preview, html)] = entry
       end
     end
     {'previews' => previews}
+  end
+
+  # Markup identity ignoring per-instance ids, data and ARIA wiring attributes.
+  def duplicate_key(preview, html)
+    [Array(preview['files']).sort, preview['wrap'].to_s.gsub(/\sclass="[^"]*"/, ''),
+     html.gsub(/\s(?:id|for|data-[\w-]+|aria-[\w-]+)="[^"]*"/, '').gsub(/\s+/, ' ').strip]
   end
 
   def run_app(spec, runner)
@@ -96,7 +112,7 @@ module ReviewPreviews
     width = preview['width'] ? "width:#{Integer(preview['width'])}px" : 'width:auto'
     body_attribute = body_class.to_s.match?(/\A[\w\s-]+\z/) ? %( class="#{body_class}") : ''
     <<~HTML.strip
-      <!doctype html><html lang="en"><head><meta charset="utf-8"><style>#{css.gsub('</', '<\\/')}</style><style>html{position:static!important;overflow:visible!important;min-width:0!important;min-height:0!important}html,body{margin:0;background:#{preview['background'] || '#fff'}!important;min-height:0!important}body{padding:16px}.review-preview-root{#{width};max-width:none}.review-preview-root>*{position:relative!important;inset:auto!important}.review-preview-root>*:not([style*="height"]){height:auto!important;min-height:0!important;max-height:none!important}</style></head><body#{body_attribute}><div class="review-preview-root">#{body}</div></body></html>
+      <!doctype html><html lang="en"><head><meta charset="utf-8"><style>#{css.gsub('</', '<\\/')}</style><style>html{position:static!important;overflow:visible!important;min-width:0!important;min-height:0!important}html,body{margin:0;background:#{preview['background'] || '#fff'}!important;min-height:0!important}body{padding:16px}.review-preview-root{#{width};max-width:none}.review-preview-root>*{position:relative!important;inset:auto!important}.review-mock-icon::before{content:none!important;display:none!important}.review-mock-icon>svg{width:1em;height:1em;vertical-align:-.125em;display:inline-block}.review-preview-root>*:not([style*="height"]){height:auto!important;min-height:0!important;max-height:none!important}</style></head><body#{body_attribute}><div class="review-preview-root">#{body}</div></body></html>
     HTML
   end
 
@@ -250,6 +266,10 @@ module ReviewPreviews
       html = preview['html']
       raise ArgumentError, "Preview #{id} must include HTML only when rendered" unless (preview['status'] == 'rendered') == html.is_a?(String)
       raise ArgumentError, "Preview #{id} contains a script" if html&.match?(/<script\b/i)
+      mocks = preview['mocks']
+      unless mocks.nil? || (mocks.is_a?(Hash) && mocks.all? { |key, value| %w[credits unmatched].include?(key) ? value.is_a?(Array) && value.all?(String) : value.is_a?(Integer) })
+        raise ArgumentError, "Preview #{id} has malformed stand-in details"
+      end
       total += html.to_s.bytesize
     end
     raise ArgumentError, 'Previews exceed the 8 MiB report budget' if total > LIMIT
@@ -265,12 +285,19 @@ if $PROGRAM_NAME == __FILE__
     parser.on('--runner COMMAND') { |value| options[:runner] = value }
     parser.on('--css PATH') { |value| options[:css] << value }
     parser.on('--out PATH') { |value| options[:out] = value }
+    parser.on('--offline', 'Use cached or placeholder icons and images; fetch nothing') { options[:offline] = true }
   end.parse!
-  abort 'Usage: ruby previews.rb render --spec <spec.json> --runner "<command>" [--css <file>]... --out <previews.json>' unless command == 'render' && options.values_at(:spec, :runner, :out).all?
+  abort 'Usage: ruby previews.rb render --spec <spec.json> --runner "<command>" [--css <file>]... [--offline] --out <previews.json>' unless command == 'render' && options.values_at(:spec, :runner, :out).all?
   begin
-    result = ReviewPreviews.render(spec: JSON.parse(File.read(options[:spec])), runner: options[:runner], css: options[:css])
+    result = ReviewPreviews.render(spec: JSON.parse(File.read(options[:spec])), runner: options[:runner], css: options[:css],
+                                   stand_ins: ReviewPreviewStandIns::Source.new(network: !options[:offline]))
     File.write(options[:out], JSON.generate(result))
-    result['previews'].each { |preview| puts "#{preview['status'].ljust(11)} #{preview['id']} #{preview['html'] ? "#{preview['html'].bytesize / 1024} KiB" : preview['note']}" }
+    unmatched = result['previews'].flat_map { |preview| preview.dig('mocks', 'unmatched') || [] }.uniq
+    puts "Icons without a Lucide match (add spec icon_map entries by meaning, then re-render): #{unmatched.join(', ')}" if unmatched.any?
+    result['previews'].each do |preview|
+      stand_ins = preview['mocks']&.reject { |key, _| %w[credits unmatched].include?(key) }&.map { |key, count| "#{count} #{key.tr('_', ' ')}" }&.join(', ')
+      puts "#{preview['status'].ljust(11)} #{preview['id']} #{preview['html'] ? "#{preview['html'].bytesize / 1024} KiB" : preview['note']}#{stand_ins ? " · stand-ins: #{stand_ins}" : ''}"
+    end
   rescue ArgumentError, KeyError, SystemCallError, JSON::ParserError => error
     abort error.message
   end

@@ -378,13 +378,23 @@
     return reasons.length && !previewsByPath.has(file.path) ? `<span class="preview-none">No preview · ${escape(reasons.join(' '))}</span>` : '';
   }
 
+  // Icons and photos swapped in while building previews are never the app's assets.
+  function standInNote(mocks) {
+    if (!mocks) return '';
+    const parts = [];
+    if (mocks.icons || mocks.placeholders) parts.push(`icons are ${mocks.placeholders ? 'Lucide stand-ins or placeholders' : 'Lucide stand-ins'} for the app's icon font`);
+    if (mocks.images) parts.push(`images are openly licensed stand-in photos (${(mocks.credits || []).join('; ')})`);
+    if (mocks.image_placeholders) parts.push('some images are placeholders');
+    return parts.length ? `<small class="preview-stand-ins">Not final: ${escape(parts.join('; '))}.</small>` : '';
+  }
+
   function previewPanel(file, placement) {
     const list = previewsByPath.get(file.path);
     if (!list?.length) return '';
     const rendered = list.filter(preview => preview.status === 'rendered').length;
     const open = placement === 'side' && previewPaneOpen();
-    const examples = list.map(preview => `<figure class="preview-example"><figcaption><strong>${escape(preview.title || 'Preview')}</strong><span class="badge ${preview.source === 'lookbook' ? 'success' : 'neutral'}">${previewSources[preview.source] || previewSources.example}</span>${preview.note && preview.status === 'rendered' ? `<small>${escape(preview.note)}</small>` : ''}</figcaption>${preview.status === 'rendered' ? `<div class="preview-frame"><iframe sandbox="allow-same-origin" loading="lazy" title="${escape(`Preview: ${preview.title || file.path}`)}" data-preview-id="${escape(preview.id)}"${preview.width ? ` style="min-width:${Number(preview.width) + 32}px"` : ''}></iframe></div>` : `<p class="preview-unavailable">Preview unavailable. ${escape(preview.note || '')}</p>`}</figure>`).join('');
-    return `<details class="preview-panel ${placement}" ${placement === 'side' ? 'id="preview-pane"' : ''} data-preview-panel data-open-state="${open}" ${open ? 'open' : ''}><summary>${icon('scan-text')}<span class="preview-heading">Preview</span><span class="badge neutral">${rendered === list.length ? `${list.length} example${list.length === 1 ? '' : 's'}` : `${rendered} of ${list.length} rendered`}</span></summary><div class="preview-body"><p class="preview-caveat">Rendered by the app from the reviewed code with example data. Static: scripts, remote images and icon fonts are left out.</p>${examples}</div></details>`;
+    const examples = list.map(preview => `<figure class="preview-example"><figcaption><strong>${escape(preview.title || 'Preview')}</strong><span class="badge ${preview.source === 'lookbook' ? 'success' : 'neutral'}">${previewSources[preview.source] || previewSources.example}</span>${preview.mocks ? '<span class="badge warning">Stand-in assets</span>' : ''}${preview.note && preview.status === 'rendered' ? `<small>${escape(preview.note)}</small>` : ''}${standInNote(preview.mocks)}</figcaption>${preview.status === 'rendered' ? `<div class="preview-frame"><iframe sandbox="allow-same-origin" loading="lazy" title="${escape(`Preview: ${preview.title || file.path}`)}" data-preview-id="${escape(preview.id)}"${preview.width ? ` style="min-width:${Number(preview.width) + 32}px"` : ''}></iframe></div>` : `<p class="preview-unavailable">Preview unavailable. ${escape(preview.note || '')}</p>`}</figure>`).join('');
+    return `<details class="preview-panel ${placement}" ${placement === 'side' ? 'id="preview-pane"' : ''} data-preview-panel data-open-state="${open}" ${open ? 'open' : ''}><summary>${icon('scan-text')}<span class="preview-heading">Preview</span><span class="badge neutral">${rendered === list.length ? `${list.length} example${list.length === 1 ? '' : 's'}` : `${rendered} of ${list.length} rendered`}</span></summary><div class="preview-body"><p class="preview-caveat">Rendered by the app from the reviewed code with example data. Static: scripts are off, and icons or images marked as stand-ins are mocked for this preview.</p>${examples}</div></details>`;
   }
 
   function fitPreview(frame) {
@@ -398,13 +408,60 @@
     previewResize = setTimeout(() => document.querySelectorAll('iframe[data-preview-id]').forEach(fitPreview), 150);
   });
 
+  // What a reader actually sees in a preview: visible text, icons and images in order,
+  // plus the rendered height. Hidden markup (a closed flyout) and widths do not count.
+  function visualFingerprint(frame) {
+    const doc = frame.contentDocument;
+    const root = doc?.querySelector('.review-preview-root');
+    if (!root) return null;
+    const parts = [];
+    const walker = doc.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const element = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+      if (!element.getClientRects().length || doc.defaultView.getComputedStyle(element).visibility === 'hidden') continue;
+      if (node.nodeType === Node.TEXT_NODE) { const text = node.textContent.trim(); if (text) parts.push(`t:${text}`); }
+      else if (node.matches('svg, img')) parts.push(node.tagName.toLowerCase());
+    }
+    parts.push(`h:${Math.round(root.getBoundingClientRect().height / 4)}`);
+    return parts.join('|');
+  }
+
+  // Examples of one template that look the same (desktop and mobile variants, say) are
+  // folded under the first one instead of repeating an identical frame.
+  function foldVisualTwins(panel) {
+    const figures = [...panel.querySelectorAll('.preview-example')].filter(figure => figure.querySelector('iframe[data-preview-id]'));
+    const prints = figures.map(figure => figure.querySelector('iframe').dataset.fingerprint);
+    if (prints.some(print => !print)) return;
+    figures.forEach((figure, index) => {
+      const first = prints.indexOf(prints[index]);
+      if (first === index || figure.classList.contains('is-visual-twin')) return;
+      figure.classList.add('is-visual-twin');
+      figure.hidden = true;
+      const title = figure.querySelector('figcaption strong')?.textContent || 'Another example';
+      const note = document.createElement('small');
+      note.className = 'preview-twin-note';
+      note.innerHTML = `${escape(`“${title}” looks the same, so it is folded here.`)} <button type="button" class="btn btn-xs btn-ghost">Show it</button>`;
+      note.querySelector('button').addEventListener('click', () => { figure.hidden = false; note.remove(); fitPreview(figure.querySelector('iframe')); });
+      figures[first].querySelector('figcaption').append(note);
+    });
+  }
+
   function hydratePreviews(root) {
     root.querySelectorAll('iframe[data-preview-id]').forEach(frame => {
       const preview = previewById.get(frame.dataset.previewId);
       if (!preview || frame.hasAttribute('srcdoc')) return;
-      frame.addEventListener('load', () => fitPreview(frame));
+      frame.addEventListener('load', () => measurePreview(frame));
       frame.srcdoc = preview.html;
     });
+  }
+
+  // Frames inside a closed pane have no layout; measure them once they are shown.
+  function measurePreview(frame) {
+    if (!frame.getClientRects().length) return;
+    fitPreview(frame);
+    frame.dataset.fingerprint = visualFingerprint(frame) || '';
+    const panel = frame.closest('.preview-panel');
+    if (panel) foldVisualTwins(panel);
   }
 
   function renderFile(item) {
@@ -929,7 +986,7 @@
       panel.dataset.openState = String(panel.open);
       if (changed && panel.matches('.side') && wideScreen()) { state.previewPane = panel.open ? 'open' : 'closed'; persist(); }
       if (panel.matches('.side')) document.querySelectorAll('[data-preview-toggle]').forEach(button => button.setAttribute('aria-expanded', panel.open));
-      if (panel.open) requestAnimationFrame(() => panel.querySelectorAll('iframe[data-preview-id]').forEach(fitPreview));
+      if (panel.open) requestAnimationFrame(() => panel.querySelectorAll('iframe[data-preview-id]').forEach(frame => frame.contentDocument?.readyState === 'complete' && frame.hasAttribute('srcdoc') ? measurePreview(frame) : null));
       return;
     }
     if (panel.matches('.file-card') && panel.isConnected) {

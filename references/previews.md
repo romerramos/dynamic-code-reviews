@@ -44,7 +44,11 @@ Write `spec.json` in the scratch directory, never in the reviewed project:
   rolled back, so factories and `create` are safe; nothing persists.
 - Choose realistic data from the component's parameters, its tests, factories and
   seeds. Prefer existing records for lists (read-only in practice). Add a second
-  example only for a state the change affects (current vs. not current, empty).
+  example for each state or variant the change affects (current vs. not current,
+  empty, desktop vs. mobile). Do not prune variants by eye: examples whose markup
+  differs only in ids, data or ARIA attributes are merged when rendering, and the
+  report folds examples of one template that look the same once they are displayed
+  (same visible text, icons, images and height; hidden markup ignored).
 - **Reuse Lookbook/ViewComponent previews** when one exists for the component
   (for example under `test/components/previews`), with `"source": "lookbook"`:
   `result = FooComponentPreview.new.default; render(result[:component], &result[:block])`,
@@ -75,6 +79,30 @@ delivering it: a clipped frame usually needs a `wrap` height or a wider `width`.
 
 Each example keeps only the CSS rules whose classes, ids and elements appear in its
 HTML (plus `:root`/`html`/`body` and used keyframes), inside its own sandboxed,
-script-less frame, so previews never collide with each other or the review. Fonts,
-scripts and remote images are not embedded: icon fonts show placeholders. Previews
-are bound to the snapshot like QA evidence and are dropped from new code revisions.
+script-less frame, so previews never collide with each other or the review. Fonts
+and scripts are never embedded. Previews are bound to the snapshot like QA evidence
+and are dropped from new code revisions.
+
+## Stand-in icons and images
+
+The report works offline and never loads assets, and app icon fonts or URL images do
+not survive into it. While rendering, the builder swaps them for labelled stand-ins:
+
+- **Icons:** glyphs of common icon fonts (Font Awesome, Bootstrap Icons, Tabler,
+  Remix, Material Design Icons, Phosphor, Line Awesome, Material Symbols/Icons
+  ligatures) become Lucide SVGs, the icon set the report already bundles. A Lucide
+  icon with the same name is used automatically. For the rest, the command prints
+  `Icons without a Lucide match`; choose the closest Lucide icon by meaning (browse
+  https://lucide.dev/icons) and add `"icon_map": {"fa-bars-filter": "list-filter"}` to
+  the spec, then re-render. Each chosen name is verified against the Lucide CDN;
+  unknown names and anything unmapped become a dashed placeholder. There is no
+  built-in library-to-library table to go stale.
+- **Images:** `data:` images already render and are kept. URL or relative images
+  become an openly licensed photo matched by alt text (avatars search for a portrait):
+  Pexels when `PEXELS_API_KEY` is set in the environment, otherwise Openverse (no key;
+  CC0, public domain, CC BY or CC BY-SA only), otherwise a local placeholder.
+  Attribution is kept.
+- Downloads are cached under `~/.cache/dynamic-code-reviews` and sanitized (icons
+  must be plain shape SVG). `--offline` fetches nothing; a failing CDN or API only
+  degrades to placeholders. The report marks every affected example “Stand-in
+  assets” and states which icons/images are not final.

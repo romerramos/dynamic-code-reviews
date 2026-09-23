@@ -74,3 +74,11 @@ Dir.mktmpdir('previews-validate') do
   end
 end
 puts 'PASS preview validation requires every changed template, reasons for non-visual ones, unique ids and script-free HTML'
+
+desktop = {'files' => ['app/components/nav_component.html.erb'], 'wrap' => '<aside class="rail">%s</aside>'}
+mobile = {'files' => ['app/components/nav_component.html.erb'], 'wrap' => '<aside class="drawer">%s</aside>'}
+same = ReviewPreviews.duplicate_key(desktop, %(<ul id="rail-1" data-action="a" aria-controls="rail-1"><li>Inbox</li></ul>)) ==
+       ReviewPreviews.duplicate_key(mobile, %(<ul id="drawer-1" data-action="b" aria-controls="drawer-1"><li>Inbox</li></ul>))
+different = ReviewPreviews.duplicate_key(desktop, '<ul><li>Inbox</li></ul>') == ReviewPreviews.duplicate_key(mobile, '<ul><li>Inbox</li><li>Sent</li></ul>')
+assert(same && !different, 'Examples differing only in ids, data or ARIA wiring are one example; visible differences are not')
+puts 'PASS identical example markup is shown once'
