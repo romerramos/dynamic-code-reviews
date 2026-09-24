@@ -172,6 +172,8 @@ captured `files` it illustrates (a component's template and class together),
 `example`), optional `title`, `note` and `width`, and a complete `html` document
 only when rendered. HTML must not contain scripts; the report shows it in a
 sandboxed frame. See [previews.md](previews.md).
+`preview_scope: "targeted"` permits a requested subset; the ordinary full pass
+still accounts for every changed visual template.
 
 ## Optional visual QA
 

@@ -243,13 +243,18 @@ module ReviewPreviews
             .select { |path| path.end_with?('.html.erb') || path.match?(%r{\Aapp/components/.+_component\.rb\z}) }
   end
 
-  def validate(previews, snapshot)
+  def validate(previews, snapshot, full: true)
     return if previews.nil?
     raise ArgumentError, 'previews must be a list' unless previews.is_a?(Array)
     paths = snapshot.fetch('files').map { |file| file['path'] }.to_set
     covered = previews.flat_map { |preview| Array(preview['files']) }.to_set
-    missing = template_paths(snapshot).reject { |path| covered.include?(path) }
-    raise ArgumentError, "Every changed template needs a preview entry (rendered, unavailable or not_visual with a reason). Missing: #{missing.join(', ')}" if missing.any?
+    if !full && (covered - template_paths(snapshot).to_set).any?
+      raise ArgumentError, 'Targeted previews must refer to changed visual templates'
+    end
+    if full
+      missing = template_paths(snapshot).reject { |path| covered.include?(path) }
+      raise ArgumentError, "Every changed template needs a preview entry (rendered, unavailable or not_visual with a reason). Missing: #{missing.join(', ')}" if missing.any?
+    end
     previews.each do |preview|
       raise ArgumentError, "Preview #{preview['id']} marked not_visual needs a note explaining why" if preview['status'] == 'not_visual' && preview['note'].to_s.strip.empty?
     end

@@ -21,8 +21,9 @@ The helpers do not call an LLM or generate review conclusions on their own.
 - Immutable review snapshots and refreshable browsing pages with complete revision
   navigation. Incremental review
   reuses explanations only when the captured ranges and recorded context match.
-- Reports open on Overview, with one-click video evidence previews. When served for
-  visual QA, the recorder's Choose QA tab action appears in that same section.
+- Reports open on Overview, with one-click video evidence previews. A live local
+  review offers Choose QA tab and per-file Request preview controls. The saved
+  offline report explains how to request these options later.
 
 ## Requirements
 
@@ -40,7 +41,7 @@ is needed for local collection and rendering. Reports embed daisyUI, Prism and
 Lucide assets and work without a network connection. The agent itself may use
 an online model or connectors according to its configuration.
 
-UI interactions default to continuous WebM tab recordings. The bundled
+When requested, timed UI interactions use continuous WebM tab recordings. The bundled
 [capture helper](references/tab-capture.md) saves lossless PNG stills from the
 same stream, preserving text detail without relying on compressed agent screenshots.
 It uses browser APIs and the existing Ruby runtime: no FFmpeg, extension, npm,
@@ -167,12 +168,17 @@ installation first; do not overwrite it or layer another copy over the same name
 ```text
 Use Dynamic Code Reviews to review my uncommitted changes.
 Use Dynamic Code Reviews to review the last commit.
+Use Dynamic Code Reviews to review this PR with a QA video and Rails previews.
 Continue the task-export review with my latest changes.
 ```
 
-Without an explicit scope, the skill asks which scope to review and offers
-uncommitted changes as the default. Follow-ups select the matching saved series;
-ambiguous scopes or series need clarification.
+Without an explicit scope, the skill reviews uncommitted changes when present, or
+the current branch's single open PR when the working tree is clean. Ambiguous
+scopes or series need clarification. Video evidence and full template previews
+are optional additions to the complete code review. In a live review, sharing a
+QA tab or requesting a specific file preview queues work for the active agent
+without a typed chat reply. The agent waits for a bounded window; after that
+turn ends, ask it to reopen the review to handle later requests.
 
 See [SKILL.md](SKILL.md) for agent instructions,
 [the review schema](references/report-schema.md) for authoring review JSON, and

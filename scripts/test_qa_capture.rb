@@ -61,11 +61,23 @@ Dir.mktmpdir('qa-capture-test') do |directory|
     request.call('POST', "/result/#{command['id']}", JSON.generate(ok: true, value: {path: 'saved.png'}))
     assert(client.value == {'ok' => true, 'value' => {'path' => 'saved.png'}}, 'Terminal client did not receive the page result')
     assert(request.call('GET', '/next').start_with?('HTTP/1.1 204'), 'Empty queue returned a command')
+    waiting = Thread.new { QACapture::Client.wait_request(directory: directory, timeout: 12) }
+    request.call('POST', '/presence', JSON.generate(state: 'open'))
+    event = JSON.parse(request.call('POST', '/request', JSON.generate(kind: 'preview', file: 'app/views/students/show.html.erb')).split("\r\n\r\n", 2).last)
+    assert(event['kind'] == 'preview' && waiting.value['file'] == 'app/views/students/show.html.erb', 'Requested preview did not wake the waiting client')
+    waiting = Thread.new { QACapture::Client.wait_request(directory: directory, timeout: 12) }
+    request.call('POST', '/request', JSON.generate(kind: 'qa'))
+    assert(waiting.value['kind'] == 'qa', 'QA request did not wake the waiting client')
+    waiting = Thread.new { QACapture::Client.wait_request(directory: directory, timeout: 12) }
+    request.call('POST', '/presence', JSON.generate(state: 'closed'))
+    assert(waiting.value['closed'], 'Closing the report did not release the waiting client')
     [
       ['POST', '/control', JSON.generate(action: 'start'), {'X-QA-Token' => 'wrong', 'Origin' => nil}],
       ['POST', '/control', JSON.generate(action: 'start'), {'Origin' => 'https://untrusted.example'}],
       ['POST', '/control', JSON.generate(action: 'connect'), {}],
       ['POST', '/control', JSON.generate(action: 'start', name: '../escape'), {}],
+      ['POST', '/request', JSON.generate(kind: 'preview', file: '../etc/passwd'), {}],
+      ['POST', '/request', JSON.generate(kind: 'preview', file: 'app/views/x.html.erb'), {'Origin' => 'https://untrusted.example'}],
       ['GET', '/next', '', {'X-QA-Token' => 'wrong'}],
       ['POST', "/result/#{'0' * 16}", '{}', {'Origin' => nil}]
     ].each do |method, path, body, headers|

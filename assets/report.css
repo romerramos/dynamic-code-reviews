@@ -427,3 +427,4 @@ body.reading-focus main#content{padding-top:12px}
 .sidebar nav button.nav-file[aria-current="location"],.sidebar nav .nav-component.is-current{background:var(--accent-soft);color:#35308f;border-color:transparent;box-shadow:none}
 .sidebar nav button.nav-file[aria-current="location"] .nav-file-name,.sidebar nav .nav-component.is-current strong{color:#35308f;font-weight:650}
 .sidebar nav .nav-component-files button[aria-current="location"]{background:#fff;color:#35308f;border-color:#c9c2f3}
+.qa-live .visual-options{display:none}

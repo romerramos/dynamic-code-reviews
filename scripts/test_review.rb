@@ -79,6 +79,8 @@ module ReviewChecks
         File.write(File.join(root, '[literal].txt'), "literal\n")
         File.write(File.join(root, 'empty.txt'), '')
         File.write(File.join(root, '.env.local'), 'secret-fixture')
+        FileUtils.mkdir_p(File.join(root, 'config'))
+        File.write(File.join(root, 'config', 'credentials.yml.enc'), 'encrypted-fixture-one')
         File.binwrite(File.join(root, 'binary.bin'), "\0first")
         snapshot = DynamicReviews.collect(repo: root)
         files = snapshot['files'].to_h { |file| [file['path'], file] }
@@ -87,8 +89,19 @@ module ReviewChecks
         assert(files['[literal].txt']['patch'].include?('+literal'), 'Literal path not collected')
         assert(files.key?('empty.txt') && files['binary.bin']['patch'].empty?, 'Empty/binary accounting is wrong')
         assert(!JSON.generate(snapshot).include?('secret-fixture'), 'Sensitive file leaked')
+        assert(!JSON.generate(snapshot).include?('encrypted-fixture-one') && files['config/credentials.yml.enc']['patch'].empty?, 'Encrypted credentials leaked')
+        Dir.mktmpdir('brief-review-output-') do |out|
+          stdout, stderr, status = Open3.capture3(RbConfig.ruby, File.join(__dir__, 'review.rb'), 'collect', '--repo', root, '--brief', '--out', File.join(out, 'snapshot.json'))
+          raise stderr unless status.success?
+          brief = JSON.parse(stdout)
+          assert(brief['file_count'] == snapshot['files'].length && brief['hunk_count'] == snapshot['files'].sum { |f| f['hunks'].length }, 'Brief manifest counts are wrong')
+          assert(brief['omitted'].any? { |f| f['path'] == 'config/credentials.yml.enc' }, 'Brief manifest hid an omitted credential file')
+        end
+        File.write(File.join(root, 'config', 'credentials.yml.enc'), 'encrypted-fixture-two')
+        after_encrypted_edit = DynamicReviews.collect(repo: root)
+        assert(snapshot['fingerprint'] != after_encrypted_edit['fingerprint'], 'Encrypted credential edit did not invalidate snapshot')
         File.binwrite(File.join(root, 'binary.bin'), "\0changed")
-        assert(snapshot['fingerprint'] != DynamicReviews.collect(repo: root)['fingerprint'], 'Omitted binary edit did not invalidate snapshot')
+        assert(after_encrypted_edit['fingerprint'] != DynamicReviews.collect(repo: root)['fingerprint'], 'Omitted binary edit did not invalidate snapshot')
       end
     end
     checks['commit and PR scopes exclude dirty working files'] = lambda do

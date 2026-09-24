@@ -5,102 +5,59 @@ checking: clipping, layout, validation, focus, navigation, loading, or error sta
 Backend-only work needs no decorative browser captures. Choose a few high-value
 states and a short flow; avoid exhaustive screenshots or full-session recordings.
 
-## First publish, then capture
+## Publish first; capture only useful evidence
 
-1. Inspect the code and author the normal review. Identify the flow, expected
-   outcome and relevant source/comment anchors. Apply this flow on every review
-   with useful visual checks, unless the user has opted out. Do only cheap environment
-   discovery before publishing; do not delay the code review for setup or capture.
-2. Publish with `qa.status: awaiting-environment`, the snapshot `fingerprint`,
-   a short summary and `flows: []`. **Immediately link current.html in commentary.**
-   Then ask using the available question tool:
+1. Complete the code review and identify the specific visual behavior, expected
+   result and relevant source/comment anchor. For a visible finding, run the
+   smallest check that proves or falsifies it. For optional demonstration media,
+   publish and link the report immediately; a missing runtime must not hold up
+   the code conclusions. Do not create an `awaiting-environment` task merely
+   because UI files changed.
+2. Discover the app and login path with
+   [local-app-discovery.md](local-app-discovery.md). Use a supplied URL/session
+   first, then project configuration, listeners, safe HTTP probes, routes,
+   fixtures and synthetic development data. Ask only about a specific remaining
+   ambiguity or access boundary. Verify the runtime matches the reviewed head;
+   otherwise qualify the evidence.
+3. Choose the lightest medium that shows the behavior. A sharp PNG is enough for
+   a static result. Use a continuous WebM/MP4 clip for timing, transitions or a
+   user-requested video. The saved report may be `complete` with a PNG-only flow.
+   Use [tab-capture.md](tab-capture.md) for the native recorder when video or
+   capture-stream PNGs are needed. A supported browser's original PNG screenshot
+   may also serve as static evidence; inspect its saved pixels and dimensions.
+4. For tab capture, open the app and the served review in the supported browser.
+   The reader clicks **Choose QA tab**, selects the app tab and clicks **Share**.
+   This queues a QA request. `qa_capture.rb control wait-request` returns the
+   request to the active agent, and `status` confirms the stream is ready. No
+   typed “shared” reply or second question is needed. If the optional share
+   never occurs in the bounded wait, stop the helper and deliver the complete
+   code review. A later request starts a new turn; the helper cannot resume an
+   agent turn that has already ended.
+5. Capture the planned state or short flow with safe test data. For video, verify
+   the selected tab, pointer visibility and readable text with one quick probe;
+   stop after one supported recovery if recording fails. Prepare the page first,
+   record only the meaningful actions and result, and save one or two native PNG
+   stills. Avoid trimming by recording a short clip initially. Restore temporary
+   data, including failed setup attempts.
+6. Attach one QA update with the command below. Check the saved report's status,
+   media count, embedded data URIs and comment links without printing media data.
+   Open the media once in the browser when available. Keep failed flows associated
+   with their finding and keep passed flows compact. Finish with `complete`,
+   `partial`, `blocked` or `skipped` only for an attempted or explicitly chosen QA
+   pass. `complete` means the planned checks finished, not that they passed.
 
-   “Do you have this environment provisioned?”
-   - “Yes — use a local URL”: ask them to paste the URL (free text in the question
-     tool). Validate reachability, safe test data and the running source revision.
-     Reuse known authentication; ask for missing access only when necessary.
-   - “Find a provisioning skill”: inspect the available skills for the repository
-     and framework, read the relevant skill, and follow its setup workflow. This
-     choice authorizes setup discovery; apply that skill's concrete execution and
-     approval rules, respecting authorization already supplied by the user. If no
-     suitable skill exists, inspect the documented local setup and propose the
-     smallest concrete route. Do not silently install tools or copy another DB.
-   - “No screenshots for this review”: save `skipped`, end QA for this review and
-     keep the code review complete. Do not ask again during the same review.
-
-   If the user already supplied the environment or authorized provisioning in
-   this conversation, reuse that choice instead of repeating the question. If they provide a URL for another
-   build, explain the mismatch rather than treating it as reviewed-head evidence.
-   With an asynchronous question, continue independent review/report work while
-   awaiting the reply. No answer is not permission to provision and not a skip:
-   retain `awaiting-environment` and clearly state the next choice needed. Do not
-   leave a running-worker message when no capture is underway. After a usable
-   environment is selected, attach `pending` with the planned checks and continue
-   capture in this turn. On a setup failure, record the actual blocker and the
-   practical next step; do not label a merely unprovisioned environment as an
-   unexplained dead end.
-3. Use a dedicated QA tab through the active browser harness. Read
-   [tab-capture.md](tab-capture.md) and start the bundled capture helper with
-   `--report` pointing at the just-published `current.html`, unless an equivalent
-   native recorder is already available. Open the served review beside the app
-   in the same QA window or tab group; its Visual QA panel is where the user
-   starts capture, and the same tab later shows the final report. The helper captures a
-   selected browser tab through standard Web APIs; it does not automate Chrome,
-   require an extension, or record the desktop. Respect browser access blocks
-   and the harness's permission policy. Do not relay blocked content through a
-   server or connect an alternate browser automation client to bypass a limit.
-4. Probe a short interaction before the real flow. Confirm the intended tab is
-   captured, native agent input is visible, video continues while the user works
-   elsewhere, and PNG text is readable at its saved dimensions. Keep the QA tab
-   selected in its browser window when native pointer capture needs that; do not
-   claim the same behavior for an unselected tab. Never paint a pointer into the
-   page or reconstruct clicks after capture. Stop after one supported recovery
-   if recording is blocked, explain the missing permission/capability, and offer
-   readable still evidence instead. Do not silently fall back to a sampled GIF.
-5. Exercise the relevant page on the reviewed build with safe test data. Record
-   short continuous clips around the actual actions. Save PNG stills from the
-   same capture stream for the before state, decisive result and thumbnail.
-   Use semantic browser actions and cheap state checks. A synthetic test or a
-   screenshot of the report does not prove application behavior. Verify the
-   runtime build, feature flags and fixtures; restore temporary fixture changes.
-   Supported harness screenshots remain useful for agent navigation, but do not
-   attach blurry tool images when the native capture stream is available.
-   Save returned bytes/files and reference their paths; do not put base64 in
-   model-authored JSON or dump it into tool output. Inspect the real saved pixels.
-6. Write small QA JSON and attach it with the command below. Use WebM/MP4 as the
-   flow's motion_preview and PNG stills as assets. Omit presentation: sequence.
-   Captions explain the action and visible result; steps provide the accessible
-   text equivalent. A single decisive static state may use PNG only. Use a PNG
-   poster from the same flow, not an unrelated image. The overview stays quiet;
-   one evidence click opens and plays the video with controls and fullscreen.
-7. Verify attachment before announcing success: extract the saved current report
-   with `DynamicReviews.extract`, check the QA status, expected asset count and
-   embedded data URIs without printing their contents. Check that comment links
-   point to existing comments. Where the browser permits report access, inspect
-   image rendering; otherwise state that limitation and rely on the inspected
-   source images plus the renderer checks. Do not work around browser access blocks.
-   The helper rejects `complete` without any media. Use `partial` or `blocked`
-   when no visual capture could be attached, even if DOM checks succeeded.
-8. Finish the pass with `complete`, `partial`, `blocked` or `skipped` and report
-   actual limitations. `complete` means planned checks finished, not that they
-   passed: failed flows retain `result: failed`. If QA changes a finding, use
-   `prepare` / `publish --record` to reassess the finding as well; the QA-only
-   command deliberately preserves code conclusions. Never infer a fix from media.
-
-The ordinary report remains available while the environment question is pending and during steps 3–6. Publishing creates a new
-immutable revision and refreshes `current.html` and history. The already-open
-page does not silently poll or reload, which could disturb reading and notes.
-Link the current view again when ready. Old revisions correctly retain their
-historical pending status. No background task is promised after the agent stops.
+The report remains readable during optional capture. Once evidence is attached,
+link `current.html` again; an already-open report needs a reload. A later user
+request starts a new agent turn and can enrich the saved review. No local process
+silently restarts Codex after handoff.
 
 ## Media input and attachment
 
-Save continuous WebM clips and PNG stills with the bundled helper described in
-[tab-capture.md](tab-capture.md). Recording and encoding happen in the browser;
-no FFmpeg or image decoder package is needed. Attach a short clip as
-motion_preview and its readable stills as assets. For static evidence, omit
-motion_preview. Existing GIFs and legacy sequences remain supported for history,
-but are not the default capture workflow.
+For a timed flow, save a continuous WebM clip and PNG stills with the bundled
+helper in [tab-capture.md](tab-capture.md); recording and encoding happen in the
+browser. Attach the short clip as `motion_preview` and its decisive stills as
+assets. For static evidence, attach one original PNG and omit `motion_preview`.
+Existing GIFs and legacy sequences remain supported for history.
 
 ```json
 {
@@ -152,11 +109,11 @@ or state uncertainty and do not present a different build as reviewed-head QA.
 Treat all captures as potentially containing sensitive data; use test fixtures,
 inspect framing, and exclude credentials or unrelated screens before embedding.
 
-For first publication, pending QA needs only status, summary, fingerprint and an
-empty flows array. If the runtime is unknown or absent, publish awaiting-environment and offer the
-three choices above. Use blocked for an attempted setup/capture that failed, and
-skipped for an explicit user choice or a flow unsuitable for visual QA. For a new code revision, old media is not automatically
-reused: `prepare` drops it, leaving the evidence accessible in historical HTML.
+Use `pending` only for an optional capture already agreed and underway. Use
+`blocked` for an attempted capture that failed and `skipped` for an explicit user
+choice. Omit QA entirely when no visual pass was planned. For a new code revision,
+old media is not automatically reused: `prepare` drops it, leaving the evidence
+accessible in historical HTML.
 
 ## Capability limits
 

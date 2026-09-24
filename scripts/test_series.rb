@@ -224,6 +224,70 @@ module SeriesChecks
         end
       end
     end
+    checks['attaches QA and previews in one immutable revision'] = lambda do
+      ReviewChecks.fixture do |root, _commit|
+        Dir.mktmpdir('review-enrich-check-') do |out|
+          first = ReviewSeries.start(repo: root, name: 'enrich-check', report: initial(root))
+          before = File.binread(first)
+          payload = DynamicReviews.extract(first)
+          png = Base64.strict_decode64('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jWZkAAAAASUVORK5CYII=')
+          File.binwrite(File.join(out, 'state.png'), png)
+          qa = {'status' => 'complete', 'fingerprint' => payload['snapshot']['fingerprint'], 'summary' => 'Static state checked.',
+                'environment' => 'Synthetic fixture for helper validation.',
+                'flows' => [{'title' => 'Inspect state', 'steps' => ['Inspect the state'], 'expected' => 'Readable state',
+                             'observed' => 'Readable synthetic state', 'result' => 'passed',
+                             'assets' => [{'path' => 'state.png', 'caption' => 'Synthetic state'}]}]}
+          preview = {'id' => 'sample', 'files' => [payload['snapshot']['files'].first['path']], 'title' => 'Sample',
+                     'source' => 'example', 'status' => 'rendered', 'html' => '<!doctype html><html><body><p>Sample</p></body></html>'}
+          input = File.join(out, 'enrich.json')
+          File.write(input, JSON.generate({'qa' => qa, 'previews' => [preview], 'validation' => ['Synthetic visual state checked.']}))
+          second = ReviewSeries.enrich(repo: root, name: 'enrich-check', revision: 1, update: input)
+          after = DynamicReviews.extract(second)
+          assert(after['review']['history']['revision'] == 2, 'Combined evidence created more than one revision')
+          assert(after['review']['qa']['flows'][0]['assets'][0]['data_uri'].start_with?('data:image/png;base64,'), 'QA media was not embedded')
+          assert(after['review']['previews'] == [preview], 'Template preview was not embedded')
+          assert(after['review']['validation'] == ['Synthetic visual state checked.'], 'Enrichment did not update validation')
+          assert(after['review']['findings'] == payload['review']['findings'], 'Enrichment changed code conclusions')
+          assert(File.binread(first) == before, 'Enrichment overwrote the original revision')
+          rejects('Stale enrichment revision accepted') { ReviewSeries.enrich(repo: root, name: 'enrich-check', revision: 1, update: input) }
+          assert(ReviewSeries.manifest(File.dirname(File.dirname(first)))['revisions'].length == 2, 'Rejected enrichment wrote a revision')
+        end
+      end
+    end
+    checks['adds one requested template preview without requiring a full pass'] = lambda do
+      ReviewChecks.fixture do |root, _commit|
+        Dir.mkdir(File.join(root, 'app'))
+        Dir.mkdir(File.join(root, 'app/views'))
+        %w[alpha beta].each { |name| File.write(File.join(root, "app/views/#{name}.html.erb"), "<p>#{name}</p>\n") }
+        snapshot = DynamicReviews.collect(repo: root)
+        items = snapshot['files'].map { |file| {'file' => file['id'], 'summaries' => file['hunks'].to_h { |hunk| [hunk['id'], 'Show the changed view.'] }} }
+        review = {'title' => 'View review', 'summary' => 'Two example views changed.', 'effort' => {'score' => 1, 'reason' => 'Two small templates'},
+                  'coverage' => 'Both templates reviewed.', 'validation' => ['Synthetic fixture only.'],
+                  'groups' => [{'title' => 'Views', 'summary' => 'The two view examples belong together.', 'layers' => [{'title' => 'Render examples', 'items' => items}]}],
+                  'comments' => [], 'findings' => []}
+        Dir.mktmpdir('review-targeted-preview-') do |out|
+          File.write(File.join(out, 'snapshot.json'), JSON.generate(snapshot))
+          File.write(File.join(out, 'review.json'), JSON.generate(review))
+          first = ReviewSeries.start(repo: root, name: 'targeted-previews', snapshot: File.join(out, 'snapshot.json'), review: File.join(out, 'review.json'))
+          before = File.binread(first)
+          entry = lambda do |id|
+            {'id' => id, 'files' => ["app/views/#{id}.html.erb"], 'status' => 'rendered', 'source' => 'example', 'title' => id,
+             'html' => "<!doctype html><html><body><p>#{id}</p></body></html>"}
+          end
+          input = File.join(out, 'previews.json')
+          File.write(input, JSON.generate('previews' => [entry.call('alpha')]))
+          second = ReviewSeries.previews(repo: root, name: 'targeted-previews', revision: 1, update: input, targeted: true)
+          partial = DynamicReviews.extract(second)['review']
+          assert(partial['preview_scope'] == 'targeted' && partial['previews'].map { |preview| preview['id'] } == ['alpha'], 'Targeted preview did not preserve partial scope')
+          assert(File.read(second).include?('Request preview'), 'Unrendered template lost its request control')
+          File.write(input, JSON.generate('previews' => [entry.call('alpha'), entry.call('beta')]))
+          third = ReviewSeries.previews(repo: root, name: 'targeted-previews', revision: 2, update: input)
+          full = DynamicReviews.extract(third)['review']
+          assert(!full.key?('preview_scope') && full['previews'].length == 2, 'Full pass did not replace the targeted set')
+          assert(File.binread(first) == before, 'Targeted preview modified the original revision')
+        end
+      end
+    end
     checks['recorded presentation refresh preserves captured code, evidence and immutable history'] = lambda do
       ReviewChecks.fixture do |root, _commit|
         first = ReviewSeries.start(repo: root, name: 'presentation', report: initial(root))

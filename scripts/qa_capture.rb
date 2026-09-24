@@ -9,6 +9,7 @@ require 'securerandom'
 require 'fileutils'
 require 'timeout'
 require 'net/http'
+require 'time'
 
 module QACapture
   LIMIT = 24 * 1024 * 1024
@@ -40,6 +41,9 @@ module QACapture
       # so the agent never has to operate the recorder tab through a browser harness.
       @commands = []
       @results = {}
+      @requests = []
+      @last_presence = nil
+      @page_closed_at = nil
       @last_poll = nil
       @lock = Mutex.new
       @signal = ConditionVariable.new
@@ -83,7 +87,7 @@ module QACapture
         headers[key.downcase] = value.strip
       end
       raise ArgumentError, 'Invalid Host' unless headers['host'] == "127.0.0.1:#{@port}"
-      if method == 'GET' && !path.start_with?('/next', '/result/')
+      if method == 'GET' && !path.start_with?('/next', '/result/', '/requests/')
         return serve_report(client, path) if @report && (path == '/' || path.match?(%r{\A/(?:revisions/)?[a-z0-9_-]+\.html\z}))
         asset, type = {'/' => ['index.html', 'text/html; charset=utf-8'], '/recorder.js' => ['recorder.js', 'text/javascript'], '/qa-panel.js' => ['qa-panel.js', 'text/javascript'], '/style.css' => ['style.css', 'text/css']}[path]
         return respond(client, 404, 'Not found', 'text/plain') unless asset
@@ -91,6 +95,7 @@ module QACapture
         return respond(client, 200, content, type)
       end
       raise ArgumentError, 'Invalid capture token' unless headers['x-qa-token'] == @token
+      return requests(client, method, path, headers) if path == '/request' || path == '/presence' || path == '/requests/next'
       return control(client, method, path, headers) if path == '/next' || path == '/control' || path.start_with?('/result/')
       raise ArgumentError, 'Only same-origin capture uploads are accepted' unless method == 'POST' && headers['origin'] == @origin
       match = path.match(%r{\A/save/([a-z0-9_-]{1,80})\.(png|webm|json)\z})
@@ -113,6 +118,49 @@ module QACapture
         raise
       end
       respond(client, 200, JSON.generate(path: output, bytes: length), 'application/json')
+    end
+
+    # A live report submits optional work. The terminal waits on this queue without
+    # polling the browser or starting media capture before the reader requests it.
+    def requests(client, method, path, headers)
+      if method == 'GET' && path == '/requests/next'
+        raise ArgumentError, 'Browser cannot read the work queue' if headers['origin']
+        event = @lock.synchronize do
+          @signal.wait(@lock, @page_closed_at ? 3 : 10) if @requests.empty?
+          stale = @last_presence && Time.now - @last_presence > 45
+          closed = @page_closed_at && Time.now - @page_closed_at > 3
+          @requests.shift || (closed || stale ? {'closed' => true} : nil)
+        end
+        return event ? respond(client, 200, JSON.generate(event), 'application/json') : respond(client, 204, '', 'text/plain')
+      end
+      raise ArgumentError, 'Only the live review may request work' unless headers['origin'] == @origin
+      if method == 'POST' && path == '/presence'
+        input = JSON.parse(small_body(client, headers))
+        raise ArgumentError, 'Invalid presence event' unless %w[open closed].include?(input['state'])
+        @lock.synchronize do
+          @last_presence = Time.now
+          @page_closed_at = input['state'] == 'closed' ? Time.now : nil
+          @signal.broadcast
+        end
+        return respond(client, 200, '{}', 'application/json')
+      end
+      if method == 'POST' && path == '/request'
+        input = JSON.parse(small_body(client, headers))
+        kind = input['kind']
+        file = input['file'].to_s
+        raise ArgumentError, 'Unknown enhancement' unless %w[qa preview].include?(kind)
+        raise ArgumentError, 'Invalid preview path' unless kind == 'qa' && file.empty? || kind == 'preview' && file.match?(%r{\A(?:app/views|app/components)/[A-Za-z0-9_./-]+\.(?:html\.erb|rb)\z}) && !file.split('/').include?('..')
+        event = {'kind' => kind, 'file' => file, 'created' => Time.now.utc.iso8601}
+        @lock.synchronize do
+          unless @requests.any? { |pending| pending['kind'] == kind && pending['file'] == file }
+            raise ArgumentError, 'Too many pending requests' if @requests.length >= 32
+            @requests << event
+            @signal.broadcast
+          end
+        end
+        return respond(client, 200, JSON.generate(event), 'application/json')
+      end
+      respond(client, 404, 'Not found', 'text/plain')
     end
 
     # GET /next and POST /result/<id> come from the recorder page; POST /control and
@@ -215,6 +263,19 @@ module QACapture
         sleep 1
       end
     end
+
+    def wait_request(directory:, timeout: 120)
+      session = JSON.parse(File.read(File.join(File.expand_path(directory), SESSION)))
+      uri = URI(session.fetch('url'))
+      headers = {'X-QA-Token' => session.fetch('token')}
+      deadline = Time.now + timeout
+      loop do
+        response = Net::HTTP.start(uri.host, uri.port) { |http| http.get('/requests/next', headers) }
+        return JSON.parse(response.body) if response.code == '200'
+        raise 'The enhancement helper rejected the request wait' unless response.code == '204'
+        return {'timeout' => true} if Time.now >= deadline
+      end
+    end
   end
 end
 
@@ -222,16 +283,19 @@ if $PROGRAM_NAME == __FILE__ && ARGV.first == 'control'
   ARGV.shift
   options = {}
   OptionParser.new do |parser|
-    parser.banner = "Usage: ruby qa_capture.rb control --out <capture-directory> <#{QACapture::ACTIONS.join('|')}|wait-ready> [--name NAME] [--timeout SECONDS]"
+    parser.banner = "Usage: ruby qa_capture.rb control --out <capture-directory> <#{QACapture::ACTIONS.join('|')}|wait-ready|wait-request> [--name NAME] [--timeout SECONDS]"
     parser.on('--out PATH') { |value| options[:directory] = value }
     parser.on('--name NAME') { |value| options[:name] = value }
     parser.on('--timeout SECONDS', Integer) { |value| options[:timeout] = value }
   end.parse!
   action = ARGV.shift
   abort 'Provide --out <capture-directory> and an action' unless options[:directory] && action
-  abort "Unknown action #{action}" unless action == 'wait-ready' || QACapture::ACTIONS.include?(action)
+  abort "Unknown action #{action}" unless %w[wait-ready wait-request].include?(action) || QACapture::ACTIONS.include?(action)
   begin
-    result = if action == 'wait-ready'
+    result = if action == 'wait-request'
+      puts JSON.generate(QACapture::Client.wait_request(directory: options[:directory], timeout: options[:timeout] || 120))
+      exit 0
+    elsif action == 'wait-ready'
       QACapture::Client.wait_ready(directory: options[:directory], timeout: options[:timeout] || 180)
     else
       QACapture::Client.call(directory: options[:directory], action: action, name: options[:name], timeout: options[:timeout] || 60)
@@ -255,7 +319,7 @@ elsif $PROGRAM_NAME == __FILE__
   $stdout.sync = true
   puts options[:report] ? "Review with QA panel: #{server.url}/#overview" : "QA recorder: #{server.url}"
   puts "Local capture files: #{File.expand_path(options[:directory])}"
-  puts "Control: ruby #{__FILE__} control --out #{File.expand_path(options[:directory])} <wait-ready|start|still|stop|end|status|reload> [--name NAME]"
+  puts "Control: ruby #{__FILE__} control --out #{File.expand_path(options[:directory])} <wait-request|wait-ready|start|still|stop|end|status|reload> [--name NAME]"
   begin
     server.run
   rescue Interrupt

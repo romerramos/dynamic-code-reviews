@@ -200,6 +200,7 @@ module ReviewSeries
     review.delete('history')
     review.delete('qa') # Captures prove a particular runtime/snapshot, never an automatic increment.
     review.delete('previews') # Rendered from one snapshot's templates; re-render after code changes.
+    review.delete('preview_scope')
     review
   end
 
@@ -379,7 +380,7 @@ module ReviewSeries
   end
 
   # Attach template previews rendered by the app for the exact reviewed snapshot.
-  def previews(repo:, name:, update:, revision:, **_unused)
+  def previews(repo:, name:, update:, revision:, targeted: false, **_unused)
     rendered = read(File.expand_path(update)).fetch('previews')
     path = directory(repo, name)
     locked(path) do
@@ -388,13 +389,57 @@ module ReviewSeries
       raise ArgumentError, 'Branch changed; use the original review checkout' unless history['branch'] == branch(repo)
       payload = latest(path, history)
       snapshot, review = payload.values_at('snapshot', 'review')
-      ReviewPreviews.validate(rendered, snapshot)
+      ReviewPreviews.validate(rendered, snapshot, full: !targeted)
       fresh = DynamicReviews.collect(repo: repo, mode: 'series', base: snapshot['base'], head: snapshot['mode'] == 'uncommitted' || snapshot['working_tree'] ? nil : snapshot['head'])
       raise ArgumentError, 'Code changed; review the new snapshot before attaching previews' unless code_key(fresh) == code_key(snapshot) && fresh['head'] == snapshot['head']
+      if targeted
+        raise ArgumentError, 'Targeted preview needs at least one example' if rendered.empty?
+        existing = Array(review['previews']).reject { |item| rendered.any? { |entry| entry['id'] == item['id'] } }
+        rendered = existing + rendered
+        ReviewPreviews.validate(rendered, snapshot, full: review['preview_scope'] != 'targeted' && !review['previews'].nil?)
+        review['preview_scope'] = 'targeted' unless review['preview_scope'].nil? && !review['previews'].nil?
+      else
+        review.delete('preview_scope')
+      end
       raise ArgumentError, 'Previews are unchanged' if review['previews'] == rendered
       review['previews'] = rendered
       shown = rendered.count { |preview| preview['status'] == 'rendered' }
       increment = {'summary' => "Template previews updated: #{shown} rendered of #{rendered.count { |preview| preview['status'] != 'not_visual' }} visual templates.", 'files' => [], 'groups' => {},
+                   'finding_states' => review.dig('history', 'finding_states') || []}
+      append(path, history, snapshot, review, increment)
+    end
+  end
+
+  # Attach the finished QA and full template preview set in one immutable revision.
+  def enrich(repo:, name:, update:, revision:, **_unused)
+    update_path = File.expand_path(update)
+    input = read(update_path)
+    raise ArgumentError, 'Enrichment needs QA and template previews' unless input['qa'].is_a?(Hash) && input['previews'].is_a?(Array)
+    if input.key?('validation')
+      raise ArgumentError, 'Validation update must be a nonempty list of statements' unless input['validation'].is_a?(Array) && input['validation'].any? && input['validation'].all? { |item| item.is_a?(String) && !item.strip.empty? }
+    end
+    evidence = ReviewQA.pack(input.fetch('qa'), directory: File.dirname(update_path))
+    rendered = input.fetch('previews')
+    path = directory(repo, name)
+    locked(path) do
+      history = manifest(path)
+      raise ArgumentError, 'Another revision was published; inspect it before attaching visual evidence' unless history['revisions'].last['number'] == Integer(revision)
+      raise ArgumentError, 'Branch changed; use the original review checkout' unless history['branch'] == branch(repo)
+      payload = latest(path, history)
+      snapshot, review = payload.values_at('snapshot', 'review')
+      ReviewQA.validate(evidence, snapshot, review)
+      ReviewPreviews.validate(rendered, snapshot)
+      fresh = DynamicReviews.collect(repo: repo, mode: 'series', base: snapshot['base'], head: snapshot['mode'] == 'uncommitted' || snapshot['working_tree'] ? nil : snapshot['head'])
+      raise ArgumentError, 'Code changed; review the new snapshot before attaching visual evidence' unless code_key(fresh) == code_key(snapshot) && fresh['head'] == snapshot['head']
+      recorded_context = review.fetch('context', {})
+      raise ArgumentError, 'Context changed; reassess before attaching visual evidence' unless contexts(fresh, recorded_context.keys) == recorded_context
+      raise ArgumentError, 'Visual evidence is unchanged' if review['qa'] == evidence && review['previews'] == rendered
+      review['qa'] = evidence
+      review['previews'] = rendered
+      review.delete('preview_scope')
+      review['validation'] = input['validation'] if input.key?('validation')
+      shown = rendered.count { |preview| preview['status'] == 'rendered' }
+      increment = {'summary' => "Visual evidence updated: #{evidence['summary']} #{shown} template previews rendered.", 'files' => [], 'groups' => {},
                    'finding_states' => review.dig('history', 'finding_states') || []}
       append(path, history, snapshot, review, increment)
     end
@@ -500,13 +545,14 @@ module ReviewSeries
     command = argv.shift
     options = {}
     parser = OptionParser.new do |p|
-      p.banner = 'ruby series.rb start|prepare|publish|qa|previews|refresh|list [options]'
+      p.banner = 'ruby series.rb start|prepare|publish|qa|previews|enrich|refresh|list [options]'
       %w[repo name report snapshot review out head base prepared update revision].each { |key| p.on("--#{key} VALUE") { |value| options[key.to_sym] = value } }
       p.on('--working-tree', 'Include current working files with the verified PR head') { options[:working_tree] = true }
       p.on('--record', 'Save an intentional reassessment or a presentation-only refresh revision') { options[:record] = true }
+      p.on('--targeted', 'Attach only requested preview files, preserving existing examples') { options[:targeted] = true }
     end
     parser.parse!(argv)
-    raise ArgumentError, parser.to_s unless %w[start prepare publish qa previews refresh list].include?(command)
+    raise ArgumentError, parser.to_s unless %w[start prepare publish qa previews enrich refresh list].include?(command)
     result = public_send(command, **options)
     puts result.is_a?(String) ? result : JSON.pretty_generate(result)
   end

@@ -94,7 +94,23 @@ module DynamicReviews
 
   def self.sensitive?(path)
     path.split('/').any? { |part| %w[.secrets .env credentials].include?(part) || part.start_with?('.env.') } ||
-      %w[.pem .key .p12 .pfx].include?(File.extname(path))
+      %w[.pem .key .p12 .pfx .enc].include?(File.extname(path))
+  end
+
+  def self.sensitive_identity(root, path, working_tree:, head:)
+    if working_tree
+      target = File.join(root, path)
+      if File.symlink?(target)
+        Digest::SHA256.hexdigest(JSON.generate(['120000', File.readlink(target)]))
+      elsif File.file?(target)
+        mode = (File.stat(target).mode & 0o111).zero? ? '100644' : '100755'
+        Digest::SHA256.hexdigest(JSON.generate([mode, Digest::SHA256.file(target).hexdigest]))
+      else
+        'deleted'
+      end
+    else
+      Digest::SHA256.hexdigest(git(root, 'ls-tree', '-z', head, '--', path))
+    end
   end
 
   def self.collect(repo: '.', mode: 'uncommitted', commit: nil, base: nil, head: nil, max_bytes: 300_000, **_unused)
@@ -131,6 +147,7 @@ module DynamicReviews
       target = File.join(root, path)
       if sensitive?(path)
         file['note'] = 'Excluded: potentially sensitive file'
+        file['content_digest'] = sensitive_identity(root, path, working_tree: working_tree, head: head) if File.extname(path) == '.enc'
       elsif working_tree && git(root, 'ls-files', '--error-unmatch', '--', path, allowed: [0, 1]).empty?
         if File.symlink?(target) || !File.file?(target)
           file['note'] = 'Untracked symlink or non-regular file; content omitted'
@@ -205,7 +222,7 @@ module DynamicReviews
 
   def self.validate(snapshot, review)
     ReviewQA.validate(review['qa'], snapshot, review)
-    ReviewPreviews.validate(review['previews'], snapshot)
+    ReviewPreviews.validate(review['previews'], snapshot, full: review['preview_scope'] != 'targeted')
     files = snapshot.fetch('files').to_h { |file| [file.fetch('id'), file] }
     hunks = files.values.flat_map { |file| file.fetch('hunks').map { |hunk| [hunk['id'], [file['id'], hunk]] } }.to_h
     covered, seen = [], []
@@ -321,14 +338,23 @@ module DynamicReviews
       p.banner = 'ruby review.rb collect|render|extract [options]'
       %w[repo mode commit base head out snapshot review name report].each { |key| p.on("--#{key} VALUE") { |v| options[key.to_sym] = v } }
       p.on('--max-bytes N', Integer) { |v| options[:max_bytes] = v }
+      p.on('--brief', 'Print counts and omissions; full snapshot stays in --out') { options[:brief] = true }
       p.on('--replace', 'Replace the named report when refreshing its layout') { options[:replace] = true }
     end
     parser.parse!(argv)
     case command
     when 'collect'
+      brief = options.delete(:brief)
       data = collect(**options)
       File.write(options.fetch(:out), JSON.pretty_generate(data))
-      puts JSON.pretty_generate({'fingerprint' => data['fingerprint'], 'files' => data['files'].map { |f| f.slice('id', 'path', 'note').merge('hunks' => f['hunks'].map { |h| h['id'] }) }})
+      if brief
+        omissions = data['files'].select { |f| f['note'].match?(/Excluded|omitted|Binary|non-regular|symlink/i) }
+        puts JSON.generate({'fingerprint' => data['fingerprint'], 'file_count' => data['files'].length,
+                            'hunk_count' => data['files'].sum { |f| f['hunks'].length },
+                            'omitted' => omissions.map { |f| f.slice('path', 'note') }})
+      else
+        puts JSON.pretty_generate({'fingerprint' => data['fingerprint'], 'files' => data['files'].map { |f| f.slice('id', 'path', 'note').merge('hunks' => f['hunks'].map { |h| h['id'] }) }})
+      end
     when 'render'
       puts render(**options)
     when 'extract'

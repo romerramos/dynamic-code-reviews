@@ -369,8 +369,12 @@
 
   function previewToggle(file) {
     const list = previewsByPath.get(file.path);
-    if (!list?.length) return '';
+    if (!list?.length) return previewEligible(file) && !notVisualByPath.has(file.path) ? `<button type="button" class="preview-toggle" data-request-preview="${escape(file.path)}" title="Request a visual preview for this file">${icon('scan-text')}<span>Request preview</span></button>` : '';
     return `<button type="button" class="preview-toggle" data-preview-toggle aria-controls="preview-pane" aria-expanded="${previewPaneOpen()}" title="Show how this template renders">${icon('scan-text')}<span>Visual preview</span><span class="preview-count">${list.length}</span></button>`;
+  }
+
+  function previewEligible(file) {
+    return !/^deleted file mode /m.test(file.patch || '') && (/\.html\.erb$/.test(file.path) || /^app\/components\/.*_component\.rb$/.test(file.path));
   }
 
   function notVisualNote(file) {
@@ -471,7 +475,7 @@
     const added = changes.filter(line => line.kind === 'add').length;
     const removed = changes.filter(line => line.kind === 'del').length;
     const table = renderDiffTable(file, hunks, item.summaries);
-    return `<details class="file-card ${fileViewed(file) ? 'is-viewed' : ''}" data-file="${file.id}" ${fileOpen(file) ? 'open' : ''}><summary><span class="file-icon" aria-hidden="true">&lt;/&gt;</span><span class="filename">${escape(file.path)}</span><span class="badge success">+${added}</span><span class="badge blocking">−${removed}</span><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" aria-label="${escape(`Mark ${file.path} as viewed`)}" ${fileViewed(file) ? 'checked' : ''}> Viewed</label></summary>${item.summary || file.note ? `<div class="file-summary">${escape(item.summary || '')}${file.note ? ` · ${escape(file.note)}` : ''}</div>` : ''}${previewPanel(file, 'inline')}${notVisualNote(file) ? `<div class="file-summary">${notVisualNote(file)}</div>` : ''}${hunks.length ? table : `<div class="file-summary"><pre>${escape(file.patch || 'No text diff available.')}</pre></div>`}</details>`;
+    return `<details class="file-card ${fileViewed(file) ? 'is-viewed' : ''}" data-file="${file.id}" ${fileOpen(file) ? 'open' : ''}><summary><span class="file-icon" aria-hidden="true">&lt;/&gt;</span><span class="filename">${escape(file.path)}</span><span class="badge success">+${added}</span><span class="badge blocking">−${removed}</span><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" aria-label="${escape(`Mark ${file.path} as viewed`)}" ${fileViewed(file) ? 'checked' : ''}> Viewed</label></summary>${item.summary || file.note ? `<div class="file-summary">${escape(item.summary || '')}${file.note ? ` · ${escape(file.note)}` : ''}</div>` : ''}${previewToggle(file)}${previewPanel(file, 'inline')}${notVisualNote(file) ? `<div class="file-summary">${notVisualNote(file)}</div>` : ''}${hunks.length ? table : `<div class="file-summary"><pre>${escape(file.patch || 'No text diff available.')}</pre></div>`}</details>`;
   }
 
   const commentTypes = {
@@ -737,7 +741,7 @@
     const qa = review.qa;
     const historyLinks = revision ? `<nav class="overview-history" aria-label="Review history"><a href="${revision.preview ? '' : '../'}current.html">Latest review</a><a href="${revision.preview ? '' : '../'}index.html">All revisions</a></nav>` : '';
     const empty = !generated.length && !feedback.findings.length && !pending && !unlinkedFlows().some(({flow}) => flow.result === 'failed') ? '<p class="review-empty">No issues found in this review.</p>' : '';
-    return `<div class="overview-reading"><header class="overview-intro"><p class="eyebrow">Review overview</p><h1>${escape(review.title)}</h1><h2 class="what-changed-title">What changed</h2><p class="overview-scope">${escape(ReviewTools.comparisonText(snapshot, review))}</p><p class="lead">${escape(review.summary)}</p>${revision && revision.revision > 1 ? `<p class="overview-update"><strong>Review revision ${revision.revision}</strong> · ${escape(revision.summary)}</p>` : ''}${historyLinks}</header>${pending ? `<p class="overview-notice">${pending} previous finding${pending === 1 ? '' : 's'} still need checking. See Review details.</p>` : ''}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${generated.map(commentCard).join('')}${unlinkedFlows().filter(({flow}) => flow.result === 'failed').map(({flow,index}) => qaFlow(flow,index)).join('')}</section>${renderOtherChecks()}${renderMyReview()}</div>`;
+    return `<div class="overview-reading"><header class="overview-intro"><p class="eyebrow">Review overview</p><h1>${escape(review.title)}</h1><h2 class="what-changed-title">What changed</h2><p class="overview-scope">${escape(ReviewTools.comparisonText(snapshot, review))}</p><p class="lead">${escape(review.summary)}</p>${revision && revision.revision > 1 ? `<p class="overview-update"><strong>Review revision ${revision.revision}</strong> · ${escape(revision.summary)}</p>` : ''}${historyLinks}</header><p class="overview-notice visual-options">Visual QA recording and Rails template previews are available on request. Open this review through the local QA helper to request recording or a preview from a file; or ask the agent in chat.</p>${pending ? `<p class="overview-notice">${pending} previous finding${pending === 1 ? '' : 's'} still need checking. See Review details.</p>` : ''}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${generated.map(commentCard).join('')}${unlinkedFlows().filter(({flow}) => flow.result === 'failed').map(({flow,index}) => qaFlow(flow,index)).join('')}</section>${renderOtherChecks()}${renderMyReview()}</div>`;
   }
 
   function renderStep(layer) {
@@ -1015,6 +1019,16 @@
   document.addEventListener('click', async event => {
     // Keep the checkbox independent from the native disclosure summary.
     if (event.target.closest('.file-viewed')) { event.stopPropagation(); return; }
+    const previewRequest = event.target.closest('[data-request-preview]');
+    if (previewRequest) {
+      event.preventDefault(); event.stopPropagation();
+      const file = previewRequest.dataset.requestPreview;
+      if (window.reviewEnhancements?.requestPreview) {
+        try { await window.reviewEnhancements.requestPreview(file); toast(`Preview requested for ${file}. Keep this review open while it renders.`); }
+        catch { toast('The local helper is unavailable. Ask the agent in chat to add this preview.'); }
+      } else toast('Ask the agent to open this review with the local QA helper, or request the preview in chat.');
+      return;
+    }
     const evidencePreview = event.target.closest('[data-open-evidence]');
     if (evidencePreview) { openEvidence(Number(evidencePreview.dataset.openEvidence), evidencePreview); return; }
     const sequenceControl = event.target.closest('[data-sequence-prev], [data-sequence-play], [data-sequence-next]');

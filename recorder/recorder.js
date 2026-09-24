@@ -49,7 +49,11 @@ async function connect() {
   } catch (error) { stream.getTracks().forEach(item => item.stop()); stream = null; throw error; }
   track.addEventListener('ended', () => run(end), {once: true});
   sessionTimer = setTimeout(() => run(end), 600000);
-  $('notice').textContent = 'Capture ready. The agent records the checks and reloads this page with the evidence when it is done.';
+  if (document.body.classList.contains('qa-live')) {
+    const response = await fetch('/request', {method: 'POST', headers: {'Content-Type': 'application/json', 'X-QA-Token': token}, body: JSON.stringify({kind: 'qa'})});
+    if (!response.ok) throw new Error('The local request helper is unavailable. Ask the agent in chat to add QA evidence.');
+  }
+  $('notice').textContent = 'QA requested. Keep this page open while the agent records the checks and reloads it with the evidence.';
 }
 function start() {
   if (!stream || recorder || stopping) throw new Error('Start capture and finish the current clip first.');
@@ -132,10 +136,12 @@ const commands = {
 const status = () => ({ready: !!stream && video.readyState >= 2, recording: !!recorder, width: video.videoWidth, height: video.videoHeight});
 // Terminal commands arrive through the helper's long poll; results go back for the waiting client.
 async function poll() {
+  let failures = 0;
   for (;;) {
     try {
       const response = await fetch('/next', {headers: {'X-QA-Token': token}, cache: 'no-store'});
       offline = ![200, 204].includes(response.status);
+      if (!offline) failures = 0;
       if (response.status === 200) {
         const command = await response.json();
         let result;
@@ -147,7 +153,8 @@ async function poll() {
         continue;
       }
       if (response.status === 204) continue;
-    } catch { offline = true; /* The helper stopped; retry below. */ }
+    } catch { offline = true; }
+    if (++failures >= 3) { render(); return; }
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
 }
@@ -157,7 +164,7 @@ $('start').onclick = () => run(start);
 $('stop').onclick = () => run(stop);
 $('snapshot').onclick = () => run(snapshot);
 $('end').onclick = () => run(end);
-setInterval(render, 500);
+setInterval(() => { if (stream || recorder) render(); }, 1000);
 
 function loadEditor(blob, metadata) {
   if (trimming) return;

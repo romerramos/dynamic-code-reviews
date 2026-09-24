@@ -53,6 +53,14 @@ Dir.mktmpdir('previews-validate') do
            {'id' => 'stream', 'files' => ['app/views/_stream.html.erb'], 'status' => 'not_visual'}]
   valid.last['note'] = 'Renders only Turbo stream actions.'
   ReviewPreviews.validate(valid, snapshot)
+  ReviewPreviews.validate([valid.first], snapshot, full: false)
+  rejected_nonvisual = begin
+    ReviewPreviews.validate([valid.first.merge('files' => ['app/other.html.erb'])], snapshot, full: false)
+    false
+  rescue ArgumentError
+    true
+  end
+  assert(rejected_nonvisual, 'Targeted preview accepted an unreviewed file')
   broken = lambda { |changes| [valid.first.merge(changes), valid.last] }
   [
     broken.call('id' => 'Bad id!'),

@@ -35,7 +35,7 @@ Within a walkthrough step, the renderer pairs changed `app/components/**/*_compo
 
 First discover existing history with `ruby <skill>/scripts/series.rb list --repo <root>`. When the user asks for an increment, follow-up or continuation, use the matching series and state its cumulative scope. Ask only if the series is ambiguous. An explicit request for only uncommitted files, one commit or a particular PR still controls the scope; do not silently replace it with a cumulative series. When offering scope choices, mention the matching saved series as an additional option. Fresh reviews still default to uncommitted changes.
 
-On invocation without an explicit scope, ask: “What should I review?” Offer **Uncommitted changes (default)**, **Whole PR**, and **Specific commit**. Use an available question tool; otherwise ask in plain text. For an optional unanswered scope prompt, allow reasonable reply time then state the uncommitted default. When the user already supplied a scope (including “try this on current uncommitted files”), use it without asking again. Confirm the target through the supplied path/current workspace; ask only if ambiguous. Read applicable repository instructions.
+On invocation without an explicit scope, inspect the workspace: review uncommitted changes when present; otherwise review the current branch's open PR when provider metadata identifies exactly one; otherwise ask whether to review a commit or another target. State the inferred scope before collecting. An explicit scope always wins. Confirm the target through the supplied path/current workspace; ask only if ambiguous. Read applicable repository instructions.
 
 - **Uncommitted:** combined tracked working-tree state against HEAD (staged + unstaged), plus non-ignored untracked files. Explain that an edit staged and then reversed in the worktree is absent from the net diff; inspect `git diff --cached` separately if the user wants what will be committed.
 - **Whole PR:** resolve live PR metadata with the authenticated provider CLI/connector. Use its actual base branch, including stacked PR bases; never assume main. Fetch exact base/head objects without checkout, then pass verified refs to the collector. Exclude uncommitted work. Record PR URL, base/head SHAs, checks and issue links. If provider access is unavailable, ask for the PR/base or offer a clearly labeled local comparison, not a claimed full PR review.
@@ -43,10 +43,10 @@ On invocation without an explicit scope, ask: “What should I review?” Offer 
 
 ## Collect and inspect efficiently
 
-Use `ruby <skill>/scripts/review.rb collect --repo <root> --mode uncommitted --out <temporary-snapshot.json>`.
+Use `ruby <skill>/scripts/review.rb collect --repo <root> --mode uncommitted --brief --out <temporary-snapshot.json>`.
 For other modes add `--mode commit --commit <sha>` (optionally `--base <parent>`), or `--mode pr --base <verified-base-ref> --head <verified-head-ref>`.
 
-The tool prints a compact file/hunk manifest; the full snapshot stays in a temporary directory outside the project. It excludes `.reviews/`, marks likely secrets/binary/oversized patches as omitted, disables external diff helpers, and refuses unresolved conflicts. Renames are deliberately represented as deletion/addition to keep complete range coverage; explain moves together. Do not silently omit source files because they look generated. Inspect omissions separately when needed and accurately report coverage. The filename filter is not a secret scanner: check relevant content before embedding and redact exposed credentials, never copy secrets into a report.
+With `--brief`, the tool prints counts and omitted paths; the full snapshot stays in a temporary directory outside the project. Query its file/hunk manifest selectively while planning groups instead of pasting a large JSON listing into model context. It excludes `.reviews/`, marks likely secrets/binary/oversized patches as omitted, disables external diff helpers, and refuses unresolved conflicts. Renames are deliberately represented as deletion/addition to keep complete range coverage; explain moves together. Do not silently omit source files because they look generated. Inspect omissions separately when needed and accurately report coverage. The filename filter is not a secret scanner: check relevant content before embedding and redact exposed credentials, never copy secrets into a report.
 
 Read each changed hunk once, then inspect its enclosing function and direct callers/tests where needed to prove behavior. Use focused `rg` searches rather than whole-repository dumps. Scale effort to risk: ordinary small changes need one focused pass; concurrency, tenancy, external I/O and migrations need their actual failure/ownership paths traced. Stop widening once the conclusion is supported. Never install dependencies or start expensive broad suites just to decorate a report.
 
@@ -99,82 +99,68 @@ Include:
 - Include related PRs, suggested labels and reviewers only when they change a review decision and are supported by live metadata, CODEOWNERS (last matching rule wins), or focused history. They are suggestions only; do not assign, comment, push or mutate external services. Omit routine metadata and unavailable optional enrichment.
 - Keep snapshot/coverage metadata in Review details. Mention before-merge/deployment actions only when they require a concrete decision not already covered by a finding. No simulated live CI, chat, native review submission, semantic symbol lookup or remote progress sync. Omit poems/fortunes by default because this is a focused review artifact; add only if requested.
 
-## Template previews for Rails partials and ViewComponents
+## Fast report and optional visual evidence
 
-When the scope changes `.html.erb` partials or ViewComponent templates/classes and
-the app's development environment is available (reuse the visual QA environment
-answer), read [references/previews.md](references/previews.md) after publishing the
-review. Render every changed visual template with the app itself, reusing an
-existing Lookbook/ViewComponent preview's example when one exists and otherwise
-writing realistic example data. Mark stream-only or other non-visual templates
-`not_visual`. `scripts/previews.rb render` runs the examples through the app's
-runner in rolled-back savepoints, keeps only the CSS each preview uses, and
-`series.rb previews` attaches them to the latest revision. Every changed template must be accounted for: rendered, unavailable with its
-error, or `not_visual` with a reason the report shows. File by file opens a sticky
-side pane by itself only from 1600px; on laptop widths a Visual preview button in
-the file header opens it, and narrow screens and file cards show a collapsed Preview
-section above the code. Each example is a sandboxed, script-less frame. App icon fonts and URL images become labelled stand-ins (Lucide icons chosen by
-name or by the agent, photos the agent finds with its own tools, or placeholders);
-look-alike examples
-are folded by the report. Inspect them in a browser before delivery and fix clipped or
-broken examples.
+Publish the complete code review as soon as the analysis and focused validation
+are ready. Do not delay it for browser setup, video, or template examples. A
+visual finding still needs the evidence required to support its claim: use the
+smallest decisive browser check and attach a readable still when the behavior is
+visible in one state. Capture a short video when timing, motion, or a sequence of
+states is essential, or when the user requests video. Full template previews and
+demonstration videos are optional enrichments; run them when the user requests
+them, without a prerequisite question. A review with no optional media remains a
+complete review. Do not set a pending QA status for work that was not requested or
+planned.
 
-## Visual QA for UI changes: publish the review first
+For UI work requiring a browser, discover the local app and access path yourself
+using [local app discovery](references/local-app-discovery.md). A supplied URL or
+session takes priority. Ask one precise question only when multiple plausible
+servers or an unresolved access boundary remain after inspection. Never ask the
+user for a URL or test login before trying the project's documented setup,
+running processes, routes, fixtures and safe development data.
 
-When the inspected change has a concrete UI or user flow that can usefully be
-exercised, read [references/visual-qa.md](references/visual-qa.md). Publish and
-link the initial HTML before attempting capture so the user can read the review
-while QA continues. After publishing, ask “Do you have this environment
-provisioned?” with options to supply a local URL, discover a provisioning skill,
-or skip screenshots for this review. Reuse an environment or skip decision
-already supplied in the conversation; do not ask again. Missing runtime alone
-is not a reason to stop without offering these paths. Use `awaiting-environment`
-while waiting for that choice, and “QA assets are being generated” only once
-capture is actually planned. Omit QA for changes with no meaningful visual flow.
+For UI changes, the report itself must say QA recording and template previews
+are available even when neither has been attached. After publishing, start the
+local [capture helper](references/tab-capture.md) against `current.html` and
+open its served review URL. Give the user the review link immediately in a
+commentary update. The helper offers **Choose QA tab** on Overview and
+**Request preview** beside each changed visual template. Wait with its
+`wait-request` command for a bounded active-turn window (default 120 seconds).
+This is an idle long poll, not a repeated browser check. A request resumes the
+turn with `{kind:"qa"}` or `{kind:"preview",file:"..."}`; a closed review tab
+returns `closed`. Stop the helper after the window or tab closes. If the user
+requests evidence later, a new turn can serve the saved review again. A local
+helper cannot wake a Codex turn after that turn has ended; do not promise
+unbounded background execution. The offline report remains readable and points
+the user to the agent for later requests.
 
-Use a dedicated QA tab through the available browser harness. For UI interactions,
-**continuous tab video is the default**. Use the bundled, harness-independent
-[tab capture helper](references/tab-capture.md), or an already available native
-recorder with equivalent output. Save lossless PNG stills from that same capture
-stream for decisive states and evidence thumbnails. Prepare before recording,
-show actions at a normal human-readable pace, pause briefly on the result, and
-keep clips focused (usually 5–20 seconds). Trim idle portions with the browser
-helper when needed; never accelerate a clip just to meet a duration target. Do not use compressed tool
-screenshots as the default published evidence, sampled GIFs, frame slideshows,
-or hand-positioned cursors. Existing GIF reports remain readable.
+For requested or finding-critical visual checks, read
+[visual QA](references/visual-qa.md). Prefer one decisive PNG for a static state;
+use [native tab capture](references/tab-capture.md) for video. Sharing a tab
+queues the QA request and makes the capture stream ready; no typed confirmation
+is needed. Continue with `status` and the planned checks. If no request arrives,
+finish the already complete code review without adding a pending QA status.
 
-The helper uses browser APIs for video and PNG capture, plus the existing Ruby
-runtime to save files locally. It needs no extension, FFmpeg, package install,
-provider SDK or second automation connection. Serve the published review with
-`qa_capture.rb --report <current.html>` and open it next to the app in one QA
-window or tab group (the harness session group qualifies), opened on its Overview. Its Record visual QA evidence section
-replaces a separate recorder app: ask once for Choose QA tab → the app tab →
-Share, drive recording from the terminal with `qa_capture.rb control`, attach the
-evidence, then `control reload` so the same tab shows the final report. Follow
-the harness's permission policy. Record only the QA tab, never the desktop.
-Verify pointer visibility with a short real interaction. A selected QA tab in a
-background Chrome window can retain the automation pointer while the user works
-in another app; an unselected tab may lose it. Do not confuse the user's system
-cursor with the agent's interaction, or generalize one harness/OS probe to others.
-Never add a synthetic pointer or require the user to babysit the recording.
-If capture or pointer visibility cannot be established, report the specific limit
-and use readable still evidence where useful; do not quietly substitute an animation.
+For requested Rails template previews, read [previews](references/previews.md)
+after publishing. A request from a file is targeted: verify that file belongs
+to the reviewed snapshot, render only it in a rolled-back savepoint, and attach
+with `series.rb previews --targeted`. After the first preview request, drain
+requests that arrive in a short idle window (about 10 seconds) and render them
+together, creating one update for that batch. The ordinary `series.rb previews`
+command retains the full template coverage gate for a full pass. Reuse existing
+examples and project assets where possible. Check rendered frames for an actual
+clipping or contrast problem; avoid adjusting examples that already display the
+changed behavior clearly.
 
-Keep the approved evidence UI: one visible thumbnail per flow, one click to open
-its media and numbered steps, compact Other flows checked previews, and native
-video controls/fullscreen. Video playback follows the reader's explicit click,
-never overview autoplay. Embed every WebM/MP4 and PNG in the single offline HTML;
-source capture files and a running capture helper are not needed to share it.
-Present a few useful flows with a short journey, explicit result, and concise
-expected/observed outcome. Assign each failed flow to its issue using comment_id;
-do not duplicate its reproduction in comment discussion or a separate QA section.
-Keep stills at their real pixel dimensions in the viewer. Inspect small text and
-clicks before attaching; format conversion or upscaling cannot restore detail.
-
-Finish an attempted QA pass with complete, partial, blocked or skipped; complete
-requires embedded media and means checks finished, not that they all passed.
-Verify the current HTML contains the expected playable video and sharp stills,
-then link it again and remind the user to reload an already-open report.
+When both QA and full previews are requested, finish and inspect their scratch
+assets before attaching either. Use `series.rb enrich` with one JSON file
+containing `qa` and `previews` to publish one optional enhancement revision.
+Use `series.rb qa` or `series.rb previews` for a single requested addition.
+Avoid pending and styling-correction revisions: validate the evidence and
+preview frames before publication. Reassess code findings only when new
+evidence actually changes them. Phrase initial validation as checks performed at
+publication, and update its statements in the combined enrichment when new QA
+would otherwise make them stale.
 
 ## Render and verify
 
@@ -190,13 +176,13 @@ For a standalone report or an explicitly requested presentation refresh, the ori
 
 The Ruby standard-library renderer enforces complete file/hunk and comment-range coverage, pairs replacement lines in split view, escapes code/data, embeds all CSS/JS, records snapshot metadata, and adds `/.reviews/` to Git's **local info/exclude** only if needed. It leaves tracked `.gitignore` unchanged and refuses tracked `.reviews` contents or a symlinked output directory. Standalone filename collisions receive a timestamp suffix; `--replace` is for an explicitly requested standalone presentation refresh. Never overwrite a saved series revision. The rendering uses bundled daisyUI 5.7.28 prebuilt CDN CSS and Prism 1.30.0; no npm, Python, gems, Tailwind browser compiler, CDN connection or build step is required at review time. Assets and licenses live in the personal skill; see [assets/vendor/SOURCES.md](assets/vendor/SOURCES.md) when updating them. Prepared snapshots, plans and update JSON stay in a temporary directory outside the project; each saved HTML contains its own complete snapshot and analysis.
 
-Recollect just before delivery and compare fingerprints; if the changes moved, refresh affected analysis and regenerate. Test the resulting navigation, unified/split diffs, J/K/Z, search, finding anchors, notes and viewed state with an available browser. Validate helper behavior with `ruby <skill>/scripts/test_review.rb` when changing helpers. Check split replacement pairing, old/new line numbers, syntax token colors, comment placement and range highlighting, and actual sidebar/code widths—not just the presence of buttons. If browser access is blocked, do not claim visual verification. At minimum validate embedded JSON, assignment coverage and JavaScript syntax; state if browser testing was unavailable. Confirm `git check-ignore <report>` and source status unchanged. Clean up only scratch files created by this run.
+Recollect just before delivery and compare fingerprints; if the changes moved, refresh affected analysis and regenerate. For an ordinary review, validate embedded JSON, assignment coverage, finding anchors and JavaScript syntax, then do one short browser smoke check of Overview, a representative diff and its comment when a browser is available. Run the full navigation, layout, keyboard and source-number checklist only when changing the renderer or investigating a concrete UI problem. If browser access is blocked, state that limit. Confirm `git check-ignore <report>` and source status unchanged. Clean up only scratch files created by this run.
 
 For ordinary increments, reuse the already verified renderer; do not repeat its whole browser suite. Validate the merged data and scope, and perform a short navigation/comment smoke check when practical. When changing helpers, run `ruby scripts/test_review.rb` and `ruby scripts/test_series.rb`; the pure UI helper checks use `node scripts/test_ui.js` with no npm dependencies. When changing UI follow its maintenance guide. If `prepare` reports unchanged code/context, return the existing revision rather than creating another or claiming a fresh review. Use `publish --record` only for a requested reassessment with fresh conclusions, context or verification.
 
-After final rendering and verification (including any requested QA updates), open the delivered HTML in the user's default browser before returning the final response. For a series, open `current.html`; for a standalone report, open the exact HTML path returned by the renderer. If reusing an unchanged review, open its existing HTML. On macOS use `open <absolute-html-path>` with the path shell-quoted; on other platforms use the available equivalent. This is part of the review handoff and requires no additional confirmation. If opening fails or no browser is available, still deliver the file link and briefly report the limitation; do not claim it opened. Opening the report alone does not count as visual verification.
+After final rendering and verification, open the report in the user's default browser. For a UI review with the local enhancement helper active, open its served review URL; otherwise open `current.html` or the standalone HTML path. If reusing an unchanged review, open its existing HTML. On macOS use `open <shell-quoted-path-or-URL>`; on other platforms use the available equivalent. If opening fails, deliver the file link and state the limit. Opening the report alone does not count as visual verification.
 
-Return links to the saved revision and series history, the changes/findings since the previous run, and material validation limits. In this skill, `publish` only saves local ignored files; it never posts externally. Report generation never implies permission to fix code or publish a remote review.
+Return links to the saved revision and series history, the changes/findings since the previous run, and material validation limits. For UI changes, point out the live report's request controls while the helper is active; after it ends, say that the offline report remains and a later request can reopen the helper. In this skill, `publish` only saves local ignored files; it never posts externally. Report generation never implies permission to fix code or publish a remote review.
 
 Design references (read once when evolving the skill, not every review): [CodeRabbit documentation index](https://docs.coderabbit.ai/llms.txt), [Walkthroughs](https://docs.coderabbit.ai/pr-reviews/walkthroughs), [Change Stack](https://docs.coderabbit.ai/pr-reviews/change-stack), [Slop Detection](https://docs.coderabbit.ai/pr-reviews/slop-detection).
 

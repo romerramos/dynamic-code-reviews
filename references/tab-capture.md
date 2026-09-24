@@ -40,14 +40,23 @@ return the saved absolute path. A Stop sent while a PNG is still saving waits
 for it instead of being dropped. If no recorder page is polling, the command
 fails within a few seconds with "The recorder page is not open".
 
+For optional work, open the served review and wait with `control wait-request
+--timeout 120`. It returns `{"kind":"qa"}` after the reader shares an app tab,
+`{"kind":"preview","file":"..."}` after a changed template's Request preview
+button is clicked, `{"closed":true}` after the report tab closes, or
+`{"timeout":true}`. The helper keeps a small in-memory queue and uses a long
+poll; it does not start an agent after the current turn ends. Stop the helper
+when the active wait closes or expires. An offline HTML file still advertises
+the options but cannot submit a request without the helper.
+
 1. Chrome's share prompt lists every open tab from every window by title, so a
    user with several tabs of the same app cannot tell them apart. Just before
    asking, mark the QA app tab through the harness:
    `document.title = '[QA] ' + document.title.replace(/^\[QA\] /, '')`. A full
    page load resets the title; set it again if the app tab navigated since.
-   Then tell the user, in one message, that the review is open in the QA window
-   and ask them to click **Choose QA tab** in the Overview's Record visual QA evidence section, pick the tab
-   titled `[QA] …` (give the full title) and click **Share**. Run `wait-ready`. Chrome shows the
+   The served report itself explains how to click **Choose QA tab**, pick the
+   `[QA] …` app tab and click **Share**. The resulting `wait-request` QA event
+   is confirmation; do not ask the user to type “shared.” Chrome shows the
    share prompt only for a real click on a visible tab. A harness that clicks
    background tabs (Claude in Chrome does) cannot open it; a harness whose tab is
    in the foreground (as in Codex) may click Choose QA tab itself so the user
@@ -57,7 +66,7 @@ fails within a few seconds with "The recorder page is not open".
 2. Chrome focuses the captured app tab after sharing. Keep it selected in its
    window; the user can return to other apps and must leave the review tab open.
    Do not operate or reload the review tab through the harness while capturing.
-3. Check the `wait-ready` dimensions. The helper requests up to 3840 ×
+3. Check the `status` dimensions after the QA request. The helper requests up to 3840 ×
    2160 at 30 fps; the actual dimensions are reported by the stream and may be
    lower. It never enlarges saved frames after capture. Use a short harmless
    click probe to check video, native agent pointer and sharp text. Inspect the
