@@ -258,11 +258,11 @@ module SeriesChecks
       ReviewChecks.fixture do |root, _commit|
         Dir.mkdir(File.join(root, 'app'))
         Dir.mkdir(File.join(root, 'app/views'))
-        %w[alpha beta].each { |name| File.write(File.join(root, "app/views/#{name}.html.erb"), "<p>#{name}</p>\n") }
+        %w[alpha beta gamma].each { |name| File.write(File.join(root, "app/views/#{name}.html.erb"), "<p>#{name}</p>\n") }
         snapshot = DynamicReviews.collect(repo: root)
         items = snapshot['files'].map { |file| {'file' => file['id'], 'summaries' => file['hunks'].to_h { |hunk| [hunk['id'], 'Show the changed view.'] }} }
-        review = {'title' => 'View review', 'summary' => 'Two example views changed.', 'effort' => {'score' => 1, 'reason' => 'Two small templates'},
-                  'coverage' => 'Both templates reviewed.', 'validation' => ['Synthetic fixture only.'],
+        review = {'title' => 'View review', 'summary' => 'Three example views changed.', 'effort' => {'score' => 1, 'reason' => 'Three small templates'},
+                  'coverage' => 'All templates reviewed.', 'validation' => ['Synthetic fixture only.'],
                   'groups' => [{'title' => 'Views', 'summary' => 'The two view examples belong together.', 'layers' => [{'title' => 'Render examples', 'items' => items}]}],
                   'comments' => [], 'findings' => []}
         Dir.mktmpdir('review-targeted-preview-') do |out|
@@ -279,11 +279,19 @@ module SeriesChecks
           second = ReviewSeries.previews(repo: root, name: 'targeted-previews', revision: 1, update: input, targeted: true)
           partial = DynamicReviews.extract(second)['review']
           assert(partial['preview_scope'] == 'targeted' && partial['previews'].map { |preview| preview['id'] } == ['alpha'], 'Targeted preview did not preserve partial scope')
-          assert(File.read(second).include?('Request preview'), 'Unrendered template lost its request control')
-          File.write(input, JSON.generate('previews' => [entry.call('alpha'), entry.call('beta')]))
-          third = ReviewSeries.previews(repo: root, name: 'targeted-previews', revision: 2, update: input)
+          assert(File.read(second).include?('Add to previews'), 'Unrendered template lost its request control')
+          qa = {'status' => 'complete', 'fingerprint' => snapshot['fingerprint'], 'summary' => 'Selected flow checked.',
+                'environment' => 'Synthetic test fixture.', 'flows' => [{'title' => 'Selected flow', 'steps' => ['Open fixture'], 'expected' => 'Visible', 'observed' => 'Visible', 'result' => 'passed', 'assets' => [{'caption' => 'Fixture', 'data_uri' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jWZkAAAAASUVORK5CYII='}]}]}
+          File.write(input, JSON.generate('previews' => [entry.call('beta')], 'qa' => qa))
+          combined = ReviewSeries.enrich(repo: root, name: 'targeted-previews', revision: 2, update: input, targeted: true)
+          enriched = DynamicReviews.extract(combined)['review']
+          assert(enriched['previews'].map { |p| p['id'] } == %w[alpha beta], 'Combined targeted update lost an existing preview')
+          assert(enriched['qa']['summary'] == qa['summary'], 'Combined targeted update lost QA')
+          assert(enriched['history']['revision'] == 3, 'Combined targeted batch created extra revisions')
+          File.write(input, JSON.generate('previews' => [entry.call('alpha'), entry.call('beta'), entry.call('gamma')]))
+          third = ReviewSeries.previews(repo: root, name: 'targeted-previews', revision: 3, update: input)
           full = DynamicReviews.extract(third)['review']
-          assert(!full.key?('preview_scope') && full['previews'].length == 2, 'Full pass did not replace the targeted set')
+          assert(!full.key?('preview_scope') && full['previews'].length == 3, 'Full pass did not replace the targeted set')
           assert(File.binread(first) == before, 'Targeted preview modified the original revision')
         end
       end

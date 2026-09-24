@@ -51,7 +51,7 @@ async function connect() {
   sessionTimer = setTimeout(() => run(end), 600000);
   if (document.body.classList.contains('qa-live')) {
     const response = await fetch('/request', {method: 'POST', headers: {'Content-Type': 'application/json', 'X-QA-Token': token}, body: JSON.stringify({kind: 'qa'})});
-    if (!response.ok) throw new Error('The local request helper is unavailable. Ask the agent in chat to add QA evidence.');
+    if (!response.ok) throw new Error('The recording session has ended. Use Copy QA prompt in Video QA to request another session.');
   }
   $('notice').textContent = 'QA requested. Keep this page open while the agent records the checks and reloads it with the evidence.';
 }
@@ -154,7 +154,13 @@ async function poll() {
       }
       if (response.status === 204) continue;
     } catch { offline = true; }
-    if (++failures >= 3) { render(); return; }
+    if (++failures >= 3) {
+      try { await run(end); } catch { /* stop() preserves unsaved clips for download. */ }
+      clearInterval(renderTimer);
+      window.dispatchEvent(new CustomEvent('qa-session-ended', {detail: {recoverable: !!editSource || !!$('artifacts').children.length}}));
+      render();
+      return;
+    }
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
 }
@@ -164,7 +170,7 @@ $('start').onclick = () => run(start);
 $('stop').onclick = () => run(stop);
 $('snapshot').onclick = () => run(snapshot);
 $('end').onclick = () => run(end);
-setInterval(() => { if (stream || recorder) render(); }, 1000);
+const renderTimer = setInterval(() => { if (stream || recorder) render(); }, 1000);
 
 function loadEditor(blob, metadata) {
   if (trimming) return;

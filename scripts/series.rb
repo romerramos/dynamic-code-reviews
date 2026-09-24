@@ -410,8 +410,8 @@ module ReviewSeries
     end
   end
 
-  # Attach the finished QA and full template preview set in one immutable revision.
-  def enrich(repo:, name:, update:, revision:, **_unused)
+  # Attach finished QA and either selected or all template previews in one revision.
+  def enrich(repo:, name:, update:, revision:, targeted: false, **_unused)
     update_path = File.expand_path(update)
     input = read(update_path)
     raise ArgumentError, 'Enrichment needs QA and template previews' unless input['qa'].is_a?(Hash) && input['previews'].is_a?(Array)
@@ -428,7 +428,16 @@ module ReviewSeries
       payload = latest(path, history)
       snapshot, review = payload.values_at('snapshot', 'review')
       ReviewQA.validate(evidence, snapshot, review)
-      ReviewPreviews.validate(rendered, snapshot)
+      ReviewPreviews.validate(rendered, snapshot, full: !targeted)
+      if targeted
+        raise ArgumentError, 'Targeted preview needs at least one example' if rendered.empty?
+        existing = Array(review['previews']).reject { |item| rendered.any? { |entry| entry['id'] == item['id'] } }
+        rendered = existing + rendered
+        ReviewPreviews.validate(rendered, snapshot, full: review['preview_scope'] != 'targeted' && !review['previews'].nil?)
+        review['preview_scope'] = 'targeted' unless review['preview_scope'].nil? && !review['previews'].nil?
+      else
+        review.delete('preview_scope')
+      end
       fresh = DynamicReviews.collect(repo: repo, mode: 'series', base: snapshot['base'], head: snapshot['mode'] == 'uncommitted' || snapshot['working_tree'] ? nil : snapshot['head'])
       raise ArgumentError, 'Code changed; review the new snapshot before attaching visual evidence' unless code_key(fresh) == code_key(snapshot) && fresh['head'] == snapshot['head']
       recorded_context = review.fetch('context', {})
@@ -436,7 +445,6 @@ module ReviewSeries
       raise ArgumentError, 'Visual evidence is unchanged' if review['qa'] == evidence && review['previews'] == rendered
       review['qa'] = evidence
       review['previews'] = rendered
-      review.delete('preview_scope')
       review['validation'] = input['validation'] if input.key?('validation')
       shown = rendered.count { |preview| preview['status'] == 'rendered' }
       increment = {'summary' => "Visual evidence updated: #{evidence['summary']} #{shown} template previews rendered.", 'files' => [], 'groups' => {},

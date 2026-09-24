@@ -18,14 +18,15 @@ For ordinary reviews, **author review JSON only and run `scripts/review.rb`**. D
 Preserve these rules when the user explicitly requests a UI change:
 
 - Use the bundled daisyUI components, Prism syntax highlighting and Lucide SVG icons, embedded into the single offline HTML. Use Lucide for comment types and thread actions rather than improvised glyphs; retain the custom skill logo. Keep Ruby stdlib helpers; no project scripts, npm, gems or runtime CDN requests.
+- Calm chrome: the app header holds the logo mark, the review title with repo and scope beneath, and only the rare actions Previews, Revision and Details. The reading bar holds the sidebar toggle, a pager showing the file or step position, and one **View** menu containing reading mode, diff layout, comments, code size and shortcuts; its button names the current settings. Reserve the accent colour for "where am I" and the one primary action in view. Add controls to these existing homes; never add a new toolbar row.
 - Keep the 320–340px desktop sidebar with full-width, wrapping step buttons; its ☰ button collapses it in place on wide screens (remembered) and opens it as a drawer below 1200px. Give the remaining width to the code. Split mode has equal code columns, paired rows and independent real old/new source numbers; narrow screens scroll the comparison horizontally instead of stacking its sides.
 - Comments use visible, keyboard-operable gutter markers on the correct side and first source line. Open a bounded 390px popover near that marker, highlight the exact inclusive range, and preserve code row alignment. Never insert screen-wide comment rows. Support grouped comments, Copy comment, Escape, outside-click dismissal and returning keyboard focus.
 - File by file is a one-file reading mode using the existing walkthrough groups and steps, with tests last in each numbered step; File by file must use the exact sidebar file order while Walkthrough may show test panels after their owning code. Never introduce a second classification. Show full captured before/after source with diff colors and original comment anchors, the existing grouped sidebar and a selectable current file path, Previous/Next file and change navigation, and shared viewed progress. Font-size controls adjust code text and row spacing together and retain the preference locally. If complete source is unavailable, label the saved-hunk fallback honestly; never substitute current files for a historical snapshot.
 - Use readable monospace code, restrained diff colors, clear selected/focus states and progressive disclosure. Keep navigation, details, and notes. Track viewed progress per unique file, shared across walkthrough and All changes: checking Viewed collapses that file outside File by file, unchecking reopens it, and manual disclosure state persists independently. Keep sidebar navigation shallow: one heading for a single-step group, a flat file/component list for the active step, and search revealing matching steps. Wrap names and path subtitles instead of cutting them off; retain full-path tooltips/accessibility labels. Represent each component once with compact Ruby/Template shortcuts; keep actual filenames in the diff tabs. Component navigation must reveal its header and tabs, which stay visible while scrolling its diff. Derive group completion from its files; do not replace partial file progress with a group checkbox. Never add a control that pretends to have a backend.
 - Use the bundled GLightbox viewer for one-click visual-evidence previews and overview View code actions. Show media at its original pixel size inside a scrollable viewer rather than stretching it; code shows the complete related hunk with syntax highlighting, real source numbers and the comment range highlighted. Default code to split on wide screens and unified below 1200px, with Auto/Unified/Split overrides. Support keyboard activation, Escape/close and focus return; suppress review shortcuts while open. Embed the viewer CSS/JS and image data so a single HTML file works offline; keep videos in their native inline player.
 - All changes renders full diffs grouped by responsibility. Keep Design/UI to markup and styles; JavaScript, helpers, presenters and view-only controllers belong in Frontend. Use `file_categories` only to correct ambiguous roles after inspecting the code. The logical walkthrough remains a separate reading order.
-- Overview is a centered reading column up to 840px: What changed (explicit code comparison plus a short behavioral paragraph), review comments containing their QA evidence, compact Other flows checked previews, and a bottom User comments section. Keep report-revision updates separate and limited to one quiet sentence. Only while served by the capture helper, a Record visual QA evidence section follows What changed; the saved HTML never contains it. Do not repeat findings as outcome cards. Each failure appears once as a review comment: a short journey, expected/actual result, and one visible evidence thumbnail. Clicking it opens the media and numbered steps together. Show up to four successful checks as a compact preview list, with more checks behind one disclosure. Never hide an unmatched failed flow. Keep the grouped walkthrough in the sidebar and metadata in Review details. Comments use one-column threads: file/range header, subject, concise body and evidence preview, a View code action opening the related highlighted diff in the shared fullscreen viewer, then actions. Distinguish types with a named icon, color and short meaning; show blocking status separately. Resolve collapses a conversation; Reopen expands it. This is browser-local progress for the snapshot/revision, never proof a finding was fixed. Copy for LLMs retains captured source and local resolution status, including resolved personal comments in combined copying. Copy for comment produces paste-ready GitHub/Linear text with location and reproduction but without source-code dumps or local resolution metadata. User comments is always available at the bottom, with Add comment for general notes, code-line comments, edit/delete, individual copying and Copy all for LLMs. Auto layout uses unified below 1200px and split above; explicit layout choices override it until Auto is selected again.
-- Open every report on Overview by default, including saved revisions and the report served with its recorder. Restore notes and reading progress without restoring the last visited page; honor an explicit section URL hash. Keep the recording action and existing video previews directly visible on Overview so readers can start a capture or play evidence from there.
+- Overview is a centered reading column up to 840px: What changed (explicit code comparison plus a short behavioral paragraph), review comments containing their QA evidence, compact Other flows checked previews, and a bottom User comments section. Keep report-revision updates separate and limited to one quiet sentence. The saved Overview always includes the Video QA prompt banner. During an active recording session, the served review replaces that banner with recording controls. Do not repeat findings as outcome cards. Each failure appears once as a review comment: a short journey, expected/actual result, and one visible evidence thumbnail. Clicking it opens the media and numbered steps together. Show up to four successful checks as a compact preview list, with more checks behind one disclosure. Never hide an unmatched failed flow. Keep the grouped walkthrough in the sidebar and metadata in Review details. Comments use one-column threads: file/range header, subject, concise body and evidence preview, a View code action opening the related highlighted diff in the shared fullscreen viewer, then actions. Distinguish types with a named icon, color and short meaning; show blocking status separately. Resolve collapses a conversation; Reopen expands it. This is browser-local progress for the snapshot/revision, never proof a finding was fixed. Copy for LLMs retains captured source and local resolution status, including resolved personal comments in combined copying. Copy for comment produces paste-ready GitHub/Linear text with location and reproduction but without source-code dumps or local resolution metadata. User comments is always available at the bottom, with Add comment for general notes, code-line comments, edit/delete, individual copying and Copy all for LLMs. Auto layout uses unified below 1200px and split above; explicit layout choices override it until Auto is selected again.
+- Open every report on Overview by default, including saved revisions and the report served with its recorder. Restore notes and reading progress without restoring the last visited page; honor an explicit section URL hash. Keep the Video QA prompt card and existing video evidence directly visible on Overview. Show sharing controls only during a requested recording session.
 
 Read [references/ui-guidelines.md](references/ui-guidelines.md) **only when changing the UI**, for dimensions, interaction details and the browser verification checklist. Routine reviews inherit these rules through the renderer without redesign work.
 
@@ -119,48 +120,45 @@ servers or an unresolved access boundary remain after inspection. Never ask the
 user for a URL or test login before trying the project's documented setup,
 running processes, routes, fixtures and safe development data.
 
-For UI changes, the report itself must say QA recording and template previews
-are available even when neither has been attached. After publishing, start the
-local [capture helper](references/tab-capture.md) against `current.html` and
-open its served review URL. Give the user the review link immediately in a
-commentary update. The helper offers **Choose QA tab** on Overview and
-**Request preview** beside each changed visual template. Wait with its
-`wait-request` command for a bounded active-turn window (default 120 seconds).
-This is an idle long poll, not a repeated browser check. A request resumes the
-turn with `{kind:"qa"}` or `{kind:"preview",file:"..."}`; a closed review tab
-returns `closed`. Stop the helper after the window or tab closes. If the user
-requests evidence later, a new turn can serve the saved review again. A local
-helper cannot wake a Codex turn after that turn has ended; do not promise
-unbounded background execution. The offline report remains readable and points
-the user to the agent for later requests.
+For a plain review request, finish after publication and the normal report check.
+Do not start the recorder, wait for optional requests, or create preview examples.
+If the user also requested QA or previews, publish the code review first and
+continue with those additions in the same turn. The Overview always offers a visible **Video QA** card with **Copy QA
+prompt**. Changed templates offer **Add to previews**; the header **Previews**
+list shows every template's state: Ready (rendered, with a New mark until opened),
+Requested (copied, waiting for the next revision), Selected, and Not previewed.
+Copying the prompt moves the selection to Requested, so the selection count returns
+to zero. These controls work offline and only prepare text for the developer to
+paste into a coding agent. Keep previews and QA separate; copying does not start work.
 
-For requested or finding-critical visual checks, read
-[visual QA](references/visual-qa.md). Prefer one decisive PNG for a static state;
-use [native tab capture](references/tab-capture.md) for video. Sharing a tab
-queues the QA request and makes the capture stream ready; no typed confirmation
-is needed. Continue with `status` and the planned checks. If no request arrives,
-finish the already complete code review without adding a pending QA status.
+When the user pastes a visual prompt, continue the saved series. Read its latest
+revision, verify the requested snapshot and checkout, and generate only the
+requested additions. Preserve existing findings and evidence. If the code has
+changed, review the delta before attaching new evidence. Batch finished additions
+into one revision; skip a full code re-review when the snapshot is unchanged.
 
-For requested Rails template previews, read [previews](references/previews.md)
-after publishing. A request from a file is targeted: verify that file belongs
-to the reviewed snapshot, render only it in a rolled-back savepoint, and attach
-with `series.rb previews --targeted`. After the first preview request, drain
-requests that arrive in a short idle window (about 10 seconds) and render them
-together, creating one update for that batch. The ordinary `series.rb previews`
-command retains the full template coverage gate for a full pass. Reuse existing
-examples and project assets where possible. Check rendered frames for an actual
-clipping or contrast problem; avoid adjusting examples that already display the
-changed behavior clearly.
+For QA requests, read [visual QA](references/visual-qa.md). The copied QA prompt
+requests video. Choose the checks yourself from findings and changed user flows;
+the developer does not need to write a QA plan. Link finding evidence to its
+comment and keep other relevant walkthrough/flow checks compact. Honor an
+explicit request for a different medium. Video uses the existing [tab recorder](references/tab-capture.md) and the
+harness's visible computer-use pointer. Prepare the app, access and controllable
+tab before opening the recorder; sharing needs no typed confirmation. Capture
+the actual flow directly. No routine cursor probe, rehearsal video, synthetic
+cursor, or per-session capability audit. Investigate recording only when the
+requested capture actually fails. After attaching the batch, open the completed standalone report, then stop the helper.
 
-When both QA and full previews are requested, finish and inspect their scratch
-assets before attaching either. Use `series.rb enrich` with one JSON file
-containing `qa` and `previews` to publish one optional enhancement revision.
-Use `series.rb qa` or `series.rb previews` for a single requested addition.
-Avoid pending and styling-correction revisions: validate the evidence and
-preview frames before publication. Reassess code findings only when new
-evidence actually changes them. Phrase initial validation as checks performed at
-publication, and update its statements in the combined enrichment when new QA
-would otherwise make them stale.
+For template previews, read [previews](references/previews.md). Validate the
+selected files against the snapshot, render them in rolled-back savepoints and
+attach with `series.rb previews --targeted`. Reuse project examples and assets.
+Validate output and expected content before publication; use browser inspection
+only to resolve a concrete rendering uncertainty, not to polish every example.
+
+When both are requested together, use `series.rb enrich --targeted` with a JSON
+object containing `qa` and `previews`. A full preview pass omits `--targeted` and
+retains the full coverage gate. Publish one completed enhancement revision;
+avoid pending and cosmetic correction revisions. Update validation statements
+when new evidence changes them, and reassess findings only when warranted.
 
 ## Render and verify
 
@@ -180,19 +178,19 @@ Recollect just before delivery and compare fingerprints; if the changes moved, r
 
 For ordinary increments, reuse the already verified renderer; do not repeat its whole browser suite. Validate the merged data and scope, and perform a short navigation/comment smoke check when practical. When changing helpers, run `ruby scripts/test_review.rb` and `ruby scripts/test_series.rb`; the pure UI helper checks use `node scripts/test_ui.js` with no npm dependencies. When changing UI follow its maintenance guide. If `prepare` reports unchanged code/context, return the existing revision rather than creating another or claiming a fresh review. Use `publish --record` only for a requested reassessment with fresh conclusions, context or verification.
 
-After final rendering and verification, open the report in the user's default browser. For a UI review with the local enhancement helper active, open its served review URL; otherwise open `current.html` or the standalone HTML path. If reusing an unchanged review, open its existing HTML. On macOS use `open <shell-quoted-path-or-URL>`; on other platforms use the available equivalent. If opening fails, deliver the file link and state the limit. Opening the report alone does not count as visual verification.
+After final rendering and verification, open `current.html` or the standalone HTML path in the user's default browser. The saved file contains the report, previews and attached media and works without a server. Use the helper URL only during an active recording session; opening it and managing its lifecycle are the agent's responsibility. Before stopping it, open the final saved report so the user has a durable, reloadable result. If reusing an unchanged review with the legacy helper-only request controls, run `series.rb refresh` once to update its current presentation without adding a revision; otherwise open its existing HTML. Historical snapshots remain immutable. On macOS use `open <shell-quoted-path-or-URL>`; on other platforms use the available equivalent. If opening fails, deliver the file link and state the limit. Opening the report alone does not count as visual verification.
 
-Return links to the saved revision and series history, the changes/findings since the previous run, and material validation limits. For UI changes, point out the live report's request controls while the helper is active; after it ends, say that the offline report remains and a later request can reopen the helper. In this skill, `publish` only saves local ignored files; it never posts externally. Report generation never implies permission to fix code or publish a remote review.
+Return links to the saved revision and series history, the changes/findings since the previous run, and material validation limits. Point out the report's Copy QA prompt button and template preview selections when relevant. Keep helper setup out of user-facing instructions: the pasted prompt lets the agent prepare recording. In this skill, `publish` only saves local ignored files; it never posts externally. Report generation never implies permission to fix code or publish a remote review.
 
 Design references (read once when evolving the skill, not every review): [CodeRabbit documentation index](https://docs.coderabbit.ai/llms.txt), [Walkthroughs](https://docs.coderabbit.ai/pr-reviews/walkthroughs), [Change Stack](https://docs.coderabbit.ai/pr-reviews/change-stack), [Slop Detection](https://docs.coderabbit.ai/pr-reviews/slop-detection).
 
-File by file and Unified are the main review defaults. Place explicit File by file / Walkthrough reading controls beside Unified/Split; the main diff has no Auto option. Walkthrough retains the existing group steps; do not imply it is one infinite list. Keep the existing grouped sidebar visible on desktop and the current group, step and file position in the sticky file header. Keep hunk explanations out of the source flow: a small note marker beside the line-number gutter on the first changed line opens a clearly labeled Review note popover. Use only the grouped sidebar for file selection; show a selectable current file path with Copy path in the reading header, without a competing file dropdown. Hide the unified table header visually while retaining accessible before/after line-number labels. Changed-section buttons navigate contiguous changed blocks separated by unchanged lines, including multiple blocks inside one Git hunk. Track the selected block explicitly across clicks, including when scrolling is clamped at the file bottom; resynchronize after manual scrolling. Use instant scrolling corrected for the sticky header, without wrapping, show the current section count and disable at boundaries. Viewed records progress without advancing or hiding the focused file; Next file remains a separate action. Explicit Overview/All changes links still open their respective screens.
+File by file and Unified are the main review defaults. Place explicit File by file / Walkthrough reading controls beside Unified/Split inside the View menu; the main diff has no Auto option. Walkthrough retains the existing group steps; do not imply it is one infinite list. Keep the existing grouped sidebar visible on desktop, the file or step position in the reading-bar pager, and the current group and step in the sticky file header. Keep hunk explanations out of the source flow: a small note marker beside the line-number gutter on the first changed line opens a clearly labeled Review note popover. Use only the grouped sidebar for file selection; show a selectable current file path with Copy path in the reading header, without a competing file dropdown. Hide the unified table header visually while retaining accessible before/after line-number labels. Changed-section buttons navigate contiguous changed blocks separated by unchanged lines, including multiple blocks inside one Git hunk. Track the selected block explicitly across clicks, including when scrolling is clamped at the file bottom; resynchronize after manual scrolling. Use instant scrolling corrected for the sticky header, without wrapping, show the current section count and disable at boundaries. Viewed records progress without advancing or hiding the focused file; Next file remains a separate action. Explicit Overview/All changes links still open their respective screens.
 
 In File by file, paired ViewComponents expose compact Ruby / Template navigation beside the current path, using the same component pairing within the existing review layer. Indicate the current file and preserve group order, viewed state and full-path copying. Show shortcuts only when both files exist in the reviewed scope; do not invent or load an unchanged companion.
 
-Keep the file-reader header compact: group, file position, changed-section arrows/count and Viewed share an orientation row; show the selectable full path below with an accessible copy icon. Mobile puts the group on its own row and keeps position/navigation/Viewed together. Component shortcuts and a quiet About this file disclosure follow without reserving empty space. Preserve full names by wrapping, and keep change navigation correct when the sticky header height changes.
+Keep the file-reader header to two rows. The orientation row holds the group/step breadcrumb and the changed-section stepper. The file row holds the selectable full path with an icon-only copy button, component shortcuts, the preview chip, a quiet Why this file disclosure, and Viewed plus Next file at its end. Do not repeat the file position the pager already shows. Preserve full names by wrapping, and keep change navigation correct when the sticky header height changes.
 
-Keep header controls clustered rather than stretching them across the available width. Copy path and About this file sit directly beside the path. Make Mark viewed a visibly clickable checkbox action, with a separate Next file button; checking it must not advance automatically. Wrap these clusters naturally on mobile.
+Keep header controls clustered rather than stretching them across the available width. Make Mark viewed a visibly clickable checkbox action, with a separate Next file button; checking it must not advance automatically. Wrap these clusters naturally on mobile.
 
 Reading mode is a browser preference separate from the current destination. Overview and All changes must not change File by file / Walkthrough. Persist explicit mode choices in local storage and apply them when returning to a review group or file; default to File by file when no preference is saved.
 

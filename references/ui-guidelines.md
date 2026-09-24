@@ -19,8 +19,8 @@ from its original snapshot and analysis when refreshing presentation only.
   hand-drawn symbols. Add any new icons from the pinned upstream CDN release to
   `assets/vendor/lucide/`; normal reviews never download assets.
 - Reuse `assets/icon.svg` for the skill identity. The renderer embeds this same
-  code-and-checkmark mark in the header; keep it crisp at 38px, without a second
-  background tile. Do not substitute emoji or regenerate the logo per review.
+  code-and-checkmark mark in the header; keep it crisp at 28px, without a second
+  background tile or a repeated product name. The review title owns the header. Do not substitute emoji or regenerate the logo per review.
 - Desktop sidebar: 320px, increasing to 340px on wide screens. Each step occupies
   the available sidebar width and wraps its title. Keep viewed-file counts and comment
   counts subordinate to the title. A single-step group has one heading, not duplicate
@@ -54,7 +54,7 @@ from its original snapshot and analysis when refreshing presentation only.
   Detailed metadata belongs in Review details; file/context panels can collapse.
   Preserve Overview, All changes, search, J/K/Z, viewed state and local notes.
 - Keep company-size/reviewer calibration out of visible and embedded report
-  content. Overview starts with What changed: the exact review type/comparison and a short behavioral paragraph. Then show review comments with their QA evidence, a compact preview list for successful checks, and User comments. Report-revision updates are separate from code changes. Keep the walkthrough in the sidebar, supporting metadata in Review details, and omit routine assessment boilerplate. Show each
+  content. Overview starts with What changed: the exact review type/comparison and a short behavioral paragraph. Keep a visible Video QA prompt card and a separate template preview selector after What changed, even after evidence is attached. Then show review comments with their QA evidence, a compact preview list for successful checks, and User comments. Report-revision updates are separate from code changes. Keep the walkthrough in the sidebar, supporting metadata in Review details, and omit routine assessment boilerplate. Show each
   observation as an individual entry with its path, range, readable subject and
   full discussion. Other evidence sections use
   clear headings, 14px text, generous line spacing and roughly 80ch prose widths.
@@ -92,6 +92,49 @@ from its original snapshot and analysis when refreshing presentation only.
   saved review history. Never infer code correctness from a resolved conversation.
   Retain resolved personal comments in combined copies, marking their local state.
   Editing a personal comment reopens it; deleting one removes its resolution mark.
+
+## Calm chrome
+
+Exactly two bars sit above the code. Before adding a control, find its home among
+these; do not add a third row or a floating toolbar.
+
+- App header (56px): logo mark, then the review title with repo and scope badge on
+  a quiet line beneath. On the right, only rare actions: Previews, the revision
+  selector and Details. Header buttons are ghost buttons; counts are small pills.
+- Reading bar (52px): sidebar toggle, then a bordered pager (previous, position,
+  next). On the right, one View button whose label names the current settings, for
+  example "Unified · File by file". It opens a native popover with Reading mode (a
+  one-line hint explains each mode), Diff layout, the comments switch, Code size and
+  keyboard shortcuts. Segmented controls are neutral: the pressed option is a white
+  chip on a grey track, not an accent fill.
+- Accent colour marks location (current step, current file, breadcrumb number) and
+  the one primary action in view. Everything else stays neutral ink and grey.
+- Walkthrough file cards show a file summary only when it adds to the range
+  summaries. A rendered preview is its own inline disclosure; the card shows no
+  second toggle for it.
+
+## Template preview lifecycle
+
+Every eligible template has one state, derived by `ReviewTools.previewLifecycle`
+from the review's `previews` and browser-local `{previews, requested}` selections
+(keyed by repo, series and snapshot fingerprint, so media-only revisions keep them):
+
+- **Selected**: chosen with Add to previews and not yet sent.
+- **Requested**: copied in a prompt. `requestPreviews` moves the whole selection
+  here with a timestamp and the revision it came from, so the selection count
+  returns to zero. It resolves when a later revision carries any preview record
+  for that path.
+- **Ready**: rendered examples exist. A template that was requested is marked New
+  until the reviewer opens it from the Previews list.
+- **Not previewed**: `not_visual` or `unavailable` records, with their reasons.
+
+The header Previews button shows the ready count (or "N new") and a pending count.
+The Previews list groups templates by state. Open lands on the file with its
+preview showing, Forget drops a request, and Copy the request again re-copies
+waiting requests. Sidebar file rows carry a small marker for ready, new, requested
+and selected templates. The per-file chip reads Add to previews, Selected for
+preview or Preview requested, and a rendered template's chip reads Preview with its
+example count.
 
 ## Comment popovers
 
@@ -287,19 +330,19 @@ must never read today's working files. Label unavailable/oversized context clear
 Context outside saved hunks has plain line numbers rather than misleading comment
 controls that would create invalid anchors.
 
-A−/A+ changes code font size from 10–20px (13px default), updating row spacing
+A−/A+ in the View menu changes code font size from 10–20px (13px default), updating row spacing
 without changing the surrounding UI. Persist this with revision-local preferences.
 Verify complete old/new line coverage, additions/deletions, no-final-newline files,
 existing comment navigation, file boundaries, viewed state, font limits/reload,
 group order, and desktop/tablet geometry. A UI refresh preserves analysis and QA.
 
-File by file and Unified are the main review defaults. Place explicit File by file / Walkthrough reading controls beside Unified/Split; the main diff has no Auto option. Walkthrough retains the existing group steps; do not imply it is one infinite list. Keep the existing grouped sidebar visible on desktop and the current group, step and file position in the sticky file header. Keep hunk explanations out of the source flow: a small note marker beside the line-number gutter on the first changed line opens a clearly labeled Review note popover. Use only the grouped sidebar for file selection; show a selectable current file path with Copy path in the reading header, without a competing file dropdown. Hide the unified table header visually while retaining accessible before/after line-number labels. Changed-section buttons navigate contiguous changed blocks separated by unchanged lines, including multiple blocks inside one Git hunk. Track the selected block explicitly across clicks, including when scrolling is clamped at the file bottom; resynchronize after manual scrolling. Use instant scrolling corrected for the sticky header, without wrapping, show the current section count and disable at boundaries. Viewed records progress without advancing or hiding the focused file; Next file remains a separate action. Explicit Overview/All changes links still open their respective screens.
+File by file and Unified are the main review defaults. Place explicit File by file / Walkthrough reading controls beside Unified/Split inside the View menu; the main diff has no Auto option. Walkthrough retains the existing group steps; do not imply it is one infinite list. Keep the existing grouped sidebar visible on desktop, the file or step position in the reading-bar pager, and the current group and step in the sticky file header. Keep hunk explanations out of the source flow: a small note marker beside the line-number gutter on the first changed line opens a clearly labeled Review note popover. Use only the grouped sidebar for file selection; show a selectable current file path with Copy path in the reading header, without a competing file dropdown. Hide the unified table header visually while retaining accessible before/after line-number labels. Changed-section buttons navigate contiguous changed blocks separated by unchanged lines, including multiple blocks inside one Git hunk. Track the selected block explicitly across clicks, including when scrolling is clamped at the file bottom; resynchronize after manual scrolling. Use instant scrolling corrected for the sticky header, without wrapping, show the current section count and disable at boundaries. Viewed records progress without advancing or hiding the focused file; Next file remains a separate action. Explicit Overview/All changes links still open their respective screens.
 
 In File by file, paired ViewComponents expose compact Ruby / Template navigation beside the current path, using the same component pairing within the existing review layer. Indicate the current file and preserve group order, viewed state and full-path copying. Show shortcuts only when both files exist in the reviewed scope; do not invent or load an unchanged companion.
 
-Keep the file-reader header compact: group, file position, changed-section arrows/count and Viewed share an orientation row; show the selectable full path below with an accessible copy icon. Mobile puts the group on its own row and keeps position/navigation/Viewed together. Component shortcuts and a quiet About this file disclosure follow without reserving empty space. Preserve full names by wrapping, and keep change navigation correct when the sticky header height changes.
+Keep the file-reader header to two rows. The orientation row holds the group/step breadcrumb and the changed-section stepper. The file row holds the selectable full path with an icon-only copy button, component shortcuts, the preview chip, a quiet Why this file disclosure, and Viewed plus Next file at its end. Do not repeat the file position the pager already shows. Preserve full names by wrapping, and keep change navigation correct when the sticky header height changes.
 
-Keep header controls clustered rather than stretching them across the available width. Copy path and About this file sit directly beside the path. Make Mark viewed a visibly clickable checkbox action, with a separate Next file button; checking it must not advance automatically. Wrap these clusters naturally on mobile.
+Keep header controls clustered rather than stretching them across the available width. Make Mark viewed a visibly clickable checkbox action, with a separate Next file button; checking it must not advance automatically. Wrap these clusters naturally on mobile.
 
 Reading mode is a browser preference separate from the current destination. Overview and All changes must not change File by file / Walkthrough. Persist explicit mode choices in local storage and apply them when returning to a review group or file; default to File by file when no preference is saved.
 

@@ -5,6 +5,10 @@ checking: clipping, layout, validation, focus, navigation, loading, or error sta
 Backend-only work needs no decorative browser captures. Choose a few high-value
 states and a short flow; avoid exhaustive screenshots or full-session recordings.
 
+The Video QA banner copies a complete request. Derive the QA plan from saved
+findings, walkthroughs and changed user flows. Attach finding evidence with its
+comment_id; retain relevant successful flows in Other flows checked.
+
 ## Publish first; capture only useful evidence
 
 1. Complete the code review and identify the specific visual behavior, expected
@@ -25,21 +29,20 @@ states and a short flow; avoid exhaustive screenshots or full-session recordings
    Use [tab-capture.md](tab-capture.md) for the native recorder when video or
    capture-stream PNGs are needed. A supported browser's original PNG screenshot
    may also serve as static evidence; inspect its saved pixels and dimensions.
-4. For tab capture, open the app and the served review in the supported browser.
-   The reader clicks **Choose QA tab**, selects the app tab and clicks **Share**.
-   This queues a QA request. `qa_capture.rb control wait-request` returns the
-   request to the active agent, and `status` confirms the stream is ready. No
-   typed “shared” reply or second question is needed. If the optional share
-   never occurs in the bounded wait, stop the helper and deliver the complete
-   code review. A later request starts a new turn; the helper cannot resume an
-   agent turn that has already ended.
-5. Capture the planned state or short flow with safe test data. For video, verify
-   the selected tab, pointer visibility and readable text with one quick probe;
-   stop after one supported recovery if recording fails. Prepare the page first,
-   record only the meaningful actions and result, and save one or two native PNG
-   stills. Avoid trimming by recording a short clip initially. Restore temporary
-   data, including failed setup attempts.
-6. Attach one QA update with the command below. Check the saved report's status,
+4. For requested tab recording, prepare access and open the app tab with the
+   supported browser before serving the recorder. Identify the tab's actual
+   title. The reader clicks **Choose QA tab** and **Share**; `control wait-ready`
+   detects sharing without a typed reply. An initial review needs no recorder
+   or background wait. The Overview's **Copy QA prompt** starts a later agent
+   turn when the developer is ready.
+5. Capture the planned state or short flow with safe test data. Record the
+   meaningful actions directly, without a routine pointer probe or rehearsal
+   video. Use the pointer the harness renders; never synthesize cursor movement
+   or click overlays. Inspect the requested evidence once, and investigate only
+   an actual failure. Avoid trimming by recording a short clip initially.
+   Restore temporary data, including failed setup attempts.
+6. Preserve existing flows for the same snapshot when composing the QA update.
+   Attach one QA update with the command below. Check the saved report's status,
    media count, embedded data URIs and comment links without printing media data.
    Open the media once in the browser when available. Keep failed flows associated
    with their finding and keep passed flows compact. Finish with `complete`,
@@ -120,7 +123,8 @@ accessible in historical HTML.
 The capture helper is independent of Codex, Claude, Grok, OpenCode and Pi. Each
 harness still controls its browser using its own supported tools. Native pointer
 rendering is a property of that browser/automation arrangement; it is not
-implemented by this skill. Verify it instead of assuming it exists. The helper
+implemented by this skill. Do not promise pointer visibility for an untested harness. Use the actual
+requested recording to identify a missing pointer; no extra per-session probe. The helper
 uses standard tab-sharing and media recording APIs in desktop Chromium; macOS
 is exercised, Linux/Omarchy and Windows Chrome with WSL still need live validation.
 See the capture reference for WSL paths and the one-time share interaction.

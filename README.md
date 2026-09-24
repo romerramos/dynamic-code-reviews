@@ -175,10 +175,15 @@ Continue the task-export review with my latest changes.
 Without an explicit scope, the skill reviews uncommitted changes when present, or
 the current branch's single open PR when the working tree is clean. Ambiguous
 scopes or series need clarification. Video evidence and full template previews
-are optional additions to the complete code review. In a live review, sharing a
-QA tab or requesting a specific file preview queues work for the active agent
-without a typed chat reply. The agent waits for a bounded window; after that
-turn ends, ask it to reopen the review to handle later requests.
+are optional additions to the complete code review. Use **Add to previews** beside templates, then
+copy one prompt from the header's **Previews** list to request them in one batch.
+That list also shows which templates are ready, still requested, or not
+previewable, so a rebuilt report never loses track of them. The Overview's
+**Video QA** row separately copies a QA prompt.
+Paste either prompt into a coding agent whenever ready. The initial review
+starts no recorder or background wait. For requested video, the agent prepares
+the app tab before opening the sharing controls and records the useful flow
+directly, without a routine cursor probe.
 
 See [SKILL.md](SKILL.md) for agent instructions,
 [the review schema](references/report-schema.md) for authoring review JSON, and

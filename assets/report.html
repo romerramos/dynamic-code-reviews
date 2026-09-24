@@ -10,35 +10,40 @@
 <body>
   <a class="skip-link" href="#content">Skip to review</a>
   <header class="app-header">
-    <div class="brand"><span class="brand-icon" aria-hidden="true">__ICON__</span><div><strong>Dynamic Code Reviews</strong><small id="repo-label"></small></div></div>
-    <div class="header-title"><strong id="title"></strong><span id="scope"></span></div>
-    <div class="header-actions"><div id="revision-navigation"></div><button class="btn btn-sm btn-ghost" id="context-toggle">Review details</button></div>
+    <div class="brand" title="Dynamic Code Reviews"><span class="brand-icon" aria-hidden="true">__ICON__</span></div>
+    <div class="header-title"><strong id="title"></strong><span class="header-meta"><span id="repo-label"></span><span id="scope"></span></span></div>
+    <div class="header-actions"><button class="header-button" id="preview-list-toggle" data-open-previews hidden>Previews</button><div id="revision-navigation"></div><button class="header-button" id="context-toggle">Details</button></div>
   </header>
   <div class="workspace">
     <aside class="sidebar" aria-label="Change groups">
-      <div class="sidebar-heading"><strong>Review navigator</strong><span id="file-total" class="badge neutral"></span></div>
+      <div class="sidebar-heading"><strong>Walkthrough</strong><span id="file-total" class="badge neutral"></span></div>
       <input id="search" class="input input-bordered" type="search" placeholder="Find a file or step…" aria-label="Find a file or step">
       <nav id="navigation" aria-label="Review navigation"></nav>
-      <div class="sidebar-footer"><progress id="progress-bar" class="progress progress-primary" value="0" max="1" aria-label="Review progress"></progress><span id="progress" role="status"></span><small><kbd>J</kbd> next · <kbd>K</kbd> previous · <kbd>Z</kbd> reading mode</small></div>
+      <div class="sidebar-footer"><span id="progress" role="status"></span><progress id="progress-bar" class="progress progress-primary" value="0" max="1" aria-label="Review progress"></progress></div>
     </aside>
     <div class="review-area">
       <div class="review-toolbar">
-        <div class="toolbar-navigation"><button id="nav-toggle" class="btn btn-sm btn-ghost" aria-expanded="false" aria-label="Toggle review navigation">☰</button><button id="prev" class="btn btn-sm btn-ghost" aria-label="Previous step">←</button><button id="next" class="btn btn-sm btn-ghost" aria-label="Next step">→</button><span id="position"></span></div>
+        <div class="toolbar-navigation"><button id="nav-toggle" class="icon-button" aria-expanded="false" aria-label="Toggle review navigation">☰</button><div class="pager"><button id="prev" class="icon-button" aria-label="Previous step">←</button><span id="position"></span><button id="next" class="icon-button" aria-label="Next step">→</button></div></div>
         <div class="toolbar-options">
-          <fieldset class="join" role="group" aria-label="Diff layout"><button id="unified" class="btn btn-sm join-item">Unified</button><button id="split" class="btn btn-sm join-item">Split</button></fieldset>
-          <fieldset class="join reading-modes" aria-label="Reading mode"><button id="focus" class="btn btn-sm join-item" aria-pressed="true">File by file</button><button id="walkthrough" class="btn btn-sm join-item" aria-pressed="false">Walkthrough</button></fieldset>
-          <label><input id="comments-toggle" class="checkbox checkbox-xs checkbox-primary" type="checkbox" checked> Comments</label>
-          <div class="font-controls" role="group" aria-label="Code font size"><button id="font-smaller" class="btn btn-sm btn-ghost" aria-label="Decrease code font size">A−</button><output id="font-size" aria-live="polite"></output><button id="font-larger" class="btn btn-sm btn-ghost" aria-label="Increase code font size">A+</button></div>
+          <button id="view-toggle" class="view-toggle" popovertarget="view-menu" aria-haspopup="dialog" aria-expanded="false"><span id="view-icon" aria-hidden="true"></span><span class="view-label">View</span><span id="view-summary"></span></button>
         </div>
       </div>
       <main id="content" tabindex="-1"></main>
     </div>
+  </div>
+  <div id="view-menu" class="view-menu" popover="auto" role="dialog" aria-label="Display settings">
+    <section><h2>Reading</h2><fieldset class="segmented reading-modes" aria-label="Reading mode"><button id="focus" aria-pressed="true">File by file</button><button id="walkthrough" aria-pressed="false">Walkthrough</button></fieldset><p id="reading-hint" class="view-hint"></p></section>
+    <section><h2>Diff</h2><fieldset class="segmented" role="group" aria-label="Diff layout"><button id="unified">Unified</button><button id="split">Split</button></fieldset></section>
+    <section class="view-row"><label class="view-switch"><input id="comments-toggle" class="toggle toggle-sm toggle-primary" type="checkbox" checked><span>Review comments in the code</span></label></section>
+    <section class="view-row"><span>Code size</span><div class="font-controls" role="group" aria-label="Code font size"><button id="font-smaller" class="icon-button" aria-label="Decrease code font size">A−</button><output id="font-size" aria-live="polite"></output><button id="font-larger" class="icon-button" aria-label="Increase code font size">A+</button></div></section>
+    <section class="view-keys"><h2>Keyboard</h2><p><kbd>J</kbd> <kbd>K</kbd> next / previous · <kbd>Z</kbd> switch reading · <kbd>Esc</kbd> close</p></section>
   </div>
   <dialog id="details-dialog" class="modal" aria-labelledby="details-title"><article class="modal-box"><header><button aria-label="Close review details" rel="prev" class="btn btn-sm btn-circle btn-ghost" id="close-details">✕</button><h2 id="details-title">Review details</h2></header><div id="review-details"></div><footer><button id="export" class="btn btn-sm btn-ghost">Export local notes</button><button class="btn btn-sm btn-primary" id="done-details">Done</button></footer></article></dialog>
   <div id="comment-popover" class="comment-popover" popover="auto" role="dialog" aria-labelledby="comment-popover-title"></div>
   <div id="range-actions" class="range-actions" hidden><div><strong id="range-label"></strong><small>Select another line to extend the range.</small></div><button id="write-comment" class="btn btn-sm btn-primary">Comment</button><button id="clear-range" class="btn btn-sm btn-ghost" aria-label="Clear selected range">✕</button></div>
   <dialog id="comment-editor" class="modal" aria-labelledby="editor-title"><form id="comment-form" class="modal-box"><header><h2 id="editor-title">Your comment</h2><button id="cancel-comment" type="button" class="btn btn-sm btn-circle btn-ghost" aria-label="Cancel comment">✕</button></header><p id="editor-location" class="comment-location"></p><pre id="editor-snippet" class="comment-snippet"></pre><label class="editor-label">Type<select id="editor-label" class="select select-bordered"><option value="note">Note</option><option value="question">Question</option><option value="suggestion">Suggestion</option><option value="issue">Issue</option></select></label><label class="editor-label">Comment<input id="editor-subject" class="input input-bordered" required placeholder="What should change, or what needs a closer look?"></label><label class="editor-label">Details <span class="muted">(optional)</span><textarea id="editor-discussion" class="textarea textarea-bordered" rows="3"></textarea></label><label class="editor-blocking"><input id="editor-blocking" type="checkbox" class="checkbox checkbox-sm"> Blocks approval</label><footer><span class="muted">Saved in this browser. Export a copy to keep it.</span><button type="submit" class="btn btn-sm btn-primary">Save comment</button></footer></form></dialog>
   <dialog id="copy-dialog" class="modal" aria-labelledby="copy-title"><div class="modal-box"><h2 id="copy-title">Copy text</h2><p>Automatic copying is unavailable. Select and copy this text.</p><textarea id="copy-text" class="textarea textarea-bordered" readonly rows="12" aria-label="Review text to copy"></textarea><button id="close-copy" class="btn btn-sm btn-primary">Done</button></div></dialog>
+  <dialog id="previews-dialog" class="modal" aria-labelledby="previews-title"><div class="modal-box preview-hub-box"><header><div><h2 id="previews-title">Template previews</h2><p class="muted">Rendered from the reviewed code with example data. Pick templates while reading, then ask your agent for all of them at once.</p></div><button type="button" id="close-previews" class="btn btn-sm btn-circle btn-ghost" aria-label="Close template previews">✕</button></header><div id="preview-hub"></div></div></dialog>
   <div id="toast" role="status" hidden></div>
   <script type="application/json" id="data">__REVIEW_DATA__</script>
   <script>__SCRIPTS__</script>

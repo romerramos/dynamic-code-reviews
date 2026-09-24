@@ -69,6 +69,13 @@
   const layerComments = layer => comments.filter(comment => hunkIDs(layer).includes(comment.hunk) || layer.items.some(item => comment.hunk === fullAnchor(files.get(item.file))));
   const titleWithoutNumber = title => title.replace(/^\d+\s*[·.]\s*/, '');
 
+  // Templates show where their preview stands, so rendered ones are easy to find again.
+  function navPreviewMark(file) {
+    if (!previewEligible(file)) return '';
+    const status = previewState(file.path);
+    const label = {fresh:'New preview ready', ready:'Preview ready', requested:'Preview requested', selected:'Selected for preview'}[status];
+    return label ? `<span class="nav-preview is-${status}" title="${label}" aria-label="${label}">${icon(status === 'requested' ? 'clock' : 'scan-text')}</span>` : '';
+  }
   function renderNavigation() {
     const query = $('search').value.trim().toLowerCase();
     let html = `<ul class="menu"><li><button data-view="overview" aria-current="${state.view === 'overview' ? 'page' : 'false'}"><span class="step-number">☷</span><span class="step-body"><strong>Overview</strong><small>Comments & evidence</small></span></button></li><li><button data-view="files" aria-current="${state.view === 'files' ? 'page' : 'false'}"><span class="step-number">⌘</span><span class="step-body"><strong>All changes</strong><small>Diffs by responsibility · ${files.size} files</small></span></button></li></ul>`;
@@ -82,7 +89,7 @@
         const slash = file.path.lastIndexOf('/');
         const filename = file.path.slice(slash + 1);
         const directory = slash < 0 ? '' : file.path.slice(0, slash);
-        return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" aria-current="${state.navFile === id && state.view === layer.id ? 'location' : 'false'}" title="${escape(file.path)}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}"><span class="file-status" aria-hidden="true">${fileViewed(file) ? icon('check') : ''}</span><span class="nav-file-label"><span class="nav-file-name">${escape(filename)}</span>${directory ? `<small class="nav-file-directory">${escape(directory)}</small>` : ''}</span></button></li>`;
+        return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" aria-current="${state.navFile === id && state.view === layer.id ? 'location' : 'false'}" title="${escape(file.path)}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}"><span class="file-status" aria-hidden="true">${fileViewed(file) ? icon('check') : ''}</span><span class="nav-file-label"><span class="nav-file-name">${escape(filename)}</span>${directory ? `<small class="nav-file-directory">${escape(directory)}</small>` : ''}</span>${navPreviewMark(file)}</button></li>`;
       };
       matching.forEach(layer => {
         const count = layerComments(layer).length;
@@ -361,6 +368,77 @@
     if (!target.has(path)) target.set(path, []);
     target.get(path).push(preview);
   }));
+  // Visual selections survive media-only revisions of the same code snapshot.
+  const visualStorageKey = `dynamic-review:visuals:${snapshot.repo}:${review.history?.series || ''}:${snapshot.fingerprint}`;
+  let visualState = {};
+  try { visualState = JSON.parse(localStorage.getItem(visualStorageKey) || '{}') || {}; } catch { /* Session-only selection still works. */ }
+  visualState = {previews:ReviewTools.pendingPreviews(snapshot, review, visualState.previews), requested:Array.isArray(visualState.requested) ? visualState.requested : []};
+  const previewsPossible = snapshot.files.some(ReviewTools.previewEligible);
+  const lifecycle = () => ReviewTools.previewLifecycle(snapshot, review, visualState);
+  function persistVisuals() {
+    try { localStorage.setItem(visualStorageKey, JSON.stringify(visualState)); return true; }
+    catch { return false; }
+  }
+  const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
+  const since = at => {
+    const minutes = Math.round((Date.now() - Date.parse(at)) / 60000);
+    if (!Number.isFinite(minutes)) return '';
+    if (minutes < 1) return 'just now';
+    if (minutes < 60) return `${minutes} min ago`;
+    if (minutes < 1440) return `${Math.round(minutes / 60)} h ago`;
+    return new Date(at).toLocaleDateString();
+  };
+  // A file's place in the preview lifecycle: ready, requested, selected or none.
+  function previewState(path) {
+    const hub = lifecycle();
+    if (hub.ready.some(item => item.path === path)) return hub.ready.find(item => item.path === path).fresh ? 'fresh' : 'ready';
+    if (hub.requested.some(item => item.path === path)) return 'requested';
+    return visualState.previews.includes(path) ? 'selected' : 'none';
+  }
+  function hubRow(path, meta, actions) {
+    const slash = path.lastIndexOf('/');
+    return `<li><div class="hub-file"><strong>${escape(path.slice(slash + 1))}</strong><small>${escape(slash < 0 ? '' : path.slice(0, slash))}</small>${meta ? `<span class="hub-meta">${meta}</span>` : ''}</div><div class="hub-actions">${actions}</div></li>`;
+  }
+  function renderPreviewHub() {
+    const hub = lifecycle();
+    const ready = hub.ready.length ? `<section class="hub-section"><h3>Ready to view <span>${hub.ready.length}</span></h3><ul class="hub-list">${hub.ready.map(item => hubRow(item.path, `${item.fresh ? '<b class="hub-new">New</b> ' : ''}${escape(plural(item.examples, 'example'))}${item.titles.length ? ` · ${escape(item.titles.join(' · '))}` : ''}`, `<button type="button" class="btn btn-sm btn-primary" data-open-preview="${escape(item.path)}">Open</button>`)).join('')}</ul></section>` : '';
+    const requested = hub.requested.length ? `<section class="hub-section"><h3>Requested <span>${hub.requested.length}</span></h3><p class="hub-help">Waiting for your agent. They move to Ready when it publishes the next revision.</p><ul class="hub-list">${hub.requested.map(item => hubRow(item.path, `${icon('clock')} Asked ${escape(since(item.at))}${item.revision ? ` from revision ${item.revision}` : ''}`, `<button type="button" class="btn btn-sm btn-ghost" data-open-preview="${escape(item.path)}">Show code</button><button type="button" class="btn btn-sm btn-ghost" data-forget-preview="${escape(item.path)}" aria-label="${escape(`Forget the request for ${item.path}`)}">Forget</button>`)).join('')}</ul><button type="button" class="btn btn-sm btn-ghost hub-inline" data-copy-previews="requested">Copy the request again</button></section>` : '';
+    const selected = `<section class="hub-section hub-selected"><h3>Selected <span>${hub.selected.length}</span></h3>${hub.selected.length ? `<ul class="hub-list">${hub.selected.map(path => hubRow(path, '', `<button type="button" class="btn btn-sm btn-ghost" data-remove-preview="${escape(path)}" aria-label="${escape(`Remove ${path} from previews`)}">Remove</button>`)).join('')}</ul>` : `<p class="hub-help">Nothing selected. While reading a template, use <strong>Add to previews</strong> in its header.</p>`}<div class="hub-footer"><button type="button" class="btn btn-sm btn-primary" data-copy-previews="selected" ${hub.selected.length ? '' : 'disabled'}>Copy prompt for ${hub.selected.length ? plural(hub.selected.length, 'template') : 'selected templates'}</button><small>Paste it into your coding agent. The selection then moves to Requested.</small></div></section>`;
+    const unavailable = hub.unavailable.length ? `<details class="hub-section hub-unavailable"><summary>Not previewed <span>${hub.unavailable.length}</span></summary><ul class="hub-list">${hub.unavailable.map(item => hubRow(item.path, `${item.status === 'not_visual' ? 'Not visual' : 'Unavailable'}${item.note ? ` · ${escape(item.note)}` : ''}`, '')).join('')}</ul></details>` : '';
+    return `${ready}${requested}${selected}${unavailable}`;
+  }
+  function refreshVisualControls() {
+    const hub = lifecycle();
+    const toggle = $('preview-list-toggle');
+    toggle.hidden = !previewsPossible;
+    const waiting = hub.selected.length + hub.requested.length;
+    toggle.innerHTML = `${icon('scan-text')}<span>Previews</span>${hub.fresh ? `<b class="header-count is-new">${hub.fresh} new</b>` : hub.ready.length ? `<b class="header-count">${hub.ready.length}</b>` : ''}${waiting ? `<b class="header-count is-pending" title="Selected or requested">${icon('clock')}${waiting}</b>` : ''}`;
+    toggle.setAttribute('aria-label', `Template previews: ${hub.ready.length} ready${hub.fresh ? `, ${hub.fresh} new` : ''}, ${hub.requested.length} requested, ${hub.selected.length} selected`);
+    document.querySelectorAll('[data-preview-summary]').forEach(node => { node.innerHTML = previewSummary(hub); });
+    document.querySelectorAll('[data-request-preview]').forEach(button => {
+      const status = previewState(button.dataset.requestPreview);
+      button.setAttribute('aria-pressed', status === 'selected');
+      button.dataset.status = status;
+      button.querySelector('span').textContent = {selected:'Selected for preview', requested:'Preview requested'}[status] || 'Add to previews';
+    });
+    if ($('previews-dialog').open) $('preview-hub').innerHTML = renderPreviewHub();
+  }
+  function previewSummary(hub) {
+    const parts = [hub.ready.length && `${hub.ready.length} ready${hub.fresh ? ` (${hub.fresh} new)` : ''}`, hub.requested.length && `${hub.requested.length} requested`, hub.selected.length && `${hub.selected.length} selected`].filter(Boolean);
+    return parts.length ? escape(parts.join(' · ')) : 'None yet. Add templates while reading the diff.';
+  }
+  function openPreviewHub() {
+    $('preview-hub').innerHTML = renderPreviewHub();
+    $('previews-dialog').showModal();
+    // Land on the most useful action rather than the close button.
+    $('preview-hub').querySelector('[data-open-preview], [data-copy-previews]:not(:disabled)')?.focus();
+  }
+  // Optional evidence requests stay one quiet strip; the review itself leads the page.
+  function renderVisualOptions() {
+    const qa = `<div class="evidence-request visual-qa-option">${icon('video')}<div><strong>Video QA</strong><p>Your agent picks checks from the findings and changed flows, records them, and attaches the videos here.</p></div><button type="button" class="btn btn-sm" data-copy-qa>Copy QA prompt</button></div>`;
+    const previews = previewsPossible ? `<div class="evidence-request">${icon('scan-text')}<div><strong>Template previews</strong><p data-preview-summary>${previewSummary(lifecycle())}</p></div><button type="button" class="btn btn-sm" data-open-previews>Open previews</button></div>` : '';
+    return `<section class="evidence-requests" aria-label="Optional visual evidence"><h2>Ask for visual evidence</h2>${qa}${previews}<small>Copying a prompt only prepares text for your coding agent. Nothing runs until you paste it.</small></section>`;
+  }
   const previewSources = {lookbook: 'Lookbook example', example: 'Example data for this review'};
   const wideScreen = () => matchMedia('(min-width: 1200px)').matches;
   // The side pane opens by itself only on big screens; laptops keep the code wide and
@@ -369,12 +447,16 @@
 
   function previewToggle(file) {
     const list = previewsByPath.get(file.path);
-    if (!list?.length) return previewEligible(file) && !notVisualByPath.has(file.path) ? `<button type="button" class="preview-toggle" data-request-preview="${escape(file.path)}" title="Request a visual preview for this file">${icon('scan-text')}<span>Request preview</span></button>` : '';
-    return `<button type="button" class="preview-toggle" data-preview-toggle aria-controls="preview-pane" aria-expanded="${previewPaneOpen()}" title="Show how this template renders">${icon('scan-text')}<span>Visual preview</span><span class="preview-count">${list.length}</span></button>`;
+    if (!list?.length) {
+      if (!previewEligible(file) || notVisualByPath.has(file.path)) return '';
+      const status = previewState(file.path);
+      return `<button type="button" class="preview-toggle is-request" data-request-preview="${escape(file.path)}" data-status="${status}" aria-pressed="${status === 'selected'}" title="Select this template for your next preview request">${icon(status === 'requested' ? 'clock' : 'scan-text')}<span>${{selected:'Selected for preview', requested:'Preview requested'}[status] || 'Add to previews'}</span></button>`;
+    }
+    return `<button type="button" class="preview-toggle" data-preview-toggle aria-controls="preview-pane" aria-expanded="${previewPaneOpen()}" title="Show how this template renders">${icon('scan-text')}<span>Preview</span><span class="preview-count">${list.length}</span>${previewState(file.path) === 'fresh' ? '<b class="hub-new">New</b>' : ''}</button>`;
   }
 
   function previewEligible(file) {
-    return !/^deleted file mode /m.test(file.patch || '') && (/\.html\.erb$/.test(file.path) || /^app\/components\/.*_component\.rb$/.test(file.path));
+    return ReviewTools.previewEligible(file);
   }
 
   function notVisualNote(file) {
@@ -475,7 +557,12 @@
     const added = changes.filter(line => line.kind === 'add').length;
     const removed = changes.filter(line => line.kind === 'del').length;
     const table = renderDiffTable(file, hunks, item.summaries);
-    return `<details class="file-card ${fileViewed(file) ? 'is-viewed' : ''}" data-file="${file.id}" ${fileOpen(file) ? 'open' : ''}><summary><span class="file-icon" aria-hidden="true">&lt;/&gt;</span><span class="filename">${escape(file.path)}</span><span class="badge success">+${added}</span><span class="badge blocking">−${removed}</span><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" aria-label="${escape(`Mark ${file.path} as viewed`)}" ${fileViewed(file) ? 'checked' : ''}> Viewed</label></summary>${item.summary || file.note ? `<div class="file-summary">${escape(item.summary || '')}${file.note ? ` · ${escape(file.note)}` : ''}</div>` : ''}${previewToggle(file)}${previewPanel(file, 'inline')}${notVisualNote(file) ? `<div class="file-summary">${notVisualNote(file)}</div>` : ''}${hunks.length ? table : `<div class="file-summary"><pre>${escape(file.patch || 'No text diff available.')}</pre></div>`}</details>`;
+    // The range heading already says it when a file has one summary for its only change.
+    const repeated = hunks.length && hunks.every(hunk => (item.summaries || {})[hunk.id] === item.summary);
+    const summary = [!repeated && item.summary, file.note].filter(Boolean).map(escape).join(' · ');
+    // A rendered preview is its own disclosure; only the request control sits in the card.
+    const request = previewsByPath.get(file.path)?.length ? '' : previewToggle(file);
+    return `<details class="file-card ${fileViewed(file) ? 'is-viewed' : ''}" data-file="${file.id}" ${fileOpen(file) ? 'open' : ''}><summary><span class="file-icon" aria-hidden="true">&lt;/&gt;</span><span class="filename">${escape(file.path)}</span><span class="badge success">+${added}</span><span class="badge blocking">−${removed}</span><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" aria-label="${escape(`Mark ${file.path} as viewed`)}" ${fileViewed(file) ? 'checked' : ''}> Viewed</label></summary>${summary || request || notVisualNote(file) ? `<div class="file-summary">${summary ? `<span>${summary}</span>` : ''}${request}${notVisualNote(file)}</div>` : ''}${previewPanel(file, 'inline')}${hunks.length ? table : `<div class="file-summary"><pre>${escape(file.patch || 'No text diff available.')}</pre></div>`}</details>`;
   }
 
   const commentTypes = {
@@ -741,7 +828,7 @@
     const qa = review.qa;
     const historyLinks = revision ? `<nav class="overview-history" aria-label="Review history"><a href="${revision.preview ? '' : '../'}current.html">Latest review</a><a href="${revision.preview ? '' : '../'}index.html">All revisions</a></nav>` : '';
     const empty = !generated.length && !feedback.findings.length && !pending && !unlinkedFlows().some(({flow}) => flow.result === 'failed') ? '<p class="review-empty">No issues found in this review.</p>' : '';
-    return `<div class="overview-reading"><header class="overview-intro"><p class="eyebrow">Review overview</p><h1>${escape(review.title)}</h1><h2 class="what-changed-title">What changed</h2><p class="overview-scope">${escape(ReviewTools.comparisonText(snapshot, review))}</p><p class="lead">${escape(review.summary)}</p>${revision && revision.revision > 1 ? `<p class="overview-update"><strong>Review revision ${revision.revision}</strong> · ${escape(revision.summary)}</p>` : ''}${historyLinks}</header><p class="overview-notice visual-options">Visual QA recording and Rails template previews are available on request. Open this review through the local QA helper to request recording or a preview from a file; or ask the agent in chat.</p>${pending ? `<p class="overview-notice">${pending} previous finding${pending === 1 ? '' : 's'} still need checking. See Review details.</p>` : ''}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${generated.map(commentCard).join('')}${unlinkedFlows().filter(({flow}) => flow.result === 'failed').map(({flow,index}) => qaFlow(flow,index)).join('')}</section>${renderOtherChecks()}${renderMyReview()}</div>`;
+    return `<div class="overview-reading"><header class="overview-intro"><p class="eyebrow">Review overview</p><h1>${escape(review.title)}</h1><h2 class="what-changed-title">What changed</h2><p class="overview-scope">${escape(ReviewTools.comparisonText(snapshot, review))}</p><p class="lead">${escape(review.summary)}</p>${revision && revision.revision > 1 ? `<p class="overview-update"><strong>Review revision ${revision.revision}</strong> · ${escape(revision.summary)}</p>` : ''}${historyLinks}</header>${renderVisualOptions()}${pending ? `<p class="overview-notice">${pending} previous finding${pending === 1 ? '' : 's'} still need checking. See Review details.</p>` : ''}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${generated.map(commentCard).join('')}${unlinkedFlows().filter(({flow}) => flow.result === 'failed').map(({flow,index}) => qaFlow(flow,index)).join('')}</section>${renderOtherChecks()}${renderMyReview()}</div>`;
   }
 
   function renderStep(layer) {
@@ -787,7 +874,9 @@
       full.forEach(hunk => highlightCache.set(hunk.id, colored));
       fullContextCache.set(`${file.id}:highlighted`, true);
     }
-    return `<section class="focus-reader"><header class="focus-file-header"><div class="focus-meta"><span class="focus-group" title="${escape(entry.layer.group.title)}">Group ${review.groups.indexOf(entry.layer.group) + 1} of ${review.groups.length} · ${escape(entry.layer.group.title)}${entry.layer.title === entry.layer.group.title ? '' : ` · ${escape(entry.layer.title)}`}</span><span class="focus-file-position">File ${focusIndex + 1} of ${focusOrder.length}</span><div class="focus-file-actions"><button class="btn btn-sm btn-ghost" data-change-step="-1" disabled aria-label="Previous changed section" title="Previous changed section">←</button><span id="change-position" class="muted">${file.hunks.length} changes</span><button class="btn btn-sm btn-ghost" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} aria-label="Next changed section" title="Next changed section">→</button></div><div class="focus-progress-actions"><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" ${fileViewed(file) ? 'checked' : ''}> <span>${fileViewed(file) ? 'Viewed' : 'Mark viewed'}</span></label><button class="btn btn-sm btn-ghost" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></div></div><div class="focus-identity"><div class="current-file"><code>${escape(file.path)}</code><button class="btn btn-sm btn-ghost copy-file-path" data-copy-file title="Copy the full relative file path" aria-label="Copy file path">${icon('copy')}<span>Copy path</span></button></div>${componentLinks}${previewToggle(file)}${notVisualNote(file)}<details class="file-about"><summary>About this file</summary><p>${escape(entry.layer.summary || entry.layer.group.summary)}</p>${items.map(item => item.summary ? `<p>${escape(item.summary)}</p>` : '').join('')}</details></div></header>${!full ? '<p class="focus-unavailable">Full source was not captured or exceeds the text limit. Showing the saved diff; no current working files have been substituted.</p>' : ''}${(() => { const code = file.hunks.length || full?.length ? renderDiffTable(file, full || file.hunks, summaries) : `<pre>${escape(file.note || file.patch || 'No text diff available.')}</pre>`; const preview = previewPanel(file, 'side'); return preview ? `<div class="focus-body has-preview"><div class="focus-code">${code}</div>${preview}</div>` : code; })()}<footer class="focus-end"><span>${focusIndex + 1 === focusOrder.length ? 'End of the review' : `Next: ${escape(files.get(focusOrder[focusIndex + 1].file).path)}`}</span><button class="btn btn-sm btn-primary" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></footer></section>`;
+    const groupNumber = review.groups.indexOf(entry.layer.group) + 1;
+    const stepTitle = entry.layer.title === entry.layer.group.title ? '' : `<span class="crumb-sep" aria-hidden="true">›</span><span class="crumb-step">${escape(entry.layer.title)}</span>`;
+    return `<section class="focus-reader"><header class="focus-file-header"><div class="focus-meta"><span class="focus-group" title="${escape(`Group ${groupNumber} of ${review.groups.length}: ${entry.layer.group.title}`)}"><span class="crumb-number">${groupNumber}/${review.groups.length}</span>${escape(titleWithoutNumber(entry.layer.group.title))}${stepTitle}</span><div class="focus-file-actions" role="group" aria-label="Changed sections"><button class="icon-button" data-change-step="-1" disabled aria-label="Previous changed section" title="Previous changed section">${icon('chevron-left')}</button><span id="change-position">${file.hunks.length} changes</span><button class="icon-button" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} aria-label="Next changed section" title="Next changed section">${icon('chevron-right')}</button></div></div><div class="focus-identity"><div class="current-file"><code>${escape(file.path)}</code><button class="icon-button copy-file-path" data-copy-file title="Copy the full relative file path" aria-label="Copy file path">${icon('copy')}</button></div>${componentLinks}${previewToggle(file)}${notVisualNote(file)}<details class="file-about"><summary>${icon('info')}<span>Why this file</span></summary><p>${escape(entry.layer.summary || entry.layer.group.summary)}</p>${items.map(item => item.summary ? `<p>${escape(item.summary)}</p>` : '').join('')}</details><div class="focus-progress-actions"><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" ${fileViewed(file) ? 'checked' : ''}> <span>${fileViewed(file) ? 'Viewed' : 'Mark viewed'}</span></label><button class="btn btn-sm btn-ghost" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file ${icon('arrow-right')}</button></div></div></header>${!full ? '<p class="focus-unavailable">Full source was not captured or exceeds the text limit. Showing the saved diff; no current working files have been substituted.</p>' : ''}${(() => { const code = file.hunks.length || full?.length ? renderDiffTable(file, full || file.hunks, summaries) : `<pre>${escape(file.note || file.patch || 'No text diff available.')}</pre>`; const preview = previewPanel(file, 'side'); return preview ? `<div class="focus-body has-preview"><div class="focus-code">${code}</div>${preview}</div>` : code; })()}<footer class="focus-end"><span>${focusIndex + 1 === focusOrder.length ? 'End of the review' : `Next: ${escape(files.get(focusOrder[focusIndex + 1].file).path)}`}</span><button class="btn btn-sm btn-primary" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></footer></section>`;
   }
   function focusFile(index) {
     document.body.classList.remove('navigation-open'); $('nav-toggle').setAttribute('aria-expanded', 'false');
@@ -872,6 +961,9 @@
     $('prev').disabled = !layer;
     $('next').disabled = !!layer && layers.indexOf(layer) === layers.length - 1;
     ['unified','split'].forEach(mode => { $(mode).setAttribute('aria-pressed', layoutChoice === mode); });
+    // The View button names the current setup, so nobody has to open it to know.
+    $('view-summary').textContent = [layoutChoice === 'split' ? 'Split' : 'Unified', focusMode ? 'File by file' : 'Walkthrough', !showComments && 'comments hidden'].filter(Boolean).join(' · ');
+    $('reading-hint').textContent = focusMode ? 'One file at a time, in walkthrough order. J and K move between files.' : 'Each step shows its files together under its explanation. J and K move between steps.';
     if (fileReadingActive()) {
       $('position').textContent = `File ${focusIndex + 1} of ${focusOrder.length}`;
       $('prev').disabled = focusIndex === 0; $('next').disabled = focusIndex === focusOrder.length - 1;
@@ -879,6 +971,7 @@
     $('prev').setAttribute('aria-label', fileReadingActive() ? 'Previous file' : 'Previous step');
     $('next').setAttribute('aria-label', fileReadingActive() ? 'Next file' : 'Next step');
     $('content').innerHTML = fileReadingActive() ? renderFocus() : layer ? renderStep(layer) : state.view === 'files' ? renderFiles() : renderOverview();
+    refreshVisualControls();
     hydratePreviews($('content'));
     paintSelection();
     requestAnimationFrame(updateChangeNavigation);
@@ -1023,11 +1116,53 @@
     if (previewRequest) {
       event.preventDefault(); event.stopPropagation();
       const file = previewRequest.dataset.requestPreview;
-      if (window.reviewEnhancements?.requestPreview) {
-        try { await window.reviewEnhancements.requestPreview(file); toast(`Preview requested for ${file}. Keep this review open while it renders.`); }
-        catch { toast('The local helper is unavailable. Ask the agent in chat to add this preview.'); }
-      } else toast('Ask the agent to open this review with the local QA helper, or request the preview in chat.');
+      const selected = visualState.previews.includes(file);
+      visualState.previews = ReviewTools.pendingPreviews(snapshot, review, selected ? visualState.previews.filter(path => path !== file) : [...visualState.previews, file]);
+      const stored = persistVisuals(); refreshVisualControls(); renderNavigation();
+      toast(stored ? (selected ? 'Removed from previews.' : 'Selected. Ask for all your selected templates from Previews in the header.') : 'Browser storage is unavailable. Copy your preview prompt before closing.');
       return;
+    }
+    if (event.target.closest('[data-open-previews]')) { openPreviewHub(); return; }
+    const removePreview = event.target.closest('[data-remove-preview]');
+    if (removePreview) {
+      visualState.previews = visualState.previews.filter(path => path !== removePreview.dataset.removePreview);
+      persistVisuals(); refreshVisualControls(); $('close-previews').focus(); return;
+    }
+    const forgetPreview = event.target.closest('[data-forget-preview]');
+    if (forgetPreview) {
+      visualState.requested = visualState.requested.filter(entry => entry.path !== forgetPreview.dataset.forgetPreview);
+      persistVisuals(); refreshVisualControls(); render(); $('close-previews').focus(); return;
+    }
+    const copyPreviews = event.target.closest('[data-copy-previews]');
+    if (copyPreviews) {
+      const hub = lifecycle();
+      const again = copyPreviews.dataset.copyPreviews === 'requested';
+      const paths = again ? hub.requested.map(item => item.path) : hub.selected;
+      if (!paths.length) return;
+      const prompt = ReviewTools.visualPrompt(snapshot, review, {kind:'previews', paths});
+      if (!again) { visualState = ReviewTools.requestPreviews(visualState, review.history?.revision || null, new Date().toISOString()); persistVisuals(); }
+      $('previews-dialog').close(); render();
+      await copyText(prompt); return;
+    }
+    // Opening a preview from the list lands on its file with the preview showing,
+    // and clears its New mark.
+    const openPreview = event.target.closest('[data-open-preview]');
+    if (openPreview) {
+      const path = openPreview.dataset.openPreview;
+      const file = filesByPath.get(path);
+      visualState.requested = visualState.requested.filter(entry => entry.path !== path || !previewsByPath.get(path)?.some(preview => preview.status === 'rendered'));
+      persistVisuals();
+      $('previews-dialog').close();
+      const layer = layers.find(layer => layer.items.some(item => item.file === file?.id));
+      if (!file || !layer) return;
+      if (previewsByPath.get(path)?.length) { state.previewPane = 'open'; persist(); }
+      navigateFile(layer, file.id);
+      const panel = focusMode ? document.getElementById('preview-pane') : document.querySelector(`.file-card[data-file="${file.id}"] .preview-panel`);
+      if (panel) { panel.open = true; if (!focusMode || !wideScreen()) panel.scrollIntoView({block:'nearest', behavior:'instant'}); }
+      refreshVisualControls(); return;
+    }
+    if (event.target.closest('[data-copy-qa]')) {
+      await copyText(ReviewTools.visualPrompt(snapshot, review, {kind:'qa'})); return;
     }
     const evidencePreview = event.target.closest('[data-open-evidence]');
     if (evidencePreview) { openEvidence(Number(evidencePreview.dataset.openEvidence), evidencePreview); return; }
@@ -1231,6 +1366,21 @@
   $('clear-range').onclick = clearSelection;
   $('cancel-comment').onclick = () => $('comment-editor').close();
   $('close-copy').onclick = () => $('copy-dialog').close();
+  $('close-previews').onclick = () => $('previews-dialog').close();
+  // Toolbar icons come from the bundled Lucide set; the static glyphs are only fallbacks.
+  $('nav-toggle').innerHTML = icon('panel-left');
+  $('prev').innerHTML = icon('chevron-left');
+  $('next').innerHTML = icon('chevron-right');
+  $('view-icon').innerHTML = icon('sliders-horizontal');
+  // The View menu is a native popover placed under its button, clamped to the viewport.
+  $('view-menu').addEventListener('toggle', event => {
+    $('view-toggle').setAttribute('aria-expanded', event.newState === 'open');
+    if (event.newState !== 'open') return;
+    const anchor = $('view-toggle').getBoundingClientRect();
+    const menu = $('view-menu');
+    menu.style.top = `${Math.round(anchor.bottom + 8)}px`;
+    menu.style.left = `${Math.round(Math.max(12, Math.min(anchor.right - menu.offsetWidth, innerWidth - menu.offsetWidth - 12)))}px`;
+  });
   $('comment-form').onsubmit = event => {
     event.preventDefault();
     const subject = $('editor-subject').value.trim();
@@ -1253,7 +1403,7 @@
   $('close-details').onclick = $('done-details').onclick = () => $('details-dialog').close();
   $('export').onclick = () => {
     const link = document.createElement('a');
-    const url = URL.createObjectURL(new Blob([JSON.stringify({snapshot:snapshot.fingerprint, ...state}, null, 2)], {type:'application/json'}));
+    const url = URL.createObjectURL(new Blob([JSON.stringify({snapshot:snapshot.fingerprint, ...state, visualSelections:visualState}, null, 2)], {type:'application/json'}));
     link.href = url; link.download = 'review-notes.json'; link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
@@ -1268,7 +1418,7 @@
       }
       return;
     }
-    if (/INPUT|TEXTAREA|SELECT/.test(event.target.tagName) || event.metaKey || event.ctrlKey || event.altKey || $('details-dialog').open || $('comment-editor').open || $('copy-dialog').open || $('comment-popover').matches(':popover-open')) return;
+    if (/INPUT|TEXTAREA|SELECT/.test(event.target.tagName) || event.metaKey || event.ctrlKey || event.altKey || $('details-dialog').open || $('comment-editor').open || $('copy-dialog').open || $('previews-dialog').open || $('comment-popover').matches(':popover-open')) return;
     const key = event.key.toLowerCase();
     if (key === 'j' || key === 'k') { event.preventDefault(); step(key === 'j' ? 1 : -1); }
     if (key === 'z') chooseReadingMode(!focusMode);

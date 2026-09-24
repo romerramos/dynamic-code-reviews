@@ -4,6 +4,8 @@ const assert = require('node:assert/strict');
 require('../assets/review-tools.js');
 const tools = globalThis.ReviewTools;
 require('./test_navigation');
+require('./test_visual_prompts');
+require('./test_recorder_lifecycle');
 const componentFiles = new Map([
   ['ruby', {path:'app/components/back_office/message_component.rb'}],
   ['erb', {path:'app/components/back_office/message_component.html.erb'}],

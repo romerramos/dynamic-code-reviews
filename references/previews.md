@@ -5,8 +5,9 @@ app. Other stacks show no preview.
 
 ## When
 
-After publishing, run this when the user requests a preview from a file or a
-full preview pass. Discover the development environment yourself using
+After publishing, run this when the user pastes the selected-template prompt
+or requests a full preview pass. Render the selected batch together. Discover
+the development environment yourself using
 [local-app-discovery.md](local-app-discovery.md). Cover every changed visual
 template in a full pass. Mark a template `not_visual` when it only renders Turbo streams,
 JSON, email headers or similar; the report then shows no pane for it. A failing
@@ -68,17 +69,18 @@ ruby <skill>/scripts/previews.rb render --spec <scratch>/spec.json \
 ruby <skill>/scripts/series.rb previews --repo <root> --name <series> --revision <latest> --update <scratch>/previews.json
 ```
 
-For a file request from the live report, validate that the requested path is a
-changed visual template in the saved snapshot. Render just that file and attach
+For a copied selection prompt, validate that each requested path is a
+changed visual template in the saved snapshot. Render just those files and attach
 with the same command plus `--targeted`. This preserves previews already in the
-report and does not claim full coverage. Gather several file requests into one
-spec and one attachment when they arrive in the same session. A later full pass
+report and does not claim full coverage. Use one spec and one attachment for
+the selected batch. A later full pass
 replaces the targeted set and restores the full coverage gate.
 
 When QA is also requested, finish both scratch outputs first. Create
 `<scratch>/enrichment.json` containing `{"qa": <QA object>, "previews":
 <previews.json's previews array>}` and attach once with
-`ruby <skill>/scripts/series.rb enrich --repo <root> --name <series> --revision <latest> --update <scratch>/enrichment.json`.
+`ruby <skill>/scripts/series.rb enrich --repo <root> --name <series> --revision <latest> --update <scratch>/enrichment.json --targeted`.
+Omit `--targeted` only for a full preview pass.
 Media paths in its QA object resolve relative to `enrichment.json`; use absolute
 paths or place the files beside it. The combined command validates both sets and
 creates one revision. Include an optional `"validation": ["..."]` array in that
@@ -86,10 +88,12 @@ JSON when the new QA result changes the report's validation statement.
 
 Find the runner and stylesheet from the project's setup. `rails runner -` reads
 the script from stdin, so nothing is written into the project. Fix example
-errors that cause `unavailable`; report genuine runtime limits. Inspect one
-representative frame per distinct layout in the browser and any frame whose
-rendered text or dimensions suggest clipping. Open more only to resolve a
-specific risk. Correct broken examples before attaching the full set.
+errors that cause `unavailable`; report genuine runtime limits. Validate render
+status, expected text and included styles. Inspect a frame in
+the browser only when those checks leave a concrete rendering uncertainty.
+Skip browser polishing of examples that already show the requested change.
+State when client-side widgets cannot initialize in the static preview. Correct
+broken examples before attaching the batch.
 
 Each example keeps only the CSS rules whose classes, ids and elements appear in its
 HTML (plus `:root`/`html`/`body` and used keyframes), inside its own sandboxed,

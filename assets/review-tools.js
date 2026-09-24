@@ -173,6 +173,65 @@ globalThis.ReviewTools = (() => {
     notes.filter(note => note.text.trim()).forEach(note => parts.push(`Step: ${note.title}\nFiles: ${note.paths.join(', ')}\n\n${note.text}`));
     return [header, ...parts].join('\n\n---\n\n');
   }
+  function previewEligible(file) {
+    return !/^deleted file mode /m.test(file.patch || '') && (/\.html\.erb$/.test(file.path) || /^app\/components\/.*_component\.rb$/.test(file.path));
+  }
+  function pendingPreviews(snapshot, review, paths) {
+    const eligible = new Set(snapshot.files.filter(previewEligible).map(file => file.path));
+    const complete = new Set((review.previews || []).filter(p => ['rendered','not_visual'].includes(p.status)).flatMap(p => p.files));
+    return [...new Set(Array.isArray(paths) ? paths : [])].filter(path => eligible.has(path) && !complete.has(path));
+  }
+  // One place answers "what happened to the templates I picked?" A request is
+  // browser-local ({path, at, revision}); it resolves when a later revision
+  // carries any preview record for that path, and stays "fresh" until opened.
+  function previewLifecycle(snapshot, review, visual = {}) {
+    const order = snapshot.files.map(file => file.path);
+    const eligible = new Set(snapshot.files.filter(previewEligible).map(file => file.path));
+    const records = new Map();
+    (review.previews || []).forEach(preview => (preview.files || []).forEach(path => {
+      if (!records.has(path)) records.set(path, []);
+      records.get(path).push(preview);
+    }));
+    const requests = new Map((Array.isArray(visual.requested) ? visual.requested : [])
+      .filter(entry => entry && typeof entry.path === 'string' && eligible.has(entry.path))
+      .map(entry => [entry.path, entry]));
+    const revision = Number(review.history?.revision) || 0;
+    const byOrder = (a, b) => order.indexOf(a.path) - order.indexOf(b.path);
+    const ready = [], unavailable = [], requested = [];
+    records.forEach((list, path) => {
+      const rendered = list.filter(preview => preview.status === 'rendered');
+      if (rendered.length) ready.push({path, examples:rendered.length, titles:rendered.map(preview => preview.title).filter(Boolean), fresh:requests.has(path)});
+      else unavailable.push({path, status:list.some(preview => preview.status === 'not_visual') ? 'not_visual' : 'unavailable', note:list.map(preview => preview.note).filter(Boolean).join(' ')});
+    });
+    requests.forEach((entry, path) => {
+      if (ready.some(item => item.path === path)) return;
+      if (records.has(path) && revision > (Number(entry.revision) || 0)) return;
+      requested.push({path, at:entry.at || null, revision:Number(entry.revision) || null});
+    });
+    const selected = pendingPreviews(snapshot, review, visual.previews);
+    return {ready:ready.sort(byOrder), requested:requested.sort(byOrder), selected, unavailable:unavailable.sort(byOrder),
+      fresh:ready.filter(item => item.fresh).length};
+  }
+  // Copying the prompt turns the selection into requests, so the counter returns to zero.
+  function requestPreviews(visual, revision, at) {
+    const selected = Array.isArray(visual.previews) ? visual.previews : [];
+    const previous = (Array.isArray(visual.requested) ? visual.requested : []).filter(entry => !selected.includes(entry.path));
+    return {...visual, previews:[], requested:[...previous, ...selected.map(path => ({path, at, revision}))]};
+  }
+  function visualPrompt(snapshot, review, {kind, paths = []}) {
+    if (!['previews','qa'].includes(kind)) throw new Error('Unknown visual task');
+    const selected = pendingPreviews(snapshot, review, paths);
+    if (kind === 'previews' && !selected.length) throw new Error('Select at least one template');
+    const series = review.history?.series;
+    const metadata = {repository: snapshot.repo, series, revision: review.history?.revision,
+      report: series && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(series) ? `${snapshot.repo}/.reviews/${series}/current.html` : undefined,
+      snapshot: snapshot.fingerprint, head: snapshot.head, base: snapshot.base,
+      working_tree: !!snapshot.working_tree || snapshot.mode === 'uncommitted'};
+    const task = kind === 'previews'
+      ? `Generate static HTML previews for only these changed templates:\n${selected.map(path => `- ${JSON.stringify(path)}`).join('\n')}\nUse the app renderer and example data. Attach the batch with series.rb previews --targeted.`
+      : `Run video QA driven by this saved review. Choose a small set of meaningful checks from its findings, walkthroughs and changed user flows; determine the scenarios yourself. Record short videos preserving the computer-use pointer already rendered by the harness. Attach each finding's evidence to its relevant review comment using comment_id, and retain relevant successful walkthrough/flow checks as compact evidence. Discover the app and prepare access yourself. Prepare and verify control of the app tab before opening the recorder. Wait for sharing without asking for a typed reply. Capture the useful flows directly; do not run a routine cursor probe or synthesize cursor overlays.`;
+    return `Use the dynamic-code-reviews skill to extend this saved review.\n\nReview context:\n${JSON.stringify(metadata, null, 2)}\n\n${task}\n\nRead the latest saved revision and verify its snapshot and the current checkout before attaching evidence. If code changed, review that change first; do not label new-code evidence as belonging to the old snapshot. Preserve existing findings, comments and evidence. Complete only the requested additions, publish one revision for this batch, and return the updated report link. Copying this prompt does not authorize changes to application source.`;
+  }
   function comparisonText(snapshot, review = {}) {
     const short = value => String(value || 'unknown').slice(0, 8);
     const supplied = review.comparison;
@@ -206,5 +265,5 @@ globalThis.ReviewTools = (() => {
     });
     return {comments, findings:remaining};
   }
-  return {focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, sourceText, commentText, reviewText, overviewFeedback, comparisonText, evidenceFlows, flowOwner, commentBody, postingText};
+  return {focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, sourceText, commentText, reviewText, overviewFeedback, comparisonText, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();

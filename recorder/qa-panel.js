@@ -9,7 +9,7 @@
   panel.setAttribute('aria-labelledby', 'qa-heading');
   panel.innerHTML = `
     <header><p class="qa-eyebrow">Live review session</p><h2 id="qa-heading">Record visual QA evidence</h2></header>
-    <p>Optional: click <b>Choose QA tab</b>, pick the app tab whose title starts with <b>[QA]</b> in Chrome’s prompt and click <b>Share</b>. Sharing requests QA from the waiting agent; no chat reply is needed.</p>
+    <p id="qa-instructions">Your agent has prepared the app for recording. Click <b>Choose QA tab</b>, select the app tab identified by your agent and click <b>Share</b>. The agent detects sharing automatically; no chat reply is needed.</p>
     <div class="qa-primary"><button type="button" id="qa-connect">Choose QA tab</button><p id="qa-status" role="status">No active capture</p></div>
     <p id="qa-notice" role="status"></p>
     <details>
@@ -28,15 +28,21 @@
   if (standalone) { document.body.append(panel); return; }
   document.body.classList.add('qa-live');
   const token = document.querySelector('meta[name="qa-token"]').content;
-  const send = async input => {
-    const response = await fetch('/request', {method: 'POST', headers: {'Content-Type': 'application/json', 'X-QA-Token': token}, body: JSON.stringify(input)});
-    if (!response.ok) throw new Error('The local request helper is unavailable. Ask the agent in chat to add this evidence.');
-  };
-  window.reviewEnhancements = {requestPreview: file => send({kind: 'preview', file})};
   const presence = state => fetch('/presence', {method: 'POST', headers: {'Content-Type': 'application/json', 'X-QA-Token': token}, body: JSON.stringify({state}), keepalive: true}).catch(() => {});
   presence('open');
-  setInterval(() => presence('open'), 20000);
-  window.addEventListener('pagehide', () => presence('closed'));
+  const heartbeat = setInterval(() => presence('open'), 20000);
+  const closed = () => presence('closed');
+  window.addEventListener('pagehide', closed);
+  window.addEventListener('qa-session-ended', event => {
+    clearInterval(heartbeat);
+    window.removeEventListener('pagehide', closed);
+    document.body.classList.remove('qa-live');
+    // Keep unsaved media recoverable; otherwise return to the normal offline banner.
+    panel.hidden = !event.detail.recoverable;
+    panel.querySelector('.qa-primary').hidden = true;
+    panel.querySelector('#qa-heading').textContent = 'Recording session ended';
+    panel.querySelector('#qa-instructions').textContent = 'Your recordings remain below. Use Copy QA prompt in Video QA to request another recording session.';
+  }, {once: true});
 
   // The review re-renders #content on every navigation. Keep the panel in a hidden holder
   // off the Overview and move it back after the intro whenever the Overview renders.

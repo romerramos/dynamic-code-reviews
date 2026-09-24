@@ -7,7 +7,8 @@ with getDisplayMedia and MediaRecorder. No extension or media-tool installation.
 
 ## Review first, then capture from the review
 
-Publish the review without QA first. Then serve that review with the QA panel:
+Start only for requested video or finding-critical capture. First prepare app access
+and open a tab the harness can control. Then serve the saved review with the QA panel:
 
 ```sh
 ruby <skill>/scripts/qa_capture.rb --out <scratch-captures> --report <root>/.reviews/<series>/current.html
@@ -40,23 +41,18 @@ return the saved absolute path. A Stop sent while a PNG is still saving waits
 for it instead of being dropped. If no recorder page is polling, the command
 fails within a few seconds with "The recorder page is not open".
 
-For optional work, open the served review and wait with `control wait-request
---timeout 120`. It returns `{"kind":"qa"}` after the reader shares an app tab,
-`{"kind":"preview","file":"..."}` after a changed template's Request preview
-button is clicked, `{"closed":true}` after the report tab closes, or
-`{"timeout":true}`. The helper keeps a small in-memory queue and uses a long
-poll; it does not start an agent after the current turn ends. Stop the helper
-when the active wait closes or expires. An offline HTML file still advertises
-the options but cannot submit a request without the helper.
+Use `control wait-ready --timeout 180` after opening the prepared recorder.
+Sharing is the confirmation; no typed reply is needed. This wait belongs only to
+a requested capture session. Initial reviews and template previews need no helper
+or active agent wait. The legacy `wait-request` command remains available for
+older reports; new reports collect template selections locally and copy prompts.
 
 1. Chrome's share prompt lists every open tab from every window by title, so a
    user with several tabs of the same app cannot tell them apart. Just before
-   asking, mark the QA app tab through the harness:
-   `document.title = '[QA] ' + document.title.replace(/^\[QA\] /, '')`. A full
-   page load resets the title; set it again if the app tab navigated since.
-   The served report itself explains how to click **Choose QA tab**, pick the
-   `[QA] …` app tab and click **Share**. The resulting `wait-request` QA event
-   is confirmation; do not ask the user to type “shared.” Chrome shows the
+   sharing, identify the prepared app tab by its actual title. Add a `[QA]`
+   title prefix only if the harness permits that operation. The user clicks
+   **Choose QA tab**, picks the identified app tab and clicks **Share**.
+   `wait-ready` detects this; do not ask the user to type “shared.” Chrome shows the
    share prompt only for a real click on a visible tab. A harness that clicks
    background tabs (Claude in Chrome does) cannot open it; a harness whose tab is
    in the foreground (as in Codex) may click Choose QA tab itself so the user
@@ -68,14 +64,13 @@ the options but cannot submit a request without the helper.
    Do not operate or reload the review tab through the harness while capturing.
 3. Check the `status` dimensions after the QA request. The helper requests up to 3840 ×
    2160 at 30 fps; the actual dimensions are reported by the stream and may be
-   lower. It never enlarges saved frames after capture. Use a short harmless
-   click probe to check video, native agent pointer and sharp text. Inspect the
-   pointer at the actual click, not just the user's physical cursor elsewhere.
+   lower. It never enlarges saved frames after capture. Record the requested
+   flow directly; do not add a cursor probe or rehearsal clip each session.
 4. Prepare the page before recording so setup and permission waits stay out of
    the clip. Run `control start --name <flow>` just before the relevant
    action. Use a human-readable pace: one meaningful action at a time, roughly
    0.7–1.5 seconds to see menus/intermediate states, and 1–2 seconds on the result.
-   Rehearse unfamiliar navigation before recording. Once controls are known,
+   Locate the needed controls before recording. Once controls are known,
    group the supported actions with state checks and deliberate pacing in one
    tool invocation when possible; avoid long model/tool-planning gaps inside
    the clip. Wait for actual loading/animations, and never race through clicks
@@ -91,14 +86,16 @@ the options but cannot submit a request without the helper.
    upscaling. Match each PNG to its flow and include an informative caption.
 6. Finish with `control end`, attach the evidence with `series.rb qa`, then run
    `control reload` so the review tab shows the final report with its evidence.
-   Stop the helper afterwards; the reloaded page stays readable, and the shareable
-   result is the saved `current.html`. Sessions also expire after 10 minutes. If
+   Open the saved `current.html` in the default browser before stopping the helper.
+   This is the final shareable result, including all attached media and previews.
+   If the served tab remains open after shutdown, it restores the normal Video QA
+   prompt banner and stops polling; any unsaved clip stays available for download.
+   Sessions also expire after 10 minutes. If
    setup fails, stop the helper; do not leave a pending capture indefinitely. The
    panel's Manual controls remain available for manual use and trimming.
 
 A share permission can cover multiple short clips and stills, including app
-navigation, because the review lives in a separate tab. Verify capture survives
-navigation for the flow under review; do not navigate/reload the review tab
+navigation, because the review lives in a separate tab. Do not navigate/reload the review tab
 while its stream is active. If a clip cannot be saved, the helper exposes a local
 recovery download; do not discard a useful capture silently.
 
@@ -120,11 +117,11 @@ skill. The recorded pointer is whatever the browser/harness actually renders.
 A selected Chrome QA tab retained the Codex interaction pointer while the user
 worked in the terminal in the macOS probe. Moving to another tab in the same
 Chrome window lost that pointer. Other harnesses and platforms can differ.
-If a verified arrangement cannot show the agent's clicks, state that limitation;
+If the actual recording shows no agent pointer, state that limitation;
 do not imply a no-pointer video meets a request for visible interactions.
 
-Use a separate QA window when the harness supports one and verify that it can
-stay selected without interfering with the user's other Chrome windows. Do not
+Use a separate QA window when the harness supports one so the app can stay
+selected while the user works elsewhere. Do not
 assume minimized or fully occluded windows behave like an unfocused window.
 
 ## Portable operation and privacy
