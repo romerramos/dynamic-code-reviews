@@ -220,7 +220,15 @@ module ReviewSeries
     end
     current = DynamicReviews.collect(repo: repo, mode: 'series', base: history.fetch('base'), head: working_tree ? nil : head)
     common = DynamicReviews.git(repo, 'merge-base', previous['snapshot']['head'], current['head'], allowed: [0, 1]).strip
-    raise ArgumentError, 'History was rewritten; start a new baseline series and reassess the full scope' unless common == previous['snapshot']['head']
+    if history['origin_mode'] == 'pr'
+      # An amended or force-pushed PR keeps the verified base, and the comparison is by content against it.
+      # Only a head moved back to an ancestor of the previous revision is refused.
+      if common == current['head'] && common != previous['snapshot']['head']
+        raise ArgumentError, 'PR head moved back to an ancestor of the previous revision; start a new baseline series'
+      end
+    else
+      raise ArgumentError, 'History was rewritten; start a new baseline series and reassess the full scope' unless common == previous['snapshot']['head']
+    end
     old_context = previous['review'].fetch('context', {})
     current_context = contexts(current, old_context.keys)
     changed_context = old_context.keys.select { |key| old_context[key] != current_context[key] }

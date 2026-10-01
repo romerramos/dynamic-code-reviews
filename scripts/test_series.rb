@@ -171,6 +171,9 @@ module SeriesChecks
           rejects('PR continued without verified refs') { ReviewSeries.prepare(repo: root, name: 'pr-values', out: out) }
           unchanged = ReviewSeries.prepare(repo: root, name: 'pr-values', out: out, base: first, head: second)
           assert(unchanged['status'] == 'unchanged', 'PR included dirty worktree content')
+          amended = DynamicReviews.git(root, 'commit-tree', tree, '-p', first, '-m', 'test: amended PR snapshot').strip
+          amended_prepare = ReviewSeries.prepare(repo: root, name: 'pr-values', out: out, base: first, head: amended)
+          assert(amended_prepare['status'] == 'unchanged', 'Amended PR head with identical content was not accepted as unchanged')
           mixed = ReviewSeries.prepare(repo: root, name: 'pr-values', out: out, base: first, head: second, working_tree: true)
           captured = ReviewSeries.read(File.join(out, 'snapshot.json'))
           assert(mixed['status'] == 'changed' && captured['working_tree'], 'Explicit local scope was not captured')

@@ -36,7 +36,9 @@ files. This deliberately differs from a fresh uncommitted-only review. State
 that scope when continuing. A commit with identical reviewed content needs no
 new revision. A changed branch or rewritten history requires selecting the
 correct series or creating a new baseline; do not reset/rebase Git to make a
-review fit.
+review fit. A PR series is the exception: an amended or force-pushed PR head on
+the same verified base continues the series, because the comparison is by
+content; a head moved back to an ancestor of the previous revision is refused.
 
 For a PR-origin series, resolve live provider metadata again and pass both
 `--base <verified-base-ref> --head <verified-head-ref>`. Working edits are then
