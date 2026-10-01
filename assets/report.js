@@ -887,7 +887,16 @@
       activateComponentFile(focusOrder[focusIndex].layer, focusOrder[focusIndex].file);
     }
     selectedChange = null;
-    clearSelection(); render(); $('content').scrollTo({top:0, behavior:'instant'}); updateChangeNavigation();
+    clearSelection(); render(); $('content').scrollTo({top:0, behavior:'instant'}); revealFirstChange(); updateChangeNavigation();
+  }
+  // Full source can open with its first change below the fold; land on it like the Next section arrow does.
+  function revealFirstChange() {
+    if (!fileReadingActive()) return;
+    const first = $('content').querySelector('.change-anchor');
+    if (!first) return;
+    const inner = getComputedStyle($('content')).overflowY !== 'visible';
+    const visibleBottom = inner ? $('content').getBoundingClientRect().bottom : window.innerHeight;
+    if (first.getBoundingClientRect().top > visibleBottom - 80) selectChangedSection(first);
   }
   function changedSectionPosition() {
     const headings = [...$('content').querySelectorAll('.change-anchor')];
@@ -989,7 +998,7 @@
     state.view = view;
     history.replaceState(null, '', `#${view}`);
     render();
-    if (scroll) $('content').scrollTop = 0;
+    if (scroll) { $('content').scrollTop = 0; revealFirstChange(); }
   }
   function navigateFile(layer, id) {
     if (focusMode) { focusFile(focusOrder.findIndex(entry => entry.file === id)); return; }

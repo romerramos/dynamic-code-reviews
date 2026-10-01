@@ -139,6 +139,23 @@ assert.equal(content.scrollTop, 900, 'One click must reach the second change and
 assert(next.disabled, 'Second of two sections must be the final destination');
 sandbox.focusTest.jumpChangedSection(-1);
 assert.equal(content.scrollTop, 50, 'Previous returns directly to the first changed line');
+// Opening a long file lands on its first change when that change starts below the fold.
+const openedAnchor = {id:'opened',classList:{contains:name=>name==='code-row',add(){},remove(){}},querySelector:()=>({}),getBoundingClientRect:()=>({top:openedTop-content.scrollTop})};
+let openedTop = 1500;
+const contentBox = content.getBoundingClientRect, contentAnchors = content.querySelectorAll;
+content.getBoundingClientRect = () => ({top:141,bottom:741});
+content.querySelector = selector => selector === '.change-anchor' ? openedAnchor : null;
+content.querySelectorAll = selector => selector === '.change-anchor' ? [openedAnchor] : [];
+content.scrollTop = 900;
+sandbox.focusTest.select('g0l0');
+assert.equal(content.scrollTop, 1300, 'A first change below the fold must be scrolled to under the sticky header');
+openedTop = 200;
+sandbox.focusTest.select('g0l0');
+assert.equal(content.scrollTop, 0, 'A first change that is already visible must leave the file at its top');
+content.getBoundingClientRect = contentBox;
+content.querySelector = () => null;
+content.querySelectorAll = contentAnchors;
+content.scrollTop = 50;
 const sampleHunk = {id:'test-hunk',old_start:1,new_start:1,old_count:2,new_count:2,rows:{unified:[{kind:'context',text:'context',old:1,new:1},{kind:'del',text:'before',old:2},{kind:'add',text:'after',new:2}]}};
 sandbox.focusTest.hunkFiles.set(sampleHunk.id, {path:'file.txt'});
 const sampleHtml = sandbox.focusTest.renderHunk(sampleHunk,'Explanation','file.txt','unified');
