@@ -142,6 +142,7 @@ module QACapture
       return live_api(client, method, path, headers) if @live && path.start_with?('/api/')
       if method == 'GET' && !path.start_with?('/next', '/result/', '/requests/')
         page = path.split('?', 2).first # `/?app` opens the review straight into the running app
+        return serve_preview(client, path) if @live && page == '/preview'
         return serve_report(client, page) if @report && (page == '/' || page.match?(%r{\A/(?:revisions/)?[a-z0-9_-]+\.html\z}))
         asset, type = {'/' => ['index.html', 'text/html; charset=utf-8'], '/recorder.js' => ['recorder.js', 'text/javascript'], '/qa-panel.js' => ['qa-panel.js', 'text/javascript'], '/style.css' => ['style.css', 'text/css']}[path]
         live_asset, live_type = {'/live-tools.js' => ['live-tools.js', 'text/javascript'], '/live.js' => ['live.js', 'text/javascript'], '/live.css' => ['live.css', 'text/css'], '/try-band.js' => ['try-band.js', 'text/javascript']}[path] if @live
@@ -374,6 +375,19 @@ module QACapture
       body = client.read(length)
       raise ArgumentError, 'Incomplete control message' unless body&.bytesize == length
       body
+    end
+
+    # One drawn template preview on its own page, so the agent can look at what it submitted before the
+    # reviewer does. Read-only and loopback-only, like the review page itself; the preview has no scripts.
+    def serve_preview(client, path)
+      asked = URI.decode_www_form(path.split('?', 2)[1].to_s).to_h['path'].to_s
+      previews = @live.state.read['previews']
+      # A ViewComponent's class and template share one preview, saved under whichever was asked for.
+      sibling = asked.sub(/_component\.rb\z/, '_component.html.erb').then { |other| other == asked ? asked.sub(/_component\.html\.erb\z/, '_component.rb') : other }
+      key, wanted = [asked, sibling].uniq.flat_map { |candidate| previews.keys.select { |name| previews.dig(name, candidate, 'status') == 'ready' }.map { |name| [name, candidate] } }
+                                   .max_by { |name, _| name.split(':').last.to_i }
+      return respond(client, 404, 'No ready preview of that template', 'text/plain') unless key
+      respond(client, 200, previews.dig(key, wanted, 'html'), 'text/html; charset=utf-8', report_csp)
     end
 
     # / is the current review with the QA panel; sibling revision pages are served as

@@ -3,6 +3,7 @@
 require 'json'
 require 'optparse'
 require 'shellwords'
+require 'uri'
 require_relative 'export'
 require_relative 'previews'
 require_relative 'state'
@@ -167,9 +168,10 @@ module DCR
         4. Icons: the preview cannot load the app's icon font, so replace every icon element (`<i class="fa-regular fa-bars-filter inbox__icon"></i>`) with the closest Lucide icon you know: `<i class="inbox__icon" data-icon="list-filter"></i>`, keeping its layout classes and dropping the icon-font ones. Any Lucide name works (https://lucide.dev/icons); choose by meaning, not by spelling.
         5. Images: never link to remote images, and never draw or generate one yourself. For each `<img>`, find a real free image that fits what it shows, different each time: a person's face for an avatar (randomuser.me, or a generated avatar from DiceBear or RoboHash), a matching photo for anything else (Unsplash, Pexels, Picsum). Download a small version (under 500 KB) to a temporary file and map it: `--image-map '{"<the img src>": {"path": "<file>", "credit": "<site or author>"}}'`. An image you do not map becomes a neutral placeholder. Give each `<img>` its real width and height.
         6. Size: the reviewer chooses whether the parent wraps the content (Content) or fits it to the height (Fit). If the template fills its parent in the app (a pane, a page shell, a full-height panel), make its root a column that grows (`display: flex; flex-direction: column`, the growing part `flex: 1` with `overflow: auto`, the footer or composer last) and give it no fixed height. A template that only wraps its content needs nothing.
-        7. Write the HTML to a temporary file outside the project. Submit ONLY HTML: the first and last characters must be tags; no headings, explanations, comments about your work or Markdown fences. No scripts.
+        7. Anything the app sizes or places with JavaScript (dropdowns, popovers, menus, tooltips, floating panels) has no script here. Draw it closed unless the change is about it; when it must be open, give it the position and width it has in the app (read its CSS for `min-width`, `width` and placement) and place it under its trigger yourself, so nothing collapses or wraps mid-word.
+        8. Write the HTML to a temporary file outside the project. Submit ONLY HTML: the first and last characters must be tags; no headings, explanations, comments about your work or Markdown fences. No scripts.
         Submit with: dcr preview submit #{flags} --path #{entry['path']} --file <your-temp-file> --css <stylesheet> --title "<a short title>" [--image-map ...]
-        It tells you which icons and images were left as placeholders; map them and submit again.
+        It tells you which icons and images were left as placeholders; map them and submit again. Then look at the result at the link it prints, in a tab of your own, and fix what looks broken before you stop.
         If nothing useful can be built: dcr preview fail #{flags} --path #{entry['path']} --reason "<one sentence>"
       TEXT
     end
@@ -232,6 +234,11 @@ module DCR
       built = Previews.build(raw, title: options[:title], css: css, page_class: options[:page_class], image_map: image_map, base_dir: base_dir)
       state.submit_preview(options[:path], built, key: options[:key])
       puts "The preview of #{options[:path]} is ready in the review."
+      endpoint = File.join(File.dirname(state.path), '.serve.json')
+      if File.file?(endpoint)
+        port = JSON.parse(File.read(endpoint))['port']
+        puts "Look at it before you finish: open http://127.0.0.1:#{port}/preview?#{URI.encode_www_form(path: options[:path])} in a new tab of your browser tool (not the reviewer's tab), at about 1280 and 390 px wide. Fix anything squeezed, wrapped mid-word, overlapping or cut off, submit again, then close that tab."
+      end
       mocks = built['mocks'] || {}
       puts "Icon-font icons left as placeholders: #{mocks['unmatched'].join(', ')}. Replace each with <i data-icon=\"<lucide name>\"></i>, choosing the closest Lucide icon, and submit again." if mocks['unmatched']&.any?
       puts "Lucide has no icon named: #{mocks['unknown_icons'].join(', ')}. Choose other Lucide names and submit again." if mocks['unknown_icons']&.any?

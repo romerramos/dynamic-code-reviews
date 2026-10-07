@@ -628,7 +628,10 @@
     const rows = stageTemplates().map(file => {
       const status = stageStatus(file.path);
       const slash = file.path.lastIndexOf('/');
-      return `<button type="button" class="stage-item" data-stage-path="${escape(file.path)}" aria-current="${file.path === stageState.path}"><span class="stage-dot is-${status}" aria-hidden="true"></span><span class="stage-item-text"><strong>${escape(file.path.slice(slash + 1))}</strong><small>${escape(file.path.slice(0, slash))}</small></span><em>${stageStatusText[status]}</em></button>`;
+      // A component whose class changed but not its template is still one thing to preview: name it so.
+      const classOnly = /_component\.rb$/.test(file.path) && !componentSibling(file.path);
+      const name = classOnly ? file.path.slice(slash + 1).replace(/\.rb$/, '') : file.path.slice(slash + 1);
+      return `<button type="button" class="stage-item" data-stage-path="${escape(file.path)}" aria-current="${file.path === stageState.path}" title="${escape(classOnly ? `${file.path}: the component's class changed, its template did not` : file.path)}"><span class="stage-dot is-${status}" aria-hidden="true"></span><span class="stage-item-text"><strong>${escape(name)}</strong><small>${escape(file.path.slice(0, slash))}</small></span><em>${classOnly ? 'Class changed · ' : ''}${stageStatusText[status]}</em></button>`;
     });
     rail.innerHTML = rows.length ? rows.join('') : '<p class="stage-empty-rail">No templates changed in this review.</p>';
   }
