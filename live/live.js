@@ -519,8 +519,24 @@
   agentPill.innerHTML = '<span class="dcr-dot" aria-hidden="true"></span><span class="dcr-agent-text"></span>';
   const optionsBar = document.querySelector('.toolbar-options');
   if (optionsBar) optionsBar.prepend(agentPill);
+  // The agent's state lives on Your review, where its answers arrive: a dot on the button and the
+  // words in its tooltip, so the reading bar keeps one control per job.
+  const ledgerButton = document.getElementById('ledger-toggle');
+  const agentDot = document.createElement('span');
+  agentDot.className = 'dcr-dot dcr-agent-dot';
+  agentDot.setAttribute('aria-hidden', 'true');
+  if (ledgerButton) ledgerButton.prepend(agentDot);
   const renderAgent = () => {
     const model = online ? tools.agentModel(threads, listening, Date.now(), previews) : {tone: 'off', text: 'Server stopped', hint: 'Restart `dcr serve` to send or receive.'};
+    if (ledgerButton) {
+      agentPill.hidden = true;
+      agentDot.hidden = !model;
+      if (!model) return;
+      agentDot.dataset.tone = model.tone;
+      ledgerButton.title = `Your review (L). ${model.text}: ${model.hint}`;
+      if (!ledgerButton.contains(agentDot)) ledgerButton.prepend(agentDot);
+      return;
+    }
     agentPill.hidden = !model;
     if (!model) return;
     agentPill.dataset.tone = model.tone;

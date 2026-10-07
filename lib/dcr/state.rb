@@ -134,14 +134,31 @@ module DCR
 
     # Queues the browser-built text for the agent and makes the thread live, so later user
     # messages in it reach the agent without another click.
+    # A comment made on the running app has no code card to live on: its first message is the
+    # comment itself, and its anchor (element, page, element text, still) is kept on the thread.
     def send_items(key, items)
       raise ArgumentError, 'Nothing to send' if !items.is_a?(Array) || items.empty? || items.length > 200
       update do |state|
         items.map do |item|
           id = item['id'].to_s
+          anchor = app_anchor(item['anchor']) if item.key?('anchor')
+          add_message(state, key, id, 'user', item['message']) if item.key?('message')
           thread(state, key, id).merge!('delivery' => 'sent', 'live' => true)
+          thread(state, key, id)['anchor'] = anchor if anchor
           enqueue(state, 'send', key, [id], item['text'].to_s)
         end
+      end
+    end
+
+    APP_ANCHOR = {'selector' => 500, 'path' => 2000, 'text' => 300, 'tag' => 40, 'kind' => 10, 'still' => 1000}.freeze
+
+    def app_anchor(value)
+      raise ArgumentError, 'An app anchor must be an object' unless value.is_a?(Hash)
+      raise ArgumentError, 'An app anchor needs a selector and a page' unless value['selector'].is_a?(String) && value['path'].is_a?(String)
+      raise ArgumentError, 'An app anchor kind is element, clip, still or request' if value.key?('kind') && !%w[element clip still request].include?(value['kind'])
+      value.slice(*APP_ANCHOR.keys).each_with_object({}) do |(name, text), out|
+        raise ArgumentError, "Invalid app anchor #{name}" unless text.is_a?(String) && text.length <= APP_ANCHOR[name]
+        out[name] = text
       end
     end
 
@@ -169,6 +186,20 @@ module DCR
 
     def finish(key)
       update { |state| enqueue(state, 'finish', key, [], 'The reviewer finished this review round.') }
+    end
+
+    # --- a QA pass recorded by the agent ------------------------------------------------
+
+    # The reviewer asks the agent to record evidence for the review in the shared tab. It is a
+    # thread like a comment on the app (so the agent's report shows up there), delivered as its own
+    # kind because, unlike a conversation, it asks the agent to record and attach.
+    def request_qa(key, id, text)
+      raise ArgumentError, 'A QA request needs instructions' if text.to_s.strip.empty?
+      update do |state|
+        add_message(state, key, id, 'user', 'Record visual evidence for this review in this tab.')
+        thread(state, key, id).merge!('delivery' => 'sent', 'live' => true, 'anchor' => {'selector' => '', 'path' => '/', 'kind' => 'request'})
+        enqueue(state, 'qa', key, [id], text.to_s)
+      end
     end
 
     # --- template previews built by the agent -----------------------------------------

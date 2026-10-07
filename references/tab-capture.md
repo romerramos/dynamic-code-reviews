@@ -22,6 +22,46 @@ comments and their videos. Its revision links keep working.
 The saved HTML file is not modified and stays a single shareable offline file.
 Without `--report` the helper serves a standalone recorder page with the same panel.
 
+### The app inside the review (one tab)
+
+Add `--app <url>` to `dcr serve` to show the running app inside the review through a
+loopback proxy (any `http` or `https` URL; see
+[local-app-discovery.md](local-app-discovery.md)). The command prints a link ending in
+`/?app#overview` that opens straight into the **App** view: Browse or Comment, device
+widths, **Record** and a side panel with Recordings and Comments on the app.
+
+- **Comment**: click an element and write what should change. **Send to agent** makes a
+  review thread that `dcr wait` prints with the page, element and its text; answer it
+  with `dcr reply` like any other thread.
+- **Record**: the first click shares this tab (the reader chooses it and **Share**) and
+  recording starts at once; the button becomes **Stop** with a timer. Only the app pane
+  is recorded, with the real pointer, because the shared tab is the review the reader
+  has in front. **Still** saves a PNG; **Stop sharing** ends the share.
+- **Recordings**: every clip or still lands there, also ones started with `dcr record`.
+  **Send to agent** sends it with a note as an app thread; **Add to review** takes a
+  title, Passed or Failed and what you saw (optionally a review comment), and
+  **Save N to the review** saves all of them as one revision.
+
+- **Start QA review** (on the Overview and in the panel header): the reader shares this
+  tab once, and the agent gets a QA request through `dcr wait` naming the recorder
+  folder, the comments and the rules. It records each flow with `dcr record`, attaches
+  them with `dcr evidence attach` (one revision, each clip on its comment) and reports
+  in the QA thread. While it runs, a banner in the App view tells the reader to leave the
+  tab alone; the agent's reply ends it, stops sharing and shows **QA review ready**. Each
+  QA review replaces the previous one's recordings; the reader's own recordings stay.
+
+When you record QA yourself in the App view, open the served review through your own
+browser tool (so you can act in the tab the reader shares), keep that tab in front, and
+drive the recorder only with `dcr record start|still|stop`. While those commands drive
+it, the review draws your pointer and a ring on each click inside the app, at the
+coordinates of the input events you send: tools that click through the DevTools
+protocol (Claude in Chrome, Chrome DevTools MCP, Playwright) never move the system
+pointer, and this is how their clips stay readable. Hover before you click. A
+computer-use harness that moves the system pointer is recorded as it is. Never add a
+cursor after recording. With several review pages open, recorder commands go to the
+one sharing its tab. Log in through the proxy. A redirect to another host is reported in the footer,
+not followed. The two-tab flow below remains for apps the proxy cannot show.
+
 Use one browser window (or tab group) holding only the QA tabs: the app under
 review and the served review. A harness session group, such as Claude in
 Chrome's, qualifies. Open the app first, then the served review.

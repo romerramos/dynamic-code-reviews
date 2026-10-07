@@ -192,3 +192,23 @@ Dir.mktmpdir('dcr-live-test') do |directory|
     server.close
   end
 end
+
+# A comment on the running app: the comment is the thread's first message, the element is kept.
+Dir.mktmpdir('dcr-live-app') do |series|
+  state = DCR::State.new(series)
+  anchor = {'selector' => 'button[data-testid="save"]', 'path' => '/inbox?status=open', 'text' => 'Save', 'ignored' => 'x'}
+  state.send_items(KEY, [{'id' => 'app-1a2b', 'text' => 'On /inbox: the Save button is cut off', 'message' => 'The Save button is cut off', 'anchor' => anchor}])
+  thread = state.read.dig('threads', KEY, 'app-1a2b')
+  assert(thread['anchor'] == anchor.except('ignored') && thread['messages'].map { |m| [m['author'], m['body']] } == [['user', 'The Save button is cut off']], 'An app comment must keep its element and its text')
+  assert(thread.values_at('delivery', 'live') == ['sent', true] && state.pending.last['text'].start_with?('On /inbox'), 'An app comment must reach the agent like any other')
+  state.send_items(KEY, [{'id' => 'app-clip', 'text' => 'clip', 'anchor' => {'selector' => '', 'path' => '/', 'kind' => 'clip', 'tag' => 'button', 'still' => '/tmp/x.webm'}}])
+  assert(state.read.dig('threads', KEY, 'app-clip', 'anchor').values_at('kind', 'tag') == %w[clip button], 'A recording thread must keep its kind and an element its tag')
+  [{'selector' => 'a'}, {'selector' => 'a', 'path' => '/', 'text' => 'x' * 301}, {'selector' => 'a', 'path' => '/', 'kind' => 'video'}, 'button'].each do |bad|
+    state.send_items(KEY, [{'id' => 'app-bad', 'text' => 't', 'anchor' => bad}])
+    assert(false, "Invalid app anchor accepted: #{bad.inspect}")
+  rescue ArgumentError
+    nil
+  end
+  assert(!state.read.dig('threads', KEY).key?('app-bad'), 'A rejected app comment must leave no thread')
+end
+puts 'app comments: ok'

@@ -29,7 +29,17 @@ comment_id; retain relevant successful flows in Other flows checked.
    Use [tab-capture.md](tab-capture.md) for the native recorder when video or
    capture-stream PNGs are needed. A supported browser's original PNG screenshot
    may also serve as static evidence; inspect its saved pixels and dimensions.
-4. For requested tab recording, prepare access and open the app tab with the
+4. Prefer one tab: serve the review with `--app <url>` and record in its App view
+   (see [tab-capture.md](tab-capture.md)). The reader clicks **Record** and shares the
+   review tab itself; only the app pane is recorded. A person's own clips show their
+   real pointer. When the agent records (Start QA review, or `dcr record` from the
+   terminal), the review draws the agent's pointer and click rings inside the app from
+   the agent's real input events, live in the recorded frames, so any browser tool can
+   record a clip a viewer can follow; a computer-use tool that moves the system pointer
+   shows as it is. The agent's browser tool must reach the shared tab: open the served
+   review through it. Never add or move a cursor after recording. The two-tab flow
+   below is the fallback for an app the proxy cannot show.
+   For the two-tab flow, prepare access and open the app tab with the
    supported browser before serving the recorder. Identify the tab's actual
    title. The reader clicks **Choose QA tab** and **Share**; `control wait-ready`
    detects sharing without a typed reply. An initial review needs no recorder

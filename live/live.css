@@ -110,3 +110,41 @@ body.qa-live .evidence-strip:not(:has(button:not(.visual-qa-option))){display:no
 .ledger-reply{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;margin:0 16px 10px;padding:0}
 .range-actions:not([hidden])~#dcr-arrival{bottom:170px}
 .act-count{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:#ffffff38;font-size:12px;font-weight:600;line-height:20px;text-align:center}
+
+/* The agent's state as a dot on Your review (its words are in the button's tooltip). */
+.dcr-agent-dot{flex:none;width:7px;height:7px;margin-right:2px}
+.dcr-agent-dot[hidden]{display:none}
+.dcr-agent-dot[data-tone="ok"]{background:var(--dcr-ok)}
+.dcr-agent-dot[data-tone="work"]{background:var(--dcr-work);animation:dcr-pulse 1.4s infinite ease-in-out}
+@media(prefers-reduced-motion:reduce){.dcr-agent-dot[data-tone="work"]{animation:none}}
+
+/* Try the change: right after What changed on the Overview of a served review. The running app
+   is shown as itself, a live miniature, because seeing it is what tells you what you can do. */
+body.dcr-has-try .evidence-strip{display:none}
+body.dcr-has-app #qa-panel{display:none}
+.dcr-try{margin:36px 0 8px}
+.dcr-try > h2{margin:0 0 14px;font-size:20px;font-weight:600}
+.dcr-try-body{display:grid;gap:14px}
+.dcr-try-app{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:22px;align-items:center;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.dcr-try-mini{position:relative;display:block;padding:0;border:0;border-radius:10px;background:none;cursor:pointer;text-align:left}
+.dcr-try-frame{display:block;position:relative;aspect-ratio:16/10;overflow:hidden;border-radius:10px;background:color-mix(in oklab,var(--ink) 6%,var(--canvas));box-shadow:0 0 0 1px var(--line),0 10px 30px #1b21331f}
+.dcr-try-frame iframe{position:absolute;top:0;left:0;width:1280px;height:800px;border:0;background:#fff;transform-origin:0 0;pointer-events:none}
+.dcr-try-mini:hover .dcr-try-frame,.dcr-try-mini:focus-visible .dcr-try-frame{box-shadow:0 0 0 2px var(--accent),0 12px 34px #1b213333}
+.dcr-try-addr{position:absolute;left:8px;bottom:8px;display:inline-flex;align-items:center;gap:6px;max-width:calc(100% - 16px);padding:3px 9px;overflow:hidden;border-radius:999px;background:color-mix(in oklab,var(--surface) 92%,transparent);color:var(--ink);font:11.5px var(--mono);text-overflow:ellipsis;white-space:nowrap;box-shadow:0 1px 3px #1b213326}
+.dcr-try-dot{flex:none;width:7px;height:7px;border-radius:50%;background:var(--dcr-off)}
+.dcr-try.is-running .dcr-try-dot{background:var(--dcr-ok)}
+.dcr-try-copy h3,.dcr-try-previews h3{margin:0 0 6px;font-size:16px;font-weight:600}
+.dcr-try-copy p,.dcr-try-previews p{max-width:58ch;margin:0 0 14px;color:var(--muted);font-size:14px;line-height:1.55}
+.dcr-try-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.dcr-try-actions kbd{margin-left:6px;padding:0 5px;border:1px solid var(--line);border-radius:4px;color:var(--muted);font:11px var(--mono)}
+.dcr-try-rec{display:inline-block;width:8px;height:8px;margin-right:6px;border-radius:50%;background:#c2410c;vertical-align:1px}
+.dcr-try-previews{padding:16px 18px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.dcr-try-templates{display:grid;gap:2px;margin:0 0 6px;padding:0;list-style:none}
+.dcr-try-templates li{display:grid;grid-template-columns:10px minmax(0,1fr) auto auto;align-items:center;gap:10px;min-height:34px;padding:0 4px;border-top:1px solid var(--line)}
+.dcr-try-templates li:first-child{border-top:0}
+.dcr-try-templates code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:12.5px var(--mono)}
+.dcr-try-state{color:var(--muted);font-size:12.5px}
+.dcr-try-templates button,.dcr-try-link{padding:4px 2px;border:0;background:none;color:var(--accent);font:inherit;font-size:13px;font-weight:550;cursor:pointer}
+.dcr-try-templates button:hover,.dcr-try-link:hover{text-decoration:underline}
+@media(min-width:1500px){.dcr-try-body.has-both{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}.dcr-try-body.has-both .dcr-try-app{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:700px){.dcr-try-app{grid-template-columns:1fr}}

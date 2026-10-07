@@ -52,6 +52,15 @@ Dir.mktmpdir('qa-capture-test') do |directory|
     assert(Dir.children(directory).length == count, 'Rejected upload left a file')
     puts 'PASS capture server preserves bytes, serves only its UI, prevents cross-origin writes and cleans incomplete uploads'
 
+    # A clip's poster is saved beside that clip, and only beside a clip that exists.
+    clip = JSON.parse(request.call('POST', '/save/flow.webm', "\x1aE\xdf\xa3".b).split("\r\n\r\n", 2).last)['path']
+    base = File.basename(clip, '.webm')
+    poster = JSON.parse(request.call('POST', "/save-poster/#{base}.png", body).split("\r\n\r\n", 2).last)['path']
+    assert(poster == clip.sub('.webm', '.poster.png') && File.binread(poster) == body, 'The poster must sit beside its clip')
+    assert(request.call('POST', '/save-poster/missing-0000aaaa.png', body).start_with?('HTTP/1.1 400'), 'A poster for a clip that does not exist was accepted')
+    assert(request.call('POST', "/save-poster/#{base}.png", body, {'Origin' => 'https://untrusted.example'}).start_with?('HTTP/1.1 400'), 'A cross-origin poster was accepted')
+    puts 'PASS a clip poster is saved beside its clip, only for an existing clip and from the page'
+
     session = File.join(directory, QACapture::SESSION)
     assert(File.stat(session).mode & 0o777 == 0o600, 'Session token file is readable by others')
     # The terminal client queues a command; a simulated recorder page receives it and reports back.

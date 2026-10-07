@@ -10,6 +10,7 @@ require_relative '../lib/dcr/evidence'
 require_relative '../lib/dcr/state'
 require_relative '../lib/dcr/export'
 require_relative '../lib/dcr/previews'
+require_relative '../lib/dcr/live_cli'
 
 PNG = Base64.strict_decode64('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jWZkAAAAASUVORK5CYII=')
 
@@ -53,6 +54,14 @@ ReviewChecks.fixture do |root, _commit|
     second = DCR::Evidence.attach(series_dir: series_dir, capture_dir: captures, input: base.merge('title' => 'Again'))
     assert(second['revision'] == 3 && DynamicReviews.extract(File.join(series_dir, 'revisions', '003.html'))['review']['qa']['flows'].length == 2, 'A second recording must be added, not replace the first')
     puts 'PASS a reviewer recording becomes a new revision of the same code with its evidence embedded, and later ones add to it'
+
+    rejected('a batch with one bad item') { DCR::Evidence.attach_all(series_dir: series_dir, capture_dir: captures, inputs: [base, base.merge('observed' => '')]) }
+    assert(ReviewSeries.manifest(series_dir)['revisions'].length == 3, 'A rejected batch must save nothing')
+    batch = DCR::Evidence.attach_all(series_dir: series_dir, capture_dir: captures, inputs: [base.merge('title' => 'One', 'page' => '/inbox?status=closed'), base.merge('title' => 'Two', 'result' => 'passed')])
+    flows = DynamicReviews.extract(File.join(series_dir, 'revisions', '004.html'))['review']['qa']['flows']
+    assert(batch.values_at('revision', 'attached') == [4, 2] && flows.map { |item| item['title'] } == ['Value page', 'Again', 'One', 'Two'], 'A session of recordings must become one revision')
+    assert(flows[2]['steps'] == ['Recorded by the reviewer on /inbox?status=closed.'], 'The page a recording was made on must be kept')
+    puts 'PASS several recordings from one session save as one revision, and a bad one saves none'
 
     # The conversation survives: same code, so the new revision inherits progress and threads.
     manifest = ReviewSeries.manifest(series_dir)
@@ -126,7 +135,61 @@ ReviewChecks.fixture do |root, _commit|
     ok = fetch.call
     assert(ok.start_with?('HTTP/1.1 200') && ok.include?('Content-Disposition: attachment; filename="evidence-review.html"') && ok.include?('__DCR_EXPORT'), 'The served export is not a download of the baked file')
     assert(fetch.call('X-QA-Token' => 'wrong').start_with?('HTTP/1.1 400') && fetch.call('Origin' => 'https://evil.example').start_with?('HTTP/1.1 400'), 'Export must need the token and a trusted origin')
-    server.close
     puts 'PASS the served page can download the export, and only with the review token and a trusted origin'
+
+    # Start QA review: the server writes the request with the real recorder folder and comments,
+    # and dcr wait hands it over as a task, not a reply-only conversation.
+    latest = ReviewSeries.manifest(series_dir)['revisions'].last
+    review_key = "dynamic-review:#{latest['fingerprint']}:evidence:#{latest['number']}"
+    # A comment on the app from before anchors had a kind must still be listed.
+    DCR::State.new(series_dir).send_items(review_key, [{'id' => 'app-old1', 'text' => 't', 'message' => 'The Filters button looks off', 'anchor' => {'selector' => 'button[data-test="assignee-trigger"]', 'path' => '/inbox', 'text' => 'Filters'}}])
+    socket = TCPSocket.new('127.0.0.1', server.port)
+    body = JSON.generate(key: review_key, route: '/inbox')
+    socket.write("POST /api/qa HTTP/1.1\r\nHost: 127.0.0.1:#{server.port}\r\nX-QA-Token: #{server.token}\r\nOrigin: #{server.url}\r\nContent-Type: application/json\r\nContent-Length: #{body.bytesize}\r\n\r\n#{body}")
+    answer = +''
+    begin
+      loop { answer << socket.readpartial(65_536) }
+    rescue EOFError, Errno::ECONNRESET
+      nil
+    end
+    qa_id = JSON.parse(answer.split("\r\n\r\n", 2).last)['id']
+    queued = DCR::State.new(series_dir).pending.last
+    assert(qa_id&.start_with?('app-qa-') && queued['kind'] == 'qa' && queued['thread_ids'] == [qa_id], "A QA request must be queued as its own kind: #{answer[0, 200]}")
+    assert(queued['text'].include?('app-old1: on /inbox') && queued['text'].include?('The Filters button looks off'), 'Comments on the app must be listed, also ones made before anchors had a kind')
+    assert(queued['text'].include?("record --out #{captures}") && queued['text'].include?('value-note') && queued['text'].include?("reply --repo") && queued['text'].include?(qa_id), 'The QA request must name the recorder folder, the comments and its thread')
+    printed = DCR::LiveCLI.render([queued], '--repo r --name s')
+    assert(printed.start_with?('QA REQUEST.') && !printed.include?('REPLY ONLY') && printed.include?('record and attach only'), 'dcr wait must hand a QA request over as a task')
+    server.close
+    puts 'PASS Start QA review queues a task for the agent with the recorder folder, the comments and its thread'
+
+    # The agent attaches what it recorded: one revision, each recording on its comment.
+    items = File.join(captures, 'items.json')
+    File.write(items, JSON.generate([{'path' => png, 'comment_id' => 'value-note', 'title' => 'Value page, recorded by the agent', 'result' => 'passed', 'observed' => 'The value shows 3.', 'page' => '/values'}]))
+    before = ReviewSeries.manifest(series_dir)['revisions'].length
+    out, err, status = Open3.capture3(RbConfig.ruby, File.expand_path('../bin/dcr', __dir__), 'evidence', 'attach', '--dir', series_dir, '--file', items)
+    flows = DynamicReviews.extract(File.join(series_dir, 'current.html'))['review']['qa']['flows']
+    assert(status.success? && out.include?('Attached 1 recording') && ReviewSeries.manifest(series_dir)['revisions'].length == before + 1, "dcr evidence attach failed: #{err}")
+    assert(flows.last.values_at('title', 'comment_id') == ['Value page, recorded by the agent', 'value-note'], 'The agent recording must land on its comment')
+    assert(flows.last['steps'] == ['Recorded by the agent on /values.'], 'Agent evidence must say the agent recorded it, not the reviewer')
+    assert(DynamicReviews.extract(File.join(series_dir, 'current.html'))['review']['qa']['status'] == 'complete', 'A finished QA review must be complete, so the Overview shows no partial-evidence note')
+    qa = DynamicReviews.extract(File.join(series_dir, 'current.html'))['review']['qa']
+    assert(qa['summary'] == '1 recording, all passed; 4 recordings by the reviewer.' && qa['environment'].include?('Recorded by the reviewer') && qa['environment'].include?('Recorded by the agent'), "A series with both kinds of recordings must say what each holds: #{qa['summary']}")
+    # A second QA review replaces the first one's clips instead of adding to them; the reviewer's stay.
+    reviewer_flows = flows.count { |item| item['source'] == 'reviewer' || Array(item['steps']).first.to_s.start_with?('Recorded by the reviewer') }
+    File.write(items, JSON.generate([{'path' => png, 'comment_id' => 'value-note', 'title' => 'Value page, second QA review', 'result' => 'passed', 'observed' => 'The value shows 3.', 'page' => '/values'}]))
+    out, err, status = Open3.capture3(RbConfig.ruby, File.expand_path('../bin/dcr', __dir__), 'evidence', 'attach', '--dir', series_dir, '--file', items)
+    again = DynamicReviews.extract(File.join(series_dir, 'current.html'))['review']['qa']['flows']
+    assert(status.success? && out.include?('replacing 1 from the previous QA review'), "The second QA review must say it replaced the first: #{out}#{err}")
+    assert(again.count { |item| item['source'] == 'agent' } == 1 && again.last['title'] == 'Value page, second QA review', 'Only the latest QA review clips may remain')
+    assert(again.count { |item| item['source'] == 'reviewer' || Array(item['steps']).first.to_s.start_with?('Recorded by the reviewer') } == reviewer_flows, 'The reviewer recordings must stay')
+    _, err, status = Open3.capture3(RbConfig.ruby, File.expand_path('../bin/dcr', __dir__), 'evidence', 'attach', '--dir', series_dir, '--file', items, '--replace', 'all')
+    fresh = DynamicReviews.extract(File.join(series_dir, 'current.html'))['review']['qa']['flows']
+    assert(status.success? && fresh.map { |item| item['title'] } == ['Value page, second QA review'], "Starting over must leave only the new recordings: #{err}")
+    fresh_qa = DynamicReviews.extract(File.join(series_dir, 'current.html'))['review']['qa']
+    assert(fresh_qa['summary'] == '1 recording, all passed.' && !fresh_qa['environment'].include?('Recorded by the reviewer'), "The QA summary must describe only the recordings that remain: #{fresh_qa.slice('summary', 'environment')}")
+    File.write(items, JSON.generate([{'path' => '/etc/hosts', 'title' => 'x', 'result' => 'passed', 'observed' => 'x'}]))
+    _, err, status = Open3.capture3(RbConfig.ruby, File.expand_path('../bin/dcr', __dir__), 'evidence', 'attach', '--dir', series_dir, '--file', items)
+    assert(!status.success? && err.include?('not a recorder folder'), 'Only files from a recorder folder can be attached')
+    puts 'PASS dcr evidence attach puts the agent recordings on their comments as one revision, from a recorder folder only'
   end
 end

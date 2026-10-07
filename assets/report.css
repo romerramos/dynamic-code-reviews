@@ -89,6 +89,8 @@
 .qa-preview-image img:not([src]) { display: none; }
 .qa-preview-play { position: absolute; right: 7px; bottom: 7px; display: grid; place-items: center; width: 27px; height: 27px; border-radius: 50%; background: #fff; color: #514ba6; box-shadow: 0 1px 5px #16213a55; font-size: 11px; }
 .qa-preview-placeholder { color: #667080; font-size: 12px; }
+/* A clip without a still shows its own frame rather than a placeholder that reads as unfinished. */
+.qa-preview-frame { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
 .qa-preview-copy { display: flex; flex-wrap: wrap; gap: 3px 8px; align-items: baseline; min-width: 0; }
 .qa-preview-copy strong { flex: 1 1 100%; font-size: 14px; line-height: 1.4; }
 .qa-preview-action { color: #514ba6; font-size: 13px; font-weight: 600; }

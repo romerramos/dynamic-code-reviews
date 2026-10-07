@@ -9,7 +9,10 @@ const token = document.querySelector('meta[name="qa-token"]').content;
 const video = document.createElement('video');
 video.muted = true; video.playsInline = true;
 let stream, recorder, recorderFinished, chunks = [], clip, clipTimer, sessionTimer, stopping, ending, busy = false;
-let editSource, editUrl, trimming = false, offline = false;
+let editSource, editUrl, trimming = false, offline = false, paneCapture = null;
+// Who drives the recorder: 'agent' once a terminal command (dcr record) arrives, 'reader' once
+// the reader uses the buttons. The App view draws the agent's pointer only while the agent drives.
+let driver = 'reader';
 const editor = $('editor');
 const safeName = value => (value || 'qa-evidence').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').slice(0, 80) || 'qa-evidence';
 const setText = (id, text) => { if ($(id).textContent !== text) $(id).textContent = text; };
@@ -20,8 +23,11 @@ function render() {
   $('snapshot').disabled = busy || !stream || video.readyState < 2;
   $('end').disabled = busy || !stream;
   $('trim').disabled = busy || trimming || !!recorder || !editSource;
+  window.dispatchEvent(new CustomEvent('qa-recorder-state', {detail: status()}));
   setText('status', recorder ? `Recording · ${Math.floor((Date.now() - clip.startedAt) / 1000)} s · ${video.videoWidth} × ${video.videoHeight}` : stream ? `Capture ready · ${video.videoWidth} × ${video.videoHeight} · native browser capture` : offline ? 'The QA session has ended. Ask the agent to start a new one to record again.' : 'No active capture');
 }
+// Every saved clip or still, whoever asked for it (a button or `dcr record`), is announced to the page.
+const announce = saved => { window.dispatchEvent(new CustomEvent('qa-recorder-saved', {detail: saved})); return saved; };
 async function save(blob, name, extra = {}) {
   const response = await fetch(`/save/${name}`, {method: 'POST', headers: {'Content-Type': blob.type || 'application/octet-stream', 'X-QA-Token': token}, body: blob});
   const result = await response.json();
@@ -32,14 +38,27 @@ async function save(blob, name, extra = {}) {
   $('artifacts').append(li);
   return artifact;
 }
-async function connect() {
-  const options = {audio: false, video: {displaySurface: 'browser', width: {ideal: 3840}, height: {ideal: 2160}, frameRate: {ideal: 30, max: 30}, cursor: 'always'}, selfBrowserSurface: 'exclude', preferCurrentTab: false};
-  if (typeof CaptureController !== 'undefined') options.controller = new CaptureController();
+// pane: an element of this page (the app inside the review). Then the reader shares this tab,
+// and the capture is cut down to that element, so there is no other tab to find.
+async function restrictTo(track, pane) {
+  if (typeof RestrictionTarget !== 'undefined' && track.restrictTo) {
+    try { await track.restrictTo(await RestrictionTarget.fromElement(pane)); return 'element'; } catch { /* fall back to cropping */ }
+  }
+  if (typeof CropTarget !== 'undefined' && track.cropTo) { await track.cropTo(await CropTarget.fromElement(pane)); return 'region'; }
+  throw new Error('This browser cannot limit a capture to the app. Use a recent desktop Chrome.');
+}
+async function connect(pane) {
+  const options = {audio: false, video: {displaySurface: 'browser', width: {ideal: 3840}, height: {ideal: 2160}, frameRate: {ideal: 30, max: 30}, cursor: 'always'}, selfBrowserSurface: pane ? 'include' : 'exclude', preferCurrentTab: !!pane};
+  if (typeof CaptureController !== 'undefined' && !pane) options.controller = new CaptureController();
   const selected = await navigator.mediaDevices.getDisplayMedia(options);
   const track = selected.getVideoTracks()[0];
   if (track.getSettings().displaySurface !== 'browser') {
     selected.getTracks().forEach(item => item.stop());
     throw new Error('Select a browser tab. Window and desktop capture are not used for review evidence.');
+  }
+  if (pane) {
+    try { paneCapture = await restrictTo(track, pane); }
+    catch (error) { selected.getTracks().forEach(item => item.stop()); throw new Error(`${error.message} Share this tab, the one showing the review.`); }
   }
   stream = selected;
   try {
@@ -60,7 +79,7 @@ function start() {
   const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type));
   if (!mimeType) throw new Error('This browser does not offer a WebM encoder.');
   chunks = [];
-  clip = {name: safeName($('name').value), startedAt: Date.now(), width: video.videoWidth, height: video.videoHeight, mimeType, capture: stream.getVideoTracks()[0].getSettings(), pointer: 'native browser capture; no added cursor'};
+  clip = {name: safeName($('name').value), startedAt: Date.now(), width: video.videoWidth, height: video.videoHeight, mimeType, capture: stream.getVideoTracks()[0].getSettings(), pane: paneCapture, pointer: 'native browser capture; no added cursor'};
   recorder = new MediaRecorder(stream, {mimeType, videoBitsPerSecond: 12000000});
   recorder.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
   recorderFinished = new Promise((resolve, reject) => {
@@ -73,6 +92,12 @@ function start() {
   $('notice').textContent = 'Recording. Interact with the QA tab.';
   return {name: clip.name};
 }
+async function frameBlob() {
+  if (!stream || video.readyState < 2) throw new Error('No ready capture stream.');
+  const canvas = document.createElement('canvas'); canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+}
 async function snapshot() {
   if (!stream || video.readyState < 2) throw new Error('No ready capture stream.');
   const canvas = document.createElement('canvas'); canvas.width = video.videoWidth; canvas.height = video.videoHeight;
@@ -81,7 +106,7 @@ async function snapshot() {
   if (!blob) throw new Error('PNG capture failed.');
   const saved = await save(blob, `${safeName($('name').value)}.png`, {width: canvas.width, height: canvas.height});
   $('notice').textContent = 'PNG saved at the capture stream’s actual pixel dimensions.';
-  return saved;
+  return announce({...saved, kind: 'still', url: URL.createObjectURL(blob)});
 }
 async function stop() {
   if (stopping) return stopping;
@@ -89,6 +114,8 @@ async function stop() {
   stopping = (async () => {
     clearTimeout(clipTimer);
     const current = recorder, metadata = {...clip, durationMs: Date.now() - clip.startedAt};
+    // The last frame on screen is the result of the flow: it becomes the clip's poster.
+    const poster = await frameBlob().catch(() => null);
     if (current.state !== 'inactive') current.stop();
     try { await recorderFinished; } finally { recorder = null; clip = null; recorderFinished = null; }
     const blob = new Blob(chunks, {type: current.mimeType}); chunks = [];
@@ -96,8 +123,12 @@ async function stop() {
     try {
       const saved = await save(blob, `${metadata.name}.webm`, {width: metadata.width, height: metadata.height});
       await save(new Blob([JSON.stringify(metadata, null, 2)], {type: 'application/json'}), `${metadata.name}.json`);
+      if (poster) {
+        const clipName = saved.path.split('/').pop().replace(/\.webm$/, '');
+        await fetch(`/save-poster/${clipName}.png`, {method: 'POST', headers: {'Content-Type': 'image/png', 'X-QA-Token': token}, body: poster}).catch(() => {});
+      }
       $('notice').textContent = `Saved ${saved.path}`;
-      return {...saved, durationMs: metadata.durationMs};
+      return announce({...saved, kind: 'clip', durationMs: metadata.durationMs, url: URL.createObjectURL(blob)});
     } catch (error) {
       // Keep a local recovery download if the helper stops or rejects the file.
       const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${metadata.name}.webm`; link.textContent = 'Download unsaved clip'; $('artifacts').append(link);
@@ -110,7 +141,7 @@ async function end() {
   if (ending) return ending;
   ending = (async () => {
     clearTimeout(sessionTimer);
-    try { await stop(); } finally { const previous = stream; stream = null; video.srcObject = null; previous?.getTracks().forEach(track => track.stop()); }
+    try { await stop(); } finally { const previous = stream; stream = null; paneCapture = null; video.srcObject = null; previous?.getTracks().forEach(track => track.stop()); }
   })();
   try { await ending; } finally { ending = null; }
 }
@@ -133,19 +164,29 @@ const commands = {
   // Ends any capture, then reloads so a served review shows its newly attached evidence.
   reload: async () => { await end(); setTimeout(() => { location.hash = 'overview'; location.reload(); }, 300); return {reloading: true}; }
 };
-const status = () => ({ready: !!stream && video.readyState >= 2, recording: !!recorder, width: video.videoWidth, height: video.videoHeight});
+const status = () => ({ready: !!stream && video.readyState >= 2, recording: !!recorder, startedAt: clip?.startedAt || null, busy, pane: paneCapture, driver, width: video.videoWidth, height: video.videoHeight});
+// The App view drives the same recorder, so terminal commands and buttons share one queue.
+window.QARecorder = {
+  connectPane: pane => { driver = 'reader'; return run(() => connect(pane)); },
+  start: name => { driver = 'reader'; return run(() => commands.start(name)); },
+  stop: () => { driver = 'reader'; return run(stop); },
+  still: name => { driver = 'reader'; return run(() => commands.still(name)); },
+  end: () => run(end),
+  status
+};
 // Terminal commands arrive through the helper's long poll; results go back for the waiting client.
 async function poll() {
   let failures = 0;
   for (;;) {
     try {
-      const response = await fetch('/next', {headers: {'X-QA-Token': token}, cache: 'no-store'});
+      const response = await fetch('/next', {headers: {'X-QA-Token': token, 'X-QA-Sharing': stream ? '1' : '0'}, cache: 'no-store'});
       offline = ![200, 204].includes(response.status);
       if (!offline) failures = 0;
       if (response.status === 200) {
         const command = await response.json();
         let result;
         try {
+          if (command.action !== 'status') driver = 'agent';
           const value = command.action === 'status' ? status() : await run(() => commands[command.action](command.name));
           result = {ok: true, value: value ?? null};
         } catch (error) { result = {ok: false, error: error.message}; }

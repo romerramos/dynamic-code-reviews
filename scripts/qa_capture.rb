@@ -11,12 +11,14 @@ require 'timeout'
 require 'net/http'
 require 'time'
 require 'tmpdir'
+require 'shellwords'
 require_relative '../lib/dcr/live_api'
 
 module QACapture
   LIMIT = 24 * 1024 * 1024
   ACTIONS = %w[start stop still end status reload].freeze
   SESSION = '.qa-session.json'
+  ENDPOINT = '.serve.json' # in the series: the served review's port and token, reused on restart
   ASSETS = File.expand_path('../recorder', __dir__)
   LIVE_ASSETS = File.expand_path('../live', __dir__)
   PANEL_CSP = "default-src 'self'; script-src 'self'; style-src 'self'; media-src blob:; img-src 'self' blob:; frame-ancestors 'none'"
@@ -28,7 +30,7 @@ module QACapture
 
     # report: a review HTML (normally .reviews/<series>/current.html) served at / with the
     # QA panel, so the reader starts capture from the review instead of a separate page.
-    def initialize(directory:, port: 0, report: nil)
+    def initialize(directory:, port: 0, report: nil, app: nil, app_ca: nil)
       @directory = File.expand_path(directory)
       raise ArgumentError, 'Capture output must not be a symlink' if File.symlink?(@directory)
       if report
@@ -38,15 +40,36 @@ module QACapture
         series_dir = File.dirname(@report)
         attach = lambda do |input|
           require_relative '../lib/dcr/evidence'
-          DCR::Evidence.attach(series_dir: series_dir, capture_dir: @directory, input: input)
+          # {items: [...]} saves a session's recordings as one revision; a single object still works.
+          if input.key?('items') then DCR::Evidence.attach_all(series_dir: series_dir, capture_dir: @directory, inputs: input['items'])
+          else DCR::Evidence.attach(series_dir: series_dir, capture_dir: @directory, input: input)
+          end
         end
         @live = DCR::LiveAPI.new(series_dir, evidence: attach)
+        @endpoint = File.join(series_dir, ENDPOINT)
       end
       FileUtils.mkdir_p(@directory)
-      @token = SecureRandom.hex(24)
-      @socket = TCPServer.new('127.0.0.1', port)
+      # A served review comes back at the same address with the same token after a restart,
+      # so a page the reviewer still has open keeps working. A taken port falls back to a new one.
+      saved = endpoint
+      @token = saved['token'].to_s.match?(/\A\h{48}\z/) ? saved['token'] : SecureRandom.hex(24)
+      @socket = listen(port.zero? ? saved['port'].to_i : port)
       @port = @socket.addr[1]
       @origin = "http://127.0.0.1:#{@port}"
+      if app
+        raise ArgumentError, '--app needs a served review (--report or --name)' unless @live
+        require_relative '../lib/dcr/app_proxy'
+        app_port = saved['app_port'].to_i
+        @app = begin
+          DCR::AppProxy.new(upstream: app, review_origin: @origin, ca_file: app_ca, port: app_port)
+        rescue Errno::EADDRINUSE
+          DCR::AppProxy.new(upstream: app, review_origin: @origin, ca_file: app_ca)
+        end
+      end
+      if @endpoint
+        File.open(@endpoint, File::WRONLY | File::CREAT | File::TRUNC, 0o600) { |file| file.write(JSON.generate(port: @port, token: @token, app_port: @app&.port)) }
+        File.chmod(0o600, @endpoint)
+      end
       # Terminal commands queue here; the recorder page polls and runs them in order,
       # so the agent never has to operate the recorder tab through a browser harness.
       @commands = []
@@ -62,10 +85,29 @@ module QACapture
       File.open(session, File::WRONLY | File::CREAT | File::EXCL, 0o600) { |file| file.write(JSON.generate(url: @origin, token: @token)) }
     end
 
+    def endpoint
+      return {} unless @endpoint && File.file?(@endpoint) && !File.symlink?(@endpoint)
+      value = JSON.parse(File.read(@endpoint))
+      value.is_a?(Hash) ? value : {}
+    rescue JSON::ParserError
+      {}
+    end
+
+    def listen(port)
+      TCPServer.new('127.0.0.1', port.between?(1, 65_535) ? port : 0)
+    rescue Errno::EADDRINUSE
+      TCPServer.new('127.0.0.1', 0)
+    end
+
     def url = @origin
-    def close = @socket.close
+    def app_url = @app && "#{@app.origin}#{@app.start_path}"
+    def close
+      @app&.close
+      @socket.close
+    end
 
     def run
+      Thread.new { @app.run } if @app
       loop do
         # One thread per connection so the page's long poll never blocks uploads or commands.
         Thread.new(@socket.accept) do |client|
@@ -99,10 +141,12 @@ module QACapture
       raise ArgumentError, 'Invalid Host' unless headers['host'] == "127.0.0.1:#{@port}"
       return live_api(client, method, path, headers) if @live && path.start_with?('/api/')
       if method == 'GET' && !path.start_with?('/next', '/result/', '/requests/')
-        return serve_report(client, path) if @report && (path == '/' || path.match?(%r{\A/(?:revisions/)?[a-z0-9_-]+\.html\z}))
+        page = path.split('?', 2).first # `/?app` opens the review straight into the running app
+        return serve_report(client, page) if @report && (page == '/' || page.match?(%r{\A/(?:revisions/)?[a-z0-9_-]+\.html\z}))
         asset, type = {'/' => ['index.html', 'text/html; charset=utf-8'], '/recorder.js' => ['recorder.js', 'text/javascript'], '/qa-panel.js' => ['qa-panel.js', 'text/javascript'], '/style.css' => ['style.css', 'text/css']}[path]
-        live_asset, live_type = {'/live-tools.js' => ['live-tools.js', 'text/javascript'], '/live.js' => ['live.js', 'text/javascript'], '/live.css' => ['live.css', 'text/css']}[path] if @live
-        return respond(client, 200, File.binread(File.join(LIVE_ASSETS, live_asset)), live_type, REPORT_CSP) if live_asset
+        live_asset, live_type = {'/live-tools.js' => ['live-tools.js', 'text/javascript'], '/live.js' => ['live.js', 'text/javascript'], '/live.css' => ['live.css', 'text/css'], '/try-band.js' => ['try-band.js', 'text/javascript']}[path] if @live
+        live_asset, live_type = {'/app-view.js' => ['app-view.js', 'text/javascript'], '/app-view.css' => ['app-view.css', 'text/css']}[path] if @app && !live_asset
+        return respond(client, 200, File.binread(File.join(LIVE_ASSETS, live_asset)), live_type, report_csp) if live_asset
         return respond(client, 404, 'Not found', 'text/plain') unless asset
         content = File.binread(File.join(ASSETS, asset)).sub('__QA_TOKEN__', @token)
         return respond(client, 200, content, type)
@@ -111,12 +155,20 @@ module QACapture
       return requests(client, method, path, headers) if path == '/request' || path == '/presence' || path == '/requests/next'
       return control(client, method, path, headers) if path == '/next' || path == '/control' || path.start_with?('/result/')
       raise ArgumentError, 'Only same-origin capture uploads are accepted' unless method == 'POST' && headers['origin'] == @origin
+      # The final frame of a clip, saved beside it as its poster (the thumbnail in the review).
+      if (clip = path[%r{\A/save-poster/([a-z0-9_-]{1,80}-[0-9a-f]{8})\.png\z}, 1])
+        raise ArgumentError, 'No such clip' unless File.file?(File.join(@directory, "#{clip}.webm"))
+        return save_upload(client, headers, File.join(@directory, "#{clip}.poster.png"))
+      end
       match = path.match(%r{\A/save/([a-z0-9_-]{1,80})\.(png|webm|json)\z})
       raise ArgumentError, 'Invalid capture filename' unless match
+      save_upload(client, headers, File.join(@directory, "#{match[1]}-#{SecureRandom.hex(4)}.#{match[2]}"))
+    end
+
+    def save_upload(client, headers, output)
       length = Integer(headers.fetch('content-length'))
       raise ArgumentError, 'Capture must be between 1 byte and 24 MiB' unless length.positive? && length <= LIMIT
       raise ArgumentError, 'Chunked uploads are unsupported' if headers['transfer-encoding']
-      output = File.join(@directory, "#{match[1]}-#{SecureRandom.hex(4)}.#{match[2]}")
       begin
         File.open(output, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |file|
           remaining = length
@@ -183,11 +235,17 @@ module QACapture
       id = path[%r{\A/result/([a-f0-9]{16})\z}, 1]
       if method == 'GET' && path == '/next'
         # Long poll: a hidden recorder tab's timers are throttled, but a pending fetch is not.
+        # Several review pages may be open; a recorder command belongs to the one sharing its tab.
+        sharing = headers['x-qa-sharing'] == '1'
         command = @lock.synchronize do
-          @last_poll = Time.now
-          @signal.wait(@lock, 10) if @commands.empty?
-          @last_poll = Time.now
-          @commands.shift
+          deadline = Time.now + 10
+          loop do
+            @last_poll = Time.now
+            @last_sharing_poll = Time.now if sharing
+            taken = take_command(sharing)
+            break taken if taken || Time.now >= deadline
+            @signal.wait(@lock, deadline - Time.now)
+          end
         end
         command ? respond(client, 200, JSON.generate(command), 'application/json') : respond(client, 204, '', 'text/plain')
       elsif method == 'POST' && path == '/control'
@@ -196,7 +254,7 @@ module QACapture
         name = request['name'].to_s
         raise ArgumentError, 'Invalid evidence name' unless name.empty? || name.match?(/\A[a-z0-9_-]{1,80}\z/)
         command = {id: SecureRandom.hex(8), action: request['action'], name: name}
-        @lock.synchronize { @commands << command; @signal.signal }
+        @lock.synchronize { @commands << command; @signal.broadcast }
         respond(client, 200, JSON.generate(id: command[:id]), 'application/json')
       elsif method == 'POST' && id
         raise ArgumentError, 'Only the recorder page reports results' unless headers['origin'] == @origin
@@ -212,6 +270,14 @@ module QACapture
       end
     end
 
+    # A page that is not sharing takes a command only when no sharing page has polled lately, so a
+    # second open review page cannot swallow the agent's `dcr record start`.
+    def take_command(sharing)
+      return nil if @commands.empty?
+      sharer_present = @last_sharing_poll && Time.now - @last_sharing_poll < 12
+      sharing || !sharer_present ? @commands.shift : nil
+    end
+
     # The served review's conversation routes. Same token and origin rules as recorder
     # control: the page sends its own origin, the terminal sends none, a foreign page fails.
     def live_api(client, method, path, headers)
@@ -225,8 +291,72 @@ module QACapture
         return respond(client, 200, html, 'text/html; charset=utf-8', REPORT_CSP, "Content-Disposition: attachment; filename=\"#{name}\"")
       end
       body = -> { read_body(client, headers, DCR::LiveAPI::BODY_LIMIT) }
+      if method == 'POST' && path == '/api/qa'
+        input = JSON.parse(body.call)
+        raise ArgumentError, 'Expected a JSON object' unless input.is_a?(Hash)
+        return respond(client, 200, JSON.generate(qa_request(input)), 'application/json', REPORT_CSP)
+      end
       code, payload = @live.call(method, path, body)
       respond(client, code, JSON.generate(payload), 'application/json', REPORT_CSP)
+    end
+
+    # Start QA review: the reviewer has shared this tab (cut to the app) and asks the agent to record
+    # evidence for the review. The server writes the request, because only it knows the recorder
+    # folder, the review's address, the app and the comments, and it fixes the rules the agent follows.
+    def qa_request(input)
+      require_relative 'series'
+      key = input['key'].to_s
+      series_dir = File.dirname(@report)
+      manifest = JSON.parse(File.read(File.join(series_dir, 'manifest.json')))
+      payload = ReviewSeries.latest(series_dir, ReviewSeries.manifest(series_dir))
+      review = payload['review']
+      flags = "--repo #{Shellwords.escape(manifest.fetch('repo'))} --name #{Shellwords.escape(manifest.fetch('name'))}"
+      dcr = Shellwords.escape(File.expand_path('../bin/dcr', __dir__))
+      out = Shellwords.escape(@directory)
+      paths = Array(payload.dig('snapshot', 'files')).flat_map { |file| Array(file['hunks']).map { |hunk| [hunk['id'], file['path']] } }.to_h
+      comments = Array(review['comments']).map do |comment|
+        where = paths[comment['hunk']] ? " (#{paths[comment['hunk']]}, lines #{comment['start']}-#{comment['end']})" : ''
+        "- #{comment['id']}: #{comment['label']}, #{comment['decoration']}: #{comment['subject']}#{where}"
+      end
+      # Comments on elements; older ones carry no kind, recordings and QA requests are left out.
+      threads = (@live.state.read.dig('threads', key) || {}).select { |id, thread| id.start_with?('app-') && !thread.dig('anchor', 'selector').to_s.empty? && !%w[clip still request].include?(thread.dig('anchor', 'kind')) }
+      app_comments = threads.map { |id, thread| "- #{id}: on #{thread.dig('anchor', 'path')}, #{thread.dig('anchor', 'selector')} (\"#{thread.dig('anchor', 'text')}\"): #{thread['messages'].first&.dig('body').to_s.lines.first.to_s.strip}" }
+      id = "app-qa-#{SecureRandom.hex(4)}"
+      text = <<~TEXT
+        The reviewer pressed Start QA review. Record visual evidence for this review now, in one pass, while they watch.
+
+        Where: the review is open at #{@origin}/?app#overview in the reviewer's browser, and its App view shows the running app (#{@app ? @app.describe[:upstream] : 'no app'}), currently at #{input['route'].to_s.empty? ? '/' : input['route']}. The reviewer already shared that tab with the recorder, cut down to the app, so recording needs no prompt.
+
+        How:
+        - Act in that very tab with your browser tool. If it cannot reach the tab (for example Claude in Chrome only reaches tabs in its own group), reply in this thread asking the reviewer to open the review from your tool's tab and press Start QA review there; do not record another tab.
+        - Start, stop and snapshot only with the `dcr record` commands below. While they drive the recorder, the review draws your pointer and a ring on each click inside the app, at the coordinates of the input you send, so a tool that never moves the system pointer (DevTools protocol, Playwright, Claude in Chrome) still records a clip a viewer can follow. A computer-use tool that moves the real pointer is shown as it is. Never add a cursor to a recording afterwards.
+        - Move to an element before clicking it (hover, then click), at a human pace, so the pointer travels the way a person's would.
+        - The app is the large pane in the middle of the App view; act inside it. Change the page with the address field at the top of the App view. Do not close the App view, reload the review or open another tab.
+        - If the app asks you to log in, log in inside the pane with the project's development seed account. Use only development data.
+
+        What: for each item below that a viewer would understand better by seeing it, record one short clip; skip items that are about code only, and say why.
+        1. Bring the app to the starting state first; that part is not recorded.
+        2. #{dcr} record --out #{out} start --name <item id>
+        3. Do the steps at a human pace, about a second per action, and hold one second on the result.
+        4. #{dcr} record --out #{out} stop        (prints the saved file's path; `still --name <id>` saves a PNG instead)
+
+        Review comments:
+        #{comments.empty? ? '- (none)' : comments.join("\n")}
+
+        Comments on the app:
+        #{app_comments.empty? ? '- (none)' : app_comments.join("\n")}
+
+        Also record any changed user flow that has no comment, if seeing it helps.
+
+        Attach everything in one go, which saves one revision the open review offers to the reviewer. This QA review replaces the clips of any previous QA review (the reviewer's own recordings stay), so record every item worth showing now, not only what is new:
+        #{dcr} evidence attach #{flags} --file <items.json>
+        items.json: [{"path": "<saved file>", "comment_id": "<review comment id, or omit>", "title": "<what the clip shows>", "result": "passed or failed", "observed": "<one sentence on what you saw>", "page": "<app path>"}]
+        Use a review comment's id as comment_id so the clip appears on that comment. For a comment on the app, put its id in the title and reply in that thread with what you saw.
+
+        Then reply to this thread: #{dcr} reply #{flags} #{id} '<what you recorded, what you skipped and why>'
+      TEXT
+      @live.state.request_qa(key, id, text)
+      {'id' => id}
     end
 
     def read_body(client, headers, limit)
@@ -252,7 +382,7 @@ module QACapture
       file = path == '/' ? @report : File.join(File.dirname(@report), path.delete_prefix('/'))
       return respond(client, 404, 'Not found', 'text/plain') unless File.file?(file) && !File.symlink?(file)
       html = File.read(file, encoding: 'UTF-8').sub(/<meta http-equiv="Content-Security-Policy"[^>]*>/i) do
-        %(<meta http-equiv="Content-Security-Policy" content="#{REPORT_CSP}">)
+        %(<meta http-equiv="Content-Security-Policy" content="#{report_csp}">)
       end
       if path == '/'
         # Saved progress and settings go in first, ahead of the early theme script and the
@@ -260,11 +390,16 @@ module QACapture
         html = html.dup.insert(html.index('<title>') || html.index('<script') || 0, @live.bootstrap_script) if @live
         panel = %(<meta name="qa-token" content="#{@token}"><link rel="stylesheet" href="/style.css"><script src="/qa-panel.js"></script><script src="/recorder.js"></script>)
         panel += %(<link rel="stylesheet" href="/live.css"><script src="/live-tools.js"></script><script src="/live.js"></script>) if @live
+        panel += %(<meta name="dcr-app" content="#{JSON.generate(@app.describe).gsub('"', '&quot;')}"><link rel="stylesheet" href="/app-view.css"><script src="/app-view.js"></script>) if @app
+        panel += %(<script src="/try-band.js"></script>) if @live
         at = html.rindex('</body>') || html.length
         html = html.dup.insert(at, panel)
       end
-      respond(client, 200, html, 'text/html; charset=utf-8', REPORT_CSP)
+      respond(client, 200, html, 'text/html; charset=utf-8', report_csp)
     end
+
+    # The running app is the only page the review may frame.
+    def report_csp = @app ? REPORT_CSP.sub("connect-src 'self';", "connect-src 'self'; frame-src #{@app.origin};") : REPORT_CSP
 
     def respond(client, code, body, type, csp = PANEL_CSP, extra = nil)
       reason = {200 => 'OK', 202 => 'Accepted', 204 => 'No Content', 400 => 'Bad Request', 404 => 'Not Found'}.fetch(code, 'Error')
@@ -352,12 +487,14 @@ if $PROGRAM_NAME == __FILE__ && ARGV.first == 'control'
 elsif $PROGRAM_NAME == __FILE__
   options = {port: 0}
   OptionParser.new do |parser|
-    parser.banner = 'Usage: ruby qa_capture.rb (--repo <root> --name <series> | --report <review.html>) [--out <capture-directory>] [--port 0]'
+    parser.banner = 'Usage: ruby qa_capture.rb (--repo <root> --name <series> | --report <review.html>) [--out <capture-directory>] [--port 0] [--app URL [--app-ca PATH]]'
     parser.on('--out PATH', 'Where recordings are saved; a temporary directory when omitted') { |value| options[:directory] = value }
     parser.on('--report PATH') { |value| options[:report] = value }
     parser.on('--repo PATH', 'With --name: serve that series\' current review') { |value| options[:repo] = value }
     parser.on('--name SLUG') { |value| options[:name] = value }
     parser.on('--port NUMBER', Integer) { |value| options[:port] = value }
+    parser.on('--app URL', 'The running app to show inside the review, like http://localhost:3000 or https://app.myproject.test') { |value| options[:app] = value }
+    parser.on('--app-ca PATH', 'A local CA certificate the app\'s HTTPS uses (mkcert\'s root is found automatically)') { |value| options[:app_ca] = value }
   end.parse!
   if options[:name]
     abort 'Use a short lowercase series slug' unless options[:name].match?(/\A[a-z0-9]+(?:-[a-z0-9]+)*\z/)
@@ -379,6 +516,8 @@ elsif $PROGRAM_NAME == __FILE__
   server = QACapture::Server.new(**options)
   $stdout.sync = true
   puts options[:report] ? "Review with QA panel: #{server.url}/#overview" : "QA recorder: #{server.url}"
+  puts "App inside the review: #{server.url}/?app#overview (proxying #{options[:app]} through #{server.app_url})" if server.app_url
+  puts 'Open the review in a tab your browser tool controls (Claude in Chrome: its tab group), so you can act in it when the reviewer presses Start QA review.' if server.app_url
   puts "Local capture files: #{File.expand_path(options[:directory])}"
   puts "Control: ruby #{__FILE__} control --out #{File.expand_path(options[:directory])} <wait-request|wait-ready|start|still|stop|end|status|reload> [--name NAME]"
   begin

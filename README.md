@@ -46,8 +46,10 @@ When requested, timed UI interactions use continuous WebM tab recordings. The bu
 [capture helper](references/tab-capture.md) saves lossless PNG stills from the
 same stream, preserving text detail without relying on compressed agent screenshots.
 It uses browser APIs and the existing Ruby runtime: no FFmpeg, extension, npm,
-gem, or harness-specific SDK. An initial browser tab-sharing choice is required.
-Native automation-pointer visibility is verified per harness; no pointer is drawn.
+gem, or harness-specific SDK; clip thumbnails are the clip's last frame, drawn by the
+browser. One browser tab-sharing click by the reviewer is required. A person's own
+recordings show their real pointer; when the agent records (Start QA review), the review
+draws the agent's pointer live from its input events, so any browser tool works.
 Videos and stills are embedded into the same offline review HTML. Historical GIFs
 remain readable; the obsolete screenshot-to-GIF encoder and its image decoder
 libraries have been removed.
@@ -259,6 +261,7 @@ ruby scripts/test_series.rb
 node scripts/test_ui.js
 node --check assets/report.js
 ruby scripts/test_qa_capture.rb
+ruby scripts/test_app_proxy.rb
 ruby scripts/test_previews.rb
 ruby scripts/test_preview_stand_ins.rb
 node --check recorder/recorder.js

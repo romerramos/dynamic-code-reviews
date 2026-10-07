@@ -39,12 +39,18 @@ module DCR
       You may read files, search and run read-only commands, and write one temporary file outside the project. Do not edit, create or delete anything in the project, run the app or console, or run formatters, generators, migrations, installs or git commands that change anything.
     TEXT
 
+    QA_RULE = <<~TEXT.strip
+      QA REQUEST. Record visual evidence in the review tab the reviewer shared, then attach it.
+      You may operate the running app in that tab, run `dcr record` and `dcr evidence attach`, read files and run read-only commands. Do not edit, create or delete anything in the project, and do not run formatters, generators, migrations, installs or git commands that change anything. Use only development data; never record credentials or unrelated screens.
+    TEXT
+
     USAGE = {
       'wait' => 'dcr wait (--repo ROOT --name SERIES | --dir DIR) [--timeout SECONDS] [--json]',
       'comments' => 'dcr comments (--repo ROOT --name SERIES | --dir DIR) [--json]',
       'preview' => 'dcr preview submit (--repo ROOT --name SERIES | --dir DIR) --path <template path> [--file FILE] [--title TITLE] | dcr preview fail ... --path <template path> --reason TEXT',
       'export' => 'dcr export (--repo ROOT --name SERIES | --dir DIR) [--out FILE]',
-      'reply' => 'dcr reply (--repo ROOT --name SERIES | --dir DIR) [--key KEY] [--json] <thread-id> <text>'
+      'reply' => 'dcr reply (--repo ROOT --name SERIES | --dir DIR) [--key KEY] [--json] <thread-id> <text>',
+      'evidence' => 'dcr evidence attach (--repo ROOT --name SERIES | --dir DIR) --file ITEMS.json [--replace previous-qa|all]   (ITEMS: [{"path", "title", "result": "passed|failed", "observed", "comment_id"?, "page"?}]; previous-qa, the default, replaces the last QA review; all replaces every recording, only when the reviewer asks to start over)'
     }.freeze
 
     def run(command, argv)
@@ -62,6 +68,7 @@ module DCR
         p.on('--reason TEXT') { |v| options[:reason] = v }
         p.on('--timeout SECONDS', Integer) { |v| options[:timeout] = v }
         p.on('--json') { options[:json] = true }
+        p.on('--replace MODE', %w[previous-qa all]) { |v| options[:replace] = v.tr('-', '_').to_sym }
       end
       parser.parse!(argv)
       state = State.new(directory(options, parser))
@@ -71,6 +78,7 @@ module DCR
       when 'reply' then reply(state, options, argv, parser)
       when 'export' then export(options, directory(options, parser))
       when 'preview' then preview(state, options, argv, parser)
+      when 'evidence' then evidence(options, directory(options, parser), argv, parser)
       end
     rescue ArgumentError, KeyError, SystemCallError, JSON::ParserError => error
       abort error.message
@@ -119,20 +127,26 @@ module DCR
       finish = entries.any? { |entry| entry['kind'] == 'finish' }
       sends = entries.select { |entry| entry['kind'] == 'send' }
       previews = entries.select { |entry| entry['kind'] == 'preview' }
+      qas = entries.select { |entry| entry['kind'] == 'qa' }
       ids = sends.flat_map { |entry| entry['thread_ids'] }.uniq
-      conversation = sends.any? || finish || previews.empty? # a pure preview request is not a conversation
+      conversation = sends.any? || finish || (previews.empty? && qas.empty?) # a pure task request is not a conversation
       out = []
       out << REPLY_ONLY if conversation
       out << PREVIEW_RULE if previews.any?
+      out << QA_RULE if qas.any?
       out << (finish ? 'The reviewer finished this round.' : 'The reviewer sent you the following from the review.') if conversation
       sends.each { |entry| out << "---\nThread: #{entry['thread_ids'].join(', ')}\n\n#{entry['text']}" }
       previews.each { |entry| out << "---\n#{preview_request(entry, flags)}" }
+      qas.each { |entry| out << "---\nThread: #{entry['thread_ids'].join(', ')}\n\n#{entry['text']}" }
       out << '---'
       out << "Answer each thread with: dcr reply #{flags} <thread-id> '<your answer: what you found, and what you would change if anything>'" unless ids.empty?
       out << 'Do not resolve threads; the reviewer resolves them.' unless ids.empty? || finish
       out << 'Then run `dcr wait` again for the next round.' unless finish
       out << 'Finish received: send any outstanding replies, then stop waiting unless the reviewer asks for another round.' if finish
-      out << (conversation ? 'Reminder: reply only. No file changes, no commits, no pushes.' : 'Reminder: submit HTML only, change nothing in the project.')
+      out << if conversation then 'Reminder: reply only. No file changes, no commits, no pushes.'
+             elsif qas.any? then 'Reminder: record and attach only. No changes to the project, no commits, no pushes.'
+             else 'Reminder: submit HTML only, change nothing in the project.'
+             end
       out.join("\n\n")
     end
 
@@ -148,6 +162,23 @@ module DCR
         Submit with: dcr preview submit #{flags} --path #{entry['path']} --file <your-temp-file> --title "<a short title>"
         If nothing useful can be built: dcr preview fail #{flags} --path #{entry['path']} --reason "<one sentence>"
       TEXT
+    end
+
+    # The agent's way to attach what it recorded for a QA request: every clip or still in one file,
+    # saved as one revision with each one on its review comment. Files must come from one recorder
+    # folder (the one `dcr record --out` used), which the same checks as the reviewer's attach guard.
+    def evidence(options, directory, argv, parser)
+      raise ArgumentError, parser.to_s unless argv.shift == 'attach' && options[:file]
+      items = JSON.parse(File.read(options[:file]))
+      raise ArgumentError, 'The file must hold a JSON array of recordings' unless items.is_a?(Array) && items.all?(Hash)
+      folders = items.map { |item| File.dirname(File.expand_path(item['path'].to_s)) }.uniq
+      raise ArgumentError, 'All recordings must come from one recorder folder (the --out of dcr record)' unless folders.length == 1
+      raise ArgumentError, "#{folders.first} is not a recorder folder" unless File.file?(File.join(folders.first, '.qa-session.json'))
+      require_relative 'evidence'
+      result = Evidence.attach_all(series_dir: directory, capture_dir: folders.first, inputs: items, source: 'agent', replace: options[:replace])
+      replaced = result['replaced'].to_i.positive? ? ", replacing #{result['replaced']} #{options[:replace] == :all ? 'earlier recording(s)' : 'from the previous QA review'}" : ''
+      puts "Attached #{result['attached']} recording(s)#{replaced} as revision #{result['revision']}: #{result['path']}"
+      puts 'The open review offers the new revision; reply to the QA thread with what you recorded and what you skipped.'
     end
 
     def comments(state, options)

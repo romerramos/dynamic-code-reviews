@@ -93,6 +93,68 @@ from its original snapshot and analysis when refreshing presentation only.
   Retain resolved personal comments in combined copies, marking their local state.
   Editing a personal comment reopens it; deleting one removes its resolution mark.
 
+## The running app (App view)
+
+A served review started with `dcr serve --app <url>` adds an **App** button in the reading
+bar and an App view built on the preview stage dialog. It follows the same tokens and
+meanings: indigo is "where am I", the one primary action and "with your agent"; amber is
+"yours, not sent"; grey is settled. The only colour of its own is red, and it means one
+thing: recording now (a red dot on **Record**, a red pill reading **Stop m:ss** while live).
+
+- **Header**: with an app, the header actions start with the **Code | App | Previews**
+  switch (Previews with its template count); the old header Previews button and the
+  reading-bar App button are not shown. The App view's bar starts with the same switch.
+  The agent's state is a dot on Your review, its words in that button's tooltip.
+- **Try the change** (Overview, right after What changed): a 300px live miniature of the
+  app (real page, inert, loaded when on screen, green dot once it answers) beside one
+  sentence and **Start QA review** (primary), Open the app (A), Comment on it; below it,
+  the changed templates (four by name, state dot, Preview) and All N in Previews. It
+  replaces the recorder card and the Visual evidence line in a review served with an app.
+- **QA review in progress**: from Start QA review until the agent replies in the QA thread,
+  an accent banner takes the first line of the App view's bar: what is happening (waiting
+  for the agent, running, or sharing stopped with **Share this tab**), a count of
+  recordings so far and **Stop QA review**. The view's own controls and Esc are locked;
+  the app pane stays live because the agent's input lands there.
+- **QA reviews in On this app**: the latest QA review is one row (time, number of
+  recordings, the report's first line); opened, it shows its clips side by side and the
+  agent's report, never a reply field. Earlier QA reviews fold into one row, since each
+  run replaces the last one's recordings. Comments on elements and the reader's own
+  recordings follow.
+- **Evidence thumbnails**: a clip's poster is its last frame, saved by the recorder; a clip
+  without one shows its own frame, never a "Video preview" placeholder. The Overview shows
+  no "recorded by" note for a finished QA review (the agent recording is the normal case);
+  the revision line says what was found ("2 recordings, all passed").
+- **QA review ready**: when the agent replies, sharing stops, the App view closes and a
+  modal names what was recorded, the revision that holds it (replacing the previous QA
+  review's recordings) and the agent's report, says the tab is free again, and offers
+  **See the clips in revision N** (reloads to the latest revision) or Close.
+- **Bar**: title, an address field (host muted, page editable, recent pages, reload and
+  open-in-a-tab inside the field), Browse/Comment, device widths (hidden below 900px;
+  Browse/Comment never are), Record, Still (only while this tab is shared), **On this app**
+  with a count, close. Opening focuses the dialog, not the address field.
+- **Comment where you see it**: in Comment mode a click picks the control under the
+  pointer (an icon inside a button picks the button) and a 380px comment box opens under
+  the element, or above it when there is no room, inside the app's area. It follows the
+  element as the app scrolls. Its first line names the element in words ("Save button");
+  the selector is a muted detail that gives way. Copy, Cancel and **Send to agent** (the
+  primary). ⌘/Ctrl Enter sends, Esc closes it, a second Esc leaves Comment mode, a third
+  closes the app.
+- **On this app** is the sibling of Your review: a 360px column, one row per thing said
+  about the app (a comment, or a recording with its conversation), newest first, a 3px
+  left stroke for state, no cards and no avatars. A row shows the element name and kind,
+  the page and time, two lines of the comment, and one status line; it opens in place to
+  the full conversation (who and when on one quiet line, then the text; agent answers
+  render the safe Markdown subset), **Show in the app** and a one-line reply field.
+  Opening a comment row highlights its element in the app.
+- **Recordings** join the same list: a thumbnail when closed, the player when open, then
+  **Send to agent** (quiet) or **Add to the review** (secondary: title, Passed or Failed,
+  what you saw, optionally a review comment). Added ones wait for **Save N to the review**
+  in the panel header, which saves one revision.
+- **Footer**: one status sentence on the left; while this tab is shared, "Sharing this
+  tab" and Stop sharing on the right. Never show file paths there.
+- With the App view available, the Overview's recorder shows **Open the app** instead of
+  Choose QA tab.
+
 ## Calm chrome
 
 Exactly two bars sit above the code. Before adding a control, find its home among
