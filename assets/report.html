@@ -55,6 +55,22 @@
   <dialog id="comment-editor" class="modal" aria-labelledby="editor-title"><form id="comment-form" class="modal-box"><header><h2 id="editor-title">Your comment</h2><button id="cancel-comment" type="button" class="btn btn-sm btn-circle btn-ghost" aria-label="Cancel comment">✕</button></header><p id="editor-location" class="comment-location"></p><pre id="editor-snippet" class="comment-snippet"></pre><label class="editor-label">Type<select id="editor-label" class="select select-bordered"><option value="note">Note</option><option value="question">Question</option><option value="suggestion">Suggestion</option><option value="issue">Issue</option></select></label><label class="editor-label">Comment<input id="editor-subject" class="input input-bordered" required placeholder="What should change, or what needs a closer look?"></label><label class="editor-label">Details <span class="muted">(optional)</span><textarea id="editor-discussion" class="textarea textarea-bordered" rows="3"></textarea></label><label class="editor-blocking"><input id="editor-blocking" type="checkbox" class="checkbox checkbox-sm"> Blocks approval</label><footer><span class="muted">Saved in this browser. Export a copy to keep it.</span><button type="submit" class="btn btn-sm btn-primary">Save comment</button></footer></form></dialog>
   <dialog id="send-dialog" class="modal" aria-labelledby="send-title"><div class="modal-box"><header><div><h2 id="send-title">Send your review</h2><p class="muted" id="send-hint">Choose what goes out. Comments you leave unticked stay with you.</p></div><button type="button" id="close-send" class="btn btn-sm btn-circle btn-ghost" aria-label="Close">✕</button></header><ul id="send-list" class="send-list"></ul><footer id="send-actions"><button type="button" id="send-copy" class="btn btn-sm btn-ghost">Copy for LLMs</button></footer></div></dialog>
   <dialog id="copy-dialog" class="modal" aria-labelledby="copy-title"><div class="modal-box"><h2 id="copy-title">Copy text</h2><p>Automatic copying is unavailable. Select and copy this text.</p><textarea id="copy-text" class="textarea textarea-bordered" readonly rows="12" aria-label="Review text to copy"></textarea><button id="close-copy" class="btn btn-sm btn-primary">Done</button></div></dialog>
+  <dialog id="stage" class="stage" aria-labelledby="stage-title">
+    <header class="stage-bar">
+      <div class="stage-heading"><h2 id="stage-title">Previews</h2><p class="stage-sub" id="stage-sub"></p></div>
+      <div class="stage-tools">
+        <div class="stage-sizes" role="group" aria-label="Preview width"><button type="button" data-stage-width="390" title="Phone, 390 px"></button><button type="button" data-stage-width="768" title="Tablet, 768 px"></button><button type="button" data-stage-width="1280" title="Desktop, 1280 px"></button><button type="button" data-stage-width="fit" title="Fit to the window">Fit</button></div>
+        <button type="button" class="act act-quiet" data-stage-code>View code</button>
+        <button type="button" class="act act-secondary" data-stage-rebuild hidden></button>
+        <button type="button" class="act act-quiet act-icon" data-stage-close aria-label="Close previews" title="Close (Esc)"></button>
+      </div>
+    </header>
+    <div class="stage-body">
+      <nav class="stage-rail" id="stage-rail" aria-label="Templates in this review"></nav>
+      <section class="stage-canvas" aria-live="polite"><div class="stage-examples" id="stage-examples"></div><div class="stage-view" id="stage-view"></div><p class="stage-caption" id="stage-caption"></p></section>
+    </div>
+    <footer class="stage-foot" id="stage-foot" hidden></footer>
+  </dialog>
   <dialog id="previews-dialog" class="modal" aria-labelledby="previews-title"><div class="modal-box preview-hub-box"><header><div><h2 id="previews-title">Template previews</h2><p class="muted">Rendered from the reviewed code with example data. Pick templates while reading, then ask your agent for all of them at once.</p></div><button type="button" id="close-previews" class="btn btn-sm btn-circle btn-ghost" aria-label="Close template previews">✕</button></header><div id="preview-hub"></div></div></dialog>
   <button id="zen-exit" class="zen-exit" hidden></button>
   <div id="toast" role="status" hidden></div>

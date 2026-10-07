@@ -197,6 +197,7 @@
   }
 
   let commentAnchor = null;
+  let drag = null; // a drag over line numbers in progress
 
   function lineButton(hunk, side, number, comment = null, path) {
     if (number === undefined) return '';
@@ -209,28 +210,150 @@
     selection = null;
     $('range-actions').hidden = true;
     document.querySelectorAll('.user-range-selected').forEach(cell => cell.classList.remove('user-range-selected'));
+    removeComposer(true);
   }
   function paintSelection() {
     document.querySelectorAll('.user-range-selected').forEach(cell => cell.classList.remove('user-range-selected'));
-    if (!selection) return;
+    if (!selection) return removeComposer();
     document.querySelectorAll('.gutter[data-line]').forEach(cell => {
       if (![cell.dataset.hunk, cell.dataset.fullHunk].includes(selection.hunk) || cell.dataset.side !== selection.side || Number(cell.dataset.line) < selection.start || Number(cell.dataset.line) > selection.end) return;
       cell.classList.add('user-range-selected');
       (layout === 'split' ? cell.nextElementSibling : cell.parentElement.querySelector('.code'))?.classList.add('user-range-selected');
     });
-    $('range-label').textContent = `${selection.side === 'new' ? 'After' : 'Before'} L${selection.start}–${selection.end} · ${hunkFiles.get(selection.hunk).path.split('/').pop()}`;
-    $('range-actions').hidden = false;
+    if (!drag?.moved) placeComposer(); // while dragging, wait for the release
   }
-  function selectLine(button) {
+  function selectLine(button, extend = false) {
     closeComments();
     const number = Number(button.dataset.selectLine);
     const hunk = button.dataset.rangeHunk;
     const side = button.dataset.rangeSide;
-    const origin = selection?.hunk === hunk && selection.side === side ? selection.origin : number;
+    // A plain click starts a new selection (a typed draft moves with the composer); shift-click extends it.
+    const origin = extend && selection?.hunk === hunk && selection.side === side ? selection.origin : number;
     selection = {hunk, side, origin, start:Math.min(origin, number), end:Math.max(origin, number)};
     if (!ReviewTools.anchor(snapshot, selection)) { clearSelection(); return; }
     paintSelection();
   }
+
+  // --- Commenting where you read: the composer opens directly under the selected lines ----------------
+  // Click a line number or drag over several; the composer grows out of the code, like a review on a pull
+  // request. The text, type and blocking choice survive the page re-rendering, so nothing is lost.
+  const composer = {text: '', label: 'note', blocking: false, node: null, shownFor: '', sender: null};
+  const composerTypes = ['note', 'question', 'suggestion', 'issue'];
+  function composerNode() {
+    if (composer.node) return composer.node;
+    const form = document.createElement('form');
+    form.id = 'inline-composer';
+    form.className = 'composer';
+    form.noValidate = true;
+    form.setAttribute('aria-label', 'Add a comment');
+    form.innerHTML = `<header class="composer-head"><span class="composer-where"></span><button type="button" class="act act-quiet act-icon" data-composer-cancel aria-label="Cancel comment" title="Cancel (Esc)">${icon('x')}</button></header>
+      <div class="composer-types" role="radiogroup" aria-label="Type of comment">${composerTypes.map(type => `<label class="composer-type"><input type="radio" name="composer-label" value="${type}"><span>${icon(commentTypes[type][0])}${commentTypes[type][1]}</span></label>`).join('')}</div>
+      <textarea class="composer-text" rows="3" aria-label="Your comment" placeholder="Leave a comment. The first line is the headline; add detail below it."></textarea>
+      <footer class="composer-foot"><label class="composer-blocking"><input type="checkbox" name="composer-blocking"><span>Blocks approval</span></label><span class="composer-hint"><kbd>⌘</kbd><kbd>↵</kbd> to save</span><div class="composer-actions"><button type="button" class="act act-quiet" data-composer-cancel>Cancel</button><button type="submit" class="act act-secondary" data-composer-save>Comment</button><button type="button" class="act act-primary" data-composer-send hidden>${icon('send')}Comment and send</button></div></footer>`;
+    const text = form.querySelector('.composer-text');
+    const refresh = () => {
+      composer.text = text.value;
+      form.querySelectorAll('[data-composer-save], [data-composer-send]').forEach(button => { button.disabled = !text.value.trim(); });
+    };
+    text.addEventListener('input', refresh);
+    text.addEventListener('keydown', event => {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); clearSelection(); }
+      else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); form.requestSubmit(); }
+    });
+    form.addEventListener('change', event => {
+      if (event.target.name === 'composer-label') composer.label = event.target.value;
+      if (event.target.name === 'composer-blocking') composer.blocking = event.target.checked;
+      form.querySelector('.composer-types').dataset.type = composer.label;
+    });
+    form.addEventListener('click', event => {
+      if (event.target.closest('[data-composer-cancel]')) clearSelection();
+      if (event.target.closest('[data-composer-send]')) { composer.sendAfter = true; form.requestSubmit(); }
+    });
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const entered = splitComment(composer.text);
+      if (!entered.subject || !selection) return;
+      const send = composer.sendAfter; composer.sendAfter = false;
+      const comment = {hunk: selection.hunk, side: selection.side, start: selection.start, end: selection.end, id: `mine-${crypto.randomUUID()}`,
+        label: composer.label, decoration: composer.blocking ? 'blocking' : 'non-blocking', subject: entered.subject, discussion: entered.discussion};
+      commitComment(comment);
+      if (send && composer.sender) composer.sender(comment.id);
+    });
+    composer.node = form;
+    syncComposerFields();
+    return form;
+  }
+  const splitComment = ReviewTools.splitComment;
+  function syncComposerFields() {
+    const form = composer.node;
+    form.querySelector('.composer-text').value = composer.text;
+    form.querySelector(`input[name="composer-label"][value="${composer.label}"]`).checked = true;
+    form.querySelector('input[name="composer-blocking"]').checked = composer.blocking;
+    form.querySelector('.composer-types').dataset.type = composer.label;
+    form.querySelectorAll('[data-composer-save], [data-composer-send]').forEach(button => { button.disabled = !composer.text.trim(); });
+  }
+  function removeComposer(reset = false) {
+    const row = composer.node?.closest('tr.inline-compose');
+    row?.remove();
+    if (reset) { composer.text = ''; composer.label = 'note'; composer.blocking = false; composer.shownFor = ''; if (composer.node) syncComposerFields(); }
+  }
+  // Put the composer in a row right under the last selected line, in whichever layout is showing.
+  function placeComposer() {
+    const form = composerNode();
+    const cell = [...document.querySelectorAll('.gutter[data-line]')].find(candidate => [candidate.dataset.hunk, candidate.dataset.fullHunk].includes(selection.hunk) && candidate.dataset.side === selection.side && Number(candidate.dataset.line) === selection.end);
+    const row = cell?.closest('tr');
+    if (!row) return;
+    document.querySelectorAll('tr.inline-compose').forEach(old => { if (old.previousElementSibling !== row) old.remove(); });
+    if (!(row.nextElementSibling?.classList.contains('inline-compose'))) {
+      const wrap = document.createElement('tr');
+      wrap.className = 'inline-compose';
+      const holder = document.createElement('td');
+      holder.colSpan = row.children.length;
+      wrap.append(holder);
+      row.after(wrap);
+      holder.append(form);
+    }
+    const where = `${selection.side === 'new' ? 'After' : 'Before'} ${selection.start === selection.end ? `line ${selection.start}` : `lines ${selection.start}–${selection.end}`}`;
+    form.querySelector('.composer-where').textContent = where;
+    const signature = `${selection.hunk}|${selection.side}|${selection.start}|${selection.end}`;
+    if (composer.shownFor !== signature) {
+      composer.shownFor = signature;
+      setTimeout(() => { form.querySelector('.composer-text').focus({preventScroll: true}); form.scrollIntoView({block: 'nearest', behavior: 'instant'}); }); // a timer, not a frame: frames pause in a background tab
+    }
+  }
+  // Save a comment you wrote: used by the composer and the dialog alike.
+  function commitComment(comment) {
+    state.personalComments = state.personalComments.filter(existing => existing.id !== comment.id);
+    state.personalComments.push(comment);
+    state.resolvedComments = state.resolvedComments.filter(id => id !== comment.id);
+    refreshComments();
+    const stored = persist();
+    clearSelection();
+    const scroll = $('content').scrollTop; render(); $('content').scrollTop = scroll;
+    toast(stored ? 'Your comment is saved in this browser.' : 'Browser storage is unavailable. Copy or export your review before closing.');
+  }
+  window.ReviewComposer = {setSender(fn) { composer.sender = fn; composerNode().querySelector('[data-composer-send]').hidden = !fn; }};
+
+  // Dragging over line numbers selects a range; the composer opens when the pointer is released.
+  document.addEventListener('pointerdown', event => {
+    const button = event.target.closest?.('[data-select-line]');
+    if (!button || event.button !== 0 || event.shiftKey) return;
+    drag = {hunk: button.dataset.rangeHunk, side: button.dataset.rangeSide, origin: Number(button.dataset.selectLine), moved: false};
+  });
+  document.addEventListener('pointerover', event => {
+    const button = event.target.closest?.('[data-select-line]');
+    if (!drag || !button || button.dataset.rangeHunk !== drag.hunk || button.dataset.rangeSide !== drag.side || Number(button.dataset.selectLine) === drag.origin && !drag.moved) return;
+    drag.moved = true;
+    selection = {hunk: drag.hunk, side: drag.side, origin: drag.origin, start: Math.min(drag.origin, Number(button.dataset.selectLine)), end: Math.max(drag.origin, Number(button.dataset.selectLine))};
+    paintSelection();
+  });
+  document.addEventListener('pointerup', () => {
+    const dragged = drag?.moved;
+    drag = null;
+    if (!dragged) return;
+    composer.suppressClick = true; setTimeout(() => { composer.suppressClick = false; });
+    paintSelection();
+  });
   function openEditor(comment = null, general = false) {
     const range = comment || (general ? {general:true} : selection);
     if (!range || (!range.general && !ReviewTools.anchor(snapshot, range))) return;
@@ -451,7 +574,7 @@
     toggle.setAttribute('aria-label', `Template previews: ${hub.ready.length} ready${hub.fresh ? `, ${hub.fresh} new` : ''}, ${hub.requested.length} requested, ${hub.selected.length} selected`);
     document.querySelectorAll('[data-preview-summary]').forEach(node => { node.innerHTML = previewSummary(hub); });
     document.querySelectorAll('[data-preview-short]').forEach(node => { node.textContent = previewShort(hub); });
-    document.querySelectorAll('[data-request-preview]').forEach(button => {
+    document.querySelectorAll('.preview-toggle[data-request-preview]').forEach(button => {
       const status = previewState(button.dataset.requestPreview);
       button.setAttribute('aria-pressed', status === 'selected');
       button.dataset.status = status;
@@ -471,6 +594,125 @@
     const parts = previewShort(hub).split(' · ').filter(Boolean);
     return parts.length ? escape(parts.join(' · ')) : (live.enabled ? 'None yet. Use Preview this template in a template\'s header.' : 'None yet. Select templates while reading the diff.');
   }
+  // --- The preview stage ---------------------------------------------------------------------------------
+  // One place for every preview: a rail of the templates in this review and how each stands, and a canvas
+  // that shows the chosen one scaled to fit, at the width of a phone, tablet or desktop.
+  const stageEl = $('stage');
+  const stageState = {path: null, width: 1280, example: 0}; // desktop by default; Fit uses the whole canvas
+  const stageTemplates = () => {
+    const paths = new Set([...previewsByPath.keys(), ...notVisualByPath.keys(), ...live.pending.keys()]);
+    snapshot.files.filter(previewEligible).forEach(file => paths.add(file.path));
+    return [...paths].map(path => filesByPath.get(path)).filter(Boolean).sort((a, b) => a.path.localeCompare(b.path));
+  };
+  const stageStatus = path => previewsByPath.get(path)?.some(preview => preview.status === 'rendered') ? 'ready'
+    : notVisualByPath.has(path) ? 'novisual' : live.enabled && live.pending.get(path)?.status || (visualState.previews.includes(path) ? 'selected' : visualState.requested.some(entry => entry.path === path) ? 'requested' : 'none');
+  const stageStatusText = {ready: 'Ready', requested: 'Requested', working: 'Your agent is building it', failed: 'Could not be built', selected: 'Selected', none: 'Not previewed', novisual: 'Nothing to see'};
+  function renderStageRail() {
+    const rail = $('stage-rail');
+    const rows = stageTemplates().map(file => {
+      const status = stageStatus(file.path);
+      const slash = file.path.lastIndexOf('/');
+      return `<button type="button" class="stage-item" data-stage-path="${escape(file.path)}" aria-current="${file.path === stageState.path}"><span class="stage-dot is-${status}" aria-hidden="true"></span><span class="stage-item-text"><strong>${escape(file.path.slice(slash + 1))}</strong><small>${escape(file.path.slice(0, slash))}</small></span><em>${stageStatusText[status]}</em></button>`;
+    });
+    rail.innerHTML = rows.length ? rows.join('') : '<p class="stage-empty-rail">No templates changed in this review.</p>';
+  }
+  function renderStageCanvas() {
+    const path = stageState.path;
+    const file = filesByPath.get(path);
+    const view = $('stage-view');
+    $('stage-examples').innerHTML = '';
+    $('stage-caption').textContent = '';
+    stageEl.querySelectorAll('[data-stage-width]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.stageWidth) === String(stageState.width)));
+    $('stage-title').textContent = file ? file.path.slice(file.path.lastIndexOf('/') + 1) : 'Previews';
+    $('stage-sub').textContent = file ? file.path.slice(0, file.path.lastIndexOf('/')) : '';
+    stageEl.querySelector('[data-stage-code]').hidden = !file;
+    const rebuild = stageEl.querySelector('[data-stage-rebuild]');
+    rebuild.hidden = true;
+    if (!file) { view.innerHTML = '<div class="stage-message"><p>Choose a template on the left.</p></div>'; return; }
+    const list = (previewsByPath.get(path) || []).filter(preview => preview.status === 'rendered');
+    const status = stageStatus(path);
+    if (list.length) {
+      stageState.example = Math.min(stageState.example, list.length - 1);
+      const current = list[stageState.example];
+      if (list.length > 1) $('stage-examples').innerHTML = list.map((preview, index) => `<button type="button" class="stage-chip" data-stage-example="${index}" aria-pressed="${index === stageState.example}">${escape(preview.title || `Example ${index + 1}`)}</button>`).join('');
+      view.innerHTML = `<div class="stage-device"><iframe sandbox="allow-same-origin" title="${escape(`Preview: ${current.title || file.path}`)}" data-stage-frame></iframe></div>`;
+      const frame = view.querySelector('iframe');
+      frame.addEventListener('load', fitStage);
+      frame.srcdoc = current.html;
+      const byAgent = current.source === 'agent';
+      $('stage-caption').textContent = `${current.title ? `${current.title}. ` : ''}${byAgent ? 'Drawn by your agent from this template and the pieces it renders: an approximation.' : 'Rendered by the app from the reviewed code with example data.'} Scripts are off; icons and images marked as stand-ins are mocked.`;
+      if (byAgent && live.enabled) { rebuild.hidden = false; rebuild.innerHTML = `${icon('refresh-cw')}Rebuild`; }
+      return;
+    }
+    if (status === 'requested' || status === 'working') {
+      const waiting = status === 'requested';
+      view.innerHTML = `<div class="stage-message" role="status"><div class="skeleton-frame" aria-hidden="true"><span class="skeleton-line w40"></span><span class="skeleton-block"></span><span class="skeleton-line w80"></span><span class="skeleton-line w60"></span><span class="skeleton-block short"></span></div><p><strong>${waiting ? 'Waiting for your agent to start' : 'Your agent is building this preview'}</strong><br>It reads the template and the pieces it renders, then draws an approximation. You can close this and keep reviewing; it appears here when it is ready.</p></div>`;
+      return;
+    }
+    const failed = status === 'failed' ? live.pending.get(path) : null;
+    const reason = notVisualByPath.get(path)?.map(preview => preview.note).filter(Boolean).join(' ');
+    const action = status === 'novisual' ? '' : `<button type="button" class="act act-primary" data-request-preview="${escape(path)}">${icon('scan-text')}${failed ? 'Try again' : live.enabled ? 'Preview this template' : visualState.previews.includes(path) ? 'Selected for preview' : 'Select for preview'}</button>`;
+    view.innerHTML = `<div class="stage-message"><p><strong>${failed ? 'Your agent could not build this preview' : status === 'novisual' ? 'Nothing to preview here' : 'No preview yet'}</strong><br>${escape(failed ? failed.error || 'It did not say why.' : status === 'novisual' ? reason || 'This template renders nothing visual.' : live.enabled ? 'Ask your agent to draw this template, including the pieces it renders. You can keep reviewing while it works.' : 'Select it, then copy one request for every template you want.')}</p>${action}</div>`;
+  }
+  function renderStageFoot() {
+    const foot = $('stage-foot');
+    foot.hidden = live.enabled;
+    if (live.enabled) return;
+    const hub = lifecycle();
+    foot.innerHTML = `<span>${hub.selected.length ? `${plural(hub.selected.length, 'template')} selected` : 'Nothing selected yet'}</span><button type="button" class="act act-primary" data-copy-previews="selected" ${hub.selected.length ? '' : 'disabled'}>${icon('copy')}Copy request for ${hub.selected.length || 'selected'}</button>`;
+  }
+  function renderStage() { renderStageRail(); renderStageCanvas(); renderStageFoot(); }
+  // The preview is drawn at the chosen width, then scaled down to fit the canvas instead of scrolling sideways.
+  function fitStage() {
+    const view = $('stage-view');
+    const frame = view.querySelector('iframe');
+    if (!frame) return;
+    const room = Math.max(280, view.clientWidth);
+    const wanted = stageState.width === 'fit' ? room : Number(stageState.width);
+    const scale = Math.min(1, room / wanted);
+    frame.style.width = `${wanted}px`;
+    const doc = frame.contentDocument;
+    const height = Math.max(240, doc ? Math.ceil(Math.max(doc.documentElement.scrollHeight, doc.body?.scrollHeight || 0)) : 600);
+    frame.style.height = `${height}px`;
+    frame.style.transform = `scale(${scale})`;
+    const device = frame.parentElement;
+    device.style.width = `${wanted * scale}px`;
+    device.style.height = `${height * scale}px`;
+  }
+  function openStage(path = null) {
+    const templates = stageTemplates();
+    const ready = templates.find(file => stageStatus(file.path) === 'ready');
+    stageState.path = path && filesByPath.has(path) ? path : stageState.path && filesByPath.has(stageState.path) ? stageState.path : (ready || templates[0])?.path ?? null;
+    stageState.example = 0;
+    // Looking at a preview clears its New mark.
+    if (stageState.path && previewsByPath.get(stageState.path)?.some(preview => preview.status === 'rendered')) {
+      visualState.requested = visualState.requested.filter(entry => entry.path !== stageState.path);
+      persistVisuals(); refreshVisualControls();
+    }
+    renderStage();
+    if (!stageEl.open) stageEl.showModal();
+    requestAnimationFrame(fitStage);
+  }
+  stageEl.addEventListener('click', event => {
+    if (event.target === stageEl || event.target.closest('[data-stage-close]')) { stageEl.close(); return; }
+    const item = event.target.closest('[data-stage-path]');
+    if (item) { stageState.path = item.dataset.stagePath; stageState.example = 0; renderStage(); requestAnimationFrame(fitStage); return; }
+    const width = event.target.closest('[data-stage-width]');
+    if (width) { stageState.width = width.dataset.stageWidth; stageEl.querySelectorAll('[data-stage-width]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.stageWidth) === String(stageState.width))); fitStage(); return; }
+    const example = event.target.closest('[data-stage-example]');
+    if (example) { stageState.example = Number(example.dataset.stageExample); renderStageCanvas(); return; }
+    if (event.target.closest('[data-stage-rebuild]')) { document.dispatchEvent(new CustomEvent('review-preview-request', {detail: {path: stageState.path}})); return; }
+    if (event.target.closest('[data-stage-code]')) { const path = stageState.path; stageEl.close(); const file = filesByPath.get(path); const layer = layers.find(candidate => candidate.items.some(entry => entry.file === file?.id)); if (layer) navigateFile(layer, file.id); }
+  });
+  window.addEventListener('resize', () => { if (stageEl.open) fitStage(); });
+  const stageIcons = () => {
+    const put = (selector, html) => { const node = stageEl.querySelector(selector); if (node) node.innerHTML = html; };
+    put('[data-stage-width="390"]', icon('smartphone'));
+    put('[data-stage-width="768"]', icon('tablet'));
+    put('[data-stage-width="1280"]', icon('monitor'));
+    put('[data-stage-close]', icon('x'));
+  };
+  stageIcons();
   function setLivePreviews({enabled, ready = [], pending = {}}) {
     live.enabled = !!enabled;
     live.ready = new Map(ready.map(item => [item.path, {id: `live:${item.path}`, files: [item.path], status: 'rendered', title: item.title || 'Built by your agent', source: 'agent', html: item.html, mocks: item.mocks || null}]));
@@ -478,16 +720,10 @@
     rebuildPreviews();
     const scroll = $('content').scrollTop;
     render(); $('content').scrollTop = scroll;
+    if (stageEl.open) { renderStage(); requestAnimationFrame(fitStage); }
   }
-  // Take the reader to a template and open its preview.
-  function showPreview(path) {
-    const file = [...files.values()].find(candidate => candidate.path === path);
-    if (!file) return;
-    state.previewPane = 'open'; persist();
-    if (document.body.classList.contains('zen')) setZen(false);
-    if (!focusMode) chooseReadingMode(true);
-    focusFile(focusOrder.findIndex(entry => entry.file === file.id));
-  }
+  // Open the stage on a template's preview.
+  function showPreview(path) { openStage(path); }
   window.ReviewPreviews = {set: setLivePreviews, show: showPreview};
   function openPreviewHub() {
     $('preview-hub').innerHTML = renderPreviewHub();
@@ -524,7 +760,7 @@
       const busy = status === 'requested' || status === 'working';
       return `<button type="button" class="preview-toggle is-request${busy && live.enabled ? ' is-working' : ''}" data-request-preview="${escape(file.path)}" data-status="${status}" aria-pressed="${status === 'selected'}" ${busy && live.enabled ? 'aria-busy="true"' : ''} title="${escape(previewHint(status, file.path))}">${icon(status === 'requested' ? 'clock' : 'scan-text')}<span>${previewLabel(status)}</span></button>`;
     }
-    return `<button type="button" class="preview-toggle" data-preview-toggle aria-controls="preview-pane" aria-expanded="${previewPaneOpen()}" title="Show how this template renders">${icon('scan-text')}<span>Preview</span><span class="preview-count">${list.length}</span>${previewState(file.path) === 'fresh' ? '<b class="hub-new">New</b>' : ''}</button>`;
+    return `<button type="button" class="preview-toggle" data-preview-toggle data-preview-path="${escape(file.path)}" title="See how this template renders">${icon('scan-text')}<span>Preview</span><span class="preview-count">${list.length}</span>${previewState(file.path) === 'fresh' ? '<b class="hub-new">New</b>' : ''}</button>`;
   }
 
   function previewEligible(file) {
@@ -647,8 +883,8 @@
     const repeated = hunks.length && hunks.every(hunk => (item.summaries || {})[hunk.id] === item.summary);
     const summary = [!repeated && item.summary, file.note].filter(Boolean).map(escape).join(' · ');
     // A rendered preview is its own disclosure; only the request control sits in the card.
-    const request = previewsByPath.get(file.path)?.length ? '' : previewToggle(file);
-    return `<details class="file-card ${fileViewed(file) ? 'is-viewed' : ''}" data-file="${file.id}" ${fileOpen(file) ? 'open' : ''}><summary><span class="file-icon" aria-hidden="true">&lt;/&gt;</span><span class="filename">${escape(file.path)}</span><span class="badge success">+${added}</span><span class="badge blocking">−${removed}</span><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" aria-label="${escape(`Mark ${file.path} as viewed`)}" ${fileViewed(file) ? 'checked' : ''}> Viewed</label></summary>${summary || request || notVisualNote(file) ? `<div class="file-summary">${summary ? `<span>${summary}</span>` : ''}${request}${notVisualNote(file)}</div>` : ''}${previewPanel(file, 'inline')}${hunks.length ? table : `<div class="file-summary"><pre>${escape(file.patch || 'No text diff available.')}</pre></div>`}</details>`;
+    const request = previewToggle(file);
+    return `<details class="file-card ${fileViewed(file) ? 'is-viewed' : ''}" data-file="${file.id}" ${fileOpen(file) ? 'open' : ''}><summary><span class="file-icon" aria-hidden="true">&lt;/&gt;</span><span class="filename">${escape(file.path)}</span><span class="badge success">+${added}</span><span class="badge blocking">−${removed}</span><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" aria-label="${escape(`Mark ${file.path} as viewed`)}" ${fileViewed(file) ? 'checked' : ''}> Viewed</label></summary>${summary || request || notVisualNote(file) ? `<div class="file-summary">${summary ? `<span>${summary}</span>` : ''}${request}${notVisualNote(file)}</div>` : ''}${hunks.length ? table : `<div class="file-summary"><pre>${escape(file.patch || 'No text diff available.')}</pre></div>`}</details>`;
   }
 
   const commentTypes = {
@@ -962,7 +1198,7 @@
     }
     const groupNumber = review.groups.indexOf(entry.layer.group) + 1;
     const stepTitle = entry.layer.title === entry.layer.group.title ? '' : `<span class="crumb-sep" aria-hidden="true">›</span><span class="crumb-step">${escape(entry.layer.title)}</span>`;
-    return `<section class="focus-reader"><header class="focus-file-header"><div class="focus-meta"><span class="focus-group" title="${escape(`Group ${groupNumber} of ${review.groups.length}: ${entry.layer.group.title}`)}"><span class="crumb-number">${groupNumber}/${review.groups.length}</span>${escape(titleWithoutNumber(entry.layer.group.title))}${stepTitle}</span><div class="focus-file-actions" role="group" aria-label="Changed sections"><button class="icon-button" data-change-step="-1" disabled aria-label="Previous changed section" title="Previous changed section">${icon('chevron-left')}</button><span id="change-position">${file.hunks.length} changes</span><button class="icon-button" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} aria-label="Next changed section" title="Next changed section">${icon('chevron-right')}</button></div></div><div class="focus-identity"><div class="current-file"><code>${escape(file.path)}</code><button class="icon-button copy-file-path" data-copy-file title="Copy the full relative file path" aria-label="Copy file path">${icon('copy')}</button></div>${componentLinks}${previewToggle(file)}${notVisualNote(file)}<details class="file-about"><summary>${icon('info')}<span>Why this file</span></summary><p>${escape(entry.layer.summary || entry.layer.group.summary)}</p>${items.map(item => item.summary ? `<p>${escape(item.summary)}</p>` : '').join('')}</details><div class="focus-progress-actions"><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" ${fileViewed(file) ? 'checked' : ''}> <span>${fileViewed(file) ? 'Viewed' : 'Mark viewed'}</span></label><button class="btn btn-sm btn-ghost" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file ${icon('arrow-right')}</button></div></div></header>${!full ? '<p class="focus-unavailable">Full source was not captured or exceeds the text limit. Showing the saved diff; no current working files have been substituted.</p>' : ''}${(() => { const code = file.hunks.length || full?.length ? renderDiffTable(file, full || file.hunks, summaries) : `<pre>${escape(file.note || file.patch || 'No text diff available.')}</pre>`; const preview = previewPanel(file, 'side'); return preview ? `<div class="focus-body has-preview"><div class="focus-code">${code}</div>${preview}</div>` : code; })()}<footer class="focus-end"><span>${focusIndex + 1 === focusOrder.length ? 'End of the review' : `Next: ${escape(files.get(focusOrder[focusIndex + 1].file).path)}`}</span><button class="btn btn-sm btn-primary" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></footer></section>`;
+    return `<section class="focus-reader"><header class="focus-file-header"><div class="focus-meta"><span class="focus-group" title="${escape(`Group ${groupNumber} of ${review.groups.length}: ${entry.layer.group.title}`)}"><span class="crumb-number">${groupNumber}/${review.groups.length}</span>${escape(titleWithoutNumber(entry.layer.group.title))}${stepTitle}</span><div class="focus-file-actions" role="group" aria-label="Changed sections"><button class="icon-button" data-change-step="-1" disabled aria-label="Previous changed section" title="Previous changed section">${icon('chevron-left')}</button><span id="change-position">${file.hunks.length} changes</span><button class="icon-button" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} aria-label="Next changed section" title="Next changed section">${icon('chevron-right')}</button></div></div><div class="focus-identity"><div class="current-file"><code>${escape(file.path)}</code><button class="icon-button copy-file-path" data-copy-file title="Copy the full relative file path" aria-label="Copy file path">${icon('copy')}</button></div>${componentLinks}${previewToggle(file)}${notVisualNote(file)}<details class="file-about"><summary>${icon('info')}<span>Why this file</span></summary><p>${escape(entry.layer.summary || entry.layer.group.summary)}</p>${items.map(item => item.summary ? `<p>${escape(item.summary)}</p>` : '').join('')}</details><div class="focus-progress-actions"><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" ${fileViewed(file) ? 'checked' : ''}> <span>${fileViewed(file) ? 'Viewed' : 'Mark viewed'}</span></label><button class="btn btn-sm btn-ghost" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file ${icon('arrow-right')}</button></div></div></header>${!full ? '<p class="focus-unavailable">Full source was not captured or exceeds the text limit. Showing the saved diff; no current working files have been substituted.</p>' : ''}${(() => { const code = file.hunks.length || full?.length ? renderDiffTable(file, full || file.hunks, summaries) : `<pre>${escape(file.note || file.patch || 'No text diff available.')}</pre>`; return code; })()}<footer class="focus-end"><span>${focusIndex + 1 === focusOrder.length ? 'End of the review' : `Next: ${escape(files.get(focusOrder[focusIndex + 1].file).path)}`}</span><button class="btn btn-sm btn-primary" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></footer></section>`;
   }
   function focusFile(index) {
     document.body.classList.remove('navigation-open'); $('nav-toggle').setAttribute('aria-expanded', 'false');
@@ -1311,10 +1547,9 @@
       const file = previewRequest.dataset.requestPreview;
       if (live.enabled) {
         const status = previewState(file);
-        if (status !== 'requested' && status !== 'working') {
-          state.previewPane = 'open'; persist(); // show the skeleton where the preview will appear
-          document.dispatchEvent(new CustomEvent('review-preview-request', {detail: {path: file}}));
-        }
+        // Ask once; after that the chip shows how it is going and opens the stage to watch it.
+        if (status === 'requested' || status === 'working') openStage(file);
+        else document.dispatchEvent(new CustomEvent('review-preview-request', {detail: {path: file}}));
         return;
       }
       const selected = visualState.previews.includes(file);
@@ -1323,7 +1558,7 @@
       toast(stored ? (selected ? 'Removed from previews.' : 'Selected. Ask for all your selected templates from Previews in the header.') : 'Browser storage is unavailable. Copy your preview prompt before closing.');
       return;
     }
-    if (event.target.closest('[data-open-previews]')) { openPreviewHub(); return; }
+    if (event.target.closest('[data-open-previews]')) { openStage(); return; }
     const showLive = event.target.closest('[data-show-live-preview]');
     if (showLive) { $('previews-dialog').close(); showPreview(showLive.dataset.showLivePreview); return; }
     if (event.target.closest('[data-open-send]')) { openSendDialog(); return; }
@@ -1442,7 +1677,7 @@
     const category = event.target.closest('[data-category]');
     if (category) { categoryFilter = category.dataset.category; clearSelection(); render(); }
     const line = event.target.closest('[data-select-line]');
-    if (line) selectLine(line);
+    if (line && !composer.suppressClick) selectLine(line, event.shiftKey);
     if (event.target.closest('[data-add-general]')) openEditor(null, true);
     const post = event.target.closest('[data-copy-comment]');
     if (post) { const comment = comments.find(comment => comment.id === post.dataset.copyComment); if (comment) await copyText(ReviewTools.postingText(snapshot, comment, review.qa)); }
@@ -1529,10 +1764,8 @@
   window.addEventListener('resize', applySidebar);
   applySidebar();
   $('content').addEventListener('click', event => {
-    const pane = event.target.closest('[data-preview-toggle]') && document.getElementById('preview-pane');
-    if (!pane) return;
-    pane.open = !pane.open;
-    if (pane.open && !wideScreen()) pane.scrollIntoView({block: 'nearest'});
+    const toggle = event.target.closest('[data-preview-toggle]');
+    if (toggle) openStage(toggle.dataset.previewPath);
   });
   document.querySelectorAll('[data-color-mode]').forEach(button => button.onclick = () => { settings.colorMode = button.dataset.colorMode; applySettings(); saveSettings(); });
   $('syntax-theme').onchange = event => { settings.syntaxTheme = event.target.value; applySettings(); saveSettings(); };
@@ -1600,14 +1833,8 @@
     if (!subject || !editorRange) return;
     const comment = {...editorRange, id:editingID || `mine-${crypto.randomUUID()}`, label:$('editor-label').value,
       decoration:$('editor-blocking').checked ? 'blocking' : 'non-blocking', subject, discussion:$('editor-discussion').value.trim()};
-    state.personalComments = state.personalComments.filter(existing => existing.id !== comment.id);
-    state.personalComments.push(comment);
-    state.resolvedComments = state.resolvedComments.filter(id => id !== comment.id);
-    refreshComments();
-    const stored = persist();
-    $('comment-editor').close(); clearSelection();
-    const scroll = $('content').scrollTop; render(); $('content').scrollTop = scroll;
-    toast(stored ? 'Your comment is saved in this browser.' : 'Browser storage is unavailable. Copy or export your review before closing.');
+    $('comment-editor').close();
+    commitComment(comment);
   };
   $('comment-editor').addEventListener('close', () => {
     const button = [...document.querySelectorAll('[data-select-line]')].find(button => button.dataset.rangeHunk === editorRange?.hunk && button.dataset.rangeSide === editorRange?.side && Number(button.dataset.selectLine) === editorRange?.start);

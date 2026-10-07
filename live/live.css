@@ -1,9 +1,12 @@
 /* Scoped to the conversation layer; the review keeps its own styles. */
 #dcr-panel[hidden]{display:none!important}
-#dcr-panel{display:grid;gap:8px;width:100%;font-size:13px}
-#dcr-panel .dcr-summary{opacity:.7}
-#dcr-panel .dcr-actions{display:flex;gap:8px;flex-wrap:wrap}
-#dcr-panel .dcr-note{margin:0;font-size:12.5px;opacity:.75}
+#dcr-panel{display:grid;gap:10px;width:100%}
+#dcr-panel .dcr-foot-status{display:flex;align-items:center;gap:8px;margin:0;font-size:12.5px;color:var(--muted,inherit)}
+#dcr-panel .dcr-foot-status .dcr-dot[data-tone="ok"]{background:var(--dcr-ok)}
+#dcr-panel .dcr-foot-status .dcr-dot[data-tone="work"]{background:var(--dcr-work)}
+#dcr-panel .dcr-foot-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#dcr-panel .act[hidden]{display:none}
+#dcr-panel .dcr-note{margin:0;font-size:12.5px;color:var(--muted,inherit)}
 #dcr-panel .dcr-note:empty{display:none}
 .ledger-status{font-size:12px}
 .ledger-status:empty{display:none}
@@ -106,3 +109,4 @@ body.qa-live .evidence-strip:not(:has(button:not(.visual-qa-option))){display:no
 /* The margin sits outside the clamped box: padding inside it would show a fourth, cut-off line. */
 .ledger-reply{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;margin:0 16px 10px;padding:0}
 .range-actions:not([hidden])~#dcr-arrival{bottom:170px}
+.act-count{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:#ffffff38;font-size:12px;font-weight:600;line-height:20px;text-align:center}

@@ -169,6 +169,21 @@ globalThis.ReviewTools = (() => {
     }
     return result;
   }
+  // A comment typed in one box: the first line is the headline, the rest is the detail. A single
+  // long line is cut at a word near 140 characters, the remainder becoming the detail.
+  function splitComment(text) {
+    const value = String(text ?? '').replace(/\r\n?/g, '\n').trim();
+    const [first = '', ...rest] = value.split('\n');
+    let subject = first.trim();
+    let detail = rest.join('\n').trim();
+    if (subject.length > 140) {
+      const at = subject.lastIndexOf(' ', 140);
+      const cut = at > 60 ? at : 140;
+      detail = `${subject.slice(cut).trim()}${detail ? `\n${detail}` : ''}`;
+      subject = subject.slice(0, cut).trim();
+    }
+    return {subject, discussion: detail};
+  }
   function sourceText(snapshot, comment) {
     const found = anchor(snapshot, comment);
     return found ? found.lines.map(line => `${line[comment.side]} | ${line.text}`).join('\n') : '';
@@ -295,5 +310,5 @@ globalThis.ReviewTools = (() => {
     });
     return {comments, findings:remaining};
   }
-  return {focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, displayRows, sourceText, commentText, reviewText, overviewFeedback, comparisonText, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  return {focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, displayRows, splitComment, sourceText, commentText, reviewText, overviewFeedback, comparisonText, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();

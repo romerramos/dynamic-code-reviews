@@ -48,3 +48,14 @@ console.log('PASS split rows fold per row and keep unpaired and different lines'
 const snapshot = {files:[{id:'f', path:'a.rb', hunks:[{id:'h', rows:{unified}}]}]};
 assert.equal(tools.anchor(snapshot, {hunk:'h', side:'new', start:2, end:3})?.lines.length, 2);
 console.log('PASS comment anchors still resolve on lines folded by the whitespace option');
+
+// The composer's single text box: headline first, detail after.
+assert.deepEqual(tools.splitComment('  Rename this\n\nIt reads oddly next to `items`.\nAnd the spec.  '), {subject:'Rename this', discussion:'It reads oddly next to `items`.\nAnd the spec.'});
+assert.deepEqual(tools.splitComment('Just a headline'), {subject:'Just a headline', discussion:''});
+assert.deepEqual(tools.splitComment('   '), {subject:'', discussion:''});
+const long = 'word '.repeat(40).trim();
+const cut = tools.splitComment(long);
+assert.ok(cut.subject.length <= 140 && cut.subject.length > 100 && !cut.subject.endsWith(' ') && (cut.subject + ' ' + cut.discussion).replace(/\s+/g, ' ') === long, 'a long single line is cut at a word and nothing is lost');
+assert.deepEqual(tools.splitComment('x'.repeat(200)).subject.length, 140, 'with no spaces it is cut at 140');
+assert.equal(tools.splitComment('x'.repeat(200)).discussion.length, 60);
+console.log('PASS the composer splits one text box into a headline and detail without losing any text');

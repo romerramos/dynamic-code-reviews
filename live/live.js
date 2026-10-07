@@ -237,7 +237,11 @@
   const panel = document.createElement('section');
   panel.id = 'dcr-panel';
   panel.setAttribute('aria-label', 'Live review');
-  panel.innerHTML = '<div><strong>Live review</strong><span class="dcr-summary" role="status"></span></div><div class="dcr-actions"><button type="button" class="btn btn-sm btn-soft" data-open-send></button><button type="button" class="btn btn-sm btn-ghost" data-dcr-export>Export HTML</button><button type="button" class="btn btn-sm btn-primary" data-dcr-finish>Finish review</button></div><p class="dcr-note"></p>';
+  const ico = name => (window.ReviewIcons?.[name] || '').replace('<svg', '<svg aria-hidden="true" focusable="false"');
+  panel.innerHTML = `<p class="dcr-foot-status" role="status"><span class="dcr-dot" aria-hidden="true"></span><span class="dcr-summary"></span></p>
+    <button type="button" class="act act-primary act-block" data-open-send>${ico('send')}<span>Review and send</span><b class="act-count"></b></button>
+    <div class="dcr-foot-row"><button type="button" class="act act-secondary" data-dcr-export title="Download one offline file with your comments, the replies and any recordings">${ico('download')}Export</button><button type="button" class="act act-secondary" data-dcr-finish title="Send anything unsent and tell your agent this round is done">${ico('check-check')}Finish review</button></div>
+    <p class="dcr-note" aria-live="polite"></p>`;
   panel.dataset.liveFooter = '1';
   const holder = document.createElement('div');
   holder.hidden = true;
@@ -251,23 +255,30 @@
   };
   const renderPanel = () => {
     const summary = tools.summary(comments(), threads, resolved());
+    const mine = comments().filter(comment => comment.personal).length;
     const parts = [];
-    if (!online) parts.push('server stopped');
+    if (!online) parts.push('Server stopped');
+    else if (!mine && !summary.waiting && !summary.answered) parts.push('No comments yet');
     else {
-      if (summary.waiting) parts.push(`${summary.waiting} waiting for your agent`);
+      parts.push(`${mine} comment${mine === 1 ? '' : 's'}`);
+      if (summary.drafts) parts.push(`${summary.drafts} not sent`);
+      if (summary.waiting) parts.push(`${summary.waiting} with your agent`);
       if (summary.answered) parts.push(`${summary.answered} answered`);
-      if (!summary.waiting && !summary.answered) parts.push('connected');
     }
-    set(panel.querySelector('.dcr-summary'), 'textContent', ` · ${parts.join(' · ')}`);
+    set(panel.querySelector('.dcr-summary'), 'textContent', parts.join(' · '));
+    panel.querySelector('.dcr-foot-status .dcr-dot').dataset.tone = !online ? 'off' : summary.drafts ? 'work' : 'ok';
     const current = review.history?.revision;
     const note = panel.querySelector('.dcr-note');
-    if (latest && current && latest > current) {
-      set(note, 'innerHTML', `A newer revision (${latest}) was saved. <a href="/">Open it</a>`);
-    }
+    if (latest && current && latest > current) set(note, 'innerHTML', `A newer revision (${latest}) was saved. <a href="/">Open it</a>`);
+    // One main action at a time: send what is unsent; with nothing to send, finishing is the next step.
     const send = panel.querySelector('[data-open-send]');
-    set(send, 'textContent', summary.drafts ? `Review and send (${summary.drafts})` : 'Review and send');
+    const finish = panel.querySelector('[data-dcr-finish]');
+    send.hidden = !summary.drafts;
+    set(send.querySelector('.act-count'), 'textContent', String(summary.drafts));
     set(send, 'disabled', !online);
-    set(panel.querySelector('[data-dcr-finish]'), 'disabled', !online);
+    set(finish, 'disabled', !online);
+    finish.classList.toggle('act-primary', !summary.drafts);
+    finish.classList.toggle('act-secondary', !!summary.drafts);
   };
   const sendDrafts = async () => {
     const pending = tools.drafts(comments(), threads, resolved());
@@ -275,7 +286,6 @@
     await api('/api/send', {key, items: pending.map(comment => ({id: comment.id, text: tools.sendText(snapshot, review, comment)}))});
   };
   panel.addEventListener('click', async event => {
-    const note = panel.querySelector('.dcr-note');
     try {
       if (event.target.closest('[data-dcr-export]')) {
         // A plain link cannot send the token, so fetch the file and save it from a blob.
@@ -283,12 +293,14 @@
         if (!response.ok) throw new Error((await response.json()).error || 'Export failed');
         const link = Object.assign(document.createElement('a'), {href: URL.createObjectURL(await response.blob()), download: `${review.history?.series || 'review'}-review.html`});
         document.body.append(link); link.click(); link.remove();
-        note.textContent = 'Exported. The file opens offline with your comments and the agent\'s replies.';
+        flash('Exported. The file opens offline with your comments and your agent\'s replies.');
         return;
       }
-      if (event.target.closest('[data-dcr-finish]')) { await sendDrafts(); await api('/api/finish', {key}); note.textContent = 'Finish sent. Your agent will pick this round up and reply here.'; }
-      await refresh();
-    } catch (error) { note.textContent = error.message; }
+      if (event.target.closest('[data-dcr-finish]')) {
+        await sendDrafts(); await api('/api/finish', {key}); await refresh();
+        flash('Finished. Your agent will pick this round up and reply here.');
+      }
+    } catch (error) { flash(error.message); }
   });
 
   // --- recordings -----------------------------------------------------------------------------
@@ -403,6 +415,12 @@
       } catch (error) { flash(`Saved, but not sent: ${error.message}`); }
     });
   }
+
+  // The composer in the code gets its "Comment and send" action: save, then hand the comment to your agent.
+  window.ReviewComposer?.setSender(async id => {
+    try { await sendComment(id); flash(tools.statusModel(threads[id], listening)?.text || 'Saved and sent to your agent.'); }
+    catch (error) { flash(`Saved, but not sent: ${error.message}`); }
+  });
 
   // 2. A quiet reminder wherever you are, until the comment is sent. Your review shows the same
   //    action itself, so the reminder steps aside while that panel is open.

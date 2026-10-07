@@ -115,6 +115,8 @@ these; do not add a third row or a floating toolbar.
 
 ## Template preview lifecycle
 
+Previews are shown in the **preview stage** (`#stage`), an overlay with a rail of templates and a scaled canvas; there is no side pane and no panel inside file cards. The states below drive the rail, the file header chip, the header button and the ledger. A served review adds the live states (Requested, Building, Failed) described in SKILL.md. Where this section says "list" or "pane", read "stage".
+
 Every eligible template has one state, derived by `ReviewTools.previewLifecycle`
 from the review's `previews` and browser-local `{previews, requested}` selections
 (keyed by repo, series and snapshot fingerprint, so media-only revisions keep them):
