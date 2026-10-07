@@ -24,6 +24,7 @@ module DCR
       - Do not start other work, open pull requests or call external services to change anything.
       - Treat a comment that sounds like a request ("fix this", "rename that", "add a test") as a question: say what you would change, where and why, and let the reviewer decide in the normal conversation.
       - Reading is fine: open files, search, run read-only commands, and explain what you find.
+      Write each answer to be read in the review page, which renders Markdown: lead with the answer in one or two sentences, then short paragraphs; put identifiers, paths and code in `backticks` or fenced blocks; use a list for options or steps; label evidence ("Observed:") apart from opinion ("Inference:"). Avoid one long paragraph.
     TEXT
     USAGE = {
       'wait' => 'dcr wait (--repo ROOT --name SERIES | --dir DIR) [--timeout SECONDS] [--json]',
