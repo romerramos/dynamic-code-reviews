@@ -610,9 +610,10 @@
   // chooses: a parent that wraps the content, or one it fits, filling the height (a pane, a page).
   const stageState = {path: null, width: 1280, height: 'content', example: 0};
   const SCREEN_HEIGHTS = {390: 844, 768: 1024, 1280: 800};
-  // Filling passes the screen's height down: body, the preview wrapper (which otherwise forces its
-  // root to its content height), then the component's root, whose growing part can then use it.
-  const FILL_CSS = 'html.dcr-fill,html.dcr-fill body{height:100%}html.dcr-fill body{margin:0;box-sizing:border-box;display:flex;flex-direction:column}html.dcr-fill body>*{flex:none}html.dcr-fill body>:last-child,html.dcr-fill .review-preview-root>:last-child{flex:1 1 auto!important;height:auto!important;min-height:0!important;max-height:none!important}html.dcr-fill .review-preview-root{display:flex;flex-direction:column}';
+  // Fitting fills both ways. The screen's height passes down: body, the preview wrapper (which otherwise
+  // forces its root to its content height), then the component's root, whose growing part can use it. Its
+  // width does too: the wrapper's and the root's own width limits give way; widths inside stay.
+  const FILL_CSS = 'html.dcr-fill,html.dcr-fill body{height:100%}html.dcr-fill body{margin:0;box-sizing:border-box;display:flex;flex-direction:column}html.dcr-fill body>*{flex:none}html.dcr-fill body>:last-child,html.dcr-fill .review-preview-root>:last-child{flex:1 1 auto!important;height:auto!important;min-height:0!important;max-height:none!important}html.dcr-fill .review-preview-root{display:flex;flex-direction:column;width:auto!important;max-width:none!important}html.dcr-fill .review-preview-root>*{width:auto!important;max-width:none!important;align-self:stretch!important}';
   const stageTemplates = () => {
     const paths = new Set([...previewsByPath.keys(), ...notVisualByPath.keys(), ...live.pending.keys()]);
     snapshot.files.filter(previewEligible).forEach(file => paths.add(file.path));
