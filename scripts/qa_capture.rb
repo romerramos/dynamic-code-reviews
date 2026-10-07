@@ -30,7 +30,9 @@ module QACapture
 
     # report: a review HTML (normally .reviews/<series>/current.html) served at / with the
     # QA panel, so the reader starts capture from the review instead of a separate page.
-    def initialize(directory:, port: 0, report: nil, app: nil, app_ca: nil)
+    # share: also serve the review (and the running app inside it) on the tailnet with Tailscale Serve,
+    # answering only the tailnet logins in share_with plus the computer's own user.
+    def initialize(directory:, port: 0, report: nil, app: nil, app_ca: nil, share: false, share_with: [])
       @directory = File.expand_path(directory)
       raise ArgumentError, 'Capture output must not be a symlink' if File.symlink?(@directory)
       if report
@@ -66,8 +68,9 @@ module QACapture
           DCR::AppProxy.new(upstream: app, review_origin: @origin, ca_file: app_ca)
         end
       end
+      share_on_tailnet(share_with) if share
       if @endpoint
-        File.open(@endpoint, File::WRONLY | File::CREAT | File::TRUNC, 0o600) { |file| file.write(JSON.generate(port: @port, token: @token, app_port: @app&.port)) }
+        File.open(@endpoint, File::WRONLY | File::CREAT | File::TRUNC, 0o600) { |file| file.write(JSON.generate(port: @port, token: @token, app_port: @app&.port, shared: @shared_origin)) }
         File.chmod(0o600, @endpoint)
       end
       # Terminal commands queue here; the recorder page polls and runs them in order,
@@ -99,9 +102,41 @@ module QACapture
       TCPServer.new('127.0.0.1', 0)
     end
 
+    attr_reader :shared_origin, :share_note
+
+    # Tailscale Serve in front of both servers. Anything missing (no Tailscale, HTTPS certificates off)
+    # leaves the review local and says why; sharing is never required to review.
+    def share_on_tailnet(share_with)
+      require_relative '../lib/dcr/share'
+      found = DCR::Share.check
+      return @share_note = "Not shared on your tailnet: #{found['reason']}." unless found['ok']
+      @allowed = ([found['login']] + Array(share_with)).map(&:to_s).reject(&:empty?).uniq
+      @shared_host = "#{found['host']}:#{@port}"
+      @shared_origin = DCR::Share.expose(@port, found['host'])
+      @shared_ports = [@port]
+      return unless @app
+      app_origin = DCR::Share.expose(@app.port, found['host'])
+      @shared_ports << @app.port
+      @app.share!(host: "#{found['host']}:#{@app.port}", origin: app_origin, review_origin: @shared_origin, allowed: @allowed)
+    rescue ArgumentError => error
+      @share_note = "Not shared on your tailnet: #{error.message}."
+    end
+
+    # The address a request came in on, checked: the loopback one, or the tailnet one for allowed logins.
+    def arrival(headers)
+      return :local if headers['host'] == "127.0.0.1:#{@port}"
+      raise ArgumentError, 'Invalid Host' unless @shared_host && headers['host'] == @shared_host
+      raise ArgumentError, 'This review is not shared with you' unless @allowed.include?(headers['tailscale-user-login'].to_s)
+      :shared
+    end
+
+    # The page's own origin for the way it was opened; writes must come from it (or from the terminal).
+    def own_origin?(origin) = origin == (Thread.current[:dcr_arrival] == :shared ? @shared_origin : @origin)
+
     def url = @origin
     def app_url = @app && "#{@app.origin}#{@app.start_path}"
     def close
+      (@shared_ports || []).each { |port| DCR::Share.withdraw(port) }
       @app&.close
       @socket.close
     end
@@ -138,7 +173,7 @@ module QACapture
         raise ArgumentError, 'Invalid header' unless value
         headers[key.downcase] = value.strip
       end
-      raise ArgumentError, 'Invalid Host' unless headers['host'] == "127.0.0.1:#{@port}"
+      Thread.current[:dcr_arrival] = arrival(headers)
       return live_api(client, method, path, headers) if @live && path.start_with?('/api/')
       if method == 'GET' && !path.start_with?('/next', '/result/', '/requests/')
         page = path.split('?', 2).first # `/?app` opens the review straight into the running app
@@ -155,7 +190,7 @@ module QACapture
       raise ArgumentError, 'Invalid capture token' unless headers['x-qa-token'] == @token
       return requests(client, method, path, headers) if path == '/request' || path == '/presence' || path == '/requests/next'
       return control(client, method, path, headers) if path == '/next' || path == '/control' || path.start_with?('/result/')
-      raise ArgumentError, 'Only same-origin capture uploads are accepted' unless method == 'POST' && headers['origin'] == @origin
+      raise ArgumentError, 'Only same-origin capture uploads are accepted' unless method == 'POST' && own_origin?(headers['origin'])
       # The final frame of a clip, saved beside it as its poster (the thumbnail in the review).
       if (clip = path[%r{\A/save-poster/([a-z0-9_-]{1,80}-[0-9a-f]{8})\.png\z}, 1])
         raise ArgumentError, 'No such clip' unless File.file?(File.join(@directory, "#{clip}.webm"))
@@ -199,7 +234,7 @@ module QACapture
         end
         return event ? respond(client, 200, JSON.generate(event), 'application/json') : respond(client, 204, '', 'text/plain')
       end
-      raise ArgumentError, 'Only the live review may request work' unless headers['origin'] == @origin
+      raise ArgumentError, 'Only the live review may request work' unless own_origin?(headers['origin'])
       if method == 'POST' && path == '/presence'
         input = JSON.parse(small_body(client, headers))
         raise ArgumentError, 'Invalid presence event' unless %w[open closed].include?(input['state'])
@@ -232,7 +267,7 @@ module QACapture
     # GET /next and POST /result/<id> come from the recorder page; POST /control and
     # GET /result/<id> come from the terminal client, which sends no Origin header.
     def control(client, method, path, headers)
-      raise ArgumentError, 'Cross-origin control rejected' unless [nil, @origin].include?(headers['origin'])
+      raise ArgumentError, 'Cross-origin control rejected' unless headers['origin'].nil? || own_origin?(headers['origin'])
       id = path[%r{\A/result/([a-f0-9]{16})\z}, 1]
       if method == 'GET' && path == '/next'
         # Long poll: a hidden recorder tab's timers are throttled, but a pending fetch is not.
@@ -258,7 +293,7 @@ module QACapture
         @lock.synchronize { @commands << command; @signal.broadcast }
         respond(client, 200, JSON.generate(id: command[:id]), 'application/json')
       elsif method == 'POST' && id
-        raise ArgumentError, 'Only the recorder page reports results' unless headers['origin'] == @origin
+        raise ArgumentError, 'Only the recorder page reports results' unless own_origin?(headers['origin'])
         result = JSON.parse(small_body(client, headers))
         @lock.synchronize { @results[id] = result }
         respond(client, 200, '{}', 'application/json')
@@ -283,7 +318,7 @@ module QACapture
     # control: the page sends its own origin, the terminal sends none, a foreign page fails.
     def live_api(client, method, path, headers)
       raise ArgumentError, 'Invalid review token' unless headers['x-qa-token'] == @token
-      raise ArgumentError, 'Cross-origin review request rejected' unless [nil, @origin].include?(headers['origin'])
+      raise ArgumentError, 'Cross-origin review request rejected' unless headers['origin'].nil? || own_origin?(headers['origin'])
       raise ArgumentError, 'Writes must come from the review page or the terminal' unless method == 'GET' || method == 'POST'
       if method == 'GET' && path == '/api/export'
         require_relative '../lib/dcr/export'
@@ -404,7 +439,7 @@ module QACapture
         html = html.dup.insert(html.index('<title>') || html.index('<script') || 0, @live.bootstrap_script) if @live
         panel = %(<meta name="qa-token" content="#{@token}"><link rel="stylesheet" href="/style.css"><script src="/qa-panel.js"></script><script src="/recorder.js"></script>)
         panel += %(<link rel="stylesheet" href="/live.css"><script src="/live-tools.js"></script><script src="/live.js"></script>) if @live
-        panel += %(<meta name="dcr-app" content="#{JSON.generate(@app.describe).gsub('"', '&quot;')}"><link rel="stylesheet" href="/app-view.css"><script src="/app-view.js"></script>) if @app
+        panel += %(<meta name="dcr-app" content="#{JSON.generate(@app.describe(shared: Thread.current[:dcr_arrival] == :shared)).gsub('"', '&quot;')}"><link rel="stylesheet" href="/app-view.css"><script src="/app-view.js"></script>) if @app
         panel += %(<script src="/try-band.js"></script>) if @live
         at = html.rindex('</body>') || html.length
         html = html.dup.insert(at, panel)
@@ -413,7 +448,7 @@ module QACapture
     end
 
     # The running app is the only page the review may frame.
-    def report_csp = @app ? REPORT_CSP.sub("connect-src 'self';", "connect-src 'self'; frame-src #{@app.origin};") : REPORT_CSP
+    def report_csp = @app ? REPORT_CSP.sub("connect-src 'self';", "connect-src 'self'; frame-src #{@app.describe(shared: Thread.current[:dcr_arrival] == :shared)[:origin]};") : REPORT_CSP
 
     def respond(client, code, body, type, csp = PANEL_CSP, extra = nil)
       reason = {200 => 'OK', 202 => 'Accepted', 204 => 'No Content', 400 => 'Bad Request', 404 => 'Not Found'}.fetch(code, 'Error')
@@ -509,6 +544,8 @@ elsif $PROGRAM_NAME == __FILE__
     parser.on('--port NUMBER', Integer) { |value| options[:port] = value }
     parser.on('--app URL', 'The running app to show inside the review, like http://localhost:3000 or https://app.myproject.test') { |value| options[:app] = value }
     parser.on('--app-ca PATH', 'A local CA certificate the app\'s HTTPS uses (mkcert\'s root is found automatically)') { |value| options[:app_ca] = value }
+    parser.on('--share', 'Also serve it on your tailnet with Tailscale Serve, for your own login; stays local when Tailscale cannot') { options[:share] = true }
+    parser.on('--share-with LOGIN', 'Another tailnet login allowed to open the shared review (repeatable)') { |value| (options[:share_with] ||= []) << value }
   end.parse!
   if options[:name]
     abort 'Use a short lowercase series slug' unless options[:name].match?(/\A[a-z0-9]+(?:-[a-z0-9]+)*\z/)
@@ -533,6 +570,8 @@ elsif $PROGRAM_NAME == __FILE__
   puts "App inside the review: #{server.url}/?app#overview (proxying #{options[:app]} through #{server.app_url})" if server.app_url
   puts 'Open the review in a tab your browser tool controls (Claude in Chrome: its tab group), so you can act in it when the reviewer presses Start QA review.' if server.app_url
   puts 'No --app: the review shows the older recorder card and has no Start QA review. Find the running app and serve again with --app <url>, or tell the reviewer why it is missing.' if options[:report] && !server.app_url
+  puts "On your tailnet: #{server.shared_origin}/#overview (only for your Tailscale login#{options[:share_with] ? ' and the ones you shared it with' : ''})" if server.shared_origin
+  puts server.share_note if server.share_note
   puts "Local capture files: #{File.expand_path(options[:directory])}"
   puts "Control: ruby #{__FILE__} control --out #{File.expand_path(options[:directory])} <wait-request|wait-ready|start|still|stop|end|status|reload> [--name NAME]"
   begin

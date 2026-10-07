@@ -123,6 +123,19 @@ end
 port = app_server
 exercise(DCR::AppProxy.new(upstream: "http://localhost:#{port}/page", review_origin: REVIEW), "http://localhost:#{port}")
 
+# Shared on the tailnet: Tailscale Serve forwards under the tailnet name and says who is asking.
+shared = DCR::AppProxy.new(upstream: "http://localhost:#{port}/page", review_origin: REVIEW)
+Thread.new { shared.run }
+tailnet = "laptop.tail0.ts.net:#{shared.port}"
+shared.share!(host: tailnet, origin: "https://#{tailnet}", review_origin: 'https://laptop.tail0.ts.net:9', allowed: ['me@github'])
+head, = fetch(shared, 'GET', '/page', 'Host' => tailnet, 'Tailscale-User-Login' => 'colleague@github')
+assert(head.start_with?('HTTP/1.1 403'), 'A tailnet login the review is not shared with must be refused')
+head, page = fetch(shared, 'GET', '/page', 'Host' => tailnet, 'Tailscale-User-Login' => 'me@github')
+assert(head.include?('frame-ancestors https://laptop.tail0.ts.net:9') && page.include?("https://#{tailnet}/next"), 'Shared, the app answers with the tailnet addresses')
+head, page = fetch(shared, 'GET', '/page')
+assert(head.include?("frame-ancestors #{REVIEW}") && page.include?("http://127.0.0.1:#{shared.port}/next"), 'Locally, the app keeps its local addresses')
+shared.close
+
 # HTTPS with a local CA that Ruby does not trust by default, as with mkcert.
 key = OpenSSL::PKey::RSA.new(2048)
 ca = OpenSSL::X509::Certificate.new

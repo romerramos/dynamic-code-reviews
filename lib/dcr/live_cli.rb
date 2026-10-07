@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'json'
+require 'open3'
 require 'optparse'
 require 'shellwords'
 require 'uri'
@@ -51,6 +52,8 @@ module DCR
       'preview' => 'dcr preview submit (--repo ROOT --name SERIES | --dir DIR) --path <template path> [--file FILE] [--title TITLE] [--css STYLESHEET]... [--page-class CLASSES] [--image-map JSON] | dcr preview fail ... --path <template path> --reason TEXT',
       'export' => 'dcr export (--repo ROOT --name SERIES | --dir DIR) [--out FILE]',
       'comment' => 'dcr comment (--repo ROOT --name SERIES | --dir DIR) [--file COMMENTS.json]   (one review comment or an array, as in the review JSON: id, label, decoration, subject, discussion, hunk, side, start, end; stdin when --file is omitted)',
+      'stop' => 'dcr stop (--repo ROOT --name SERIES | --dir DIR | --all)   (stops the served review and its `dcr wait`; --all stops every review served on this computer)',
+      'link' => 'dcr link (--repo ROOT --name SERIES | --dir DIR)   (the served review\'s addresses: on this computer, and on your tailnet when shared)',
       'focus' => 'dcr focus (--repo ROOT --name SERIES | --dir DIR)   (brings the browser tab showing the served review to the front)',
       'reply' => 'dcr reply (--repo ROOT --name SERIES | --dir DIR) [--key KEY] [--json] <thread-id> <text>',
       'evidence' => 'dcr evidence attach (--repo ROOT --name SERIES | --dir DIR) --file ITEMS.json [--replace previous-qa|all]   (ITEMS: [{"path", "title", "result": "passed|failed", "observed", "comment_id"?, "page"?}]; previous-qa, the default, replaces the last QA review; all replaces every recording, only when the reviewer asks to start over)'
@@ -74,9 +77,11 @@ module DCR
         p.on('--page-class CLASSES') { |v| options[:page_class] = v }
         p.on('--timeout SECONDS', Integer) { |v| options[:timeout] = v }
         p.on('--json') { options[:json] = true }
+        p.on('--all') { options[:all] = true }
         p.on('--replace MODE', %w[previous-qa all]) { |v| options[:replace] = v.tr('-', '_').to_sym }
       end
       parser.parse!(argv)
+      return stop(options, parser) if command == 'stop'
       state = State.new(directory(options, parser))
       case command
       when 'wait' then wait(state, options)
@@ -84,6 +89,7 @@ module DCR
       when 'reply' then reply(state, options, argv, parser)
       when 'comment' then comment(state, options, directory(options, parser))
       when 'focus' then focus(directory(options, parser))
+      when 'link' then link(directory(options, parser))
       when 'export' then export(options, directory(options, parser))
       when 'preview' then preview(state, options, argv, parser)
       when 'evidence' then evidence(options, directory(options, parser), argv, parser)
@@ -282,6 +288,45 @@ module DCR
       entry = history['revisions'].last
       state.post_comments(State.review_key(entry['fingerprint'], history['name'], entry['number']), comments)
       puts "Posted #{comments.length == 1 ? "comment #{comments.first['id']}" : "#{comments.length} comments"} to the open review."
+    end
+
+    # Served reviews keep running in the background until stopped. This stops the review server of one
+    # series (or every one with --all) and the `dcr wait` listening for it. A server removes its tailnet
+    # share as it exits; a stopped review stays readable as its saved HTML.
+    def stop(options, parser)
+      found = review_processes
+      unless options[:all]
+        directory = directory(options, parser)
+        name = File.basename(directory)
+        found = found.select { |_, command| command.include?(directory) || command.match?(/--name #{Regexp.escape(name)}(?:\s|\z)/) }
+      end
+      return puts(options[:all] ? 'No review is being served on this computer.' : "No server or wait is running for #{File.basename(directory)}.") if found.empty?
+      found.each_key { |pid| Process.kill('TERM', pid) rescue nil }
+      deadline = Time.now + 5
+      sleep 0.2 while Time.now < deadline && found.keys.any? { |pid| (Process.kill(0, pid) rescue false) }
+      servers = found.count { |_, command| command.include?('qa_capture.rb') }
+      puts "Stopped #{servers} review server(s) and #{found.length - servers} wait(s)#{options[:all] ? ' on this computer' : " for #{File.basename(directory)}"}."
+    end
+
+    # [pid => command] of review servers (`dcr serve`) and `dcr wait` listeners, from any installed copy.
+    def review_processes
+      out, = Open3.capture2('ps', '-eo', 'pid=,command=')
+      out.lines.filter_map do |line|
+        pid, command = line.strip.split(' ', 2)
+        next unless command && pid.to_i != Process.pid
+        serving = command.include?('scripts/qa_capture.rb') && !command.match?(/qa_capture\.rb\s+control\b/)
+        waiting = command.match?(%r{bin/dcr\s+wait\b})
+        [pid.to_i, command] if serving || waiting
+      end.to_h
+    end
+
+    # What the agent quotes to the reviewer, who may be on another device: the addresses of the served review.
+    def link(directory)
+      endpoint = File.join(directory, '.serve.json')
+      raise ArgumentError, 'The review is not being served. Run `dcr serve` first.' unless File.file?(endpoint)
+      served = JSON.parse(File.read(endpoint))
+      puts "On this computer: http://127.0.0.1:#{served.fetch('port')}/#overview"
+      puts served['shared'] ? "On your tailnet: #{served['shared']}/#overview" : 'Not shared on your tailnet (serve with --share to open it from your other devices).'
     end
 
     # Once the review is open in the agent's browser tab: show it to the reviewer, wherever they are.

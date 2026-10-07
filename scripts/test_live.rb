@@ -236,3 +236,16 @@ if RUBY_PLATFORM.include?('darwin')
   assert(none.include?('No supported browser'), 'With no browser running nothing is asked')
   puts 'focus: ok'
 end
+
+# Sharing on the tailnet: only with Tailscale running, MagicDNS and HTTPS certificates; otherwise it says why.
+require_relative '../lib/dcr/share'
+status = ->(data) { ->(*_args) { [JSON.generate(data), true] } }
+ready = {'BackendState' => 'Running', 'Self' => {'DNSName' => 'laptop.tail0.ts.net.', 'UserID' => 7}, 'CertDomains' => ['laptop.tail0.ts.net'], 'User' => {'7' => {'LoginName' => 'me@github'}}}
+assert(DCR::Share.check(run: status.call(ready)) == {'ok' => true, 'host' => 'laptop.tail0.ts.net', 'login' => 'me@github'}, 'A ready tailnet gives its name and login')
+assert(DCR::Share.check(run: ->(*) { ['', nil] })['reason'].include?('not installed'), 'No Tailscale says so')
+assert(DCR::Share.check(run: status.call(ready.merge('BackendState' => 'Stopped')))['reason'].include?('stopped'), 'A stopped Tailscale says so')
+assert(DCR::Share.check(run: status.call(ready.merge('CertDomains' => [])))['reason'].include?('HTTPS certificates'), 'Missing HTTPS certificates say where to turn them on')
+calls = []
+url = DCR::Share.expose(4400, 'laptop.tail0.ts.net', run: ->(*args) { calls << args; ['', true] })
+assert(url == 'https://laptop.tail0.ts.net:4400' && calls == [['serve', '--bg', '--https=4400', 'http://127.0.0.1:4400']], "Exposing uses Tailscale Serve on the same port: #{calls}")
+puts 'share: ok'

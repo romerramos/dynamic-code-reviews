@@ -42,7 +42,13 @@ module DCR
       @upstream.query ? "#{path}?#{@upstream.query}" : path
     end
 
-    def describe = {origin: @origin, upstream: @base, start: start_path}
+    def describe(shared: false) = {origin: shared && @shared ? @shared[:origin] : @origin, upstream: @base, start: start_path}
+
+    # A review shared on the tailnet (dcr serve --share) reaches the proxy through Tailscale Serve under
+    # its tailnet name; requests there are answered only for the people it is shared with.
+    def share!(host:, origin:, review_origin:, allowed:)
+      @shared = {host: host, origin: origin, review_origin: review_origin, allowed: allowed}
+    end
 
     def close = @socket.close
 
@@ -89,8 +95,17 @@ module DCR
       method, target, version = head.first.split(' ', 3)
       raise ArgumentError, 'Invalid HTTP request' unless method && target&.start_with?('/') && version&.start_with?('HTTP/1.')
       headers = parse_headers(head.drop(1))
-      # A page on another site that rebinds its name to 127.0.0.1 must not reach the app.
-      return plain(client, 400, 'Invalid Host') unless header(headers, 'host') == "127.0.0.1:#{@port}"
+      # A page on another site that rebinds its name to 127.0.0.1 must not reach the app. Each connection
+      # answers with the addresses of the way it came in: local, or shared on the tailnet.
+      host = header(headers, 'host')
+      if host == "127.0.0.1:#{@port}"
+        Thread.current[:dcr_view] = {origin: @origin, review: @review_origin}
+      elsif @shared && host == @shared[:host]
+        return plain(client, 403, 'This review is not shared with you') unless @shared[:allowed].include?(header(headers, 'tailscale-user-login').to_s)
+        Thread.current[:dcr_view] = {origin: @shared[:origin], review: @shared[:review_origin]}
+      else
+        return plain(client, 400, 'Invalid Host')
+      end
       return serve_agent(client, method, target) if target.start_with?(PREFIX)
 
       upstream = connect
@@ -163,8 +178,8 @@ module DCR
     def request_head(method, target, headers, websocket)
       out = headers.reject { |name, _| HOP.include?(name.downcase) || %w[host accept-encoding].include?(name.downcase) }.map do |name, value|
         case name.downcase
-        when 'origin' then [name, value == @origin ? @base : value]
-        when 'referer' then [name, value.start_with?("#{@origin}/") || value == @origin ? value.sub(@origin, @base) : value]
+        when 'origin' then [name, value == origin_here ? @base : value]
+        when 'referer' then [name, value.start_with?("#{origin_here}/") || value == origin_here ? value.sub(origin_here, @base) : value]
         else [name, value]
         end
       end
@@ -258,7 +273,7 @@ module DCR
       html, injected = add_agent(body)
       kept = rewrite(headers, keep_framing: false).reject { |name, _| %w[content-length transfer-encoding content-encoding].include?(name.downcase) }
       # Only the review may frame the proxied app.
-      kept += [['Content-Length', html.bytesize.to_s], ['Content-Security-Policy', "frame-ancestors #{@review_origin}"], ['X-DCR-Agent', injected ? 'injected' : 'failed']]
+      kept += [['Content-Length', html.bytesize.to_s], ['Content-Security-Policy', "frame-ancestors #{review_here}"], ['X-DCR-Agent', injected ? 'injected' : 'failed']]
       client.write(build_head(status_line, kept))
       client.write(html)
     end
@@ -281,7 +296,7 @@ module DCR
     # at the proxy so clicking them stays inside the review.
     def add_agent(body)
       html = body.dup.force_encoding(Encoding::BINARY)
-      html = html.gsub(@base.b, @origin.b).gsub(@base.gsub('/', '\/').b, @origin.gsub('/', '\/').b)
+      html = html.gsub(@base.b, origin_here.b).gsub(@base.gsub('/', '\/').b, origin_here.gsub('/', '\/').b)
       tag = %(<script src="#{PREFIX}agent.js"></script>).b
       masked = html.gsub(/<!--.*?-->/m) { |comment| ' ' * comment.bytesize }
       at = masked =~ /<head\b[^>]*>/i ? Regexp.last_match.end(0) : masked =~ /<html\b[^>]*>/i ? Regexp.last_match.end(0) : nil
@@ -292,7 +307,7 @@ module DCR
 
     def serve_agent(client, method, target)
       return plain(client, 404, 'Not found') unless method == 'GET' && target.split('?').first == "#{PREFIX}agent.js"
-      script = File.read(AGENT).sub('__DCR_REVIEW_ORIGIN__', @review_origin).sub('__DCR_UPSTREAM_SECURE__', (@upstream.scheme == 'https').to_s)
+      script = File.read(AGENT).sub('__DCR_REVIEW_ORIGIN__', review_here).sub('__DCR_UPSTREAM_SECURE__', (@upstream.scheme == 'https').to_s)
       client.write("HTTP/1.1 200 OK\r\nContent-Type: text/javascript; charset=utf-8\r\nContent-Length: #{script.bytesize}\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n#{script}")
     end
 
@@ -310,8 +325,11 @@ module DCR
     def page(client, code, title, body, left: nil)
       meta = left ? %(<meta name="dcr-left" content="#{left.gsub('"', '&quot;')}">) : ''
       html = "<!doctype html><html><head><meta charset=\"utf-8\"><script src=\"#{PREFIX}agent.js\"></script>#{meta}<title>#{title}</title><style>body{font:15px/1.55 system-ui,sans-serif;max-width:560px;margin:12vh auto;padding:0 24px;color:#1f2430}h1{font-size:18px}</style></head><body><h1>#{title}</h1>#{body}</body></html>"
-      client.write("HTTP/1.1 #{code} #{code == 200 ? 'OK' : 'Bad Gateway'}\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: #{html.bytesize}\r\nContent-Security-Policy: frame-ancestors #{@review_origin}\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n#{html}")
+      client.write("HTTP/1.1 #{code} #{code == 200 ? 'OK' : 'Bad Gateway'}\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: #{html.bytesize}\r\nContent-Security-Policy: frame-ancestors #{review_here}\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n#{html}")
     end
+
+    def origin_here = Thread.current[:dcr_view]&.fetch(:origin) || @origin
+    def review_here = Thread.current[:dcr_view]&.fetch(:review) || @review_origin
 
     def plain(client, code, text)
       client.write("HTTP/1.1 #{code} Error\r\nContent-Type: text/plain\r\nContent-Length: #{text.bytesize}\r\nConnection: close\r\n\r\n#{text}")

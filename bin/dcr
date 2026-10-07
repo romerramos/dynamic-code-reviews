@@ -22,6 +22,8 @@ USAGE = <<~TEXT
     wait | comments | reply        The agent's side of a served review: receive the reviewer's comments, list threads, answer one
     comment                        Post a review comment to a review in progress; the open page shows it at once
     focus                          Bring the browser tab showing the served review to the front
+    link                           Print the served review's addresses, including the tailnet one when shared
+    stop                           Stop a served review and its wait (--all: every review served on this computer)
     preview submit | fail          The agent's side of a template preview request
     evidence attach                The agent's side of a QA request: attach recordings to their comments as one revision
     export                         One offline HTML file with comments, replies and recordings baked in
@@ -44,7 +46,7 @@ when 'series'
 when 'previews'
   abort USAGE unless ARGV.first == 'render'
   run_script('previews.rb', *ARGV)
-when 'wait', 'comments', 'comment', 'focus', 'reply', 'export', 'preview', 'evidence'
+when 'wait', 'comments', 'comment', 'focus', 'link', 'stop', 'reply', 'export', 'preview', 'evidence'
   require_relative '../lib/dcr/live_cli'
   DCR::LiveCLI.run(command, ARGV)
 when 'serve' then run_script('qa_capture.rb', *ARGV)

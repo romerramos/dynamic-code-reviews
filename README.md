@@ -1,294 +1,225 @@
 # Dynamic Code Reviews
 
-An agent skill for reviewing Git changes through a grouped, interactive HTML
-walkthrough. Review uncommitted work, a commit or a pull request, then continue
-a saved review incrementally as the feature evolves.
+A code review you read in your browser while an AI agent reviews alongside you.
 
-The agent explains and reviews the code. Small Ruby helpers collect the diff,
-validate coverage, reuse unchanged ranges and render the report deterministically.
-The helpers do not call an LLM or generate review conclusions on their own.
+Ask your coding agent to review your uncommitted changes, a commit or a pull request. Within a
+minute or two the review opens in your browser, with every changed file in a sensible reading
+order. While you read, the agent leaves review comments beside the code and tells you when one
+arrives. When it has finished, the full walkthrough (explanations, findings, test results) replaces
+the outline. Your progress and comments carry over. You reply to the agent from the page; it answers
+there.
 
-## What you get
+It works for any language. Small Ruby helpers collect the diff and render the page; the agent writes
+the review. Reviews are saved in your repository (`.reviews/`, git-ignored) as self-contained HTML
+files that open offline.
 
-- Logical change groups and a suggested reading order, plus complete diffs
-  grouped by responsibility.
-- Unified/split comparison, syntax highlighting and compact range comments.
-- Conventional Comments types, blocking badges, local Resolve/Reopen and
-  Copy for LLMs with file, source range and code context.
-- Personal line/range comments, combined copying, and persistent per-file viewed
-  progress. File headers collapse when marked viewed; sidebar file paths jump
-  directly to their diffs and show where a partially reviewed group stands.
-- Immutable review snapshots and refreshable browsing pages with complete revision
-  navigation. Incremental review
-  reuses explanations only when the captured ranges and recorded context match.
-- Display settings in the View menu: light, dark or system colour mode, five syntax themes, and an option to hide whitespace-only changes. A served review remembers them for every review.
-- Reports open on Overview, with one-click video evidence previews. A live local
-  review offers Choose QA tab and per-file Request preview controls. The saved
-  offline report explains how to request these options later.
+## What a review gives you
 
-## Requirements
-
-| Component | Requirement |
-| --- | --- |
-| Agent | A coding agent that can read skill instructions, inspect files and run commands |
-| Helpers | Ruby 3.1+ with its standard library, and Git on PATH |
-| Repository | A local Git checkout with at least one commit; any project language |
-| Report viewer | A current browser supporting native HTML popovers and dialogs |
-| Optional context | A provider CLI or connector for live PR/issue metadata |
-| Maintainer checks | Node.js 18+ for the small JavaScript checks; no npm packages |
-
-No gems, npm installation, database, Docker setup, API key or provider account
-is needed for local collection and rendering. Reports embed daisyUI, Prism and
-Lucide assets and work without a network connection. The agent itself may use
-an online model or connectors according to its configuration.
-
-When requested, timed UI interactions use continuous WebM tab recordings. The bundled
-[capture helper](references/tab-capture.md) saves lossless PNG stills from the
-same stream, preserving text detail without relying on compressed agent screenshots.
-It uses browser APIs and the existing Ruby runtime: no FFmpeg, extension, npm,
-gem, or harness-specific SDK; clip thumbnails are the clip's last frame, drawn by the
-browser. One browser tab-sharing click by the reviewer is required. A person's own
-recordings show their real pointer; when the agent records (Start QA review), the review
-draws the agent's pointer live from its input events, so any browser tool works.
-Videos and stills are embedded into the same offline review HTML. Historical GIFs
-remain readable; the obsolete screenshot-to-GIF encoder and its image decoder
-libraries have been removed.
-
-The helpers use portable Ruby/Git APIs and resolve assets relative to their own
-location. macOS has been exercised; Linux and Windows/WSL have not been verified.
-Do not rely on an older system Ruby merely because `ruby` is already installed.
+- **Read first, comments as they come.** The review opens before the agent has read the code. Its
+  comments appear in the code and on the Overview as it writes them, with a notice wherever you are.
+  Your browser comes to the front on the review tab when it is ready.
+- **A walkthrough grouped by behaviour**, not by folder, with a reading order and a note on each
+  changed range. Read file by file or step by step, in unified or split view, light or dark.
+- **A conversation with your agent.** Comment on any line, then Send to agent. The agent replies in
+  the page; it explains and suggests, and never changes your code from the review.
+- **Template previews.** For a changed Rails view or ViewComponent, ask for a preview: the agent draws
+  it from the code with the app's real stylesheet, then checks it before handing it over. Show it at
+  phone, tablet or desktop width, wrapped to its content or fitted to the screen.
+- **Your running app inside the review** (when the agent finds it): use it, comment on any element,
+  record a clip, or press Start QA review and the agent records the flows behind its comments.
+- **On your other devices**, with Tailscale: open the same live review from your phone or a laptop in
+  a remote session. See [Open reviews from your other devices](#open-reviews-from-your-other-devices).
+- **History.** Each run saves a revision; a follow-up review reuses the explanations of code that did
+  not change.
 
 ## Install
 
-This repository contains one standard directory-based skill at its root. Clone
-the whole repository into a folder named `dynamic-code-reviews` in your agent's
-skill directory. The instructions and assets stay together, and updates use Git.
-No installer script, package manager or plugin configuration is needed.
+Clone this repository into your agent's skill folder, under the name `dynamic-code-reviews`. Keep the
+whole folder together; there is no installer, package manager or build step. The repository is
+private, so your GitHub account needs access (`gh auth login` if needed; never put a token in a clone
+URL).
 
-The repository is private: your GitHub account must have access. Authenticate
-with `gh auth login` if needed, or use an existing authenticated Git/SSH setup.
-Never put a token into a clone URL or a checked-in configuration file.
+| Agent | Command |
+| --- | --- |
+| Claude Code | `gh repo clone romerramos/dynamic-code-reviews ~/.claude/skills/dynamic-code-reviews` |
+| Codex | `gh repo clone romerramos/dynamic-code-reviews ~/.agents/skills/dynamic-code-reviews` |
+| OpenCode | `gh repo clone romerramos/dynamic-code-reviews ~/.config/opencode/skills/dynamic-code-reviews` |
 
-### Codex
+Create the parent folder first if it does not exist (`mkdir -p ~/.claude/skills`). Install it once:
+OpenCode also finds the Claude Code and Codex locations, so one clone can serve several agents. Restart
+the agent if the skill does not appear. For a single project, use the project's own folder instead
+(`.claude/skills/`, `.agents/skills/` or `.opencode/skills/`).
 
-Install for your user:
+**Update:** `git -C ~/.claude/skills/dynamic-code-reviews pull --ff-only` (use your install path). A
+copy that is not a Git clone is updated by replacing the folder with a fresh copy of this repository;
+keep `.reviews/` if the folder has one.
 
-```sh
-mkdir -p "$HOME/.agents/skills"
-gh repo clone romerramos/dynamic-code-reviews "$HOME/.agents/skills/dynamic-code-reviews"
-```
+**Remove:** move the folder out of the skill directory and restart the agent. Reviews already saved in
+your projects keep working.
 
-Then invoke it in Codex:
+### Requirements
 
-```text
-$dynamic-code-reviews review my uncommitted changes
-```
+| What | Needed for |
+| --- | --- |
+| Ruby 3.1+ and Git on `PATH` | Everything. Ruby's standard library only, no gems. |
+| A browser | Reading the review. Chrome, Edge, Brave, Arc, Firefox or Safari. |
+| A browser tool for the agent (Claude in Chrome, or computer use) | Opening the review in a tab the agent can also use, for QA. Optional. |
+| macOS | Bringing the browser to the front (`dcr focus`). Elsewhere the agent tells you which tab. |
+| Tailscale | Optional. Opening reviews from your other devices. |
+| `gh`, or a GitHub or Linear connector | Optional. Reviewing a pull request with its real base and linked issues. |
+| Node.js 18+ | Only for the maintainer checks below. |
 
-Alternatively, ask Codex's built-in installer:
+No npm, Docker, database, API key or network connection is needed to collect and render a review.
 
-```text
-Use $skill-installer to install the skill at the root of the private repository
-romerramos/dynamic-code-reviews, with the name dynamic-code-reviews.
-```
+## Use it
 
-Choose one installation method. Existing installations may be under
-`~/.codex/skills`; do not keep a second copy of the same skill in `.agents/skills`.
-If the skill does not appear, start a new session or restart Codex.
-These locations and invocation follow the [official Codex skill documentation](https://learn.chatgpt.com/docs/build-skills).
-
-### Claude Code
-
-```sh
-mkdir -p "$HOME/.claude/skills"
-gh repo clone romerramos/dynamic-code-reviews "$HOME/.claude/skills/dynamic-code-reviews"
-```
-
-Invoke it with:
+Ask your agent in plain words:
 
 ```text
 /dynamic-code-reviews review my uncommitted changes
-```
-
-The personal skill directory and slash invocation follow the
-[Claude Code skill documentation](https://code.claude.com/docs/en/skills).
-This setup targets local Claude Code sessions; it does not install into Claude's
-web app or transfer your checkout to a cloud session.
-
-### OpenCode
-
-If you already installed for Codex or Claude Code above, OpenCode also discovers
-their `.agents/skills` and `.claude/skills` locations. Avoid a duplicate install.
-For an OpenCode-only installation:
-
-```sh
-mkdir -p "$HOME/.config/opencode/skills"
-gh repo clone romerramos/dynamic-code-reviews "$HOME/.config/opencode/skills/dynamic-code-reviews"
-```
-
-Ask: `Use the dynamic-code-reviews skill to review my uncommitted changes.`
-For a custom configuration directory, use its `skills` subdirectory instead.
-See [OpenCode's skill discovery documentation](https://opencode.ai/docs/skills/).
-
-### Project scope and other agents
-
-To make the skill available only within one project, use the corresponding
-project directory in the table below. Copy the skill's files into it, excluding
-the clone's `.git` directory, or use a Git submodule if the team wants a pinned
-version. Anyone updating a private submodule also needs repository access.
-
-| Agent | User location | Project location |
-| --- | --- | --- |
-| Codex | `~/.agents/skills/dynamic-code-reviews` | `.agents/skills/dynamic-code-reviews` |
-| Claude Code | `~/.claude/skills/dynamic-code-reviews` | `.claude/skills/dynamic-code-reviews` |
-| OpenCode | `~/.config/opencode/skills/dynamic-code-reviews` | `.opencode/skills/dynamic-code-reviews` |
-
-Other agents supporting directory-based `SKILL.md` skills can use the same
-folder in their documented discovery location. Keep `scripts/`, `assets/` and
-`references/` beside `SKILL.md`. `agents/openai.yaml` supplies optional Codex
-display metadata; it is not a runtime dependency. An agent without skill discovery
-can read `SKILL.md` explicitly and follow it if it has filesystem and shell access.
-
-### Update, pin or remove
-
-For a Git-cloned installation, use its actual directory:
-
-```sh
-git -C "$HOME/.agents/skills/dynamic-code-reviews" pull --ff-only
-```
-
-Substitute the Claude Code/OpenCode path if applicable. `--ff-only` avoids merge
-commits; inspect local changes before updating a modified installation. To pin a
-version, check out a reviewed commit in that clone instead of following `main`.
-To uninstall, move the skill folder outside all discovery directories, preserving
-any edits you want to keep, then restart or reload the agent. Generated reviews
-in your projects remain independent of the installation.
-
-If a destination already exists, Git refuses to clone over it. Compare the existing
-installation first; do not overwrite it or layer another copy over the same name.
-
-## Live review
-
-Invoking the skill opens the review in your browser first, and brings the browser to the front on it, with every changed
-file in reading order and the running app attached when it finds one. The
-agent's comments then arrive beside the code while you read, each with a
-notice; explanations, findings and test results follow as the finished
-review. QA and template previews open once it is done.
-
-`dcr serve --repo <root> --name <series>` serves a saved review with
-comment threads (the skill does this by default and opens the page). The reviewer sends a comment to the agent, the agent's `dcr wait` receives it and
-`dcr reply` answers in the open page. The saved HTML never needs the server. Record a clip in the page and attach it to a comment, or run `dcr export` (or use Export HTML) for one offline file that carries your comments, the agent's replies and the recordings. See SKILL.md
-("Live review with the reviewer") for the agent's loop.
-
-## Use
-
-```text
-Use Dynamic Code Reviews to review my uncommitted changes.
-Use Dynamic Code Reviews to review the last commit.
-Use Dynamic Code Reviews to review this PR with a QA video and Rails previews.
+/dynamic-code-reviews review this PR
+/dynamic-code-reviews review the last commit
 Continue the task-export review with my latest changes.
 ```
 
-Without an explicit scope, the skill reviews uncommitted changes when present, or
-the current branch's single open PR when the working tree is clean. Ambiguous
-scopes or series need clarification. Video evidence and full template previews
-are optional additions to the complete code review. Use **Preview this template** beside a template in a served review to ask your agent for it directly, or **Select for preview** offline and then
-copy one prompt from the header's **Previews** list to request them in one batch.
-That list also shows which templates are ready, still requested, or not
-previewable, so a rebuilt report never loses track of them. The Overview's
-**Visual evidence** line separately copies a video QA prompt. The right-hand
-**Your review** panel repeats the previews state next to your comments.
-Paste either prompt into a coding agent whenever ready. The initial review
-starts no recorder or background wait. For requested video, the agent prepares
-the app tab before opening the sharing controls and records the useful flow
-directly, without a routine cursor probe.
+With no scope it reviews your uncommitted changes, or the open pull request of the current branch
+when the working tree is clean. You do not need to run any command yourself: the skill collects,
+serves, opens and answers. When you are done, press **Finish review** in the page; ask the agent to
+close the review when you no longer need it.
 
-See [SKILL.md](SKILL.md) for agent instructions,
-[the review schema](references/report-schema.md) for authoring review JSON, and
-[the incremental workflow](references/incremental-reviews.md) for updates.
-Commands in those files use `<skill>`, `<root>` and temporary-path placeholders;
-replace them with real paths and quote each path when invoking the shell.
+## Open reviews from your other devices
+
+If [Tailscale](https://tailscale.com) is installed and running on the computer that runs the review,
+the review is also shared on your tailnet. Nothing to configure per project.
+
+**What you get.** The agent's message says where the review is, twice: when it first opens and when
+it is finished. Next to the usual local address there is a tailnet one:
+
+```text
+On this computer: http://127.0.0.1:52318/#overview
+On your tailnet:  https://my-laptop.tail1234.ts.net:52318/#overview
+```
+
+Open the tailnet address on your phone, tablet or another computer on your tailnet and you get the
+same live review: the agent's comments arriving, Send to agent and replies, previews. The running app
+inside the review works too, through the review itself, so your phone never needs to reach the app
+directly (a plain `localhost:3000` app works the same as one behind a proxy). Sign in to the app once
+there: the tailnet address keeps its own cookies.
+
+This is what makes remote sessions work: when you drive the computer from elsewhere (for example from
+Herdr on your phone), the browser on that computer is out of sight, but the agent's message with the
+tailnet link is in front of you.
+
+**How it works.** The review server listens only on `127.0.0.1`. The skill starts it with `--share`,
+which asks Tailscale Serve to publish that port on your tailnet over HTTPS, and does the same for the
+app proxy. When the server stops, it removes those Serve entries again.
+
+**Who can open it.** Only devices on your tailnet can reach it; it is never on the public internet
+(it does not use Tailscale Funnel). On a shared company tailnet, colleagues could reach the address, so
+the review also checks who is asking: Tailscale adds the visitor's login to every request, and the
+review answers only your own login. Ask the agent to share a review with a colleague and it adds
+their login (`--share-with`).
+
+**What you need.**
+
+- Tailscale installed, logged in and running on the computer that runs the review. A machine running
+  Tailscale as a server works without prompts.
+- MagicDNS and HTTPS certificates turned on for your tailnet: Tailscale admin console, DNS page. On a
+  company tailnet an admin may need to do this once.
+
+If any of this is missing, the review simply stays local and the agent says why in one line.
+
+**What does not work remotely.** Recording a clip and Start QA review need tab sharing, which phone
+browsers do not offer; use them from a desktop browser. Bringing the window to the front only applies
+to the computer itself.
+
+**Without Tailscale.** From another computer with SSH access, forward the two ports the agent's message
+shows and open the local address: `ssh -L 52318:127.0.0.1:52318 -L 50186:127.0.0.1:50186 <host>`. Or
+read the saved HTML file (`.reviews/<series>/current.html`) anywhere; it works offline but cannot talk
+to the agent.
+
+## Stopping reviews
+
+A review keeps its server running in the background so you can come back to it. Ask the agent to close
+it, or to close all reviews, and it stops them, together with their tailnet share. The saved HTML stays
+readable without a server.
 
 ## Output and privacy
 
-Reports live in the reviewed repository, under `.reviews/`:
+Reviews live in the reviewed repository:
 
 ```text
 .reviews/task-export/
-  index.html
-  manifest.json
-  current.html
-  revision-001.html  # refreshed UI and navigation for revision 1
-  revisions/
-    001.html
-    002.html
+  current.html        # the latest review, opens offline
+  index.html          # every revision
+  revisions/001.html  # each saved revision, never rewritten
+  state.json          # your progress and the conversation, while served
 ```
 
-The helpers add `/.reviews/` to Git's local `info/exclude` when needed, leaving
-the project's tracked `.gitignore` alone. No project scripts are installed.
-The command named `publish` saves a local revision; it never posts to a provider.
+The helpers add `/.reviews/` to Git's local `info/exclude`; your tracked `.gitignore` is not touched.
+"Publish" in the commands means saving a local revision; nothing is posted to GitHub or anywhere else.
 
-**Share this skill directory, not your generated reviews.** HTML reports contain
-captured source diffs, analysis, repository paths, commit IDs and any supplied
-issue context. A filename filter omits common sensitive files, but is not a
-credential scanner or an anonymizer. Inspect report content before sharing it.
-The included `.gitignore` excludes common local artifacts from a skill repository.
+**Share this skill, not your reviews.** A review contains your source code, analysis, repository paths
+and commit IDs. Obviously sensitive files are left out, but this is not a secret scanner. Check a
+review's content before you send it to anyone.
 
-Personal comments and resolution marks stay in browser storage for that snapshot
-and revision. Copy or export them to keep a separate record. Resolving a thread
-does not verify that a code defect has been fixed.
+## For agents: the `dcr` commands
 
-## Portability limits
+The skill's instructions are in [SKILL.md](SKILL.md); agents follow them, and people do not need these
+commands. Everything runs as `<skill>/bin/dcr <command>`, with Ruby 3.1+ (under mise:
+`mise exec ruby -- <skill>/bin/dcr ...`). Run a command without arguments for its options.
 
-- Project language is independent of the helper language. Highlighting is bundled
-  for Ruby, JavaScript/TypeScript, markup, CSS, SQL, JSON, YAML and shell; other
-  source remains readable as plain text.
-- Responsibility categories are heuristics. Use the documented `file_categories`
-  overrides for a project's directory conventions; the agent's logical groups
-  should always follow the actual behavior and dependencies.
-- A saved series is tied to its original checkout, branch and comparison base.
-  Copying its folder preserves offline viewing, but continuing in a different
-  clone or after rewriting its base requires a fresh series.
-- Local review works without GitHub or an issue tracker. A full PR review needs
-  verified base/head metadata; a local comparison cannot substitute silently.
-- Unresolved working-tree conflicts must be resolved before an uncommitted
-  review. Binary, oversized and other omitted content needs separate inspection.
+| Command | What it does |
+| --- | --- |
+| `collect` | Snapshot uncommitted changes, a commit or a PR range. |
+| `series start --in-progress` / `series finish` | Open the review from an outline, then save the full review as the next revision. |
+| `series prepare` / `series publish` | Continue a saved series incrementally. |
+| `serve [--share] [--app <url>]` | Serve a review live: conversation, previews, the running app, tailnet sharing. |
+| `focus` / `link` | Bring the review's browser tab to the front; print its local and tailnet addresses. |
+| `comment` | Post a review comment to a review in progress. |
+| `wait` / `reply` / `comments` | Receive the reviewer's messages, answer a thread, list threads. |
+| `preview submit` / `preview fail` | Answer a template preview request. |
+| `record` / `evidence attach` | Record and attach visual QA evidence. |
+| `stop [--all]` | Stop a served review and its wait, and remove its tailnet share. |
+| `export` | One offline HTML file with the comments, replies and recordings. |
+
+References: [review JSON](references/report-schema.md), [incremental reviews](references/incremental-reviews.md),
+[finding the running app](references/local-app-discovery.md), [template previews](references/previews.md),
+[visual QA](references/visual-qa.md).
+
+## Limits
+
+- Syntax highlighting is bundled for Ruby, JavaScript and TypeScript, HTML, CSS, SQL, JSON, YAML and
+  shell; other languages show as plain text.
+- Template previews are for Rails views and ViewComponents. Drawn previews are approximations made by
+  the agent from the code.
+- A saved series belongs to its checkout, branch and base. Continuing after rewriting the base needs a
+  new series.
+- A full PR review needs the real base and head from GitHub; a local comparison is labelled as such.
+- It is used on macOS. The helpers use portable Ruby and Git, but Linux and Windows (WSL) have not
+  been verified.
 
 ## Maintainer checks
 
-Run from this directory:
+Run focused checks for what you change, from this folder:
 
 ```sh
-ruby scripts/test_dcr.rb
-ruby scripts/test_live.rb
-ruby scripts/test_evidence.rb
-ruby scripts/test_dark_theme.rb
-ruby scripts/test_review.rb
-ruby scripts/test_series.rb
-node scripts/test_ui.js
+ruby scripts/test_review.rb        # collection, rendering, validation
+ruby scripts/test_series.rb        # series, in-progress reviews, increments
+ruby scripts/test_live.rb          # live server state, threads, focus, tailnet sharing
+ruby scripts/test_live_previews.rb # preview requests, stylesheets, stand-ins
+ruby scripts/test_app_proxy.rb     # the running app inside the review
+node scripts/test_ui.js            # the review page's own logic
 node --check assets/report.js
-ruby scripts/test_qa_capture.rb
-ruby scripts/test_app_proxy.rb
-ruby scripts/test_previews.rb
-ruby scripts/test_preview_stand_ins.rb
-node --check recorder/recorder.js
-node --check recorder/qa-panel.js
 ```
 
-The Ruby checks create temporary Git repositories using your existing configured
-Git identity. They do not change your identity, commit to the reviewed project,
-contact a remote or require an application runtime. Tests need Git author and
-committer identity to be available; ordinary review collection does not.
-
-For renderer changes, follow the focused browser checks in
-[the UI guide](references/ui-guidelines.md). Use synthetic source for public
-fixtures, screenshots and examples.
+The full list is every `scripts/test_*` file. The Ruby checks create temporary Git repositories with
+your existing Git identity; they never touch your projects or a remote. For changes to the page, follow
+the browser checks in [the UI guide](references/ui-guidelines.md).
 
 ## Bundled libraries
 
-Third-party versions, sources and license notices are recorded in
-[assets/vendor/SOURCES.md](assets/vendor/SOURCES.md). Keep these notices when
-redistributing the skill. The original skill code does not yet have a distribution
-license; choose one before offering it as an open-source project.
-
-Inspired by CodeRabbit walkthroughs and change grouping; this is an independent
-local review workflow, with no CodeRabbit account or integration required.
+daisyUI, Prism, Lucide and GLightbox are embedded so reviews work offline; versions, sources and
+licences are in [assets/vendor/SOURCES.md](assets/vendor/SOURCES.md). The skill's own code has no
+distribution licence yet. Inspired by CodeRabbit's walkthroughs and change grouping; no CodeRabbit
+account or integration is involved.
