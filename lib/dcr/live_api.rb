@@ -48,6 +48,8 @@ module DCR
       when ['POST', '/api/evidence']
         raise ArgumentError, 'Attaching recordings is not available here' unless @evidence
         [200, @evidence.call(json(body))]
+      when ['GET', '/api/preview'] then [200, preview_html(key, query['path'])]
+      when ['POST', '/api/preview'] then (input = json(body); [200, {'entry' => @state.request_preview(input['key'], input['path'])}])
       when ['POST', '/api/send'] then (input = json(body); [200, {'queued' => @state.send_items(input['key'], input['items']).length}])
       when ['POST', '/api/message'] then (input = json(body); [200, {'message' => @state.user_message(input['key'], input['id'], input['body'])}])
       when ['POST', '/api/finish'] then [200, {'entry' => @state.finish(json(body)['key'])}]
@@ -71,6 +73,18 @@ module DCR
       @state.carry_forward(data['name'], data['revisions']) if data['name'] && data['revisions']
     end
 
+    # Statuses only: the markup of a ready preview is fetched once, on its own.
+    def preview_status(previews)
+      (previews || {}).transform_values { |preview| preview.reject { |name, _| name == 'html' } }
+    end
+
+    def preview_html(key, path)
+      raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
+      preview = @state.read.dig('previews', key, path.to_s)
+      raise ArgumentError, 'No ready preview for that template' unless preview && preview['status'] == 'ready'
+      {'html' => preview['html'], 'ready_at' => preview['ready_at']}
+    end
+
     def json(body)
       value = JSON.parse(body.call)
       raise ArgumentError, 'Expected a JSON object' unless value.is_a?(Hash)
@@ -80,7 +94,7 @@ module DCR
     def snapshot(key)
       raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
       state = @state.read
-      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'latest_revision' => latest_revision, 'listening' => @state.listening?,
+      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'previews' => preview_status(state['previews'][key]), 'latest_revision' => latest_revision, 'listening' => @state.listening?,
        'pending' => state['outbox'].count { |entry| entry['seq'] > state['acked'] && entry['key'] == key }}
     end
 

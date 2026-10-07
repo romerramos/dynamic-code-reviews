@@ -183,7 +183,7 @@ Continue the task-export review with my latest changes.
 Without an explicit scope, the skill reviews uncommitted changes when present, or
 the current branch's single open PR when the working tree is clean. Ambiguous
 scopes or series need clarification. Video evidence and full template previews
-are optional additions to the complete code review. Use **Add to previews** beside templates, then
+are optional additions to the complete code review. Use **Preview this template** beside a template in a served review to ask your agent for it directly, or **Select for preview** offline and then
 copy one prompt from the header's **Previews** list to request them in one batch.
 That list also shows which templates are ready, still requested, or not
 previewable, so a rebuilt report never loses track of them. The Overview's

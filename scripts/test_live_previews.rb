@@ -1,0 +1,150 @@
+# frozen_string_literal: true
+# Run with ruby scripts/test_live_previews.rb. Template previews the agent builds for a served review.
+require 'tmpdir'
+ENV['DCR_CONFIG_DIR'] = Dir.mktmpdir('dcr-config')
+require 'open3'
+require 'rbconfig'
+require_relative 'qa_capture'
+require_relative '../lib/dcr/state'
+require_relative '../lib/dcr/previews'
+
+def assert(condition, message)
+  raise message unless condition
+end
+
+def rejects(message)
+  yield
+  raise "Accepted: #{message}"
+rescue ArgumentError => error
+  error.message
+end
+
+KEY = 'dynamic-review:abc123:feature:2'
+PATH = 'app/views/orders/show.html.erb'
+
+# --- what an agent may submit -----------------------------------------------------------------
+built = DCR::Previews.build(<<~HTML, title: ' Order page ')
+  <div class="order"><i data-icon="check"></i><i data-icon="no-such-icon"></i>
+  <img src="https://cdn.example.test/p.png" width="40" height="30" srcset="x 2x">
+  <script>alert(1)</script><iframe src="https://evil.test"></iframe><link rel="stylesheet" href="https://evil.test/a.css">
+  <a href="javascript:steal()" onclick="steal()">go</a><button onmouseover="x()">Pay</button>
+  <style>@import url(https://evil.test/x.css); .order{background:url(https://evil.test/bg.png);color:red}</style></div>
+HTML
+html = built['html']
+assert(html.include?('class="order"') && html.include?('>Pay</button>') && html.include?('color:red'), 'Legitimate markup and styles must survive')
+assert(html.include?('stroke-linecap') && built['mocks'].values_at('icons', 'placeholders', 'image_placeholders') == [1, 1, 1], "Icon and image stand-ins are wrong: #{built['mocks']}")
+%w[<script <iframe <link alert(1) javascript: onclick onmouseover evil.test @import cdn.example.test srcset].each { |bad| assert(!html.include?(bad), "Unsafe content survived: #{bad}") }
+assert(built['title'] == 'Order page', 'The title must be trimmed')
+fenced = DCR::Previews.build("```html\n<p>Hello</p>\n```")
+assert(fenced['html'].include?('<p>Hello</p>') && !fenced['html'].include?('```'), 'A Markdown fence around the HTML is removed')
+document = DCR::Previews.build("<!doctype html><html><head><title>t</title><style>.a{color:blue}</style></head><body><p class=\"a\">In body</p></body></html>")
+assert(document['html'].include?('In body') && document['html'].include?('.a{color:blue}') && !document['html'].include?('<title>t</title>'), 'A whole document is reduced to its body and styles')
+messages = [
+  rejects('prose before the HTML') { DCR::Previews.build("Here is the preview:\n<div>x</div>") },
+  rejects('prose after the HTML') { DCR::Previews.build("<div>x</div>\nLet me know!") },
+  rejects('plain text') { DCR::Previews.build('just words') },
+  rejects('empty') { DCR::Previews.build('  ') },
+  rejects('oversized') { DCR::Previews.build("<div>#{'x' * (DCR::Previews::LIMIT + 1)}</div>") }
+]
+assert(messages[0].include?('Submit only HTML') && messages[4].include?('Simplify'), 'Rejections must tell the agent what to do')
+puts 'PASS agent HTML keeps its markup and styles, loses anything that could run or fetch, and prose around it is refused with advice'
+
+# --- the request lifecycle ---------------------------------------------------------------------
+Dir.mktmpdir('dcr-previews-test') do |directory|
+  series = File.join(directory, 'series')
+  state = DCR::State.new(series)
+  [['../etc/passwd', 'dotdot'], ['/abs/path.rb', 'absolute'], ['no-extension', 'no extension'], ["a b.rb", 'space']].each do |path, label|
+    rejects(label) { state.request_preview(KEY, path) }
+  end
+  entry = state.request_preview(KEY, PATH)
+  assert(entry['kind'] == 'preview' && entry['path'] == PATH && state.read.dig('previews', KEY, PATH, 'status') == 'requested', 'A request must be queued and recorded')
+  rejects('a second request while one is being built') { state.request_preview(KEY, PATH) }
+  assert(state.pending.length == 1, 'Only one request may be queued')
+  state.ack(entry['seq'])
+  assert(state.read.dig('previews', KEY, PATH, 'status') == 'working' && state.read.dig('previews', KEY, PATH, 'delivered_at'), 'Handing the request over means the agent is working on it')
+  rejects('submitting a template nobody asked for') { state.submit_preview('app/views/other.html.erb', DCR::Previews.build('<p>x</p>')) }
+  state.submit_preview(PATH, DCR::Previews.build('<p>Done</p>', title: 'Order'))
+  ready = state.read.dig('previews', KEY, PATH)
+  assert(ready['status'] == 'ready' && ready['html'].include?('Done') && ready['title'] == 'Order', 'A submitted preview is ready')
+  state.request_preview(KEY, PATH) # building it again after it is ready is allowed
+  state.fail_preview(PATH, 'The template needs a database to render anything useful.')
+  assert(state.read.dig('previews', KEY, PATH).values_at('status', 'error') == ['failed', 'The template needs a database to render anything useful.'], 'A failure keeps its reason')
+  fp = 'a' * 64
+  old_key = "dynamic-review:#{fp}:feat:1"
+  state.request_preview(old_key, PATH)
+  state.carry_forward('feat', [{'number' => 1, 'fingerprint' => fp}, {'number' => 2, 'fingerprint' => fp}])
+  assert(state.read.dig('previews', "dynamic-review:#{fp}:feat:2", PATH, 'status') == 'requested', 'A same-code revision keeps its previews')
+  puts 'PASS a preview request is queued once, becomes working when the agent has it, then ready or failed, and follows a same-code revision'
+
+  # --- what the agent sees and does -------------------------------------------------------------
+  dcr = File.expand_path('../bin/dcr', __dir__)
+  run = ->(*args, stdin: nil) { Open3.capture3(RbConfig.ruby, dcr, *args, stdin_data: stdin.to_s) }
+  agent_dir = File.join(directory, 'agent')
+  agent = DCR::State.new(agent_dir)
+  agent.request_preview(KEY, PATH)
+  out, _err, status = run.call('wait', '--dir', agent_dir, '--timeout', '3')
+  assert(status.success? && out.start_with?('PREVIEW REQUEST. Build the HTML'), 'A preview request opens with its own rule, not the reply-only conversation rule')
+  assert(!out.include?('REPLY ONLY') && !out.include?('dcr reply'), 'A pure preview request is not a conversation')
+  %w[PREVIEW\ REQUEST:\ app/views/orders/show.html.erb nested\ piece Submit\ ONLY\ HTML data-icon dcr\ preview\ submit dcr\ preview\ fail].each { |needle| assert(out.include?(needle), "The request is missing: #{needle}") }
+  assert(out.include?('check') && out.include?('Do not edit, create or delete anything in the project'), 'The request lists the available icons and forbids project changes')
+  assert(agent.read.dig('previews', KEY, PATH, 'status') == 'working', 'Printing the request marks it working')
+  assert(!out.include?('resolve threads') && out.include?('Then run `dcr wait` again') && out.rstrip.end_with?('Reminder: submit HTML only, change nothing in the project.'), 'A pure preview request has no thread instructions')
+  out, err, status = run.call('preview', 'submit', '--dir', agent_dir, '--path', PATH, '--title', 'Order', stdin: '<section><h1>Order 7</h1></section>')
+  assert(status.success? && out.include?('is ready in the review') && agent.read.dig('previews', KEY, PATH, 'status') == 'ready', "Submitting on stdin failed: #{err}")
+  file = File.join(directory, 'p.html')
+  File.write(file, '<p>From a file</p>')
+  agent.request_preview(KEY, PATH)
+  _out, err, status = run.call('preview', 'submit', '--dir', agent_dir, '--path', PATH, '--file', file)
+  assert(status.success? && agent.read.dig('previews', KEY, PATH, 'html').include?('From a file'), "Submitting a file failed: #{err}")
+  agent.request_preview(KEY, PATH)
+  _out, err, status = run.call('preview', 'submit', '--dir', agent_dir, '--path', PATH, stdin: "Sure! Here you go:\n<p>x</p>")
+  assert(!status.success? && err.include?('Submit only HTML'), 'Prose around the HTML must be refused')
+  assert(agent.read.dig('previews', KEY, PATH, 'status') == 'requested', 'A refused submission leaves the request open')
+  _out, err, status = run.call('preview', 'submit', '--dir', agent_dir, '--path', 'app/views/never.html.erb', stdin: '<p>x</p>')
+  assert(!status.success? && err.include?('No preview of app/views/never.html.erb was requested'), 'A preview nobody asked for is refused clearly')
+  _out, err, status = run.call('preview', 'fail', '--dir', agent_dir, '--path', PATH, '--reason', 'Needs live data')
+  assert(status.success? && agent.read.dig('previews', KEY, PATH, 'status') == 'failed', "Failing a preview did not work: #{err}")
+  agent.send_items(KEY, [{'id' => 'c1', 'text' => 'a question'}])
+  agent.request_preview(KEY, PATH)
+  out, = run.call('wait', '--dir', agent_dir, '--timeout', '3')
+  assert(out.include?('REPLY ONLY') && out.include?('PREVIEW REQUEST: app/views') && out.include?('a question'), 'A mixed batch carries both rules')
+  puts 'PASS dcr wait prints a self-contained preview request, dcr preview submit takes only HTML from a file or stdin, and mistakes get a clear message'
+
+  # --- the page's side ----------------------------------------------------------------------------
+  FileUtils.mkdir_p(series)
+  File.write(File.join(series, 'current.html'), %(<html><body><script type="application/json" id="data">{}</script></body></html>))
+  server = QACapture::Server.new(directory: File.join(directory, 'capture'), report: File.join(series, 'current.html'))
+  Thread.new { server.run }
+  request = lambda do |method, path, body = '', extra = {}|
+    socket = TCPSocket.new('127.0.0.1', server.port)
+    headers = {'Host' => "127.0.0.1:#{server.port}", 'Content-Length' => body.bytesize.to_s, 'Origin' => server.url, 'X-QA-Token' => server.token}.merge(extra).compact
+    socket.write("#{method} #{path} HTTP/1.1\r\n#{headers.map { |key, value| "#{key}: #{value}" }.join("\r\n")}\r\n\r\n#{body}")
+    socket.close_write
+    response = +''
+    begin
+      loop { response << socket.readpartial(65_536) }
+    rescue EOFError, Errno::ECONNRESET
+      nil
+    end
+    socket.close
+    response
+  end
+  json = ->(response) { JSON.parse(response.split("\r\n\r\n", 2).last) }
+  begin
+    assert(request.call('POST', '/api/preview', JSON.generate(key: KEY, path: '../x.rb')).start_with?('HTTP/1.1 400'), 'A bad path must be refused')
+    assert(request.call('POST', '/api/preview', JSON.generate(key: KEY, path: PATH), 'Origin' => 'https://evil.example').start_with?('HTTP/1.1 400'), 'A foreign origin must be refused')
+    assert(request.call('POST', '/api/preview', JSON.generate(key: KEY, path: PATH)).start_with?('HTTP/1.1 200'), 'The page could not request a preview')
+    assert(request.call('POST', '/api/preview', JSON.generate(key: KEY, path: PATH)).start_with?('HTTP/1.1 400'), 'A duplicate request must be refused')
+    snapshot = json.call(request.call('GET', "/api/state?key=#{KEY}"))
+    assert(snapshot.dig('previews', PATH, 'status') == 'requested', 'The page sees the request')
+    DCR::State.new(series).submit_preview(PATH, DCR::Previews.build('<p>Rendered</p>', title: 'Order'))
+    snapshot = json.call(request.call('GET', "/api/state?key=#{KEY}"))
+    assert(snapshot.dig('previews', PATH, 'status') == 'ready' && !snapshot.dig('previews', PATH).key?('html'), 'State carries status only, never the markup')
+    fetched = json.call(request.call('GET', "/api/preview?key=#{KEY}&path=#{PATH}"))
+    assert(fetched['html'].include?('Rendered') && fetched['ready_at'], 'The ready preview is fetched on its own')
+    assert(request.call('GET', "/api/preview?key=#{KEY}&path=app/views/none.html.erb").start_with?('HTTP/1.1 400'), 'A preview that is not ready cannot be fetched')
+    puts 'PASS the page can request a preview, sees its status without the markup, and fetches the ready preview separately'
+  ensure
+    server.close
+  end
+end

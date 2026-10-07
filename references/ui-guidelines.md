@@ -119,7 +119,7 @@ Every eligible template has one state, derived by `ReviewTools.previewLifecycle`
 from the review's `previews` and browser-local `{previews, requested}` selections
 (keyed by repo, series and snapshot fingerprint, so media-only revisions keep them):
 
-- **Selected**: chosen with Add to previews and not yet sent.
+- **Selected**: chosen with Select for preview and not yet sent.
 - **Requested**: copied in a prompt. `requestPreviews` moves the whole selection
   here with a timestamp and the revision it came from, so the selection count
   returns to zero. It resolves when a later revision carries any preview record
@@ -132,8 +132,8 @@ The header Previews button shows the ready count (or "N new") and a pending coun
 The Previews list groups templates by state. Open lands on the file with its
 preview showing, Forget drops a request, and Copy the request again re-copies
 waiting requests. Sidebar file rows carry a small marker for ready, new, requested
-and selected templates. The per-file chip reads Add to previews, Selected for
-preview or Preview requested, and a rendered template's chip reads Preview with its
+and selected templates. The per-file chip reads Preview this template (served) or Select for preview (offline), then Selected for
+preview, Preview requested or Building preview…, and a rendered template's chip reads Preview with its
 example count.
 
 ## Comment popovers

@@ -68,6 +68,12 @@ globalThis.LiveTools = (() => {
     return out.join('');
   }
 
+  // The start of an answer as plain text for a narrow list: its first paragraph with the Markdown marks
+  // removed. Underscores stay; they are part of identifiers such as `to_params`.
+  const snippet = text => String(text ?? '').replace(/```[\s\S]*?(```|$)/g, '\n\n').split(/\n\s*\n/)
+    .map(paragraph => paragraph.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/`/g, '').replace(/\*\*/g, '').replace(/(^|\s)[*>#-]+\s+/g, '$1').replace(/\s+/g, ' ').trim())
+    .find(Boolean) || '';
+
   function relativeTime(at, now = Date.now()) {
     const then = Date.parse(at);
     if (!Number.isFinite(then)) return '';
@@ -122,9 +128,10 @@ globalThis.LiveTools = (() => {
   }
 
   // The agent as a whole: listening for messages, working on one, or not connected.
-  function agentModel(threads, listening, now = Date.now()) {
+  function agentModel(threads, listening, now = Date.now(), previews = {}) {
     if (listening === undefined) return null;
-    const working = Object.values(threads || {}).some(thread => thread.delivery === 'delivered' && !stale(thread, now));
+    const building = Object.values(previews || {}).some(preview => preview.status === 'working');
+    const working = building || Object.values(threads || {}).some(thread => thread.delivery === 'delivered' && !stale(thread, now));
     if (working) return {tone: 'work', text: 'Agent working', hint: 'Your agent received a message and is preparing an answer.'};
     if (listening) return {tone: 'ok', text: 'Agent listening', hint: 'Your agent is waiting for your next message.'};
     return {tone: 'off', text: 'No agent connected', hint: 'Nothing is listening yet. Ask your agent to continue this review so it can answer here.'};
@@ -136,5 +143,5 @@ globalThis.LiveTools = (() => {
     return {drafts: drafts(comments, threads, resolved).length, waiting, answered};
   }
 
-  return {escape, progressKey, allComments, sendText, drafts, statusText, statusModel, actionLabel, markdown, relativeTime, messagesHTML, unseen, agentModel, summary};
+  return {escape, progressKey, allComments, sendText, drafts, statusText, statusModel, actionLabel, markdown, snippet, relativeTime, messagesHTML, unseen, agentModel, summary};
 })();

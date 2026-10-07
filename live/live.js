@@ -23,6 +23,9 @@
   try { const stored = localStorage.getItem(seenKey); if (stored) { seen = new Set(JSON.parse(stored)); seenKnown = true; } } catch { /* announce nothing twice this session instead */ }
   const saveSeen = () => { try { localStorage.setItem(seenKey, JSON.stringify([...seen].slice(-500))); } catch { /* session only */ } };
   const announced = new Set();
+  let previews = {};          // path -> status (requested, working, ready, failed)
+  const previewHtml = new Map(); // path -> {ready_at, html}, fetched once per build
+  const previewsAnnounced = new Set();
   const drafts = new Map(); // reply text survives the review re-rendering its cards
   // Everything here lives inside the observed #content, so write only real changes or the
   // observer would re-trigger itself.
@@ -333,7 +336,7 @@
 
   // --- rows in "Your review" ---------------------------------------------------------------------
   const STATE = {sent: 'sent', delivered: 'sent', answered: 'answered'};
-  const plain = text => String(text).replace(/```[a-z]*\n?/g, '').replace(/[`*_>#]/g, '').replace(/\s+/g, ' ').trim();
+  const plain = tools.snippet;
   const unseenIn = thread => (thread?.messages || []).some(message => message.author === 'agent' && !seen.has(message.id));
   const rowFor = (comment, thread) => {
     const found = globalThis.ReviewTools.anchor(snapshot, comment);
@@ -499,7 +502,7 @@
   const optionsBar = document.querySelector('.toolbar-options');
   if (optionsBar) optionsBar.prepend(agentPill);
   const renderAgent = () => {
-    const model = online ? tools.agentModel(threads, listening) : {tone: 'off', text: 'Server stopped', hint: 'Restart `dcr serve` to send or receive.'};
+    const model = online ? tools.agentModel(threads, listening, Date.now(), previews) : {tone: 'off', text: 'Server stopped', hint: 'Restart `dcr serve` to send or receive.'};
     agentPill.hidden = !model;
     if (!model) return;
     agentPill.dataset.tone = model.tone;
@@ -538,14 +541,63 @@
   // "5 min ago" stays true while the page is open.
   setInterval(() => document.querySelectorAll('time[data-at]').forEach(node => set(node, 'textContent', tools.relativeTime(node.dataset.at))), 30000);
 
+  // --- template previews built by your agent --------------------------------------------------------
+  // The report asks; this asks your agent, then shows how it is going and puts the result in the
+  // report's own preview pane when it arrives.
+  document.addEventListener('review-preview-request', async event => {
+    const path = event.detail.path;
+    try {
+      await api('/api/preview', {key, path});
+      await refresh();
+      const name = path.slice(path.lastIndexOf('/') + 1);
+      flash(listening === false ? `Asked your agent to preview ${name}. No agent is listening yet; it will start when your agent picks it up.` : `Asked your agent to preview ${name}. You can keep reviewing.`);
+    } catch (error) { flash(error.message); }
+  });
+  const syncPreviews = async () => {
+    const ready = [];
+    for (const [path, preview] of Object.entries(previews)) {
+      if (preview.status !== 'ready') continue;
+      const cached = previewHtml.get(path);
+      if (!cached || cached.ready_at !== preview.ready_at) {
+        try { previewHtml.set(path, await api(`/api/preview?key=${encodeURIComponent(key)}&path=${encodeURIComponent(path)}`)); }
+        catch { continue; }
+      }
+      ready.push({path, title: preview.title, mocks: preview.mocks, html: previewHtml.get(path).html});
+    }
+    const pending = Object.fromEntries(Object.entries(previews).filter(([, preview]) => preview.status !== 'ready').map(([path, preview]) => [path, {status: preview.status, error: preview.error}]));
+    const signature = JSON.stringify([ready.map(item => [item.path, previewHtml.get(item.path).ready_at]), pending]);
+    if (window.ReviewPreviews && syncPreviews.last !== signature) {
+      syncPreviews.last = signature;
+      window.ReviewPreviews.set({enabled: true, ready, pending});
+    }
+    // A preview that finished while you were elsewhere: say so, once, with a way to it.
+    ready.filter(item => !previewsAnnounced.has(`${item.path}@${previewHtml.get(item.path).ready_at}`)).forEach(item => {
+      previewsAnnounced.add(`${item.path}@${previewHtml.get(item.path).ready_at}`);
+      if (syncPreviews.first) announcePreview(item.path);
+    });
+    syncPreviews.first = true;
+  };
+  const announcePreview = path => {
+    const name = path.slice(path.lastIndexOf('/') + 1);
+    arrival.innerHTML = `<span class="dcr-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span><div><strong>Preview ready</strong><span>${tools.escape(name)}</span></div><button type="button" class="btn btn-sm btn-primary" data-dcr-show-preview="${tools.escape(path)}">View</button><button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
+    arrival.hidden = false;
+    clearTimeout(arrivalTimer);
+    arrivalTimer = setTimeout(() => { arrival.hidden = true; }, 12000);
+  };
+  arrival.addEventListener('click', event => {
+    const show = event.target.closest('[data-dcr-show-preview]');
+    if (show) { arrival.hidden = true; window.ReviewPreviews?.show(show.dataset.dcrShowPreview); }
+  });
+
   // --- sync ----------------------------------------------------------------------------------
   const apply = data => {
-    threads = data.threads; rev = data.rev; latest = data.latest_revision; listening = data.listening; online = true;
+    threads = data.threads; rev = data.rev; latest = data.latest_revision; listening = data.listening; online = true; previews = data.previews || {};
     if (!seenKnown) { tools.unseen(threads, seen).forEach(item => seen.add(item.id)); saveSeen(); seenKnown = true; }
     const arrived = tools.unseen(threads, seen).filter(item => !announced.has(item.id));
     arrived.forEach(item => announced.add(item.id));
     decorate(); decorateLedger(); renderPanel(); renderUnsent(); renderAgent(); refreshUnread();
     announce(arrived);
+    syncPreviews();
   };
   const refresh = async () => apply(await api(`/api/state?key=${encodeURIComponent(key)}`));
   const poll = async () => {

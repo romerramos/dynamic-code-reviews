@@ -23,7 +23,8 @@ module DCR
       state = State.new(series_dir)
       state.carry_forward(manifest['name'], manifest['revisions'])
       saved = state.read
-      data = {'key' => key, 'progress' => saved['blobs'][key], 'threads' => saved['threads'][key] || {}}
+      built = (saved['previews'][key] || {}).select { |_, preview| preview['status'] == 'ready' }.map { |path, preview| {'path' => path, 'title' => preview['title'], 'mocks' => preview['mocks'], 'html' => preview['html']} }
+      data = {'key' => key, 'progress' => saved['blobs'][key], 'threads' => saved['threads'][key] || {}, 'previews' => built}
 
       head = page.index('<title>') || page.index('<script') or raise ArgumentError, 'This is not a saved review'
       body = page.rindex('</body>') or raise ArgumentError, 'This is not a saved review'

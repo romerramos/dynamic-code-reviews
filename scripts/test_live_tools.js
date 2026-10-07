@@ -57,6 +57,12 @@ assert.equal(tools.markdown(''), '');
 assert.equal(tools.markdown('a\n\n\nb'), '<p>a</p><p>b</p>');
 console.log('PASS answers render paragraphs, lists, code and links, and hostile text stays inert');
 
+assert.equal(tools.snippet('I would keep `Data`. **Observed:** `to_params` uses `with` and `to_h`; see [the docs](https://x.test).\n\nSecond paragraph.'), 'I would keep Data. Observed: to_params uses with and to_h; see the docs.', 'only the first paragraph, marks removed, identifiers intact');
+assert.equal(tools.snippet('```ruby\nx = 1\n```\n\nAfter the code'), 'After the code', 'a leading code block is skipped');
+assert.equal(tools.snippet('- first point\n- second point'), 'first point second point', 'list markers are dropped');
+assert.equal(tools.snippet(undefined), '');
+console.log('PASS the list snippet is the first paragraph as plain text and keeps underscored identifiers');
+
 const now = Date.parse('2026-10-07T12:00:00Z');
 assert.equal(tools.relativeTime('2026-10-07T11:59:40Z', now), 'just now');
 assert.equal(tools.relativeTime('2026-10-07T11:55:00Z', now), '5 min ago');
@@ -78,6 +84,8 @@ assert.equal(tools.statusModel({delivery:'delivered', delivered_at:'2026-10-07T1
 assert.equal(tools.statusModel(staleThread, true, now).tone, 'idle', 'an old hand-over with no answer is not shown as work in progress');
 assert.match(tools.statusModel(staleThread, true, now).text, /20 min ago and has not answered/);
 assert.equal(tools.agentModel({a:staleThread}, true, now).tone, 'ok', 'a stale hand-over does not keep the agent working');
+assert.equal(tools.agentModel({}, true, now, {'a.erb':{status:'working'}}).tone, 'work', 'building a preview is working');
+assert.equal(tools.agentModel({}, true, now, {'a.erb':{status:'requested'}}).tone, 'ok', 'a request nobody has picked up yet is not work in progress');
 assert.equal(tools.agentModel({}, undefined), null, 'an old server that cannot say shows nothing');
 assert.equal(tools.agentModel({}, true).tone, 'ok');
 assert.equal(tools.agentModel({}, false).tone, 'off');

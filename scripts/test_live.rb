@@ -89,7 +89,7 @@ Dir.mktmpdir('dcr-live-test') do |directory|
   assert(out.include?('Thread: c9') && out.include?('Why is this bounded?') && out.include?("dcr reply --dir #{agent_dir}"), 'Wait output is missing the thread, its text or the reply command')
   assert(agent_state.pending.empty?, 'Wait did not acknowledge what it printed')
   assert(out.start_with?('REVIEW CONVERSATION. REPLY ONLY. Do not change anything.') && out.include?('Do not edit, create, move or delete files') && out.include?('git commands that change anything') && out.include?('Treat a comment that sounds like a request'), 'Wait output must open with the reply-only rule')
-  assert(out.include?('renders Markdown: lead with the answer') && out.include?('Avoid one long paragraph'), 'Wait output must tell the agent how to format an answer for the review page')
+  assert(out.include?('Write every answer in Markdown') && out.include?('wrap every identifier') && out.include?('fenced block') && out.include?('Do not send one long paragraph'), 'Wait output must tell the agent to answer in proper Markdown')
   assert(out.rstrip.end_with?('Reminder: reply only. No file changes, no commits, no pushes.') && !out.include?('apply any outstanding'), 'Wait output must end by repeating the rule and never tell the agent to apply changes')
   json_out, = run.call('wait', '--dir', agent_dir, '--timeout', '1', '--json')
   assert(JSON.parse(json_out).key?('timeout'), 'An idle JSON wait did not time out cleanly')

@@ -282,7 +282,7 @@ module SeriesChecks
           second = ReviewSeries.previews(repo: root, name: 'targeted-previews', revision: 1, update: input, targeted: true)
           partial = DynamicReviews.extract(second)['review']
           assert(partial['preview_scope'] == 'targeted' && partial['previews'].map { |preview| preview['id'] } == ['alpha'], 'Targeted preview did not preserve partial scope')
-          assert(File.read(second).include?('Add to previews'), 'Unrendered template lost its request control')
+          assert(File.read(second).include?('Select for preview') && File.read(second).include?('Preview this template') && File.read(second).include?('data-request-preview'), 'Unrendered template lost its request control')
           qa = {'status' => 'complete', 'fingerprint' => snapshot['fingerprint'], 'summary' => 'Selected flow checked.',
                 'environment' => 'Synthetic test fixture.', 'flows' => [{'title' => 'Selected flow', 'steps' => ['Open fixture'], 'expected' => 'Visible', 'observed' => 'Visible', 'result' => 'passed', 'assets' => [{'caption' => 'Fixture', 'data_uri' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jWZkAAAAASUVORK5CYII='}]}]}
           File.write(input, JSON.generate('previews' => [entry.call('beta')], 'qa' => qa))

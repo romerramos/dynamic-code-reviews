@@ -9,6 +9,7 @@ require_relative 'test_series'
 require_relative '../lib/dcr/evidence'
 require_relative '../lib/dcr/state'
 require_relative '../lib/dcr/export'
+require_relative '../lib/dcr/previews'
 
 PNG = Base64.strict_decode64('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jWZkAAAAASUVORK5CYII=')
 
@@ -70,11 +71,14 @@ ReviewChecks.fixture do |root, _commit|
     state.agent_reply('value-note', 'tricky </script><img src=x onerror=alert(1)> text', key: new_key)
     saved_report = File.read(File.join(series_dir, 'current.html'))
     state.save_blob(new_key, {'resolvedComments' => ['value-note'], 'personalComments' => []})
+    state.request_preview(new_key, 'app/views/orders/show.html.erb')
+    state.submit_preview('app/views/orders/show.html.erb', DCR::Previews.build('<p class="exported-preview">Order 1042</p>', title: 'Order'))
     html, warnings = DCR::Export.html(series_dir)
     assert(warnings.empty?, 'A small export should not warn')
     assert(html.include?('Checked: no caller passes nil') && html.include?('window.__DCR_EXPORT') && html.include?('"resolvedComments":["value-note"]'), 'The conversation and progress are not baked in')
     assert(html.index('__DCR_EXPORT') < html.index('id="data"'), 'The seed must run before the review script')
     assert(html.scan('data:image/png;base64,').length >= 2, 'Embedded recordings were dropped')
+    assert(html.include?('exported-preview') && html.include?('"path":"app\\/views\\/orders\\/show.html.erb"') && html.include?('Order 1042'), 'A preview your agent built is part of the export')
     assert(!html.include?('qa-token') && !html.include?('/api/') && !html.include?('X-QA-Token'), 'An export must not carry the server token or API')
     assert(!html.include?('</script><img') && html.include?('tricky '), 'A message containing a script end tag must not break out of the seed script')
     assert(File.read(File.join(series_dir, 'current.html')) == saved_report, 'Exporting changed the saved report')

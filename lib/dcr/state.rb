@@ -4,6 +4,7 @@ require 'fileutils'
 require 'json'
 require 'securerandom'
 require 'time'
+require_relative 'previews'
 
 module DCR
   # Review state shared by the live server and the terminal commands: the browser's
@@ -17,7 +18,7 @@ module DCR
     KEY = /\A[A-Za-z0-9_.:-]{1,300}\z/
     AUTHORS = %w[user agent].freeze
 
-    def self.empty = {'version' => 1, 'rev' => 0, 'blobs' => {}, 'threads' => {}, 'outbox' => [], 'acked' => 0, 'seq' => 0}
+    def self.empty = {'version' => 1, 'rev' => 0, 'blobs' => {}, 'threads' => {}, 'previews' => {}, 'outbox' => [], 'acked' => 0, 'seq' => 0}
 
     attr_reader :path
 
@@ -105,6 +106,7 @@ module DCR
           from, to = key.call(old), key.call(new)
           state['blobs'][to] ||= Marshal.load(Marshal.dump(state['blobs'][from])) if state['blobs'][from]
           state['threads'][to] ||= Marshal.load(Marshal.dump(state['threads'][from])) if state['threads'][from]
+          state['previews'][to] ||= Marshal.load(Marshal.dump(state['previews'][from])) if state['previews'][from]
         end
       end
     end
@@ -169,6 +171,37 @@ module DCR
       update { |state| enqueue(state, 'finish', key, [], 'The reviewer finished this review round.') }
     end
 
+    # --- template previews built by the agent -----------------------------------------
+
+    # Asking for a preview queues a request for the agent. The preview moves requested, working (the
+    # agent has it), ready or failed. It is kept per review key like a thread, so it follows a
+    # same-code revision.
+    def request_preview(key, path)
+      check_key(key)
+      raise ArgumentError, 'Invalid template path' unless Previews.valid_path?(path)
+      update do |state|
+        preview = (state['previews'][key] ||= {})[path] ||= {}
+        raise ArgumentError, 'A preview of this template is already being built' if %w[requested working].include?(preview['status'])
+        state['previews'][key][path] = {'status' => 'requested', 'requested_at' => Time.now.utc.iso8601}
+        enqueue(state, 'preview', key, [], "Preview of #{path}", 'path' => path)
+      end
+    end
+
+    def submit_preview(path, built, key: nil)
+      update do |state|
+        key = preview_key(state, path, key)
+        state['previews'][key][path] = {'status' => 'ready', 'html' => built.fetch('html'), 'title' => built['title'], 'mocks' => built['mocks'],
+                                        'ready_at' => Time.now.utc.iso8601}
+      end
+    end
+
+    def fail_preview(path, reason, key: nil)
+      update do |state|
+        key = preview_key(state, path, key)
+        state['previews'][key][path] = {'status' => 'failed', 'error' => reason.to_s.strip[0, 400], 'ready_at' => Time.now.utc.iso8601}
+      end
+    end
+
     # --- outbox -----------------------------------------------------------------------
 
     # Entries stay until acknowledged, so a `dcr wait` killed after taking them but before
@@ -186,18 +219,32 @@ module DCR
             thread['delivered_at'] = Time.now.utc.iso8601
           end
         end
+        state['outbox'].select { |entry| entry['kind'] == 'preview' && entry['seq'] > state['acked'] && entry['seq'] <= through }.each do |entry|
+          preview = state.dig('previews', entry['key'], entry['path'])
+          next unless preview && preview['status'] == 'requested'
+          preview.merge!('status' => 'working', 'delivered_at' => Time.now.utc.iso8601)
+        end
         state['acked'] = [state['acked'], through].max
       end
     end
 
     private
 
-    def enqueue(state, kind, key, thread_ids, text)
+    def enqueue(state, kind, key, thread_ids, text, extra = {})
       state['seq'] += 1
-      entry = {'seq' => state['seq'], 'kind' => kind, 'key' => key, 'thread_ids' => thread_ids, 'text' => text, 'at' => Time.now.utc.iso8601}
+      entry = {'seq' => state['seq'], 'kind' => kind, 'key' => key, 'thread_ids' => thread_ids, 'text' => text, 'at' => Time.now.utc.iso8601}.merge(extra)
       state['outbox'] << entry
       state['outbox'] = state['outbox'].last(500)
       entry
+    end
+
+    # The newest review key that asked for this template (or the one given).
+    def preview_key(state, path, given)
+      return check_key(given) || given if given
+      candidates = state['previews'].select { |_, previews| %w[requested working].include?(previews.dig(path, 'status')) }.keys
+      key = candidates.max_by { |name| name.split(':').last.to_i }
+      raise ArgumentError, "No preview of #{path} was requested. Use the template path printed by `dcr wait`." unless key
+      key
     end
 
     def check_key(key)

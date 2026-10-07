@@ -103,5 +103,6 @@ body.qa-live .evidence-strip:not(:has(button:not(.visual-qa-option))){display:no
 .ledger-status{white-space:nowrap}
 
 /* Your review shows the start of an answer, not all of it. */
-.ledger-reply{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+/* The margin sits outside the clamped box: padding inside it would show a fourth, cut-off line. */
+.ledger-reply{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;margin:0 16px 10px;padding:0}
 .range-actions:not([hidden])~#dcr-arrival{bottom:170px}

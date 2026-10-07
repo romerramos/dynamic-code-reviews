@@ -20,6 +20,8 @@
       if (block.dataset.html !== html) { block.innerHTML = html; block.dataset.html = html; } // not innerHTML: the DOM re-serialises quotes
     });
   };
+  // Previews your agent built are part of the review; without a server they are only shown.
+  if (data.previews?.length && window.ReviewPreviews) window.ReviewPreviews.set({enabled: false, ready: data.previews});
   new MutationObserver(decorate).observe(content, {childList: true, subtree: true});
   decorate();
 })();

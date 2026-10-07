@@ -713,3 +713,24 @@ body.zen.ledger-open .workspace,body.zen.ledger-open.sidebar-collapsed .workspac
 
 /* A comment with no description or evidence should not leave a blank band under its title. */
 .thread-body:empty{display:none}
+
+/* Focus is for reading code: no preview pane, and no button that would open one. */
+body.zen .focus-body.has-preview{display:block}
+body.zen .preview-panel.side,body.zen .preview-toggle{display:none}
+
+/* A preview your agent is building: say so, and hold the place it will appear in. */
+.preview-toggle.is-working{border-color:var(--accent);color:var(--accent)}
+.preview-toggle.is-working svg{animation:preview-pulse 1.4s infinite ease-in-out}
+@keyframes preview-pulse{50%{opacity:.35}}
+.preview-skeleton p{margin:0 0 14px;font-size:14px;line-height:1.5}
+.preview-skeleton small{color:var(--muted);font-size:13px}
+.skeleton-frame{display:grid;gap:12px;padding:16px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.skeleton-line,.skeleton-block{display:block;border-radius:6px;background:linear-gradient(90deg,var(--line) 25%,color-mix(in oklab,var(--line) 55%,var(--surface)) 50%,var(--line) 75%);background-size:200% 100%;animation:skeleton-shimmer 1.6s infinite linear}
+.skeleton-line{height:12px}
+.skeleton-block{height:84px}
+.skeleton-block.short{height:46px}
+.skeleton-line.w40{width:40%}.skeleton-line.w60{width:60%}.skeleton-line.w80{width:80%}
+@keyframes skeleton-shimmer{to{background-position:-200% 0}}
+@media(prefers-reduced-motion:reduce){.skeleton-line,.skeleton-block,.preview-toggle.is-working svg{animation:none}}
+.preview-panel.is-agent>summary .preview-heading::after{content:" · built by your agent"}
+.preview-panel.is-generating>summary .preview-heading::after{content:""}

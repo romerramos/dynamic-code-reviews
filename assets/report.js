@@ -94,7 +94,7 @@
   function navPreviewMark(file) {
     if (!previewEligible(file)) return '';
     const status = previewState(file.path);
-    const label = {fresh:'New preview ready', ready:'Preview ready', requested:'Preview requested', selected:'Selected for preview'}[status];
+    const label = {fresh:'New preview ready', ready:'Preview ready', requested:'Preview requested', working:'Building preview', selected:'Selected for preview'}[status];
     return label ? `<span class="nav-preview is-${status}" title="${label}" aria-label="${label}">${icon(status === 'requested' ? 'clock' : 'scan-text')}</span>` : '';
   }
   function renderNavigation() {
@@ -381,14 +381,24 @@
 
   // Template previews: static HTML the app rendered for this snapshot, shown in sandboxed,
   // script-less frames so the app's CSS never touches the review and vice versa.
-  const previewById = new Map((review.previews || []).map(preview => [preview.id, preview]));
+  const previewById = new Map();
   const previewsByPath = new Map();
   const notVisualByPath = new Map();
-  (review.previews || []).forEach(preview => preview.files.forEach(path => {
-    const target = preview.status === 'not_visual' ? notVisualByPath : previewsByPath;
-    if (!target.has(path)) target.set(path, []);
-    target.get(path).push(preview);
-  }));
+  // Previews your agent builds while you review (a served review only): ready ones join the list
+  // above, the rest are shown as a request in progress.
+  const live = {enabled: false, ready: new Map(), pending: new Map()};
+  function rebuildPreviews() {
+    previewById.clear(); previewsByPath.clear(); notVisualByPath.clear();
+    [...(review.previews || []), ...live.ready.values()].forEach(preview => {
+      previewById.set(preview.id, preview);
+      preview.files.forEach(path => {
+        const target = preview.status === 'not_visual' ? notVisualByPath : previewsByPath;
+        if (!target.has(path)) target.set(path, []);
+        target.get(path).push(preview);
+      });
+    });
+  }
+  rebuildPreviews();
   // Visual selections survive media-only revisions of the same code snapshot.
   const visualStorageKey = `dynamic-review:visuals:${snapshot.repo}:${review.history?.series || ''}:${snapshot.fingerprint}`;
   let visualState = {};
@@ -411,6 +421,7 @@
   };
   // A file's place in the preview lifecycle: ready, requested, selected or none.
   function previewState(path) {
+    if (live.enabled && !previewsByPath.has(path) && live.pending.has(path)) return live.pending.get(path).status;
     const hub = lifecycle();
     if (hub.ready.some(item => item.path === path)) return hub.ready.find(item => item.path === path).fresh ? 'fresh' : 'ready';
     if (hub.requested.some(item => item.path === path)) return 'requested';
@@ -424,16 +435,19 @@
     const hub = lifecycle();
     const ready = hub.ready.length ? `<section class="hub-section"><h3>Ready to view <span>${hub.ready.length}</span></h3><ul class="hub-list">${hub.ready.map(item => hubRow(item.path, `${item.fresh ? '<b class="hub-new">New</b> ' : ''}${escape(plural(item.examples, 'example'))}${item.titles.length ? ` · ${escape(item.titles.join(' · '))}` : ''}`, `<button type="button" class="btn btn-sm btn-primary" data-open-preview="${escape(item.path)}">Open</button>`)).join('')}</ul></section>` : '';
     const requested = hub.requested.length ? `<section class="hub-section"><h3>Requested <span>${hub.requested.length}</span></h3><p class="hub-help">Waiting for your agent. They move to Ready when it publishes the next revision.</p><ul class="hub-list">${hub.requested.map(item => hubRow(item.path, `${icon('clock')} Asked ${escape(since(item.at))}${item.revision ? ` from revision ${item.revision}` : ''}`, `<button type="button" class="btn btn-sm btn-ghost" data-open-preview="${escape(item.path)}">Show code</button><button type="button" class="btn btn-sm btn-ghost" data-forget-preview="${escape(item.path)}" aria-label="${escape(`Forget the request for ${item.path}`)}">Forget</button>`)).join('')}</ul><button type="button" class="btn btn-sm btn-ghost hub-inline" data-copy-previews="requested">Copy the request again</button></section>` : '';
-    const selected = `<section class="hub-section hub-selected"><h3>Selected <span>${hub.selected.length}</span></h3>${hub.selected.length ? `<ul class="hub-list">${hub.selected.map(path => hubRow(path, '', `<button type="button" class="btn btn-sm btn-ghost" data-remove-preview="${escape(path)}" aria-label="${escape(`Remove ${path} from previews`)}">Remove</button>`)).join('')}</ul>` : `<p class="hub-help">Nothing selected. While reading a template, use <strong>Add to previews</strong> in its header.</p>`}<div class="hub-footer"><button type="button" class="btn btn-sm btn-primary" data-copy-previews="selected" ${hub.selected.length ? '' : 'disabled'}>Copy prompt for ${hub.selected.length ? plural(hub.selected.length, 'template') : 'selected templates'}</button><small>Paste it into your coding agent. The selection then moves to Requested.</small></div></section>`;
+    const selected = `<section class="hub-section hub-selected"><h3>Selected <span>${hub.selected.length}</span></h3>${hub.selected.length ? `<ul class="hub-list">${hub.selected.map(path => hubRow(path, '', `<button type="button" class="btn btn-sm btn-ghost" data-remove-preview="${escape(path)}" aria-label="${escape(`Remove ${path} from previews`)}">Remove</button>`)).join('')}</ul>` : `<p class="hub-help">Nothing selected. While reading a template, use <strong>Select for preview</strong> in its header.</p>`}<div class="hub-footer"><button type="button" class="btn btn-sm btn-primary" data-copy-previews="selected" ${hub.selected.length ? '' : 'disabled'}>Copy prompt for ${hub.selected.length ? plural(hub.selected.length, 'template') : 'selected templates'}</button><small>Paste it into your coding agent. The selection then moves to Requested.</small></div></section>`;
     const unavailable = hub.unavailable.length ? `<details class="hub-section hub-unavailable"><summary>Not previewed <span>${hub.unavailable.length}</span></summary><ul class="hub-list">${hub.unavailable.map(item => hubRow(item.path, `${item.status === 'not_visual' ? 'Not visual' : 'Unavailable'}${item.note ? ` · ${escape(item.note)}` : ''}`, '')).join('')}</ul></details>` : '';
-    return `${ready}${requested}${selected}${unavailable}`;
+    const agentRows = [...live.ready.keys()].map(path => hubRow(path, 'Built by your agent', `<button type="button" class="btn btn-sm" data-show-live-preview="${escape(path)}">View</button>`))
+      .concat([...live.pending].map(([path, request]) => hubRow(path, request.status === 'failed' ? `Not built: ${escape(request.error || 'no reason given')}` : request.status === 'requested' ? 'Waiting for your agent' : 'Your agent is building it', request.status === 'failed' ? `<button type="button" class="btn btn-sm" data-request-preview="${escape(path)}">Try again</button>` : '')));
+    const byAgent = agentRows.length ? `<section class="hub-section"><h3>Your agent <span>${agentRows.length}</span></h3><ul class="hub-list">${agentRows.join('')}</ul></section>` : '';
+    return live.enabled ? `${byAgent}${ready}${unavailable}` : `${byAgent}${ready}${requested}${selected}${unavailable}`;
   }
   function refreshVisualControls() {
     const hub = lifecycle();
     const toggle = $('preview-list-toggle');
     toggle.hidden = !previewsPossible;
     const waiting = hub.selected.length + hub.requested.length;
-    toggle.innerHTML = `${icon('scan-text')}<span>Previews</span>${hub.fresh ? `<b class="header-count is-new">${hub.fresh} new</b>` : hub.ready.length ? `<b class="header-count">${hub.ready.length}</b>` : ''}${waiting ? `<b class="header-count is-pending" title="Selected or requested">${icon('clock')}${waiting}</b>` : ''}`;
+    toggle.innerHTML = `${icon('scan-text')}<span>Previews</span>${hub.fresh ? `<b class="header-count is-new">${hub.fresh} new</b>` : hub.ready.length + live.ready.size ? `<b class="header-count">${hub.ready.length + live.ready.size}</b>` : ''}${waiting ? `<b class="header-count is-pending" title="Selected or requested">${icon('clock')}${waiting}</b>` : ''}`;
     toggle.setAttribute('aria-label', `Template previews: ${hub.ready.length} ready${hub.fresh ? `, ${hub.fresh} new` : ''}, ${hub.requested.length} requested, ${hub.selected.length} selected`);
     document.querySelectorAll('[data-preview-summary]').forEach(node => { node.innerHTML = previewSummary(hub); });
     document.querySelectorAll('[data-preview-short]').forEach(node => { node.textContent = previewShort(hub); });
@@ -441,18 +455,40 @@
       const status = previewState(button.dataset.requestPreview);
       button.setAttribute('aria-pressed', status === 'selected');
       button.dataset.status = status;
-      button.querySelector('span').textContent = {selected:'Selected for preview', requested:'Preview requested'}[status] || 'Add to previews';
+      button.querySelector('span').textContent = previewLabel(status);
+      button.title = previewHint(status, button.dataset.requestPreview);
+      button.classList.toggle('is-working', live.enabled && (status === 'requested' || status === 'working'));
     });
     if ($('previews-dialog').open) $('preview-hub').innerHTML = renderPreviewHub();
   }
   // The same state in as few words as fit on a button; empty when there is nothing to say.
   function previewShort(hub) {
-    return [hub.ready.length && `${hub.ready.length} ready${hub.fresh ? ` (${hub.fresh} new)` : ''}`, hub.requested.length && `${hub.requested.length} requested`, hub.selected.length && `${hub.selected.length} selected`].filter(Boolean).join(' · ');
+    const building = [...live.pending.values()].filter(request => request.status === 'requested' || request.status === 'working').length;
+    const ready = hub.ready.length + live.ready.size;
+    return [ready && `${ready} ready${hub.fresh ? ` (${hub.fresh} new)` : ''}`, building && `${building} building`, hub.requested.length && `${hub.requested.length} requested`, hub.selected.length && `${hub.selected.length} selected`].filter(Boolean).join(' · ');
   }
   function previewSummary(hub) {
-    const parts = [hub.ready.length && `${hub.ready.length} ready${hub.fresh ? ` (${hub.fresh} new)` : ''}`, hub.requested.length && `${hub.requested.length} requested`, hub.selected.length && `${hub.selected.length} selected`].filter(Boolean);
-    return parts.length ? escape(parts.join(' · ')) : 'None yet. Add templates while reading the diff.';
+    const parts = previewShort(hub).split(' · ').filter(Boolean);
+    return parts.length ? escape(parts.join(' · ')) : (live.enabled ? 'None yet. Use Preview this template in a template\'s header.' : 'None yet. Select templates while reading the diff.');
   }
+  function setLivePreviews({enabled, ready = [], pending = {}}) {
+    live.enabled = !!enabled;
+    live.ready = new Map(ready.map(item => [item.path, {id: `live:${item.path}`, files: [item.path], status: 'rendered', title: item.title || 'Built by your agent', source: 'agent', html: item.html, mocks: item.mocks || null}]));
+    live.pending = new Map(Object.entries(pending));
+    rebuildPreviews();
+    const scroll = $('content').scrollTop;
+    render(); $('content').scrollTop = scroll;
+  }
+  // Take the reader to a template and open its preview.
+  function showPreview(path) {
+    const file = [...files.values()].find(candidate => candidate.path === path);
+    if (!file) return;
+    state.previewPane = 'open'; persist();
+    if (document.body.classList.contains('zen')) setZen(false);
+    if (!focusMode) chooseReadingMode(true);
+    focusFile(focusOrder.findIndex(entry => entry.file === file.id));
+  }
+  window.ReviewPreviews = {set: setLivePreviews, show: showPreview};
   function openPreviewHub() {
     $('preview-hub').innerHTML = renderPreviewHub();
     $('previews-dialog').showModal();
@@ -466,18 +502,27 @@
     const previews = previewsPossible ? `<button type="button" class="btn btn-sm btn-ghost" data-open-previews>${icon('scan-text')}<span>Template previews</span><small data-preview-short>${escape(previewShort(lifecycle()))}</small></button>` : '';
     return `<section class="evidence-strip" aria-label="Visual evidence"><span>Visual evidence</span>${qa}${previews}</section>`;
   }
-  const previewSources = {lookbook: 'Lookbook example', example: 'Example data for this review'};
+  const previewSources = {lookbook: 'Lookbook example', example: 'Example data for this review', agent: 'Built by your agent, approximate'};
   const wideScreen = () => matchMedia('(min-width: 1200px)').matches;
-  // The side pane opens by itself only on big screens; laptops keep the code wide and
-  // show the Preview button instead. An explicit open/close choice is remembered.
-  const previewPaneOpen = () => wideScreen() && (state.previewPane ? state.previewPane === 'open' : matchMedia('(min-width: 1600px)').matches);
+  // The side pane takes width from the code, so it opens only when asked for (and never in
+  // Focus). The choice is remembered.
+  const previewPaneOpen = () => wideScreen() && state.previewPane === 'open' && !document.body.classList.contains('zen');
 
+  // What the button says. Served, it asks your agent and tells you how that is going; offline, it only
+  // selects the template for a request you copy yourself.
+  const previewLabel = status => live.enabled
+    ? {requested: 'Preview requested', working: 'Building preview…', failed: 'Preview failed. Try again'}[status] || 'Preview this template'
+    : {selected: 'Selected for preview', requested: 'Preview requested'}[status] || 'Select for preview';
+  const previewHint = (status, path) => live.enabled
+    ? ({requested: 'Sent to your agent. You can keep reviewing.', working: 'Your agent is building this preview. You can keep reviewing.', failed: live.pending.get(path)?.error || 'Your agent could not build it.'}[status] || 'Ask your agent to build a preview of this template, including the pieces it renders')
+    : 'Select this template for your next preview request';
   function previewToggle(file) {
     const list = previewsByPath.get(file.path);
     if (!list?.length) {
       if (!previewEligible(file) || notVisualByPath.has(file.path)) return '';
       const status = previewState(file.path);
-      return `<button type="button" class="preview-toggle is-request" data-request-preview="${escape(file.path)}" data-status="${status}" aria-pressed="${status === 'selected'}" title="Select this template for your next preview request">${icon(status === 'requested' ? 'clock' : 'scan-text')}<span>${{selected:'Selected for preview', requested:'Preview requested'}[status] || 'Add to previews'}</span></button>`;
+      const busy = status === 'requested' || status === 'working';
+      return `<button type="button" class="preview-toggle is-request${busy && live.enabled ? ' is-working' : ''}" data-request-preview="${escape(file.path)}" data-status="${status}" aria-pressed="${status === 'selected'}" ${busy && live.enabled ? 'aria-busy="true"' : ''} title="${escape(previewHint(status, file.path))}">${icon(status === 'requested' ? 'clock' : 'scan-text')}<span>${previewLabel(status)}</span></button>`;
     }
     return `<button type="button" class="preview-toggle" data-preview-toggle aria-controls="preview-pane" aria-expanded="${previewPaneOpen()}" title="Show how this template renders">${icon('scan-text')}<span>Preview</span><span class="preview-count">${list.length}</span>${previewState(file.path) === 'fresh' ? '<b class="hub-new">New</b>' : ''}</button>`;
   }
@@ -501,13 +546,27 @@
     return parts.length ? `<small class="preview-stand-ins">Not final: ${escape(parts.join('; '))}.</small>` : '';
   }
 
+  // While your agent builds a preview: what is happening, and a skeleton where it will appear.
+  function livePreviewPlaceholder(file, placement) {
+    const request = live.enabled && live.pending.get(file.path);
+    if (!request) return '';
+    const name = file.path.slice(file.path.lastIndexOf('/') + 1);
+    const attributes = `class="preview-panel ${placement} is-generating" ${placement === 'side' ? 'id="preview-pane"' : ''} data-preview-panel data-open-state="true" open`;
+    if (request.status === 'failed') {
+      return `<details ${attributes}><summary>${icon('scan-text')}<span class="preview-heading">Preview</span><span class="badge warning">Not built</span></summary><div class="preview-body"><div class="preview-skeleton" role="status"><p><strong>Your agent could not build a preview of ${escape(name)}</strong><br><small>${escape(request.error || 'It did not say why.')}</small></p><button type="button" class="btn btn-sm btn-primary" data-request-preview="${escape(file.path)}">Try again</button></div></div></details>`;
+    }
+    const waiting = request.status === 'requested';
+    return `<details ${attributes}><summary>${icon('scan-text')}<span class="preview-heading">Preview</span><span class="badge neutral">${waiting ? 'Requested' : 'Building'}</span></summary><div class="preview-body"><div class="preview-skeleton" role="status" aria-live="polite"><p><strong>${waiting ? 'Waiting for your agent to start' : 'Your agent is building a preview of'} ${escape(name)}</strong><br><small>It reads the template and the pieces it renders, then draws an approximation. You can keep reviewing; it appears here when it is ready.</small></p><div class="skeleton-frame" aria-hidden="true"><span class="skeleton-line w40"></span><span class="skeleton-block"></span><span class="skeleton-line w80"></span><span class="skeleton-line w60"></span><span class="skeleton-block short"></span></div></div></div></details>`;
+  }
+
   function previewPanel(file, placement) {
     const list = previewsByPath.get(file.path);
-    if (!list?.length) return '';
+    if (!list?.length) return livePreviewPlaceholder(file, placement);
     const rendered = list.filter(preview => preview.status === 'rendered').length;
     const open = placement === 'side' && previewPaneOpen();
     const examples = list.map(preview => `<figure class="preview-example"><figcaption><strong>${escape(preview.title || 'Preview')}</strong><span class="badge ${preview.source === 'lookbook' ? 'success' : 'neutral'}">${previewSources[preview.source] || previewSources.example}</span>${preview.mocks ? '<span class="badge warning">Stand-in assets</span>' : ''}${preview.note && preview.status === 'rendered' ? `<small>${escape(preview.note)}</small>` : ''}${standInNote(preview.mocks)}</figcaption>${preview.status === 'rendered' ? `<div class="preview-frame"><iframe sandbox="allow-same-origin" loading="lazy" title="${escape(`Preview: ${preview.title || file.path}`)}" data-preview-id="${escape(preview.id)}"${preview.width ? ` style="min-width:${Number(preview.width) + 32}px"` : ''}></iframe></div>` : `<p class="preview-unavailable">Preview unavailable. ${escape(preview.note || '')}</p>`}</figure>`).join('');
-    return `<details class="preview-panel ${placement}" ${placement === 'side' ? 'id="preview-pane"' : ''} data-preview-panel data-open-state="${open}" ${open ? 'open' : ''}><summary>${icon('scan-text')}<span class="preview-heading">Preview</span><span class="badge neutral">${rendered === list.length ? `${list.length} example${list.length === 1 ? '' : 's'}` : `${rendered} of ${list.length} rendered`}</span></summary><div class="preview-body"><p class="preview-caveat">Rendered by the app from the reviewed code with example data. Static: scripts are off, and icons or images marked as stand-ins are mocked for this preview.</p>${examples}</div></details>`;
+    const byAgent = list.every(preview => preview.source === 'agent');
+    return `<details class="preview-panel ${placement}${byAgent ? ' is-agent' : ''}" ${placement === 'side' ? 'id="preview-pane"' : ''} data-preview-panel data-open-state="${open}" ${open ? 'open' : ''}><summary>${icon('scan-text')}<span class="preview-heading">Preview</span><span class="badge neutral">${rendered === list.length ? `${list.length} example${list.length === 1 ? '' : 's'}` : `${rendered} of ${list.length} rendered`}</span></summary><div class="preview-body"><p class="preview-caveat">${byAgent ? 'Drawn by your agent from this template and the pieces it renders, with made-up example data. An approximation: it can differ from the app. ' : 'Rendered by the app from the reviewed code with example data. '}Static: scripts are off, and icons or images marked as stand-ins are mocked for this preview.</p>${examples}</div></details>`;
   }
 
   function fitPreview(frame) {
@@ -1250,6 +1309,14 @@
     if (previewRequest) {
       event.preventDefault(); event.stopPropagation();
       const file = previewRequest.dataset.requestPreview;
+      if (live.enabled) {
+        const status = previewState(file);
+        if (status !== 'requested' && status !== 'working') {
+          state.previewPane = 'open'; persist(); // show the skeleton where the preview will appear
+          document.dispatchEvent(new CustomEvent('review-preview-request', {detail: {path: file}}));
+        }
+        return;
+      }
       const selected = visualState.previews.includes(file);
       visualState.previews = ReviewTools.pendingPreviews(snapshot, review, selected ? visualState.previews.filter(path => path !== file) : [...visualState.previews, file]);
       const stored = persistVisuals(); refreshVisualControls(); renderNavigation();
@@ -1257,6 +1324,8 @@
       return;
     }
     if (event.target.closest('[data-open-previews]')) { openPreviewHub(); return; }
+    const showLive = event.target.closest('[data-show-live-preview]');
+    if (showLive) { $('previews-dialog').close(); showPreview(showLive.dataset.showLivePreview); return; }
     if (event.target.closest('[data-open-send]')) { openSendDialog(); return; }
     const removePreview = event.target.closest('[data-remove-preview]');
     if (removePreview) {
