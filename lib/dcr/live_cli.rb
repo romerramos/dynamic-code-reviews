@@ -67,8 +67,15 @@ module DCR
     # is killed between printing and acknowledging leaves the messages queued, so the next
     # one prints them again rather than losing them.
     def wait(state, options)
+      wait_for(state, options)
+    ensure
+      state.clear_heartbeat
+    end
+
+    def wait_for(state, options)
       deadline = options[:timeout] && Time.now + options[:timeout]
       loop do
+        state.heartbeat # tells the open page that something is listening
         pending = state.pending
         unless pending.empty?
           puts options[:json] ? JSON.pretty_generate('instructions' => REPLY_ONLY, 'entries' => pending) : render(pending, flags(options))

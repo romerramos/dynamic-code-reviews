@@ -7,21 +7,81 @@
 #dcr-panel .dcr-note:empty{display:none}
 .ledger-status{font-size:12px}
 .ledger-status:empty{display:none}
+/* The conversation under a comment: a plain thread on the card's own surface, no boxes. */
+:root{--dcr-ok:#1f8a5b;--dcr-work:#a15c07;--dcr-off:#8a8f9c}
+html[data-theme="dark"]{--dcr-ok:#4cc38a;--dcr-work:#e0a94a;--dcr-off:#8a93a6}
 .dcr-thread{display:none}
 .dcr-thread.has-content{display:block}
-.dcr-card{padding:0 28px 18px}
-.dcr-popover{margin-top:10px;padding-top:10px;border-top:1px solid var(--line,#e3e5ea)}
-.dcr-state{margin:0 0 8px;font-size:12.5px;color:var(--muted,inherit);opacity:.85}
+.dcr-card{padding:2px 28px 22px}
+.dcr-popover{margin-top:12px;padding-top:14px;border-top:1px solid var(--line,#e3e5ea)}
+
+.dcr-state{display:flex;align-items:center;gap:8px;margin:0 0 14px;font-size:13px;color:var(--muted,inherit)}
 .dcr-state:empty{display:none}
-.dcr-message{margin:0 0 8px;padding:8px 12px;border-radius:8px;border-left:3px solid color-mix(in oklab,currentColor 25%,transparent);background:color-mix(in oklab,currentColor 4%,transparent)}
-.dcr-message.dcr-agent{border-left-color:#6048b5;background:color-mix(in oklab,#6048b5 8%,transparent)}
-.dcr-message .dcr-author{display:block;font-size:12px;font-weight:600;opacity:.7}
-.dcr-message p{margin:2px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
-.dcr-reply{margin:10px 0 0}
+.dcr-state time{opacity:.8}
+.dcr-dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--dcr-off)}
+.dcr-tone-wait,.dcr-tone-work{background:var(--dcr-work)}
+.dcr-tone-done{background:var(--dcr-ok)}
+.dcr-tone-idle,.dcr-tone-off{background:var(--dcr-off)}
+.dcr-typing{display:inline-flex;gap:3px;margin-left:1px}
+.dcr-typing i{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.5;animation:dcr-typing 1.2s infinite ease-in-out}
+.dcr-typing i:nth-child(2){animation-delay:.15s}
+.dcr-typing i:nth-child(3){animation-delay:.3s}
+@keyframes dcr-typing{0%,60%,100%{opacity:.35;transform:none}30%{opacity:1;transform:translateY(-2px)}}
+@media(prefers-reduced-motion:reduce){.dcr-typing i{animation:none;opacity:.6}}
+
+.dcr-convo{position:relative;display:grid;gap:22px}
+.dcr-convo:has(.dcr-msg+.dcr-msg)::before{content:"";position:absolute;left:13.5px;top:30px;bottom:30px;width:1px;background:var(--line,#e3e5ea)}
+.dcr-msg{display:grid;grid-template-columns:28px minmax(0,1fr);column-gap:12px}
+.dcr-avatar{position:relative;z-index:1;flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--accent-soft,#efeefc);color:var(--accent,#4f4bc4);font-size:12px;font-weight:600}
+.dcr-you .dcr-avatar{background:var(--line,#e3e5ea);color:var(--ink,inherit)}
+.dcr-msg-head{display:flex;align-items:center;gap:8px;min-height:28px;margin:0;font-size:13px}
+.dcr-msg-head strong{font-weight:600;color:var(--ink,inherit)}
+.dcr-msg-head time{color:var(--muted,inherit);font-size:12.5px}
+.dcr-new{padding:0 7px;border-radius:9px;background:var(--accent,#4f4bc4);color:#fff;font-size:11px;font-weight:600;line-height:17px}
+.dcr-body{margin-top:-2px;max-width:68ch;color:var(--ink,inherit);font-size:14.5px;line-height:1.62;overflow-wrap:anywhere}
+.dcr-body.is-clamped:not(.is-open){max-height:calc(7 * 1.62em);overflow:hidden;-webkit-mask-image:linear-gradient(#000 72%,transparent);mask-image:linear-gradient(#000 72%,transparent)}
+.dcr-body p{margin:0 0 .75em}
+.dcr-body>:last-child{margin-bottom:0}
+.dcr-body ul,.dcr-body ol{margin:.2em 0 .75em;padding-left:1.3em;list-style-position:outside}
+.dcr-body ul{list-style-type:disc}
+.dcr-body ol{list-style-type:decimal}
+.dcr-body li{margin:.15em 0}
+.dcr-body code{padding:1px 5px;border-radius:5px;background:color-mix(in oklab,currentColor 8%,transparent);font:12.5px/1.4 var(--mono,ui-monospace,monospace)}
+.dcr-body pre{margin:.4em 0 .8em;padding:10px 12px;overflow:auto;border-radius:8px;background:color-mix(in oklab,currentColor 6%,transparent)}
+.dcr-body pre code{padding:0;background:none}
+.dcr-body a{color:var(--accent,#4f4bc4)}
+.dcr-more{margin:2px 0 0;padding:5px 0;border:0;background:none;color:var(--accent,#4f4bc4);font-size:13px;font-weight:550}
+.dcr-more:hover{text-decoration:underline}
+
+.dcr-reply{margin:16px 0 0 40px}
 .dcr-reply[hidden]{display:none}
-.dcr-reply textarea{width:100%;box-sizing:border-box;font:inherit;font-size:13.5px;padding:8px 10px;border-radius:8px;border:1px solid color-mix(in oklab,currentColor 22%,transparent);background:transparent;color:inherit;resize:vertical}
-.dcr-reply textarea:focus-visible{outline:2px solid #e09a38;outline-offset:1px}
-.dcr-reply .dcr-actions,.dcr-popover>.dcr-actions{display:flex;gap:8px;margin-top:8px}
+.dcr-reply textarea{width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid color-mix(in oklab,currentColor 22%,transparent);border-radius:8px;background:transparent;color:inherit;font:inherit;font-size:14px;line-height:1.5;resize:vertical}
+.dcr-reply textarea:focus-visible{outline:2px solid var(--accent,#4f4bc4);outline-offset:1px}
+.dcr-reply .dcr-actions,.dcr-popover>.dcr-actions{display:flex;gap:8px;margin-top:10px}
+.dcr-popover>.dcr-actions{margin-left:0}
+.dcr-act-reply{border:1px solid var(--accent,#4f4bc4);background:transparent;color:var(--accent,#4f4bc4)}
+.dcr-act-reply:hover{background:var(--accent-soft,#efeefc)}
+#comment-popover.dcr-wide[popover]{width:min(560px,calc(100vw - 24px));max-height:min(78dvh,720px)}
+
+/* The agent as a whole, in the reading bar. */
+#dcr-agent{display:inline-flex;align-items:center;gap:7px;padding:0 4px;color:var(--muted,inherit);font-size:12.5px;white-space:nowrap}
+#dcr-agent[hidden]{display:none}
+#dcr-agent[data-tone="ok"] .dcr-dot{background:var(--dcr-ok)}
+#dcr-agent[data-tone="work"] .dcr-dot{background:var(--dcr-work);animation:dcr-pulse 1.4s infinite ease-in-out}
+@keyframes dcr-pulse{50%{opacity:.3}}
+@media(prefers-reduced-motion:reduce){#dcr-agent[data-tone="work"] .dcr-dot{animation:none}}
+@media(max-width:1000px){#dcr-agent .dcr-agent-text{display:none}}
+.ledger-toggle{position:relative}
+.ledger-toggle.has-unread::after{content:"";position:absolute;top:3px;right:3px;width:9px;height:9px;border-radius:50%;background:var(--accent,#4f4bc4);box-shadow:0 0 0 2px var(--surface,#fff)}
+
+/* An answer arrived somewhere you are not looking. */
+#dcr-arrival{position:fixed;right:24px;bottom:84px;z-index:18;display:flex;align-items:center;gap:12px;max-width:min(430px,calc(100vw - 32px));padding:12px 10px 12px 14px;border:1px solid var(--line,#e3e5ea);border-radius:12px;background:var(--surface,#fff);color:var(--ink,inherit);font-size:13.5px;box-shadow:0 8px 30px #28324c30}
+#dcr-arrival[hidden]{display:none}
+#dcr-arrival strong{display:block;font-weight:600}
+#dcr-arrival div>span{display:block;max-width:28ch;overflow:hidden;color:var(--muted,inherit);text-overflow:ellipsis;white-space:nowrap}
+.dcr-dismiss{padding:4px 6px;border:0;background:transparent;color:var(--muted,inherit);font-size:12px}
+@media(prefers-reduced-motion:no-preference){#dcr-arrival{animation:dcr-unsent-in .2s ease-out}}
+@media(min-width:1500px){body.ledger-open #dcr-arrival{right:344px}}
 #qa-artifacts .dcr-attach-open{margin-left:6px;font-size:12px;padding:3px 9px}
 #qa-artifacts .dcr-attach{display:grid;gap:8px;margin:8px 0 12px;padding:12px;border:1px solid color-mix(in oklab,currentColor 18%,transparent);border-radius:8px;background:transparent}
 #qa-artifacts .dcr-attach label{display:grid;gap:3px;font-size:12px;font-weight:600;margin:0}
@@ -35,9 +95,13 @@ body.qa-live .evidence-strip:not(:has(button:not(.visual-qa-option))){display:no
 #dcr-unsent{position:fixed;right:24px;bottom:22px;z-index:17;display:flex;align-items:center;gap:14px;padding:9px 10px 9px 16px;border:1px solid var(--line,#e3e5ea);border-left:3px solid var(--yours,#a15c07);border-radius:10px;background:var(--surface,#fff);color:var(--ink,inherit);font-size:13px;box-shadow:0 6px 26px #28324c26}
 #dcr-unsent[hidden]{display:none}
 .range-actions:not([hidden])~#dcr-unsent{bottom:104px}
-.ledger-meta .dcr-row-send{padding:2px 9px;border:1px solid var(--accent,#4f4bc4);border-radius:6px;background:transparent;color:var(--accent,#4f4bc4);font-size:12px;font-weight:550}
+.ledger-meta .dcr-row-send{padding:4px 10px;border:1px solid var(--accent,#4f4bc4);border-radius:6px;background:transparent;color:var(--accent,#4f4bc4);font-size:12px;font-weight:550}
 .ledger-meta .dcr-row-send:hover{background:var(--accent-soft,#efeefc);text-decoration:none}
 @media(prefers-reduced-motion:no-preference){#dcr-unsent{animation:dcr-unsent-in .18s ease-out}}
 @keyframes dcr-unsent-in{from{transform:translateY(8px);opacity:0}}
 .ledger-meta{flex-wrap:wrap;gap:4px 12px}
 .ledger-status{white-space:nowrap}
+
+/* Your review shows the start of an answer, not all of it. */
+.ledger-reply{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+.range-actions:not([hidden])~#dcr-arrival{bottom:170px}

@@ -13,6 +13,16 @@
   let rev = -1;
   let online = true;
   let latest = null;
+  let listening; // is an agent waiting for messages? undefined: an older server that cannot say
+  const baseTitle = document.title;
+  // Agent messages the reader has been shown. First visit to a review marks the history as seen,
+  // so only what arrives after that is announced.
+  const seenKey = `dcr-seen:${key}`;
+  let seen = new Set();
+  let seenKnown = false;
+  try { const stored = localStorage.getItem(seenKey); if (stored) { seen = new Set(JSON.parse(stored)); seenKnown = true; } } catch { /* announce nothing twice this session instead */ }
+  const saveSeen = () => { try { localStorage.setItem(seenKey, JSON.stringify([...seen].slice(-500))); } catch { /* session only */ } };
+  const announced = new Set();
   const drafts = new Map(); // reply text survives the review re-rendering its cards
   // Everything here lives inside the observed #content, so write only real changes or the
   // observer would re-trigger itself.
@@ -75,38 +85,60 @@
   };
 
   // --- thread cards ------------------------------------------------------------------------
-  // On an Overview card the one action sits in the card's own footer, beside Copy and Resolve;
-  // in the diff popover it sits at the bottom of the thread. A sent comment answers with Reply,
-  // which opens a small box; nothing is shown until there is something to say.
+  // The conversation under a comment is a plain thread: who, when, then the text. A line above it
+  // says what is happening (sent, being worked on, replied). On an Overview card the one action
+  // sits in the card's footer beside Copy and Resolve; in the diff popover it ends the thread.
   const cardBlock = (id, variant) => {
     const block = document.createElement('div');
     block.className = `dcr-thread dcr-${variant}`;
     block.dataset.dcr = id;
-    block.innerHTML = `<div class="dcr-state" role="status"></div><div class="dcr-messages"></div><form class="dcr-reply" hidden><textarea rows="3" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea><div class="dcr-actions"><button type="submit" class="btn btn-sm btn-primary">Send reply</button><button type="button" class="btn btn-sm btn-ghost" data-dcr-cancel>Cancel</button></div></form>${variant === 'popover' ? `<div class="dcr-actions"><button type="button" class="btn btn-sm btn-primary" data-dcr-act data-dcr-for="${tools.escape(id)}"></button></div>` : ''}`;
+    block.innerHTML = `<div class="dcr-state" role="status" aria-live="polite"></div><div class="dcr-convo"></div><form class="dcr-reply" hidden><textarea rows="3" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea><div class="dcr-actions"><button type="submit" class="btn btn-sm btn-primary">Send reply</button><button type="button" class="btn btn-sm btn-ghost" data-dcr-cancel>Cancel</button></div></form>${variant === 'popover' ? `<div class="dcr-actions"><button type="button" class="btn btn-sm btn-primary" data-dcr-act data-dcr-for="${tools.escape(id)}"></button></div>` : ''}`;
     block.querySelector('textarea').value = drafts.get(id) || '';
     return block;
   };
   const actionButtons = id => document.querySelectorAll(`[data-dcr-act][data-dcr-for="${CSS.escape(id)}"]`);
+  const stateHTML = (model, at) => model
+    ? `<span class="dcr-dot dcr-tone-${model.tone}" aria-hidden="true"></span><span>${tools.escape(model.text)}</span>${model.typing ? '<span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span>' : ''}${at ? `<time data-at="${tools.escape(at)}">${tools.escape(tools.relativeTime(at))}</time>` : ''}`
+    : '';
+  // Long answers start clamped; the button appears only when something is actually hidden.
+  const clampLong = root => root.querySelectorAll('.dcr-body').forEach(body => {
+    if (body.dataset.clamped || !body.offsetParent) return; // measure only what is on screen
+    body.dataset.clamped = '1';
+    const line = parseFloat(getComputedStyle(body).lineHeight) || 24;
+    if (body.scrollHeight > line * 9) {
+      body.classList.add('is-clamped');
+      body.after(Object.assign(document.createElement('button'), {type: 'button', className: 'dcr-more', textContent: 'Show more'}));
+    }
+  });
   const refreshBlock = block => {
     const id = block.dataset.dcr;
     const thread = threads[id];
     const sent = !!thread && (thread.live || thread.delivery !== 'draft');
     // The DOM re-serialises markup (an escaped quote comes back as a quote), so compare the
     // string that was set, not innerHTML, or the observer would re-trigger itself forever.
-    const box = block.querySelector('.dcr-messages');
-    const html = tools.messagesHTML(thread);
-    if (box.dataset.html !== html) { box.innerHTML = html; box.dataset.html = html; }
-    const state = online ? tools.statusText(thread) : 'Server stopped. Restart `dcr serve` to send.';
-    set(block.querySelector('.dcr-state'), 'textContent', state);
+    const convo = block.querySelector('.dcr-convo');
+    const html = tools.messagesHTML(thread, {seen});
+    // Keyed on the messages, not their text: "2 min ago" changes by itself and must not redraw.
+    const signature = (thread?.messages || []).map(message => message.id + (message.author === 'agent' && !seen.has(message.id) ? '!' : '')).join('|');
+    const model = online ? tools.statusModel(thread, listening) : {tone: 'off', text: 'The review server stopped. Restart `dcr serve` to send or receive.'};
+    // The reply carries its own time; the status line only says that it came.
+    const status = stateHTML(model, '');
+    const statusSignature = model ? `${model.tone}|${model.text}` : '';
     const form = block.querySelector('.dcr-reply');
     if (!sent && !form.hidden) form.hidden = true;
-    block.classList.toggle('has-content', !!(html || state || !form.hidden));
+    block.classList.toggle('has-content', !!(html || status || !form.hidden));
+    if (convo.dataset.sig !== signature) { convo.innerHTML = html; convo.dataset.sig = signature; watchMessages(convo); }
+    clampLong(convo);
+    const stateEl = block.querySelector('.dcr-state');
+    if (stateEl.dataset.sig !== statusSignature) { stateEl.innerHTML = status; stateEl.dataset.sig = statusSignature; }
     actionButtons(id).forEach(button => {
       set(button, 'textContent', sent ? 'Reply' : 'Send to agent');
       set(button, 'disabled', !online);
       button.classList.toggle('btn-primary', !sent);
-      button.classList.toggle('btn-soft', sent);
+      button.classList.toggle('dcr-act-reply', sent);
+      button.classList.remove('btn-soft');
     });
+    if (block.classList.contains('dcr-popover')) widenPopover();
   };
   const decorate = () => {
     document.querySelectorAll('#content article.review-thread[data-thread-id]').forEach(card => {
@@ -126,6 +158,20 @@
     document.querySelectorAll('.dcr-thread').forEach(refreshBlock);
   };
 
+  // --- marking what you have read -------------------------------------------------------------------
+  // An agent message counts as read once it has been on screen for a moment.
+  const dwell = new WeakMap();
+  const watcher = typeof IntersectionObserver === 'function' ? new IntersectionObserver(entries => entries.forEach(entry => {
+    const node = entry.target;
+    clearTimeout(dwell.get(node));
+    if (!entry.isIntersecting || document.hidden) return;
+    dwell.set(node, setTimeout(() => {
+      const id = node.dataset.msg;
+      if (id && !seen.has(id)) { seen.add(id); saveSeen(); refreshUnread(); node.querySelector('.dcr-new')?.remove(); }
+    }, 1200));
+  }), {threshold: 0.6}) : null;
+  const watchMessages = root => { if (watcher) root.querySelectorAll('.dcr-msg.dcr-agent').forEach(node => watcher.observe(node)); };
+
   document.addEventListener('input', event => {
     const field = event.target.closest('.dcr-thread textarea');
     if (field) drafts.set(field.closest('.dcr-thread').dataset.dcr, field.value);
@@ -133,6 +179,13 @@
   // The block that shows a comment's conversation: in its card, or in the popover.
   const blockFor = button => button.closest('.dcr-thread') || button.closest('article, .popover-comment')?.querySelector('.dcr-thread');
   document.addEventListener('click', async event => {
+    const more = event.target.closest('.dcr-more');
+    if (more) {
+      const body = more.previousElementSibling;
+      const open = body.classList.toggle('is-open');
+      more.textContent = open ? 'Show less' : 'Show more';
+      return;
+    }
     const cancel = event.target.closest('[data-dcr-cancel]');
     if (cancel) { const block = cancel.closest('.dcr-thread'); block.querySelector('.dcr-reply').hidden = true; refreshBlock(block); return; }
     const button = event.target.closest('[data-dcr-act]');
@@ -152,7 +205,7 @@
     button.disabled = true;
     try {
       await sendComment(id);
-      flash('Sent to your agent. Its answer will appear here.');
+      flash(tools.statusModel(threads[id], listening)?.text || 'Sent to your agent.');
     } catch (error) { flash(error.message); }
     finally { button.disabled = !online; }
   });
@@ -172,7 +225,7 @@
       field.value = '';
       form.hidden = true;
       await refresh();
-      flash('Reply sent to your agent.');
+      flash(tools.statusModel(threads[id], listening)?.text || 'Reply sent to your agent.');
     } catch (error) { flash(error.message); }
     finally { form.querySelector('[type="submit"]').disabled = false; }
   });
@@ -280,11 +333,13 @@
 
   // --- rows in "Your review" ---------------------------------------------------------------------
   const STATE = {sent: 'sent', delivered: 'sent', answered: 'answered'};
+  const plain = text => String(text).replace(/```[a-z]*\n?/g, '').replace(/[`*_>#]/g, '').replace(/\s+/g, ' ').trim();
+  const unseenIn = thread => (thread?.messages || []).some(message => message.author === 'agent' && !seen.has(message.id));
   const rowFor = (comment, thread) => {
     const found = globalThis.ReviewTools.anchor(snapshot, comment);
     const where = comment.general ? 'General comment' : `${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}`;
     const last = [...(thread.messages || [])].reverse().find(message => message.author === 'agent');
-    return `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-state="${STATE[thread.delivery] || 'draft'}" data-conversation="1"><button type="button" class="ledger-jump" data-ledger-jump="${tools.escape(comment.id)}"><span class="ledger-where">${tools.escape(found?.file.path || 'General')} · ${tools.escape(where)}</span><span class="ledger-subject">${tools.escape(comment.subject)}</span></button><div class="ledger-meta"><span class="ledger-status">${tools.escape(tools.statusText(thread))}</span></div>${last ? `<p class="ledger-reply"><b>Agent</b> ${tools.escape(last.body)}</p>` : ''}</li>`;
+    return `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-state="${STATE[thread.delivery] || 'draft'}" data-conversation="1"><button type="button" class="ledger-jump" data-ledger-jump="${tools.escape(comment.id)}"><span class="ledger-where">${tools.escape(found?.file.path || 'General')} · ${tools.escape(where)}</span><span class="ledger-subject">${tools.escape(comment.subject)}</span></button><div class="ledger-meta"><span class="ledger-status">${tools.escape(tools.statusText(thread, listening))}</span>${unseenIn(thread) ? '<span class="dcr-new">New</span>' : ''}</div>${last ? `<p class="ledger-reply"><b>Agent</b> ${tools.escape(plain(last.body))}</p>` : ''}</li>`;
   };
   const decorateLedger = () => {
     const body = document.getElementById('ledger-body');
@@ -298,7 +353,10 @@
       let status = meta.querySelector('.ledger-status');
       if (!status) { status = document.createElement('span'); status.className = 'ledger-status'; meta.prepend(status); }
       // An unsent comment shows its Send button instead of saying it is unsent.
-      set(status, 'textContent', state === 'resolved' || (state === 'draft' && online) ? '' : tools.statusText(thread) || 'Not sent');
+      set(status, 'textContent', state === 'resolved' || (state === 'draft' && online) ? '' : tools.statusText(thread, listening) || 'Not sent');
+      let fresh = meta.querySelector('.dcr-new');
+      if (unseenIn(thread) && !fresh) { fresh = Object.assign(document.createElement('span'), {className: 'dcr-new', textContent: 'New'}); status.after(fresh); }
+      if (!unseenIn(thread) && fresh) fresh.remove();
       let send = meta.querySelector('.dcr-row-send');
       const canSend = state === 'draft' && online;
       if (canSend && !send) { send = Object.assign(document.createElement('button'), {type: 'button', className: 'dcr-row-send', textContent: 'Send to agent'}); send.dataset.dcrRowSend = item.dataset.ledger; status.after(send); }
@@ -306,7 +364,7 @@
       const last = [...(thread?.messages || [])].reverse().find(message => message.author === 'agent');
       let reply = item.querySelector(':scope > .ledger-reply');
       if (last && !reply) { reply = document.createElement('p'); reply.className = 'ledger-reply'; item.append(reply); }
-      if (reply) { if (last) { const text = last.body; if (reply.dataset.text !== text) { reply.replaceChildren(Object.assign(document.createElement('b'), {textContent: 'Agent'}), ` ${text}`); reply.dataset.text = text; } } else reply.remove(); }
+      if (reply) { if (last) { const text = plain(last.body); if (reply.dataset.text !== text) { reply.replaceChildren(Object.assign(document.createElement('b'), {textContent: 'Agent'}), ` ${text}`); reply.dataset.text = text; } } else reply.remove(); }
     });
     // Conversations about the agent's own findings that you have joined.
     const mine = new Set(comments().filter(comment => comment.personal).map(comment => comment.id));
@@ -422,12 +480,77 @@
     catch (error) { flash(error.message); button.disabled = false; }
   });
 
+  // --- telling you what is happening ---------------------------------------------------------------
+  // A conversation in the diff popover needs room to be read.
+  const widenPopover = () => {
+    const wide = !!popover?.querySelector('.dcr-popover.has-content .dcr-msg');
+    if (popover && popover.classList.contains('dcr-wide') !== wide) {
+      popover.classList.toggle('dcr-wide', wide);
+      window.dispatchEvent(new Event('resize'));
+    }
+  };
+
+  // The agent as a whole, in the reading bar: listening, working or not connected.
+  const agentPill = document.createElement('span');
+  agentPill.id = 'dcr-agent';
+  agentPill.setAttribute('role', 'status');
+  agentPill.hidden = true;
+  agentPill.innerHTML = '<span class="dcr-dot" aria-hidden="true"></span><span class="dcr-agent-text"></span>';
+  const optionsBar = document.querySelector('.toolbar-options');
+  if (optionsBar) optionsBar.prepend(agentPill);
+  const renderAgent = () => {
+    const model = online ? tools.agentModel(threads, listening) : {tone: 'off', text: 'Server stopped', hint: 'Restart `dcr serve` to send or receive.'};
+    agentPill.hidden = !model;
+    if (!model) return;
+    agentPill.dataset.tone = model.tone;
+    set(agentPill.querySelector('.dcr-agent-text'), 'textContent', model.text);
+    agentPill.title = model.hint;
+  };
+
+  // Unread answers: a count in the tab title and a dot on Your review, until they have been seen.
+  const refreshUnread = () => {
+    const count = tools.unseen(threads, seen).length;
+    document.title = `${count ? `(${count}) ` : ''}${baseTitle}`;
+    document.getElementById('ledger-toggle')?.classList.toggle('has-unread', count > 0);
+    document.querySelectorAll('.dcr-thread').forEach(block => {
+      if (!unseenIn(threads[block.dataset.dcr])) block.querySelectorAll('.dcr-new').forEach(tag => tag.remove());
+    });
+  };
+
+  // When an answer arrives while you are reading something else: say so, once, with a way to it.
+  const arrival = document.createElement('div');
+  arrival.id = 'dcr-arrival';
+  arrival.hidden = true;
+  arrival.setAttribute('role', 'status');
+  document.body.append(arrival);
+  let arrivalTimer;
+  const announce = items => {
+    if (!items.length) return;
+    const first = comments().find(comment => comment.id === items[0].thread);
+    const many = new Set(items.map(item => item.thread)).size > 1;
+    arrival.innerHTML = `<span class="dcr-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span><div><strong>${many ? 'Your agent replied to several comments' : 'Your agent replied'}</strong>${!many && first ? `<span>${tools.escape(first.subject)}</span>` : ''}</div>${first ? `<button type="button" class="btn btn-sm btn-primary" data-ledger-jump="${tools.escape(first.id)}">View</button>` : ''}<button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
+    arrival.hidden = false;
+    clearTimeout(arrivalTimer);
+    arrivalTimer = setTimeout(() => { arrival.hidden = true; }, 12000);
+  };
+  arrival.addEventListener('click', event => { if (event.target.closest('[data-ledger-jump], .dcr-dismiss')) arrival.hidden = true; });
+
+  // "5 min ago" stays true while the page is open.
+  setInterval(() => document.querySelectorAll('time[data-at]').forEach(node => set(node, 'textContent', tools.relativeTime(node.dataset.at))), 30000);
+
   // --- sync ----------------------------------------------------------------------------------
-  const apply = data => { threads = data.threads; rev = data.rev; latest = data.latest_revision; online = true; decorate(); decorateLedger(); renderPanel(); renderUnsent(); };
+  const apply = data => {
+    threads = data.threads; rev = data.rev; latest = data.latest_revision; listening = data.listening; online = true;
+    if (!seenKnown) { tools.unseen(threads, seen).forEach(item => seen.add(item.id)); saveSeen(); seenKnown = true; }
+    const arrived = tools.unseen(threads, seen).filter(item => !announced.has(item.id));
+    arrived.forEach(item => announced.add(item.id));
+    decorate(); decorateLedger(); renderPanel(); renderUnsent(); renderAgent(); refreshUnread();
+    announce(arrived);
+  };
   const refresh = async () => apply(await api(`/api/state?key=${encodeURIComponent(key)}`));
   const poll = async () => {
     try { apply(await api(`/api/poll?key=${encodeURIComponent(key)}&since=${rev}`)); }
-    catch { online = false; decorate(); renderPanel(); await new Promise(resolve => setTimeout(resolve, 2000)); }
+    catch { online = false; decorate(); renderPanel(); renderAgent(); await new Promise(resolve => setTimeout(resolve, 2000)); }
     poll();
   };
   new MutationObserver(() => { decorate(); renderPanel(); renderUnsent(); }).observe(content, {childList: true, subtree: true});

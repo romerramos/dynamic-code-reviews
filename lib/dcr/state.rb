@@ -62,6 +62,29 @@ module DCR
       File.unlink(temporary) if temporary && File.file?(temporary)
     end
 
+    # --- is an agent listening --------------------------------------------------------
+
+    # `dcr wait` touches this while it blocks and removes it when it returns, so the page can say
+    # whether anything is ready to answer. Not part of the saved state: it changes every second.
+    LISTENING = '.listening'
+    LISTENING_SECONDS = 4
+
+    def heartbeat
+      FileUtils.mkdir_p(@directory)
+      File.write(File.join(@directory, LISTENING), Time.now.to_f.to_s, perm: 0o600)
+    end
+
+    def clear_heartbeat
+      File.unlink(File.join(@directory, LISTENING))
+    rescue Errno::ENOENT
+      nil
+    end
+
+    def listening?
+      path = File.join(@directory, LISTENING)
+      File.file?(path) && Time.now - File.mtime(path) < LISTENING_SECONDS
+    end
+
     # --- browser progress -------------------------------------------------------------
 
     def save_blob(key, blob)
@@ -158,7 +181,9 @@ module DCR
         state['outbox'].select { |entry| entry['seq'] > state['acked'] && entry['seq'] <= through }.each do |entry|
           entry['thread_ids'].each do |id|
             thread = state.dig('threads', entry['key'], id)
-            thread['delivery'] = 'delivered' if thread && thread['delivery'] == 'sent'
+            next unless thread && thread['delivery'] == 'sent'
+            thread['delivery'] = 'delivered'
+            thread['delivered_at'] = Time.now.utc.iso8601
           end
         end
         state['acked'] = [state['acked'], through].max

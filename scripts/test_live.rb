@@ -29,6 +29,7 @@ Dir.mktmpdir('dcr-live-test') do |directory|
   assert(state.pending.length == 2 && state.read.dig('threads', KEY, 'c2', 'delivery') == 'draft', 'A draft thread must not reach the agent')
   state.ack(state.pending.first['seq'])
   assert(state.pending.length == 1 && state.read.dig('threads', KEY, 'c1', 'delivery') == 'delivered', 'Ack must leave the later message queued and mark delivery')
+  assert(Time.parse(state.read.dig('threads', KEY, 'c1', 'delivered_at')) > Time.now - 30, 'Delivery time was not recorded')
   reply = state.agent_reply('c1', 'Fixed in app/a.rb')
   assert(reply['author'] == 'agent' && state.read.dig('threads', KEY, 'c1', 'delivery') == 'answered', 'Agent reply was not recorded on the thread')
   begin
@@ -150,6 +151,23 @@ Dir.mktmpdir('dcr-live-test') do |directory|
     assert(request.call('GET', '/').include?('dynamic-review:settings') , 'Saved settings are not seeded into the page')
     assert(request.call('POST', '/api/settings', '{"colorMode":"light"}', 'Origin' => 'https://evil.example').start_with?('HTTP/1.1 400'), 'Cross-origin settings write accepted')
     puts 'PASS display settings are saved once per user, validated, private and seeded into every served review'
+
+    # The page can tell whether an agent is listening: only while a `dcr wait` is blocked.
+    assert(json.call(request.call('GET', "/api/state?key=#{KEY}"))['listening'] == false, 'No wait is running, so nothing is listening')
+    waiter = Thread.new { run.call('wait', '--dir', series, '--timeout', '20') }
+    sleep 1.5
+    assert(json.call(request.call('GET', "/api/state?key=#{KEY}"))['listening'] == true, 'A blocked wait must show as listening')
+    started = Time.now
+    flip = Thread.new { json.call(request.call('GET', "/api/poll?key=#{KEY}&since=#{json.call(request.call('GET', "/api/state?key=#{KEY}"))['rev']}")) }
+    sleep 0.5
+    state.send_items(KEY, [{'id' => 'listen-probe', 'text' => 'probe'}])
+    waiter.value
+    changed = flip.value
+    assert(Time.now - started < 6, 'The poll did not wake for the change')
+    sleep 0.3
+    assert(json.call(request.call('GET', "/api/state?key=#{KEY}"))['listening'] == false, 'A finished wait must stop showing as listening')
+    assert(!File.exist?(File.join(series, '.listening')), 'A finished wait left its heartbeat behind')
+    puts 'PASS the page learns whether an agent is listening, only while a wait is blocked'
 
     sent = json.call(request.call('POST', '/api/send', JSON.generate(key: KEY, items: [{id: 'c1', text: 'Please explain'}])))
     assert(sent['queued'] == 1, 'Send was not queued')

@@ -80,7 +80,7 @@ module DCR
     def snapshot(key)
       raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
       state = @state.read
-      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'latest_revision' => latest_revision,
+      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'latest_revision' => latest_revision, 'listening' => @state.listening?,
        'pending' => state['outbox'].count { |entry| entry['seq'] > state['acked'] && entry['key'] == key }}
     end
 
@@ -92,9 +92,10 @@ module DCR
     def poll(key, since)
       deadline = Time.now + POLL_SECONDS
       last_latest = latest_revision
+      last_listening = @state.listening?
       loop do
         current = snapshot(key)
-        return current if current['rev'] != since || current['latest_revision'] != last_latest || Time.now >= deadline
+        return current if current['rev'] != since || current['latest_revision'] != last_latest || current['listening'] != last_listening || Time.now >= deadline
         sleep 0.4
       end
     end
