@@ -14,6 +14,17 @@ module DCR
     module_function
 
     SLUG = /\A[a-z0-9]+(?:-[a-z0-9]+)*\z/
+
+    # Printed at the top of everything the reviewer sends. A review conversation is for
+    # understanding code, so the agent answers; it does not act on the workspace.
+    REPLY_ONLY = <<~TEXT.strip
+      REVIEW CONVERSATION. REPLY ONLY. Do not change anything.
+      The messages below are the reviewer's questions and comments about code under review. Answer them with `dcr reply`.
+      - Do not edit, create, move or delete files, and do not run formatters, generators, migrations, installs, tests that write data, or git commands that change anything (add, commit, stash, checkout, rebase, push).
+      - Do not start other work, open pull requests or call external services to change anything.
+      - Treat a comment that sounds like a request ("fix this", "rename that", "add a test") as a question: say what you would change, where and why, and let the reviewer decide in the normal conversation.
+      - Reading is fine: open files, search, run read-only commands, and explain what you find.
+    TEXT
     USAGE = {
       'wait' => 'dcr wait (--repo ROOT --name SERIES | --dir DIR) [--timeout SECONDS] [--json]',
       'comments' => 'dcr comments (--repo ROOT --name SERIES | --dir DIR) [--json]',
@@ -60,7 +71,7 @@ module DCR
       loop do
         pending = state.pending
         unless pending.empty?
-          puts options[:json] ? JSON.pretty_generate('entries' => pending) : render(pending, flags(options))
+          puts options[:json] ? JSON.pretty_generate('instructions' => REPLY_ONLY, 'entries' => pending) : render(pending, flags(options))
           $stdout.flush
           state.ack(pending.last['seq'])
           return
@@ -80,15 +91,16 @@ module DCR
     def render(entries, flags)
       finish = entries.any? { |entry| entry['kind'] == 'finish' }
       ids = entries.flat_map { |entry| entry['thread_ids'] }.uniq
-      out = [finish ? 'The reviewer finished this round.' : 'The reviewer sent you the following from the review.']
+      out = [REPLY_ONLY, finish ? 'The reviewer finished this round.' : 'The reviewer sent you the following from the review.']
       entries.each do |entry|
         next if entry['kind'] == 'finish'
         out << "---\nThread: #{entry['thread_ids'].join(', ')}\n\n#{entry['text']}"
       end
       out << '---'
-      out << "Answer each thread with: dcr reply #{flags} <thread-id> '<what you did or found>'" unless ids.empty?
+      out << "Answer each thread with: dcr reply #{flags} <thread-id> '<your answer: what you found, and what you would change if anything>'" unless ids.empty?
       out << 'Do not resolve threads; the reviewer resolves them. Then run `dcr wait` again for the next round.' unless finish
-      out << 'Finish received: apply any outstanding replies, then stop waiting unless the reviewer asks for another round.' if finish
+      out << 'Finish received: send any outstanding replies, then stop waiting unless the reviewer asks for another round.' if finish
+      out << 'Reminder: reply only. No file changes, no commits, no pushes.'
       out.join("\n\n")
     end
 
