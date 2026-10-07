@@ -830,7 +830,7 @@ dialog.stage::backdrop{background:#16203766;backdrop-filter:blur(4px)}
   .stage-body{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}
   .stage-rail{display:flex;gap:6px;overflow-x:auto;padding:8px 10px;border-right:0;border-bottom:1px solid var(--line)}
   .stage-item{width:auto;min-width:200px;flex:none}
-  .stage-sizes{display:none}
+  .stage-sizes:not(.stage-height){display:none}
   .stage-canvas{padding:14px}
 }
 @media print{dialog.stage{display:none}}

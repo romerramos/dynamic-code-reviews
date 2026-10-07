@@ -22,16 +22,38 @@ module DCR
 
     def valid_path?(path) = path.to_s.match?(PATH) && path.to_s.include?('.')
 
+    CSS_LIMIT = 8 * 1024 * 1024
+    # Icon fonts are never translated by name: the agent chooses each Lucide icon itself.
+    NO_ICONS = Object.new.tap { |source| def source.icon(*) = nil }
+
     # Returns {'html' => document, 'mocks' => counts or nil}. Raises ArgumentError, with advice, when the
     # submission is not usable HTML.
-    def build(raw, title: nil)
+    # css: the project's compiled stylesheets; only the rules the markup uses are kept. page_class: the
+    # classes of the page around it, which rules like `.dark .card` depend on.
+    # Stand-ins are the agent's choices, embedded as given: `<i data-icon="name">` is the Lucide icon the
+    # agent picked (bundled, or fetched from Lucide once and cached); image_map ({src => {'path',
+    # 'credit'}}) points each image at a photo the agent saved. Nothing is mapped by name here: an icon-font
+    # element left in the markup, an unknown icon name or an unmapped image becomes a placeholder and is
+    # listed in mocks, so the agent can choose and submit again.
+    def build(raw, title: nil, css: nil, page_class: nil, image_map: {}, base_dir: Dir.pwd, icons: nil)
       fragment = unwrap(raw)
       mocks = Hash.new(0)
       body = sanitize(fragment)
-      body = icons_in(body, mocks)
-      body = images_in(body, mocks)
-      html = ReviewPreviews.document(body, BASE_CSS, {})
-      {'html' => html, 'mocks' => mocks.empty? ? nil : mocks.to_h, 'title' => title.to_s.strip[0, 120]}
+      unknown = []
+      body = icons_in(body, mocks, icons || ReviewPreviewStandIns::Source.new, unknown)
+      mocks['unknown_icons'] = unknown.uniq if unknown.any?
+      body, found = ReviewPreviewStandIns.apply(body, NO_ICONS, {}, image_map, base_dir: base_dir)
+      mocks.merge!(found) { |_, ours, theirs| ours + theirs } if found
+      page_class = page_class.to_s.split.grep(/\A[\w-]+\z/).uniq.join(' ')
+      styles = BASE_CSS
+      unless css.to_s.empty?
+        raise ArgumentError, "The stylesheets are over #{CSS_LIMIT / 1024 / 1024} MiB." if css.bytesize > CSS_LIMIT
+        kept = ReviewPreviews.prune(ReviewPreviews.parse(css.dup.force_encoding(Encoding::BINARY)), %(<body class="#{page_class}">#{body}))
+        styles = "#{styles}\n#{clean_css(ReviewPreviews.fixed_viewport(kept, 900))}"
+      end
+      html = ReviewPreviews.document(body, styles, {}, page_class.empty? ? nil : page_class)
+      raise ArgumentError, "The preview is over #{LIMIT * 2 / 1024} KiB with its styles and images. Use smaller images or fewer rules." if html.bytesize > LIMIT * 2
+      {'html' => html, 'mocks' => mocks.empty? ? nil : {}.merge(mocks), 'title' => title.to_s.strip[0, 120]}
     end
 
     # A fragment, a body, or a whole document: keep the markup and its styles, nothing around it.
@@ -67,24 +89,19 @@ module DCR
       css.gsub(/@import[^;]*;?/i, '').gsub(%r{url\(\s*["']?\s*(?:https?:)?//[^)]*\)}i, 'none').gsub(/expression\s*\(|behavior\s*:|-moz-binding\s*:/i, 'x')
     end
 
-    def icons_in(html, mocks)
+    # `<i data-icon="name">`, with any classes of its own: the bundled Lucide icon, or Lucide's icon of that
+    # name fetched once. An unknown name becomes a placeholder and is listed for the agent.
+    def icons_in(html, mocks, source, unknown = [])
       html.gsub(%r{<(i|span)\b([^>]*?)\bdata-icon="([a-z0-9-]{1,60})"([^>]*)>\s*</\1>}i) do
         tag, before, name, after = Regexp.last_match.captures
-        path = File.join(ICON_DIR, "#{name}.svg")
-        svg = File.file?(path) ? ReviewPreviewStandIns.clean_svg(File.read(path)) : nil
+        bundled = File.join(ICON_DIR, "#{name}.svg")
+        svg = File.file?(bundled) ? ReviewPreviewStandIns.clean_svg(File.read(bundled)) : source.icon(name, name)
         mocks[svg ? 'icons' : 'placeholders'] += 1
-        %(<#{tag}#{before}#{after} class="review-mock-icon">#{svg || ReviewPreviewStandIns::PLACEHOLDER_ICON}</#{tag}>)
-      end
-    end
-
-    def images_in(html, mocks)
-      html.gsub(/<img\b[^>]*>/i) do |tag|
-        next tag if tag[/\ssrc="([^"]*)"/i, 1].to_s.start_with?('data:image/')
-        width = tag[/\swidth="(\d{1,4})"/i, 1] || '120'
-        height = tag[/\sheight="(\d{1,4})"/i, 1] || width
-        mocks['image_placeholders'] += 1
-        uri = ReviewPreviewStandIns.placeholder_image(width, height)
-        tag.sub(/\ssrc\s*=\s*("[^"]*"|'[^']*')/i, '').sub(/\ssrcset\s*=\s*("[^"]*"|'[^']*')/i, '').sub('<img', %(<img src="#{uri}" data-review-mock="image"))
+        unknown << name unless svg
+        attributes = "#{before}#{after}"
+        classes = attributes[/\sclass="([^"]*)"/i, 1]
+        attributes = attributes.sub(/\sclass="[^"]*"/i, '')
+        %(<#{tag}#{attributes} class="#{[classes, 'review-mock-icon'].compact.join(' ')}">#{svg || ReviewPreviewStandIns::PLACEHOLDER_ICON}</#{tag}>)
       end
     end
   end

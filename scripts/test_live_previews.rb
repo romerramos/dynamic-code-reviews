@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 # Run with ruby scripts/test_live_previews.rb. Template previews the agent builds for a served review.
 require 'tmpdir'
+require 'base64'
 ENV['DCR_CONFIG_DIR'] = Dir.mktmpdir('dcr-config')
 require 'open3'
 require 'rbconfig'
@@ -23,8 +24,9 @@ KEY = 'dynamic-review:abc123:feature:2'
 PATH = 'app/views/orders/show.html.erb'
 
 # --- what an agent may submit -----------------------------------------------------------------
-built = DCR::Previews.build(<<~HTML, title: ' Order page ')
-  <div class="order"><i data-icon="check"></i><i data-icon="no-such-icon"></i>
+OFFLINE = Object.new.tap { |source| def source.icon(*) = nil } # no Lucide downloads in tests
+built = DCR::Previews.build(<<~HTML, title: ' Order page ', icons: OFFLINE)
+  <div class="order"><i class="order__tick" data-icon="check"></i><i data-icon="no-such-icon"></i><i class="fa-solid fa-truck order__truck"></i>
   <img src="https://cdn.example.test/p.png" width="40" height="30" srcset="x 2x">
   <script>alert(1)</script><iframe src="https://evil.test"></iframe><link rel="stylesheet" href="https://evil.test/a.css">
   <a href="javascript:steal()" onclick="steal()">go</a><button onmouseover="x()">Pay</button>
@@ -32,7 +34,8 @@ built = DCR::Previews.build(<<~HTML, title: ' Order page ')
 HTML
 html = built['html']
 assert(html.include?('class="order"') && html.include?('>Pay</button>') && html.include?('color:red'), 'Legitimate markup and styles must survive')
-assert(html.include?('stroke-linecap') && built['mocks'].values_at('icons', 'placeholders', 'image_placeholders') == [1, 1, 1], "Icon and image stand-ins are wrong: #{built['mocks']}")
+assert(html.include?('stroke-linecap') && built['mocks'].values_at('icons', 'placeholders', 'image_placeholders') == [1, 2, 1], "Icon and image stand-ins are wrong: #{built['mocks']}")
+assert(html.include?('class="order__tick review-mock-icon"') && built['mocks']['unknown_icons'] == ['no-such-icon'] && built['mocks']['unmatched'] == ['fa-truck'], "The agent must be told which icons to choose again: #{built['mocks']}")
 %w[<script <iframe <link alert(1) javascript: onclick onmouseover evil.test @import cdn.example.test srcset].each { |bad| assert(!html.include?(bad), "Unsafe content survived: #{bad}") }
 assert(built['title'] == 'Order page', 'The title must be trimmed')
 fenced = DCR::Previews.build("```html\n<p>Hello</p>\n```")
@@ -48,6 +51,16 @@ messages = [
 ]
 assert(messages[0].include?('Submit only HTML') && messages[4].include?('Simplify'), 'Rejections must tell the agent what to do')
 puts 'PASS agent HTML keeps its markup and styles, loses anything that could run or fetch, and prose around it is refused with advice'
+
+# --- real stylesheets: a capture from the app, or a drawn preview given the project's CSS ----------
+stylesheet = '.pane{display:flex;height:100vh}.unused-rule{color:red}.dark .pane{background:#000}@media (min-width:600px){.pane .row{gap:4px}.nowhere{x:y}}' \
+             '@import url(https://evil.test/x.css);.row{background:url(https://evil.test/bg.png)}'
+captured = DCR::Previews.build('<div class="pane"><p class="row">Hi</p></div>', css: stylesheet, page_class: 'dark md:flex')
+doc = captured['html']
+assert(doc.include?('.pane{display:flex;height:900') && doc.include?('.dark .pane') && doc.include?('.pane .row{gap:4px}'), "Rules the markup uses must be kept: #{doc[0, 600]}")
+assert(!doc.include?('unused-rule') && !doc.include?('nowhere') && !doc.include?('evil.test'), 'Unused or remote rules must be dropped')
+assert(doc.include?('<body class="dark">'), 'The page classes must be kept, without classes that are not plain names')
+puts 'PASS a drawn preview given the project stylesheet keeps only the rules its markup uses, safely, inside the page classes around it'
 
 # --- the request lifecycle ---------------------------------------------------------------------
 Dir.mktmpdir('dcr-previews-test') do |directory|
@@ -83,19 +96,28 @@ Dir.mktmpdir('dcr-previews-test') do |directory|
   agent = DCR::State.new(agent_dir)
   agent.request_preview(KEY, PATH)
   out, _err, status = run.call('wait', '--dir', agent_dir, '--timeout', '3')
-  assert(status.success? && out.start_with?('PREVIEW REQUEST. Build the HTML'), 'A preview request opens with its own rule, not the reply-only conversation rule')
+  assert(status.success? && out.start_with?('PREVIEW REQUEST. Draw the HTML'), 'A preview request opens with its own rule, not the reply-only conversation rule')
   assert(!out.include?('REPLY ONLY') && !out.include?('dcr reply'), 'A pure preview request is not a conversation')
-  %w[PREVIEW\ REQUEST:\ app/views/orders/show.html.erb nested\ piece Submit\ ONLY\ HTML data-icon dcr\ preview\ submit dcr\ preview\ fail].each { |needle| assert(out.include?(needle), "The request is missing: #{needle}") }
-  assert(out.include?('check') && out.include?('Do not edit, create or delete anything in the project'), 'The request lists the available icons and forbids project changes')
+  %w[PREVIEW\ REQUEST:\ app/views/orders/show.html.erb everything\ it\ renders Submit\ ONLY\ HTML data-icon dcr\ preview\ submit dcr\ preview\ fail].each { |needle| assert(out.include?(needle), "The request is missing: #{needle}") }
+  assert(out.include?('Do not edit, create or delete anything in the project'), 'The request forbids project changes')
   assert(agent.read.dig('previews', KEY, PATH, 'status') == 'working', 'Printing the request marks it working')
   assert(!out.include?('resolve threads') && out.include?('Then run `dcr wait` again') && out.rstrip.end_with?('Reminder: submit HTML only, change nothing in the project.'), 'A pure preview request has no thread instructions')
+  assert(out.include?('--css') && out.include?('data-icon') && out.include?('--image-map'), 'The agent draws with the real stylesheet and chooses icons and photos')
   out, err, status = run.call('preview', 'submit', '--dir', agent_dir, '--path', PATH, '--title', 'Order', stdin: '<section><h1>Order 7</h1></section>')
   assert(status.success? && out.include?('is ready in the review') && agent.read.dig('previews', KEY, PATH, 'status') == 'ready', "Submitting on stdin failed: #{err}")
   file = File.join(directory, 'p.html')
-  File.write(file, '<p>From a file</p>')
+  File.write(file, '<p>From a file, Reply to Priya Shah…</p>')
   agent.request_preview(KEY, PATH)
   _out, err, status = run.call('preview', 'submit', '--dir', agent_dir, '--path', PATH, '--file', file)
   assert(status.success? && agent.read.dig('previews', KEY, PATH, 'html').include?('From a file'), "Submitting a file failed: #{err}")
+  photo = File.join(directory, 'face.png')
+  File.binwrite(photo, Base64.strict_decode64('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jWZkAAAAASUVORK5CYII='))
+  File.write(file, '<div><img src="avatar.jpg" width="32" height="32" alt="Priya"><img src="unit.jpg" width="80" height="60"></div>')
+  agent.request_preview(KEY, PATH)
+  out, err, status = run.call('preview', 'submit', '--dir', agent_dir, '--path', PATH, '--file', file, '--image-map', JSON.generate('avatar.jpg' => {'path' => photo, 'credit' => 'randomuser.me'}))
+  photo_html = agent.read.dig('previews', KEY, PATH, 'html').to_s
+  assert(status.success? && photo_html.include?('data:image/png;base64,') && !photo_html.include?('avatar.jpg'), "A mapped photo must be embedded: #{err}")
+  assert(out.include?('Images left as placeholders: unit.jpg'), "Unmapped images must be listed for the agent: #{out}")
   agent.request_preview(KEY, PATH)
   _out, err, status = run.call('preview', 'submit', '--dir', agent_dir, '--path', PATH, stdin: "Sure! Here you go:\n<p>x</p>")
   assert(!status.success? && err.include?('Submit only HTML'), 'Prose around the HTML must be refused')

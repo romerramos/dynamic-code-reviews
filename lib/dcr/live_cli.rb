@@ -35,8 +35,8 @@ module DCR
     TEXT
     # Printed when the reviewer asks for a preview: a task that produces HTML, not a conversation.
     PREVIEW_RULE = <<~TEXT.strip
-      PREVIEW REQUEST. Build the HTML described below and submit it with `dcr preview submit`.
-      You may read files, search and run read-only commands, and write one temporary file outside the project. Do not edit, create or delete anything in the project, run the app or console, or run formatters, generators, migrations, installs or git commands that change anything.
+      PREVIEW REQUEST. Draw the HTML described below from the code and submit it with `dcr preview submit`.
+      You may read files, search and run read-only commands, and write temporary files outside the project (your HTML, and stand-in photos you download). Do not edit, create or delete anything in the project, run the app or console, or run formatters, generators, migrations, installs or git commands that change anything.
     TEXT
 
     QA_RULE = <<~TEXT.strip
@@ -47,7 +47,7 @@ module DCR
     USAGE = {
       'wait' => 'dcr wait (--repo ROOT --name SERIES | --dir DIR) [--timeout SECONDS] [--json]',
       'comments' => 'dcr comments (--repo ROOT --name SERIES | --dir DIR) [--json]',
-      'preview' => 'dcr preview submit (--repo ROOT --name SERIES | --dir DIR) --path <template path> [--file FILE] [--title TITLE] | dcr preview fail ... --path <template path> --reason TEXT',
+      'preview' => 'dcr preview submit (--repo ROOT --name SERIES | --dir DIR) --path <template path> [--file FILE] [--title TITLE] [--css STYLESHEET]... [--page-class CLASSES] [--image-map JSON] | dcr preview fail ... --path <template path> --reason TEXT',
       'export' => 'dcr export (--repo ROOT --name SERIES | --dir DIR) [--out FILE]',
       'comment' => 'dcr comment (--repo ROOT --name SERIES | --dir DIR) [--file COMMENTS.json]   (one review comment or an array, as in the review JSON: id, label, decoration, subject, discussion, hunk, side, start, end; stdin when --file is omitted)',
       'reply' => 'dcr reply (--repo ROOT --name SERIES | --dir DIR) [--key KEY] [--json] <thread-id> <text>',
@@ -67,6 +67,9 @@ module DCR
         p.on('--file FILE') { |v| options[:file] = v }
         p.on('--title TITLE') { |v| options[:title] = v }
         p.on('--reason TEXT') { |v| options[:reason] = v }
+        p.on('--image-map JSON') { |v| options[:image_map] = v }
+        p.on('--css FILE') { |v| (options[:css] ||= []) << v }
+        p.on('--page-class CLASSES') { |v| options[:page_class] = v }
         p.on('--timeout SECONDS', Integer) { |v| options[:timeout] = v }
         p.on('--json') { options[:json] = true }
         p.on('--replace MODE', %w[previous-qa all]) { |v| options[:replace] = v.tr('-', '_').to_sym }
@@ -155,13 +158,16 @@ module DCR
     def preview_request(entry, flags)
       <<~TEXT.strip
         PREVIEW REQUEST: #{entry['path']}
-        Build an approximate HTML preview of this template, so the reviewer can see roughly what it renders.
-        1. Read the template. For a ViewComponent also read its Ruby class and sibling template. Find what it renders: partials, other components, helpers. For each nested piece that adds visible markup, read it and include a simplified version in place. Leave out what does not help: tracking snippets, hidden fields, empty wrappers, anything out of context.
-        2. Use realistic example data from tests, fixtures or seeds when you can find it, otherwise plausible values. One state is enough unless the change is about different states.
-        3. It only has to look roughly right. Do not run the app, a console, a renderer or anything that writes data. Do not edit the project: write your HTML to a temporary file outside it.
-        4. Icons: `<i data-icon="name"></i>` with one of these Lucide names: #{Previews.icons.join(', ')}. Any other name becomes a neutral placeholder. Images: `<img src="x" width="120" height="80">`; they become placeholders, so never link to external images, fonts or scripts. No scripts. An inline `<style>` block is welcome: approximate the layout and colours you can find in the app's stylesheets.
-        5. Submit ONLY HTML: the first and last characters of your output must be tags. No headings, explanations, comments about your work or Markdown fences. The page shows your output directly.
-        Submit with: dcr preview submit #{flags} --path #{entry['path']} --file <your-temp-file> --title "<a short title>"
+        Draw this template as HTML, from its code, so the reviewer sees what it renders. Follow the code rather than guessing:
+        1. Read the template. For a ViewComponent also read its Ruby class and sibling template; one preview covers both. Follow everything it renders (partials, other components, helpers) and copy each piece's markup in place with its real tags, class names and icon elements. Replace Ruby with what it would output. Leave out what does not help: tracking snippets, hidden fields, empty wrappers.
+        2. Fill it with realistic example data from tests, fixtures or seeds when you can find it, otherwise plausible values. Choose the state this change is about; one state is enough unless the change is about different states.
+        3. Style it with the app's real CSS: find the compiled stylesheet the layout loads (for example `app/assets/builds/application.css` or `tailwind.css`, or the files under `app/assets/stylesheets`) and pass it with `--css <file>` (repeatable). When the CSS is compiled while the app runs (Sass, Vite, Tailwind) and no built file exists, download the stylesheet the layout links from the running development server to a temporary file (a plain GET, for example `curl -sk https://<app>/vite-dev/entrypoints/application.scss -o /tmp/app.css`) and pass that. Only the rules your markup uses are kept, so keep the class names exactly. Add `--page-class '<classes>'` when rules depend on classes on the page around it (a theme or layout class on `<body>`). Write your own `<style>` only for what the stylesheets cannot give.
+        4. Icons: the preview cannot load the app's icon font, so replace every icon element (`<i class="fa-regular fa-bars-filter inbox__icon"></i>`) with the closest Lucide icon you know: `<i class="inbox__icon" data-icon="list-filter"></i>`, keeping its layout classes and dropping the icon-font ones. Any Lucide name works (https://lucide.dev/icons); choose by meaning, not by spelling.
+        5. Images: never link to remote images, and never draw or generate one yourself. For each `<img>`, find a real free image that fits what it shows, different each time: a person's face for an avatar (randomuser.me, or a generated avatar from DiceBear or RoboHash), a matching photo for anything else (Unsplash, Pexels, Picsum). Download a small version (under 500 KB) to a temporary file and map it: `--image-map '{"<the img src>": {"path": "<file>", "credit": "<site or author>"}}'`. An image you do not map becomes a neutral placeholder. Give each `<img>` its real width and height.
+        6. Size: the reviewer chooses whether the parent wraps the content (Content) or fits it to the height (Fit). If the template fills its parent in the app (a pane, a page shell, a full-height panel), make its root a column that grows (`display: flex; flex-direction: column`, the growing part `flex: 1` with `overflow: auto`, the footer or composer last) and give it no fixed height. A template that only wraps its content needs nothing.
+        7. Write the HTML to a temporary file outside the project. Submit ONLY HTML: the first and last characters must be tags; no headings, explanations, comments about your work or Markdown fences. No scripts.
+        Submit with: dcr preview submit #{flags} --path #{entry['path']} --file <your-temp-file> --css <stylesheet> --title "<a short title>" [--image-map ...]
+        It tells you which icons and images were left as placeholders; map them and submit again.
         If nothing useful can be built: dcr preview fail #{flags} --path #{entry['path']} --reason "<one sentence>"
       TEXT
     end
@@ -218,8 +224,25 @@ module DCR
         return puts("Marked the preview of #{options[:path]} as not possible.")
       end
       raw = options[:file] ? File.read(File.expand_path(options[:file]), Previews::LIMIT + 1) : ($stdin.tty? ? raise(ArgumentError, 'Give the HTML with --file or on stdin') : $stdin.read(Previews::LIMIT + 1))
-      state.submit_preview(options[:path], Previews.build(raw, title: options[:title]), key: options[:key])
+      raw = raw.to_s.dup.force_encoding(Encoding::UTF_8).scrub # a length-limited read is binary; the HTML is text
+      css = Array(options[:css]).map { |path| File.binread(File.expand_path(path)) }.join("\n")
+      image_map, base_dir = json_option(options[:image_map], '--image-map')
+      built = Previews.build(raw, title: options[:title], css: css, page_class: options[:page_class], image_map: image_map, base_dir: base_dir)
+      state.submit_preview(options[:path], built, key: options[:key])
       puts "The preview of #{options[:path]} is ready in the review."
+      mocks = built['mocks'] || {}
+      puts "Icon-font icons left as placeholders: #{mocks['unmatched'].join(', ')}. Replace each with <i data-icon=\"<lucide name>\"></i>, choosing the closest Lucide icon, and submit again." if mocks['unmatched']&.any?
+      puts "Lucide has no icon named: #{mocks['unknown_icons'].join(', ')}. Choose other Lucide names and submit again." if mocks['unknown_icons']&.any?
+      puts "Images left as placeholders: #{mocks['unmatched_images'].join('; ')}. Save a fitting free photo for each (a person for an avatar) and submit again with --image-map '{\"<src>\": {\"path\": \"<file>\", \"credit\": \"<source>\"}}'." if mocks['unmatched_images']&.any?
+    end
+
+    # A JSON object given inline or as a file; [value, the directory relative paths in it resolve against].
+    def json_option(value, flag)
+      return [{}, Dir.pwd] if value.to_s.strip.empty?
+      inline = value.strip.start_with?('{')
+      parsed = JSON.parse(inline ? value : File.read(File.expand_path(value)))
+      raise ArgumentError, "#{flag} must be a JSON object" unless parsed.is_a?(Hash)
+      [parsed, inline ? Dir.pwd : File.dirname(File.expand_path(value))]
     end
 
     COMMENT_FIELDS = %w[id label decoration subject discussion hunk side start end].freeze

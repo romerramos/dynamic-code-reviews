@@ -512,11 +512,17 @@
   // Previews your agent builds while you review (a served review only): ready ones join the list
   // above, the rest are shown as a request in progress.
   const live = {enabled: false, ready: new Map(), pending: new Map()};
+  // A ViewComponent is one thing to preview: its class and its template share a preview and a state.
+  const componentSibling = path => {
+    const other = /_component\.rb$/.test(path) ? path.replace(/\.rb$/, '.html.erb') : /_component\.html\.erb$/.test(path) ? path.replace(/\.html\.erb$/, '.rb') : null;
+    return other && filesByPath.has(other) ? other : null;
+  };
+  const pendingPreview = path => live.pending.get(path) || live.pending.get(componentSibling(path));
   function rebuildPreviews() {
     previewById.clear(); previewsByPath.clear(); notVisualByPath.clear();
     [...(review.previews || []), ...live.ready.values()].forEach(preview => {
       previewById.set(preview.id, preview);
-      preview.files.forEach(path => {
+      new Set(preview.files.flatMap(path => [path, componentSibling(path)]).filter(Boolean)).forEach(path => {
         const target = preview.status === 'not_visual' ? notVisualByPath : previewsByPath;
         if (!target.has(path)) target.set(path, []);
         target.get(path).push(preview);
@@ -546,7 +552,7 @@
   };
   // A file's place in the preview lifecycle: ready, requested, selected or none.
   function previewState(path) {
-    if (live.enabled && !previewsByPath.has(path) && live.pending.has(path)) return live.pending.get(path).status;
+    if (live.enabled && !previewsByPath.has(path) && pendingPreview(path)) return pendingPreview(path).status;
     const hub = lifecycle();
     if (hub.ready.some(item => item.path === path)) return hub.ready.find(item => item.path === path).fresh ? 'fresh' : 'ready';
     if (hub.requested.some(item => item.path === path)) return 'requested';
@@ -600,14 +606,22 @@
   // One place for every preview: a rail of the templates in this review and how each stands, and a canvas
   // that shows the chosen one scaled to fit, at the width of a phone, tablet or desktop.
   const stageEl = $('stage');
-  const stageState = {path: null, width: 1280, example: 0}; // desktop by default; Fit uses the whole canvas
+  // desktop by default; Fit uses the whole canvas. The preview cannot know its parent, so the reader
+  // chooses: a parent that wraps the content, or one it fits, filling the height (a pane, a page).
+  const stageState = {path: null, width: 1280, height: 'content', example: 0};
+  const SCREEN_HEIGHTS = {390: 844, 768: 1024, 1280: 800};
+  // Filling passes the screen's height down: body, the preview wrapper (which otherwise forces its
+  // root to its content height), then the component's root, whose growing part can then use it.
+  const FILL_CSS = 'html.dcr-fill,html.dcr-fill body{height:100%}html.dcr-fill body{margin:0;box-sizing:border-box;display:flex;flex-direction:column}html.dcr-fill body>*{flex:none}html.dcr-fill body>:last-child,html.dcr-fill .review-preview-root>:last-child{flex:1 1 auto!important;height:auto!important;min-height:0!important;max-height:none!important}html.dcr-fill .review-preview-root{display:flex;flex-direction:column}';
   const stageTemplates = () => {
     const paths = new Set([...previewsByPath.keys(), ...notVisualByPath.keys(), ...live.pending.keys()]);
     snapshot.files.filter(previewEligible).forEach(file => paths.add(file.path));
-    return [...paths].map(path => filesByPath.get(path)).filter(Boolean).sort((a, b) => a.path.localeCompare(b.path));
+    // One row per component: its template stands for its class.
+    return [...paths].map(stagePath).filter((path, index, all) => all.indexOf(path) === index).map(path => filesByPath.get(path)).filter(Boolean).sort((a, b) => a.path.localeCompare(b.path));
   };
+  const stagePath = path => /_component\.rb$/.test(path) && componentSibling(path) ? componentSibling(path) : path;
   const stageStatus = path => previewsByPath.get(path)?.some(preview => preview.status === 'rendered') ? 'ready'
-    : notVisualByPath.has(path) ? 'novisual' : live.enabled && live.pending.get(path)?.status || (visualState.previews.includes(path) ? 'selected' : visualState.requested.some(entry => entry.path === path) ? 'requested' : 'none');
+    : notVisualByPath.has(path) ? 'novisual' : live.enabled && pendingPreview(path)?.status || (visualState.previews.includes(path) ? 'selected' : visualState.requested.some(entry => entry.path === path) ? 'requested' : 'none');
   const stageStatusText = {ready: 'Ready', requested: 'Requested', working: 'Your agent is building it', failed: 'Could not be built', selected: 'Selected', none: 'Not previewed', novisual: 'Nothing to see'};
   function renderStageRail() {
     const rail = $('stage-rail');
@@ -625,6 +639,7 @@
     $('stage-examples').innerHTML = '';
     $('stage-caption').textContent = '';
     stageEl.querySelectorAll('[data-stage-width]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.stageWidth) === String(stageState.width)));
+    stageEl.querySelectorAll('[data-stage-height]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.stageHeight === stageState.height)));
     $('stage-title').textContent = file ? file.path.slice(file.path.lastIndexOf('/') + 1) : 'Previews';
     $('stage-sub').textContent = file ? file.path.slice(0, file.path.lastIndexOf('/')) : '';
     stageEl.querySelector('[data-stage-code]').hidden = !file;
@@ -651,7 +666,7 @@
       view.innerHTML = `<div class="stage-message" role="status"><div class="skeleton-frame" aria-hidden="true"><span class="skeleton-line w40"></span><span class="skeleton-block"></span><span class="skeleton-line w80"></span><span class="skeleton-line w60"></span><span class="skeleton-block short"></span></div><p><strong>${waiting ? 'Waiting for your agent to start' : 'Your agent is building this preview'}</strong><br>It reads the template and the pieces it renders, then draws an approximation. You can close this and keep reviewing; it appears here when it is ready.</p></div>`;
       return;
     }
-    const failed = status === 'failed' ? live.pending.get(path) : null;
+    const failed = status === 'failed' ? pendingPreview(path) : null;
     const reason = notVisualByPath.get(path)?.map(preview => preview.note).filter(Boolean).join(' ');
     const action = status === 'novisual' ? '' : `<button type="button" class="act act-primary" data-request-preview="${escape(path)}">${icon('scan-text')}${failed ? 'Try again' : live.enabled ? 'Preview this template' : visualState.previews.includes(path) ? 'Selected for preview' : 'Select for preview'}</button>`;
     view.innerHTML = `<div class="stage-message"><p><strong>${failed ? 'Your agent could not build this preview' : status === 'novisual' ? 'Nothing to preview here' : 'No preview yet'}</strong><br>${escape(failed ? failed.error || 'It did not say why.' : status === 'novisual' ? reason || 'This template renders nothing visual.' : live.enabled ? 'Ask your agent to draw this template, including the pieces it renders. You can keep reviewing while it works.' : 'Select it, then copy one request for every template you want.')}</p>${action}</div>`;
@@ -669,12 +684,29 @@
     const view = $('stage-view');
     const frame = view.querySelector('iframe');
     if (!frame) return;
+    // On a tablet or phone the width choice is hidden: the preview uses the stage as it is.
+    const width = matchMedia('(max-width: 900px)').matches ? 'fit' : stageState.width;
     const room = Math.max(280, view.clientWidth);
-    const wanted = stageState.width === 'fit' ? room : Number(stageState.width);
+    const wanted = width === 'fit' ? room : Number(width);
     const scale = Math.min(1, room / wanted);
     frame.style.width = `${wanted}px`;
     const doc = frame.contentDocument;
-    const height = Math.max(240, doc ? Math.ceil(Math.max(doc.documentElement.scrollHeight, doc.body?.scrollHeight || 0)) : 600);
+    const fill = stageState.height === 'fit';
+    if (doc?.head) {
+      if (!doc.getElementById('dcr-fill')) doc.head.append(Object.assign(doc.createElement('style'), {id: 'dcr-fill', textContent: FILL_CSS}));
+      doc.documentElement.classList.toggle('dcr-fill', fill);
+    }
+    // Fitting, the frame is one screen tall first, so the preview's 100% means that height.
+    // At full width it fills the stage's own height: the canvas minus its padding, caption and example chips (the view
+    // itself grows with what it shows, so it cannot be the measure).
+    const canvas = view.parentElement;
+    const padding = parseFloat(getComputedStyle(canvas).paddingTop) + parseFloat(getComputedStyle(canvas).paddingBottom);
+    const stageHeight = canvas.clientHeight - padding - $('stage-caption').offsetHeight - $('stage-examples').offsetHeight - 16;
+    const screen = SCREEN_HEIGHTS[width] || Math.max(240, Math.floor(stageHeight));
+    // A document is never shorter than its frame, so measure the content in a frame that does not hold it open.
+    frame.style.height = fill ? `${screen}px` : '1px';
+    const content = doc ? Math.ceil(Math.max(doc.documentElement.scrollHeight, doc.body?.scrollHeight || 0)) : 600;
+    const height = Math.max(240, fill ? Math.max(screen, content) : content);
     frame.style.height = `${height}px`;
     frame.style.transform = `scale(${scale})`;
     const device = frame.parentElement;
@@ -684,6 +716,7 @@
   function openStage(path = null) {
     const templates = stageTemplates();
     const ready = templates.find(file => stageStatus(file.path) === 'ready');
+    path = path && stagePath(path);
     stageState.path = path && filesByPath.has(path) ? path : stageState.path && filesByPath.has(stageState.path) ? stageState.path : (ready || templates[0])?.path ?? null;
     stageState.example = 0;
     // Looking at a preview clears its New mark.
@@ -701,6 +734,8 @@
     if (item) { stageState.path = item.dataset.stagePath; stageState.example = 0; renderStage(); requestAnimationFrame(fitStage); return; }
     const width = event.target.closest('[data-stage-width]');
     if (width) { stageState.width = width.dataset.stageWidth; stageEl.querySelectorAll('[data-stage-width]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.stageWidth) === String(stageState.width))); fitStage(); return; }
+    const height = event.target.closest('[data-stage-height]');
+    if (height) { stageState.height = height.dataset.stageHeight; stageEl.querySelectorAll('[data-stage-height]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.stageHeight === stageState.height))); fitStage(); return; }
     const example = event.target.closest('[data-stage-example]');
     if (example) { stageState.example = Number(example.dataset.stageExample); renderStageCanvas(); return; }
     if (event.target.closest('[data-stage-rebuild]')) { document.dispatchEvent(new CustomEvent('review-preview-request', {detail: {path: stageState.path}})); return; }
@@ -783,7 +818,7 @@
     ? {requested: 'Preview requested', working: 'Building preview…', failed: 'Preview failed. Try again'}[status] || 'Preview this template'
     : {selected: 'Selected for preview', requested: 'Preview requested'}[status] || 'Select for preview';
   const previewHint = (status, path) => live.enabled
-    ? ({requested: 'Sent to your agent. You can keep reviewing.', working: 'Your agent is building this preview. You can keep reviewing.', failed: live.pending.get(path)?.error || 'Your agent could not build it.'}[status] || 'Ask your agent to build a preview of this template, including the pieces it renders')
+    ? ({requested: 'Sent to your agent. You can keep reviewing.', working: 'Your agent is building this preview. You can keep reviewing.', failed: pendingPreview(path)?.error || 'Your agent could not build it.'}[status] || 'Ask your agent to build a preview of this template, including the pieces it renders')
     : 'Select this template for your next preview request';
   function previewToggle(file) {
     const list = previewsByPath.get(file.path);
