@@ -690,15 +690,27 @@
     // On a tablet or phone the width choice is hidden: the preview uses the stage as it is.
     const width = matchMedia('(max-width: 900px)').matches ? 'fit' : stageState.width;
     const room = Math.max(280, view.clientWidth);
-    const wanted = width === 'fit' ? room : Number(width);
-    const scale = Math.min(1, room / wanted);
-    frame.style.width = `${wanted}px`;
+    const deviceWidth = Number(width === 'fit' ? room : width);
+    frame.style.width = `${deviceWidth}px`;
     const doc = frame.contentDocument;
     const fill = stageState.height === 'fit';
     if (doc?.head) {
       if (!doc.getElementById('dcr-fill')) doc.head.append(Object.assign(doc.createElement('style'), {id: 'dcr-fill', textContent: FILL_CSS}));
       doc.documentElement.classList.toggle('dcr-fill', fill);
     }
+    // Content wraps both ways. Laid out at the device width, the preview's own width is where its narrower
+    // pieces end (a full-width block is only the page); when everything spans the page, the device width stays.
+    let wanted = deviceWidth;
+    const root = doc?.querySelector('.review-preview-root');
+    if (!fill && root) {
+      const full = root.getBoundingClientRect().width - 1;
+      const ends = [...root.querySelectorAll('*')].map(node => node.getBoundingClientRect()).filter(box => box.width > 0 && box.width < full).map(box => box.right);
+      if (ends.length) {
+        wanted = Math.min(deviceWidth, Math.max(120, Math.ceil(Math.max(...ends) + parseFloat(getComputedStyle(doc.body).paddingRight))));
+        frame.style.width = `${wanted}px`;
+      }
+    }
+    const scale = Math.min(1, room / wanted);
     // Fitting, the frame is one screen tall first, so the preview's 100% means that height.
     // At full width it fills the stage's own height: the canvas minus its padding, caption and example chips (the view
     // itself grows with what it shows, so it cannot be the measure).
@@ -709,7 +721,7 @@
     // A document is never shorter than its frame, so measure the content in a frame that does not hold it open.
     frame.style.height = fill ? `${screen}px` : '1px';
     const content = doc ? Math.ceil(Math.max(doc.documentElement.scrollHeight, doc.body?.scrollHeight || 0)) : 600;
-    const height = Math.max(240, fill ? Math.max(screen, content) : content);
+    const height = fill ? Math.max(screen, content) : Math.max(40, content);
     frame.style.height = `${height}px`;
     frame.style.transform = `scale(${scale})`;
     const device = frame.parentElement;
