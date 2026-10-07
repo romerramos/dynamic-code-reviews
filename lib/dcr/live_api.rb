@@ -1,0 +1,102 @@
+# frozen_string_literal: true
+
+require 'json'
+require 'uri'
+require_relative 'settings'
+require_relative 'state'
+
+module DCR
+  # The JSON routes the served review uses. The HTTP server owns sockets, Host/Origin
+  # and token checks; this class only maps a request to a state change and a response.
+  class LiveAPI
+    POLL_SECONDS = 10 # below the server's per-connection timeout
+    BODY_LIMIT = 4 * 1024 * 1024
+
+    # evidence: callable taking the request hash, for attaching a recording to the series.
+    def initialize(directory, settings: Settings.new, evidence: nil)
+      @state = State.new(directory)
+      @settings = settings
+      @evidence = evidence
+    end
+
+    attr_reader :state
+
+    # Saved browser progress, written into the page before the review script runs so the
+    # server's copy wins over a stale browser one.
+    def bootstrap_script
+      carry_forward
+      blobs = @state.read['blobs'].dup
+      saved = @settings.read
+      blobs[Settings::KEY] = saved unless saved.empty?
+      %(<script>(function(){try{var b=#{JSON.generate(blobs, script_safe: true)};Object.keys(b).forEach(function(k){localStorage.setItem(k,JSON.stringify(b[k]))})}catch(e){}})()</script>)
+    end
+
+    # Returns [status, body_hash]. body is a callable returning the raw request body.
+    def call(method, path, body)
+      uri = URI(path)
+      query = URI.decode_www_form(uri.query.to_s).to_h
+      key = query['key']
+      case [method, uri.path]
+      when ['GET', '/api/state'] then [200, snapshot(key)]
+      when ['GET', '/api/poll'] then [200, poll(key, Integer(query.fetch('since', '-1')))]
+      when ['POST', '/api/state']
+        input = json(body)
+        @state.save_blob(input['key'], input['blob'])
+        [200, {'ok' => true}]
+      when ['GET', '/api/settings'] then [200, @settings.read]
+      when ['POST', '/api/settings'] then [200, @settings.write(json(body))]
+      when ['POST', '/api/evidence']
+        raise ArgumentError, 'Attaching recordings is not available here' unless @evidence
+        [200, @evidence.call(json(body))]
+      when ['POST', '/api/send'] then (input = json(body); [200, {'queued' => @state.send_items(input['key'], input['items']).length}])
+      when ['POST', '/api/message'] then (input = json(body); [200, {'message' => @state.user_message(input['key'], input['id'], input['body'])}])
+      when ['POST', '/api/finish'] then [200, {'entry' => @state.finish(json(body)['key'])}]
+      else [404, {'error' => 'Not found'}]
+      end
+    rescue ArgumentError, KeyError, JSON::ParserError, TypeError => error
+      [400, {'error' => error.message}]
+    end
+
+    private
+
+    def manifest
+      path = File.join(File.dirname(@state.path), 'manifest.json')
+      File.file?(path) ? JSON.parse(File.read(path)) : {}
+    rescue JSON::ParserError
+      {}
+    end
+
+    def carry_forward
+      data = manifest
+      @state.carry_forward(data['name'], data['revisions']) if data['name'] && data['revisions']
+    end
+
+    def json(body)
+      value = JSON.parse(body.call)
+      raise ArgumentError, 'Expected a JSON object' unless value.is_a?(Hash)
+      value
+    end
+
+    def snapshot(key)
+      raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
+      state = @state.read
+      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'latest_revision' => latest_revision,
+       'pending' => state['outbox'].count { |entry| entry['seq'] > state['acked'] && entry['key'] == key }}
+    end
+
+    # The newest saved revision number, so an open page can offer it after the agent publishes one.
+    def latest_revision = manifest['revisions']&.map { |revision| revision['number'] }&.max
+
+    # Long poll: answers as soon as anything changes, or with the unchanged state after a
+    # window so a hidden tab's throttled timers do not matter.
+    def poll(key, since)
+      deadline = Time.now + POLL_SECONDS
+      last_latest = latest_revision
+      loop do
+        current = snapshot(key)
+        return current if current['rev'] != since || current['latest_revision'] != last_latest || Time.now >= deadline
+        sleep 0.4
+      end
+    end
+  end
+end

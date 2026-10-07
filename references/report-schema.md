@@ -158,15 +158,14 @@ The bundled languages are Ruby, JavaScript, TypeScript, HTML/XML, CSS, SQL, JSON
 YAML and shell. No runtime language download occurs.
 
 The report uses daisyUI precompiled CDN assets embedded inline, a 320–340px desktop
-navigator, collapsible file cards, a details dialog, and local notes. `ruby
-scripts/review.rb extract --report <file.html> --out <payload.json>` recovers a
+navigator, collapsible file cards, a details dialog, and local notes. `dcr extract --report <file.html> --out <payload.json>` recovers a
 previous report's captured snapshot and analysis for reuse. Use `--replace` when
 refreshing an existing report's UI; otherwise filenames receive a timestamp.
 
 ## Template previews
 
-Top-level `previews` is written by `scripts/previews.rb` and attached with
-`series.rb previews`; do not hand-author its HTML. Each entry has an `id`, the
+Top-level `previews` is written by `dcr previews render` and attached with
+`dcr series previews`; do not hand-author its HTML. Each entry has an `id`, the
 captured `files` it illustrates (a component's template and class together),
 `status` (`rendered`, `unavailable` or `not_visual`), `source` (`lookbook` or
 `example`), optional `title`, `note` and `width`, and a complete `html` document

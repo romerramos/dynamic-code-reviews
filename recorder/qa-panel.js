@@ -7,9 +7,12 @@
   const panel = document.createElement(standalone ? 'main' : 'section');
   panel.id = 'qa-panel';
   panel.setAttribute('aria-labelledby', 'qa-heading');
+  const instructions = standalone
+    ? 'Your agent has prepared the app for recording. Click <b>Choose QA tab</b>, select the app tab identified by your agent and click <b>Share</b>. The agent detects sharing automatically; no chat reply is needed.'
+    : 'Share the app’s tab to record clips and screenshots, then attach them to a comment.';
   panel.innerHTML = `
-    <header><p class="qa-eyebrow">Live review session</p><h2 id="qa-heading">Record visual QA evidence</h2></header>
-    <p id="qa-instructions">Your agent has prepared the app for recording. Click <b>Choose QA tab</b>, select the app tab identified by your agent and click <b>Share</b>. The agent detects sharing automatically; no chat reply is needed.</p>
+    <header>${standalone ? '<p class="qa-eyebrow">Live review session</p>' : ''}<h2 id="qa-heading">${standalone ? 'Record visual QA evidence' : 'Record the app'}</h2></header>
+    <p id="qa-instructions">${instructions}</p>
     <div class="qa-primary"><button type="button" id="qa-connect">Choose QA tab</button><p id="qa-status" role="status">No active capture</p></div>
     <p id="qa-notice" role="status"></p>
     <details>

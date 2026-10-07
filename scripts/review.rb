@@ -16,6 +16,7 @@ require 'pathname'
 require 'time'
 require_relative 'qa_assets'
 require_relative 'previews'
+require_relative 'dark_theme'
 
 module DynamicReviews
   ASSETS = File.expand_path('../assets', __dir__)
@@ -322,7 +323,7 @@ module DynamicReviews
     snapshot['files'].each { |file| file['hunks'].each { |hunk| hunk['rows'] = diff_rows(hunk) } }
     payload = JSON.generate({'snapshot' => snapshot, 'review' => review}).gsub('<', '\\u003c').gsub('>', '\\u003e').gsub('&', '\\u0026')
     licenses = %w[DAISYUI-LICENSE PRISM-LICENSE lucide/LICENSE glightbox/LICENSE].map { |name| File.read(File.join(ASSETS, 'vendor', name)) }.join("\n")
-    styles = "/* Third-party licenses\n#{licenses}\n*/\n" + File.read(File.join(ASSETS, 'vendor/daisyui.css')) + "\n" + File.read(File.join(ASSETS, 'vendor/glightbox/glightbox.min.css')) + "\n" + File.read(File.join(ASSETS, 'report.css'))
+    styles = "/* Third-party licenses\n#{licenses}\n*/\n" + File.read(File.join(ASSETS, 'vendor/daisyui.css')) + "\n" + File.read(File.join(ASSETS, 'vendor/glightbox/glightbox.min.css')) + "\n" + File.read(File.join(ASSETS, 'report.css')) + ReviewDarkTheme.css(File.read(File.join(ASSETS, 'report.css')))
     prism = LANGUAGES.map { |lang| File.read(File.join(ASSETS, "vendor/prism-#{lang}.min.js")) }.join("\n")
     icons = Dir[File.join(ASSETS, 'vendor/lucide/*.svg')].sort.to_h { |path| [File.basename(path, '.svg'), File.read(path)] }
     scripts = "window.Prism = {manual: true};\nwindow.ReviewIcons = #{JSON.generate(icons)};\n#{prism}\n#{File.read(File.join(ASSETS, 'vendor/glightbox/glightbox.min.js'))}\n#{File.read(File.join(ASSETS, 'review-tools.js'))}\n#{File.read(File.join(ASSETS, 'report.js'))}"

@@ -21,6 +21,7 @@ The helpers do not call an LLM or generate review conclusions on their own.
 - Immutable review snapshots and refreshable browsing pages with complete revision
   navigation. Incremental review
   reuses explanations only when the captured ranges and recorded context match.
+- Display settings in the View menu: light, dark or system colour mode, five syntax themes, and an option to hide whitespace-only changes. A served review remembers them for every review.
 - Reports open on Overview, with one-click video evidence previews. A live local
   review offers Choose QA tab and per-file Request preview controls. The saved
   offline report explains how to request these options later.
@@ -163,6 +164,13 @@ in your projects remain independent of the installation.
 If a destination already exists, Git refuses to clone over it. Compare the existing
 installation first; do not overwrite it or layer another copy over the same name.
 
+## Live review
+
+`dcr serve --repo <root> --name <series>` serves a saved review with
+comment threads (the skill does this by default and opens the page). The reviewer sends a comment to the agent, the agent's `dcr wait` receives it and
+`dcr reply` answers in the open page. The saved HTML never needs the server. Record a clip in the page and attach it to a comment, or run `dcr export` (or use Export HTML) for one offline file that carries your comments, the agent's replies and the recordings. See SKILL.md
+("Live review with the reviewer") for the agent's loop.
+
 ## Use
 
 ```text
@@ -179,7 +187,8 @@ are optional additions to the complete code review. Use **Add to previews** besi
 copy one prompt from the header's **Previews** list to request them in one batch.
 That list also shows which templates are ready, still requested, or not
 previewable, so a rebuilt report never loses track of them. The Overview's
-**Video QA** row separately copies a QA prompt.
+**Visual evidence** line separately copies a video QA prompt. The right-hand
+**Your review** panel repeats the previews state next to your comments.
 Paste either prompt into a coding agent whenever ready. The initial review
 starts no recorder or background wait. For requested video, the agent prepares
 the app tab before opening the sharing controls and records the useful flow
@@ -241,6 +250,10 @@ does not verify that a code defect has been fixed.
 Run from this directory:
 
 ```sh
+ruby scripts/test_dcr.rb
+ruby scripts/test_live.rb
+ruby scripts/test_evidence.rb
+ruby scripts/test_dark_theme.rb
 ruby scripts/test_review.rb
 ruby scripts/test_series.rb
 node scripts/test_ui.js

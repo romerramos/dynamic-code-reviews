@@ -9,8 +9,8 @@ explanations is what saves model tokens.
 ## Continue a series
 
 ```sh
-ruby <skill>/scripts/series.rb list --repo <root>
-ruby <skill>/scripts/series.rb prepare --repo <root> --name <feature> --out <scratch>
+<skill>/bin/dcr series list --repo <root>
+<skill>/bin/dcr series prepare --repo <root> --name <feature> --out <scratch>
 ```
 
 Use a temporary directory outside the repository. This writes:
@@ -127,7 +127,7 @@ hunks and renames receive fresh inspection rather than guessed anchors.
 ## Save and verify
 
 ```sh
-ruby <skill>/scripts/series.rb publish --prepared <scratch> --update <update.json>
+<skill>/bin/dcr series publish --prepared <scratch> --update <update.json>
 ```
 
 The command merges the update, validates complete coverage and comment ranges,
@@ -152,7 +152,7 @@ original snapshots may have the old UI; use the index or current view to browse.
 The whole series folder preserves navigation when copied; an individual HTML
 still renders independently, but sibling history links then need those files.
 
-For UI-only changes, `series.rb refresh --repo <root> --name <feature>` rebuilds
+For UI-only changes, `dcr series refresh --repo <root> --name <feature>` rebuilds
 `current.html` and every revision browsing page from their saved snapshots and
 analysis, with the complete revision selector. This does not create
 a revision, change historical HTML, or claim to review current working files.
@@ -164,7 +164,7 @@ opens the immutable original rendering.
 For a fresh review, use the normal collector and authoring schema, then:
 
 ```sh
-ruby <skill>/scripts/series.rb start --repo <root> --name <feature> --snapshot <snapshot.json> --review <review.json>
+<skill>/bin/dcr series start --repo <root> --name <feature> --snapshot <snapshot.json> --review <review.json>
 ```
 
 Include `context_paths` in the initial review JSON for consulted dependencies.

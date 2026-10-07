@@ -1,7 +1,7 @@
 # UI maintenance guide
 
 This is the established UI contract, not a request to redesign each report.
-Normal review runs use `scripts/review.rb` and author only the review JSON.
+Normal review runs use `dcr` and author only the review JSON.
 Modify the assets only for an explicitly requested UI improvement or a verified
 renderer defect. Keep changes in this personal skill and regenerate the report
 from its original snapshot and analysis when refreshing presentation only.
@@ -54,7 +54,7 @@ from its original snapshot and analysis when refreshing presentation only.
   Detailed metadata belongs in Review details; file/context panels can collapse.
   Preserve Overview, All changes, search, J/K/Z, viewed state and local notes.
 - Keep company-size/reviewer calibration out of visible and embedded report
-  content. Overview starts with What changed: the exact review type/comparison and a short behavioral paragraph. Keep a visible Video QA prompt card and a separate template preview selector after What changed, even after evidence is attached. Then show review comments with their QA evidence, a compact preview list for successful checks, and User comments. Report-revision updates are separate from code changes. Keep the walkthrough in the sidebar, supporting metadata in Review details, and omit routine assessment boilerplate. Show each
+  content. Overview starts with What changed: the exact review type/comparison and a short behavioral paragraph. Keep one quiet Visual evidence line (Copy video QA prompt, Template previews with its state) after What changed, even after evidence is attached; the same preview state is repeated in Your review. Then show review comments with their QA evidence, a compact preview list for successful checks, and User comments. Report-revision updates are separate from code changes. Keep the walkthrough in the sidebar, supporting metadata in Review details, and omit routine assessment boilerplate. Show each
   observation as an individual entry with its path, range, readable subject and
   full discussion. Other evidence sections use
   clear headings, 14px text, generous line spacing and roughly 80ch prose widths.
@@ -211,7 +211,7 @@ and 3840×2160, plus a shorter viewport for edge placement:
    edit/delete, reload persistence, combined copying and clipboard fallback.
    Validate exact copy content with `node scripts/test_ui.js`. At 768×1024,
    check automatic unified mode, navigation, range selection and editor sizing.
-7. For a UI refresh, rebuild the series' current view with `series.rb refresh`.
+7. For a UI refresh, rebuild the series' current view with `dcr series refresh`.
    Original snapshots remain unchanged; a UI refresh is not a new review.
    Navigate newest → oldest → newest through the selector. Check revision text
    clears the native caret and the search input retains at least 40px height in
@@ -310,7 +310,7 @@ once overall; related tests remain reachable through sidebar file links. Finding
 navigation must reveal collapsed files without clearing their viewed mark. Use
 keyboard controls and check narrow-width wrapping and checkbox focus.
 
-`series.rb refresh --record` creates an explicitly requested presentation revision
+`dcr series refresh --record` creates an explicitly requested presentation revision
 without collecting source or altering conclusions or QA evidence. The default
 refresh still updates browsing pages only; original snapshots stay immutable.
 

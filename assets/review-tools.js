@@ -139,6 +139,36 @@ globalThis.ReviewTools = (() => {
     if (lines.length !== comment.end - comment.start + 1) return null;
     return {file, hunk, lines};
   }
+  // Render-time view of a hunk's rows with whitespace-only changes shown as unchanged
+  // context. The captured rows are never altered, so comment anchors and copied code keep
+  // their original lines. Like `git diff -w`, all whitespace is ignored.
+  const squeeze = text => String(text ?? '').replace(/\s+/g, '');
+  function displayRows(rows, mode, ignoreWhitespace) {
+    if (!ignoreWhitespace) return rows;
+    const context = (before, after) => ({kind:'context', text:after.text, old:before.old, new:after.new});
+    if (mode === 'split') {
+      return rows.map(row => row.old?.kind === 'del' && row.new?.kind === 'add' && squeeze(row.old.text) === squeeze(row.new.text)
+        ? {old:context(row.old, row.new), new:context(row.old, row.new)} : row);
+    }
+    const result = [];
+    for (let index = 0; index < rows.length;) {
+      if (rows[index].kind === 'context') { result.push(rows[index++]); continue; }
+      const removed = [], added = [];
+      while (index < rows.length && rows[index].kind === 'del') removed.push(rows[index++]);
+      while (index < rows.length && rows[index].kind === 'add') added.push(rows[index++]);
+      if (removed.length !== added.length) { result.push(...removed, ...added); continue; }
+      // Equal-sized block: fold each matching pair, keeping the genuine changes between
+      // them grouped (removals, then additions) as the diff normally shows them.
+      let runRemoved = [], runAdded = [];
+      const flush = () => { result.push(...runRemoved, ...runAdded); runRemoved = []; runAdded = []; };
+      removed.forEach((row, at) => {
+        if (squeeze(row.text) === squeeze(added[at].text)) { flush(); result.push(context(row, added[at])); }
+        else { runRemoved.push(row); runAdded.push(added[at]); }
+      });
+      flush();
+    }
+    return result;
+  }
   function sourceText(snapshot, comment) {
     const found = anchor(snapshot, comment);
     return found ? found.lines.map(line => `${line[comment.side]} | ${line.text}`).join('\n') : '';
@@ -265,5 +295,5 @@ globalThis.ReviewTools = (() => {
     });
     return {comments, findings:remaining};
   }
-  return {focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, sourceText, commentText, reviewText, overviewFeedback, comparisonText, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  return {focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, displayRows, sourceText, commentText, reviewText, overviewFeedback, comparisonText, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();

@@ -5,7 +5,7 @@ checking: clipping, layout, validation, focus, navigation, loading, or error sta
 Backend-only work needs no decorative browser captures. Choose a few high-value
 states and a short flow; avoid exhaustive screenshots or full-session recordings.
 
-The Video QA banner copies a complete request. Derive the QA plan from saved
+The Copy video QA prompt button copies a complete request. Derive the QA plan from saved
 findings, walkthroughs and changed user flows. Attach finding evidence with its
 comment_id; retain relevant successful flows in Other flows checked.
 
@@ -98,7 +98,7 @@ revision. Use a short factual caption instead of repeating the image in prose.
 Text-only copy does not carry image bytes; share the offline report for evidence.
 
 ```sh
-ruby <skill>/scripts/series.rb qa --repo <root> --name <series> \
+<skill>/bin/dcr series qa --repo <root> --name <series> \
   --revision <latest-number> --update <scratch>/qa.json
 ```
 

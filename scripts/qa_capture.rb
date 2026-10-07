@@ -10,12 +10,15 @@ require 'fileutils'
 require 'timeout'
 require 'net/http'
 require 'time'
+require 'tmpdir'
+require_relative '../lib/dcr/live_api'
 
 module QACapture
   LIMIT = 24 * 1024 * 1024
   ACTIONS = %w[start stop still end status reload].freeze
   SESSION = '.qa-session.json'
   ASSETS = File.expand_path('../recorder', __dir__)
+  LIVE_ASSETS = File.expand_path('../live', __dir__)
   PANEL_CSP = "default-src 'self'; script-src 'self'; style-src 'self'; media-src blob:; img-src 'self' blob:; frame-ancestors 'none'"
   # The served review keeps its own inline scripts and embedded media, and may also load
   # the QA panel and talk to this helper. The saved HTML file keeps its stricter offline policy.
@@ -31,6 +34,13 @@ module QACapture
       if report
         @report = File.expand_path(report)
         raise ArgumentError, 'The review report must be an existing HTML file' unless @report.end_with?('.html') && File.file?(@report) && !File.symlink?(@report)
+        # A served report keeps its conversation threads and progress beside it, in the series.
+        series_dir = File.dirname(@report)
+        attach = lambda do |input|
+          require_relative '../lib/dcr/evidence'
+          DCR::Evidence.attach(series_dir: series_dir, capture_dir: @directory, input: input)
+        end
+        @live = DCR::LiveAPI.new(series_dir, evidence: attach)
       end
       FileUtils.mkdir_p(@directory)
       @token = SecureRandom.hex(24)
@@ -87,9 +97,12 @@ module QACapture
         headers[key.downcase] = value.strip
       end
       raise ArgumentError, 'Invalid Host' unless headers['host'] == "127.0.0.1:#{@port}"
+      return live_api(client, method, path, headers) if @live && path.start_with?('/api/')
       if method == 'GET' && !path.start_with?('/next', '/result/', '/requests/')
         return serve_report(client, path) if @report && (path == '/' || path.match?(%r{\A/(?:revisions/)?[a-z0-9_-]+\.html\z}))
         asset, type = {'/' => ['index.html', 'text/html; charset=utf-8'], '/recorder.js' => ['recorder.js', 'text/javascript'], '/qa-panel.js' => ['qa-panel.js', 'text/javascript'], '/style.css' => ['style.css', 'text/css']}[path]
+        live_asset, live_type = {'/live-tools.js' => ['live-tools.js', 'text/javascript'], '/live.js' => ['live.js', 'text/javascript'], '/live.css' => ['live.css', 'text/css']}[path] if @live
+        return respond(client, 200, File.binread(File.join(LIVE_ASSETS, live_asset)), live_type, REPORT_CSP) if live_asset
         return respond(client, 404, 'Not found', 'text/plain') unless asset
         content = File.binread(File.join(ASSETS, asset)).sub('__QA_TOKEN__', @token)
         return respond(client, 200, content, type)
@@ -199,6 +212,32 @@ module QACapture
       end
     end
 
+    # The served review's conversation routes. Same token and origin rules as recorder
+    # control: the page sends its own origin, the terminal sends none, a foreign page fails.
+    def live_api(client, method, path, headers)
+      raise ArgumentError, 'Invalid review token' unless headers['x-qa-token'] == @token
+      raise ArgumentError, 'Cross-origin review request rejected' unless [nil, @origin].include?(headers['origin'])
+      raise ArgumentError, 'Writes must come from the review page or the terminal' unless method == 'GET' || method == 'POST'
+      if method == 'GET' && path == '/api/export'
+        require_relative '../lib/dcr/export'
+        html, _warnings = DCR::Export.html(File.dirname(@report))
+        name = "#{File.basename(File.dirname(@report))}-review.html"
+        return respond(client, 200, html, 'text/html; charset=utf-8', REPORT_CSP, "Content-Disposition: attachment; filename=\"#{name}\"")
+      end
+      body = -> { read_body(client, headers, DCR::LiveAPI::BODY_LIMIT) }
+      code, payload = @live.call(method, path, body)
+      respond(client, code, JSON.generate(payload), 'application/json', REPORT_CSP)
+    end
+
+    def read_body(client, headers, limit)
+      length = Integer(headers.fetch('content-length'))
+      raise ArgumentError, "Request body must be between 1 byte and #{limit} bytes" unless length.between?(1, limit)
+      raise ArgumentError, 'Chunked bodies are unsupported' if headers['transfer-encoding']
+      body = client.read(length)
+      raise ArgumentError, 'Incomplete request body' unless body&.bytesize == length
+      body
+    end
+
     def small_body(client, headers)
       length = Integer(headers.fetch('content-length'))
       raise ArgumentError, 'Control message too large' unless length.between?(1, 65_536)
@@ -216,16 +255,20 @@ module QACapture
         %(<meta http-equiv="Content-Security-Policy" content="#{REPORT_CSP}">)
       end
       if path == '/'
+        # Saved progress and settings go in first, ahead of the early theme script and the
+        # review script, which each read them once on load.
+        html = html.dup.insert(html.index('<title>') || html.index('<script') || 0, @live.bootstrap_script) if @live
         panel = %(<meta name="qa-token" content="#{@token}"><link rel="stylesheet" href="/style.css"><script src="/qa-panel.js"></script><script src="/recorder.js"></script>)
+        panel += %(<link rel="stylesheet" href="/live.css"><script src="/live-tools.js"></script><script src="/live.js"></script>) if @live
         at = html.rindex('</body>') || html.length
         html = html.dup.insert(at, panel)
       end
       respond(client, 200, html, 'text/html; charset=utf-8', REPORT_CSP)
     end
 
-    def respond(client, code, body, type, csp = PANEL_CSP)
-      reason = {200 => 'OK', 202 => 'Accepted', 204 => 'No Content', 404 => 'Not Found'}.fetch(code, 'Error')
-      client.write("HTTP/1.1 #{code} #{reason}\r\nContent-Type: #{type}\r\nContent-Length: #{body.bytesize}\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nX-Frame-Options: DENY\r\nContent-Security-Policy: #{csp}\r\n\r\n")
+    def respond(client, code, body, type, csp = PANEL_CSP, extra = nil)
+      reason = {200 => 'OK', 202 => 'Accepted', 204 => 'No Content', 400 => 'Bad Request', 404 => 'Not Found'}.fetch(code, 'Error')
+      client.write("HTTP/1.1 #{code} #{reason}\r\nContent-Type: #{type}\r\nContent-Length: #{body.bytesize}\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nX-Frame-Options: DENY\r\nContent-Security-Policy: #{csp}\r\n#{extra ? "#{extra}\r\n" : ''}\r\n")
       client.write(body)
     end
   end
@@ -309,12 +352,20 @@ if $PROGRAM_NAME == __FILE__ && ARGV.first == 'control'
 elsif $PROGRAM_NAME == __FILE__
   options = {port: 0}
   OptionParser.new do |parser|
-    parser.banner = 'Usage: ruby qa_capture.rb --out <capture-directory> [--report <review.html>] [--port 0]'
-    parser.on('--out PATH') { |value| options[:directory] = value }
+    parser.banner = 'Usage: ruby qa_capture.rb (--repo <root> --name <series> | --report <review.html>) [--out <capture-directory>] [--port 0]'
+    parser.on('--out PATH', 'Where recordings are saved; a temporary directory when omitted') { |value| options[:directory] = value }
     parser.on('--report PATH') { |value| options[:report] = value }
+    parser.on('--repo PATH', 'With --name: serve that series\' current review') { |value| options[:repo] = value }
+    parser.on('--name SLUG') { |value| options[:name] = value }
     parser.on('--port NUMBER', Integer) { |value| options[:port] = value }
   end.parse!
-  abort 'Provide --out <capture-directory>' unless options[:directory]
+  if options[:name]
+    abort 'Use a short lowercase series slug' unless options[:name].match?(/\A[a-z0-9]+(?:-[a-z0-9]+)*\z/)
+    options[:report] ||= File.join(File.expand_path(options.fetch(:repo, Dir.pwd)), '.reviews', options[:name], 'current.html')
+  end
+  options.delete(:repo)
+  options.delete(:name)
+  options[:directory] ||= Dir.mktmpdir('dcr-capture-')
   server = QACapture::Server.new(**options)
   $stdout.sync = true
   puts options[:report] ? "Review with QA panel: #{server.url}/#overview" : "QA recorder: #{server.url}"

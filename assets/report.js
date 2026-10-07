@@ -53,6 +53,27 @@
   let editorRange = null;
   let editingID = null;
   let showComments = true;
+  // Display preferences are global to the reviewer, not to one review, so they live under
+  // their own key. A served review mirrors the key to the server (see live/live.js).
+  const settingsKey = 'dynamic-review:settings';
+  const settings = {colorMode:'system', syntaxTheme:'classic', ignoreWhitespace:false};
+  try { Object.assign(settings, JSON.parse(localStorage.getItem(settingsKey) || '{}')); } catch { /* defaults apply */ }
+  if (!['system', 'light', 'dark'].includes(settings.colorMode)) settings.colorMode = 'system';
+  if (!['classic', 'github', 'one', 'solarized', 'dracula'].includes(settings.syntaxTheme)) settings.syntaxTheme = 'classic';
+  settings.ignoreWhitespace = settings.ignoreWhitespace === true;
+  const darkQuery = matchMedia('(prefers-color-scheme: dark)');
+  const shownRows = (hunk, mode) => ReviewTools.displayRows(hunk.rows[mode], mode, settings.ignoreWhitespace);
+  function applySettings() {
+    const root = document.documentElement;
+    root.dataset.theme = settings.colorMode === 'system' ? (darkQuery.matches ? 'dark' : 'light') : settings.colorMode;
+    root.dataset.syntax = settings.syntaxTheme;
+    document.querySelectorAll('[data-color-mode]').forEach(button => button.setAttribute('aria-pressed', button.dataset.colorMode === settings.colorMode));
+    $('syntax-theme').value = settings.syntaxTheme;
+    $('whitespace-toggle').checked = settings.ignoreWhitespace;
+  }
+  function saveSettings() {
+    try { localStorage.setItem(settingsKey, JSON.stringify(settings)); } catch { /* applies to this page only */ }
+  }
   const highlightCache = new Map();
 
   function persist() {
@@ -325,7 +346,7 @@
     const range = (side) => hunk[`${side}_count`] === 0 ? '—' : `${hunk[`${side}_start`]}–${hunk[`${side}_start`] + hunk[`${side}_count`] - 1}`;
     const inlineNote = fileReadingActive() && !comment && !hunk.contextOnly;
     const heading = hunk.contextOnly || inlineNote ? '' : `<tr class="range-heading" id="${comment ? 'expanded-' : ''}${hunk.id}"><td colspan="${columns}"><div class="range-label"><span>CHANGED RANGE</span><span>Before ${range('old')} &nbsp; / &nbsp; After ${range('new')}</span></div><p>${escape(summary)}</p></td></tr>`;
-    const rows = hunk.rows[mode].map(row => {
+    const rows = shownRows(hunk, mode).map(row => {
       if (mode === 'split') return `<tr class="code-row">${splitCells(hunk, row.old, 'old', colored, comment, path)}${splitCells(hunk, row.new, 'new', colored, comment, path)}</tr>`;
       const side = row.kind === 'del' ? 'old' : 'new';
       const marked = rangeClasses(hunk, 'old', row.old, comment, path) + rangeClasses(hunk, 'new', row.new, comment, path);
@@ -335,7 +356,7 @@
     });
     if (inlineNote) {
       const changed = row => mode === 'unified' ? row.kind !== 'context' : row.old?.kind === 'del' || row.new?.kind === 'add';
-      const starts = hunk.rows[mode].flatMap((row, index, all) => changed(row) && (index === 0 || !changed(all[index - 1])) ? [index] : []);
+      const starts = shownRows(hunk, mode).flatMap((row, index, all) => changed(row) && (index === 0 || !changed(all[index - 1])) ? [index] : []);
       const firstChange = starts[0];
       starts.forEach((rowIndex, index) => {
         const id = index === 0 ? hunk.id : `${hunk.id}-change-${index + 1}`;
@@ -415,6 +436,7 @@
     toggle.innerHTML = `${icon('scan-text')}<span>Previews</span>${hub.fresh ? `<b class="header-count is-new">${hub.fresh} new</b>` : hub.ready.length ? `<b class="header-count">${hub.ready.length}</b>` : ''}${waiting ? `<b class="header-count is-pending" title="Selected or requested">${icon('clock')}${waiting}</b>` : ''}`;
     toggle.setAttribute('aria-label', `Template previews: ${hub.ready.length} ready${hub.fresh ? `, ${hub.fresh} new` : ''}, ${hub.requested.length} requested, ${hub.selected.length} selected`);
     document.querySelectorAll('[data-preview-summary]').forEach(node => { node.innerHTML = previewSummary(hub); });
+    document.querySelectorAll('[data-preview-short]').forEach(node => { node.textContent = previewShort(hub); });
     document.querySelectorAll('[data-request-preview]').forEach(button => {
       const status = previewState(button.dataset.requestPreview);
       button.setAttribute('aria-pressed', status === 'selected');
@@ -422,6 +444,10 @@
       button.querySelector('span').textContent = {selected:'Selected for preview', requested:'Preview requested'}[status] || 'Add to previews';
     });
     if ($('previews-dialog').open) $('preview-hub').innerHTML = renderPreviewHub();
+  }
+  // The same state in as few words as fit on a button; empty when there is nothing to say.
+  function previewShort(hub) {
+    return [hub.ready.length && `${hub.ready.length} ready${hub.fresh ? ` (${hub.fresh} new)` : ''}`, hub.requested.length && `${hub.requested.length} requested`, hub.selected.length && `${hub.selected.length} selected`].filter(Boolean).join(' · ');
   }
   function previewSummary(hub) {
     const parts = [hub.ready.length && `${hub.ready.length} ready${hub.fresh ? ` (${hub.fresh} new)` : ''}`, hub.requested.length && `${hub.requested.length} requested`, hub.selected.length && `${hub.selected.length} selected`].filter(Boolean);
@@ -435,9 +461,10 @@
   }
   // Optional evidence requests stay one quiet strip; the review itself leads the page.
   function renderVisualOptions() {
-    const qa = `<div class="evidence-request visual-qa-option">${icon('video')}<div><strong>Video QA</strong><p>Your agent picks checks from the findings and changed flows, records them, and attaches the videos here.</p></div><button type="button" class="btn btn-sm" data-copy-qa>Copy QA prompt</button></div>`;
-    const previews = previewsPossible ? `<div class="evidence-request">${icon('scan-text')}<div><strong>Template previews</strong><p data-preview-summary>${previewSummary(lifecycle())}</p></div><button type="button" class="btn btn-sm" data-open-previews>Open previews</button></div>` : '';
-    return `<section class="evidence-requests" aria-label="Optional visual evidence"><h2>Ask for visual evidence</h2>${qa}${previews}<small>Copying a prompt only prepares text for your coding agent. Nothing runs until you paste it.</small></section>`;
+    // One quiet line. Copying a prompt only prepares text; nothing runs until it is pasted.
+    const qa = `<button type="button" class="btn btn-sm btn-ghost visual-qa-option" data-copy-qa title="Copies a prompt that asks your agent to record the changed flows. Nothing runs until you paste it.">${icon('video')}<span>Copy video QA prompt</span></button>`;
+    const previews = previewsPossible ? `<button type="button" class="btn btn-sm btn-ghost" data-open-previews>${icon('scan-text')}<span>Template previews</span><small data-preview-short>${escape(previewShort(lifecycle()))}</small></button>` : '';
+    return `<section class="evidence-strip" aria-label="Visual evidence"><span>Visual evidence</span>${qa}${previews}</section>`;
   }
   const previewSources = {lookbook: 'Lookbook example', example: 'Example data for this review'};
   const wideScreen = () => matchMedia('(min-width: 1200px)').matches;
@@ -955,6 +982,71 @@
     $('font-larger').disabled = state.codeFontSize === 20;
     persist(); schedulePosition();
   }
+  // --- Your review: what you have said so far, and focus mode -------------------------------
+  const ledgerWide = () => matchMedia('(min-width: 1500px)').matches;
+  function ledgerEntries() {
+    return comments.filter(comment => comment.personal).map(comment => {
+      const found = comment.general ? null : ReviewTools.anchor(snapshot, comment);
+      return {id:comment.id, path:found?.file.path || 'General', resolved:comment.resolved, subject:comment.subject,
+              where:comment.general ? 'General comment' : `${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}`};
+    });
+  }
+  // Open by choice; until you choose, open on a wide screen once there is something to show.
+  const ledgerOpen = () => typeof state.ledgerOpen === 'boolean' ? state.ledgerOpen : ledgerWide() && (ledgerEntries().length > 0 || personalNotes().length > 0);
+  function renderLedger() {
+    const entries = ledgerEntries();
+    const notes = personalNotes();
+    const open = ledgerOpen();
+    document.body.classList.toggle('ledger-open', open);
+    $('ledger').hidden = !open;
+    $('ledger-toggle').setAttribute('aria-expanded', open);
+    const waiting = entries.filter(entry => !entry.resolved).length + notes.length;
+    $('ledger-count').hidden = !waiting;
+    $('ledger-count').textContent = waiting;
+    $('ledger-toggle').setAttribute('aria-label', open ? 'Hide your review' : `Show your review${waiting ? `, ${plural(waiting, 'item')}` : ''}`);
+    if (!open) return;
+    const groups = new Map();
+    entries.forEach(entry => { if (!groups.has(entry.path)) groups.set(entry.path, []); groups.get(entry.path).push(entry); });
+    const row = entry => `<li class="ledger-item" data-ledger="${escape(entry.id)}" data-state="${entry.resolved ? 'resolved' : 'draft'}"><button type="button" class="ledger-jump" data-ledger-jump="${escape(entry.id)}"><span class="ledger-where">${escape(entry.where)}</span><span class="ledger-subject">${escape(entry.subject)}</span></button><div class="ledger-meta"><button type="button" data-resolve="${escape(entry.id)}">${entry.resolved ? 'Reopen' : 'Resolve'}</button><button type="button" data-copy="${escape(entry.id)}">Copy for LLMs</button></div></li>`;
+    const byFile = [...groups].map(([path, list]) => `<section class="ledger-group"><h3>${escape(path)}</h3><ul class="ledger-list">${list.map(row).join('')}</ul></section>`).join('');
+    const stepNotes = notes.length ? `<section class="ledger-group"><h3>Step notes</h3><ul class="ledger-list">${notes.map(note => `<li class="ledger-item" data-state="draft"><button type="button" class="ledger-jump" data-ledger-step="${escape(note.id)}"><span class="ledger-where">${escape(note.title)}</span><span class="ledger-subject">${escape(note.text)}</span></button></li>`).join('')}</ul></section>` : '';
+    const empty = !entries.length && !notes.length ? '<p class="ledger-note">Select lines in a diff and write a comment. What you say, and what your agent answers, collects here.</p>' : '';
+    const previews = previewsPossible ? `<section class="ledger-previews"><strong>Template previews</strong><p data-preview-summary>${previewSummary(lifecycle())}</p><button type="button" class="btn btn-sm btn-soft" data-open-previews>Open previews</button></section>` : '';
+    $('ledger-body').innerHTML = `${empty}${byFile}${stepNotes}${previews}`;
+    $('ledger-footer').dataset.base = entries.length || notes.length ? '1' : '';
+    if (!$('ledger-footer').querySelector('[data-live-footer]')) $('ledger-footer').innerHTML = entries.length || notes.length ? '<button type="button" class="btn btn-sm btn-ghost" data-copy-all>Copy all for LLMs</button>' : '';
+  }
+  function setLedger(open) { state.ledgerOpen = open; persist(); renderLedger(); }
+  $('ledger-toggle').onclick = () => setLedger(!ledgerOpen());
+  $('ledger-close').onclick = () => setLedger(false);
+  function ledgerClick(event) {
+    const jumpTo = event.target.closest('[data-ledger-jump]');
+    const stepTo = event.target.closest('[data-ledger-step]');
+    if (!jumpTo && !stepTo) return;
+    if (stepTo) select(stepTo.dataset.ledgerStep);
+    else {
+      const comment = comments.find(comment => comment.id === jumpTo.dataset.ledgerJump);
+      if (!comment) return;
+      if (comment.general) { select('overview'); $('my-review')?.scrollIntoView({block:'start', behavior:'instant'}); }
+      else jump(comment.hunk, comment.id);
+    }
+    if (!ledgerWide() || document.body.classList.contains('zen')) setLedger(false);
+  }
+
+  function setZen(on) {
+    if (on === document.body.classList.contains('zen')) return;
+    if (on) {
+      if (!focusMode) chooseReadingMode(true);
+      if (!fileReadingActive()) focusFile(Math.max(0, focusIndex));
+    }
+    document.body.classList.toggle('zen', on);
+    $('zen-exit').hidden = !on;
+    if (on) $('zen-exit').focus({preventScroll:true}); else $('zen-toggle').focus({preventScroll:true});
+    renderLedger();
+  }
+  $('zen-toggle').onclick = () => setZen(true);
+  $('zen-exit').onclick = () => setZen(false);
+
   function render() {
     stopQASequence();
     closeComments();
@@ -971,7 +1063,7 @@
     $('next').disabled = !!layer && layers.indexOf(layer) === layers.length - 1;
     ['unified','split'].forEach(mode => { $(mode).setAttribute('aria-pressed', layoutChoice === mode); });
     // The View button names the current setup, so nobody has to open it to know.
-    $('view-summary').textContent = [layoutChoice === 'split' ? 'Split' : 'Unified', focusMode ? 'File by file' : 'Walkthrough', !showComments && 'comments hidden'].filter(Boolean).join(' · ');
+    $('view-summary').textContent = [layoutChoice === 'split' ? 'Split' : 'Unified', focusMode ? 'File by file' : 'Walkthrough', !showComments && 'comments hidden', settings.ignoreWhitespace && 'whitespace hidden'].filter(Boolean).join(' · ');
     $('reading-hint').textContent = focusMode ? 'One file at a time, in walkthrough order. J and K move between files.' : 'Each step shows its files together under its explanation. J and K move between steps.';
     if (fileReadingActive()) {
       $('position').textContent = `File ${focusIndex + 1} of ${focusOrder.length}`;
@@ -981,6 +1073,7 @@
     $('next').setAttribute('aria-label', fileReadingActive() ? 'Next file' : 'Next step');
     $('content').innerHTML = fileReadingActive() ? renderFocus() : layer ? renderStep(layer) : state.view === 'files' ? renderFiles() : renderOverview();
     refreshVisualControls();
+    renderLedger();
     hydratePreviews($('content'));
     paintSelection();
     requestAnimationFrame(updateChangeNavigation);
@@ -1121,6 +1214,7 @@
   document.addEventListener('click', async event => {
     // Keep the checkbox independent from the native disclosure summary.
     if (event.target.closest('.file-viewed')) { event.stopPropagation(); return; }
+    ledgerClick(event);
     const previewRequest = event.target.closest('[data-request-preview]');
     if (previewRequest) {
       event.preventDefault(); event.stopPropagation();
@@ -1339,6 +1433,11 @@
     pane.open = !pane.open;
     if (pane.open && !wideScreen()) pane.scrollIntoView({block: 'nearest'});
   });
+  document.querySelectorAll('[data-color-mode]').forEach(button => button.onclick = () => { settings.colorMode = button.dataset.colorMode; applySettings(); saveSettings(); });
+  $('syntax-theme').onchange = event => { settings.syntaxTheme = event.target.value; applySettings(); saveSettings(); };
+  darkQuery.addEventListener('change', () => { if (settings.colorMode === 'system') applySettings(); });
+  $('whitespace-toggle').onchange = event => { const scroll = $('content').scrollTop; settings.ignoreWhitespace = event.target.checked; saveSettings(); render(); $('content').scrollTop = scroll; };
+  applySettings();
   $('comments-toggle').onchange = event => { const scroll = $('content').scrollTop; showComments = event.target.checked; render(); $('content').scrollTop = scroll; };
   function chooseReadingMode(enabled) {
     focusMode = enabled;
@@ -1381,6 +1480,10 @@
   $('prev').innerHTML = icon('chevron-left');
   $('next').innerHTML = icon('chevron-right');
   $('view-icon').innerHTML = icon('sliders-horizontal');
+  $('ledger-toggle').innerHTML = `${icon('panel-right')}<b id="ledger-count" class="ledger-count" hidden></b>`;
+  $('ledger-close').innerHTML = icon('x');
+  $('zen-toggle').innerHTML = icon('maximize-2');
+  $('zen-exit').innerHTML = `${icon('minimize-2')}<span>Exit focus</span>`;
   // The View menu is a native popover placed under its button, clamped to the viewport.
   $('view-menu').addEventListener('toggle', event => {
     $('view-toggle').setAttribute('aria-expanded', event.newState === 'open');
@@ -1431,6 +1534,10 @@
     const key = event.key.toLowerCase();
     if (key === 'j' || key === 'k') { event.preventDefault(); step(key === 'j' ? 1 : -1); }
     if (key === 'z') chooseReadingMode(!focusMode);
+    if (key === 'f') setZen(!document.body.classList.contains('zen'));
+    if (key === 'l') setLedger(!ledgerOpen());
+    if (key === 'v' && document.body.classList.contains('zen')) document.querySelector('.focus-reader [data-file-viewed]')?.click();
+    if (event.key === 'Escape' && document.body.classList.contains('zen')) setZen(false);
   });
   $('title').textContent = review.title;
   if (review.history) {

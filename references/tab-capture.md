@@ -11,7 +11,7 @@ Start only for requested video or finding-critical capture. First prepare app ac
 and open a tab the harness can control. Then serve the saved review with the QA panel:
 
 ```sh
-ruby <skill>/scripts/qa_capture.rb --out <scratch-captures> --report <root>/.reviews/<series>/current.html
+<skill>/bin/dcr serve --out <scratch-captures> --report <root>/.reviews/<series>/current.html
 ```
 
 Keep the process running during capture (a background shell task). It prints a
@@ -30,7 +30,7 @@ Drive the recorder from the terminal, not through the browser harness. The
 recorder page polls the helper, runs each command in order and returns its result:
 
 ```sh
-ruby <skill>/scripts/qa_capture.rb control --out <same-dir> <action> [--name NAME] [--timeout S]
+<skill>/bin/dcr record --out <same-dir> <action> [--name NAME] [--timeout S]
 ```
 
 Actions: `wait-ready` (block until a tab is shared; default 180 s), `status`,
@@ -84,12 +84,12 @@ older reports; new reports collect template selections locally and copy prompts.
    is recording. PNG comes directly from the live tab stream at its actual
    pixel dimensions via canvas. There is no JPEG re-encoding or screenshot
    upscaling. Match each PNG to its flow and include an informative caption.
-6. Finish with `control end`, attach the evidence with `series.rb qa`, then run
+6. Finish with `control end`, attach the evidence with `dcr series qa`, then run
    `control reload` so the review tab shows the final report with its evidence.
    Open the saved `current.html` in the default browser before stopping the helper.
    This is the final shareable result, including all attached media and previews.
-   If the served tab remains open after shutdown, it restores the normal Video QA
-   prompt banner and stops polling; any unsaved clip stays available for download.
+   If the served tab remains open after shutdown, it restores the normal Copy video QA
+   prompt button and stops polling; any unsaved clip stays available for download.
    Sessions also expire after 10 minutes. If
    setup fails, stop the helper; do not leave a pending capture indefinitely. The
    panel's Manual controls remain available for manual use and trimming.
@@ -143,7 +143,7 @@ private report, or arbitrary local files. End the session to release sharing.
 
 ## One-file review
 
-Use the normal `series.rb qa` command with paths to the generated files:
+Use the normal `dcr series qa` command with paths to the generated files:
 
 ```json
 {

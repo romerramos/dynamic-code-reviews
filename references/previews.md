@@ -12,7 +12,7 @@ the development environment yourself using
 template in a full pass. Mark a template `not_visual` when it only renders Turbo streams,
 JSON, email headers or similar; the report then shows no pane for it. A failing
 example becomes `unavailable` with its error and never blocks the review.
-The full `series.rb previews` command refuses a set that leaves any changed `.html.erb` file or
+The full `dcr series previews` command refuses a set that leaves any changed `.html.erb` file or
 `app/components/**/*_component.rb` unaccounted for, or a `not_visual` entry without a
 reason; the report shows that reason in place of a preview.
 
@@ -64,9 +64,9 @@ Write `spec.json` in the scratch directory, never in the reviewed project:
 
 ```sh
 curl -sk "<app>/<compiled stylesheet URL>" -o <scratch>/app.css   # e.g. the Vite dev entry with ?direct
-ruby <skill>/scripts/previews.rb render --spec <scratch>/spec.json \
+<skill>/bin/dcr previews render --spec <scratch>/spec.json \
   --runner "docker exec -i <web-container> bin/rails runner -" --css <scratch>/app.css --out <scratch>/previews.json
-ruby <skill>/scripts/series.rb previews --repo <root> --name <series> --revision <latest> --update <scratch>/previews.json
+<skill>/bin/dcr series previews --repo <root> --name <series> --revision <latest> --update <scratch>/previews.json
 ```
 
 For a copied selection prompt, validate that each requested path is a
@@ -79,7 +79,7 @@ replaces the targeted set and restores the full coverage gate.
 When QA is also requested, finish both scratch outputs first. Create
 `<scratch>/enrichment.json` containing `{"qa": <QA object>, "previews":
 <previews.json's previews array>}` and attach once with
-`ruby <skill>/scripts/series.rb enrich --repo <root> --name <series> --revision <latest> --update <scratch>/enrichment.json --targeted`.
+`<skill>/bin/dcr series enrich --repo <root> --name <series> --revision <latest> --update <scratch>/enrichment.json --targeted`.
 Omit `--targeted` only for a full preview pass.
 Media paths in its QA object resolve relative to `enrichment.json`; use absolute
 paths or place the files beside it. The combined command validates both sets and

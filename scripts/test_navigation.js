@@ -45,7 +45,7 @@ const sandbox = {
   cancelAnimationFrame(){}, requestAnimationFrame(){return 1;},
   ReviewTools:globalThis.ReviewTools,
   Prism:{languages:{}},
-  document:{getElementById:get,querySelector:selector=>selector.includes('f2') ? plainCard : pairedCard,querySelectorAll:()=>[],createElement:()=>node('inline evidence'),body:node('body'),
+  document:{getElementById:get,querySelector:selector=>selector.includes('f2') ? plainCard : pairedCard,querySelectorAll:()=>[],createElement:()=>node('inline evidence'),body:node('body'),documentElement:node('html'),
     addEventListener(type,fn){(listeners[type] ||= []).push(fn);}},
   window:{ReviewIcons:{},addEventListener(){}},
   localStorage:{getItem:key=>key === 'dynamic-review:reading-mode' ? 'walkthrough' : null,setItem:(key,value)=>{stored=JSON.parse(value);}},

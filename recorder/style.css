@@ -29,3 +29,18 @@ main#qa-panel{max-width:760px;margin:40px auto;font-size:16px}
 #qa-panel .qa-range{display:flex;gap:12px;margin:12px 0}
 #qa-artifacts{padding-left:18px;margin:0}
 #qa-artifacts li{overflow-wrap:anywhere;margin:6px 0;font-size:12px}
+/* In a served review the panel is one slim row that follows the review's colours. */
+section#qa-panel{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 18px;background:transparent;color:inherit;border:1px solid color-mix(in oklab,currentColor 16%,transparent);border-radius:10px;padding:12px 16px;margin:18px 0 22px;font:inherit;font-size:14px}
+section#qa-panel>*{grid-column:1/-1}
+section#qa-panel>header,section#qa-panel>#qa-instructions{grid-column:1}
+section#qa-panel>.qa-primary{grid-column:2;grid-row:1/span 2;margin:0}
+section#qa-panel h2{font-size:15px;color:inherit}
+section#qa-panel #qa-instructions{margin:0;opacity:.72;font-size:13px}
+section#qa-panel .qa-muted,section#qa-panel summary{color:inherit;opacity:.72}
+section#qa-panel button{background:#6048b5;color:#fff}
+section#qa-panel .secondary{background:color-mix(in oklab,currentColor 12%,transparent);color:inherit}
+section#qa-panel #qa-connect{font-size:13px!important;padding:8px 14px!important;box-shadow:none}
+section#qa-panel #qa-status{background:transparent;border:0;padding:0;font-size:12px;opacity:.72}
+section#qa-panel .qa-primary{gap:12px}
+section#qa-panel input,section#qa-panel select,section#qa-panel textarea{background:transparent;color:inherit;border-color:color-mix(in oklab,currentColor 24%,transparent)}
+section#qa-panel #qa-notice{color:inherit;opacity:.85}

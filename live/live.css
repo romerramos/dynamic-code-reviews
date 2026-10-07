@@ -1,0 +1,26 @@
+/* Scoped to the conversation layer; the review keeps its own styles. */
+#dcr-panel[hidden]{display:none!important}
+#dcr-panel{display:grid;gap:8px;width:100%;font-size:13px}
+#dcr-panel .dcr-summary{opacity:.7}
+#dcr-panel .dcr-actions{display:flex;gap:8px;flex-wrap:wrap}
+#dcr-panel .dcr-note{margin:0;font-size:12.5px;opacity:.75}
+#dcr-panel .dcr-note:empty{display:none}
+.ledger-status{font-size:12px}
+.ledger-status:empty{display:none}
+.dcr-thread{margin:10px 0 0;padding-top:10px;border-top:1px dashed color-mix(in oklab,currentColor 18%,transparent)}
+.dcr-message{margin:0 0 8px;padding:8px 10px;border-radius:8px;border-left:3px solid color-mix(in oklab,currentColor 25%,transparent);background:color-mix(in oklab,currentColor 4%,transparent)}
+.dcr-message.dcr-agent{border-left-color:#6048b5;background:color-mix(in oklab,#6048b5 8%,transparent)}
+.dcr-message .dcr-author{display:block;font-size:11px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;opacity:.65}
+.dcr-message p{margin:2px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.dcr-compose textarea{width:100%;font:inherit;font-size:13px;padding:8px;border-radius:8px;border:1px solid color-mix(in oklab,currentColor 22%,transparent);background:transparent;color:inherit;resize:vertical}
+.dcr-compose textarea:focus-visible{outline:2px solid #e09a38;outline-offset:1px}
+.dcr-compose .dcr-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px}
+.dcr-status{font-size:12px;opacity:.7}
+#qa-artifacts .dcr-attach-open{margin-left:6px;font-size:12px;padding:3px 9px}
+#qa-artifacts .dcr-attach{display:grid;gap:8px;margin:8px 0 12px;padding:12px;border:1px solid color-mix(in oklab,currentColor 18%,transparent);border-radius:8px;background:transparent}
+#qa-artifacts .dcr-attach label{display:grid;gap:3px;font-size:12px;font-weight:600;margin:0}
+#qa-artifacts .dcr-attach input,#qa-artifacts .dcr-attach select,#qa-artifacts .dcr-attach textarea{font:inherit;font-size:13px;font-weight:400;padding:6px 8px;border:1px solid color-mix(in oklab,currentColor 24%,transparent);border-radius:6px;width:100%;background:transparent;color:inherit}
+#qa-artifacts .dcr-attach .dcr-status{font-size:12px;opacity:.75}
+/* While the recorder is live in this page, the "copy a QA prompt" card is redundant. */
+body.qa-live .visual-qa-option{display:none}
+body.qa-live .evidence-strip:not(:has(button:not(.visual-qa-option))){display:none}

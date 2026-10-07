@@ -1,0 +1,50 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Single entry point for Dynamic Code Reviews. Dispatches to the helper scripts
+# unchanged, so their options, output and exit codes stay exactly as documented.
+require 'rbconfig'
+
+ROOT = File.expand_path('..', __dir__)
+SCRIPTS = File.join(ROOT, 'scripts')
+
+SERIES_COMMANDS = %w[start prepare publish qa previews enrich refresh list].freeze
+REVIEW_COMMANDS = %w[collect render extract].freeze
+
+USAGE = <<~TEXT
+  Usage: dcr <command> [options]
+
+    collect | render | extract     Snapshot changes, render a standalone report, or read one back
+    series <#{SERIES_COMMANDS.join('|')}>
+                                   Saved review series and their revisions
+    previews render                Render template previews from a spec
+    serve                          Serve a review with the QA recorder panel and live conversation threads
+    wait | comments | reply        The agent's side of a served review: receive the reviewer's comments, list threads, answer one
+    export                         One offline HTML file with comments, replies and recordings baked in
+    record <action>                Control a running recorder (wait-ready, start, still, stop, end, status, reload)
+
+  Run a command with no further arguments to see its own usage.
+TEXT
+
+def run_script(script, *args)
+  exec(RbConfig.ruby, File.join(SCRIPTS, script), *args)
+end
+
+command = ARGV.shift
+case command
+when *REVIEW_COMMANDS then run_script('review.rb', command, *ARGV)
+when 'series'
+  sub = ARGV.shift
+  abort USAGE unless SERIES_COMMANDS.include?(sub)
+  run_script('series.rb', sub, *ARGV)
+when 'previews'
+  abort USAGE unless ARGV.first == 'render'
+  run_script('previews.rb', *ARGV)
+when 'wait', 'comments', 'reply', 'export'
+  require_relative '../lib/dcr/live_cli'
+  DCR::LiveCLI.run(command, ARGV)
+when 'serve' then run_script('qa_capture.rb', *ARGV)
+when 'record' then run_script('qa_capture.rb', 'control', *ARGV)
+when nil, '-h', '--help', 'help' then puts USAGE
+else abort "Unknown command #{command}\n\n#{USAGE}"
+end
