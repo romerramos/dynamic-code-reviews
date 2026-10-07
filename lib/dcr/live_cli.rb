@@ -49,6 +49,7 @@ module DCR
       'comments' => 'dcr comments (--repo ROOT --name SERIES | --dir DIR) [--json]',
       'preview' => 'dcr preview submit (--repo ROOT --name SERIES | --dir DIR) --path <template path> [--file FILE] [--title TITLE] | dcr preview fail ... --path <template path> --reason TEXT',
       'export' => 'dcr export (--repo ROOT --name SERIES | --dir DIR) [--out FILE]',
+      'comment' => 'dcr comment (--repo ROOT --name SERIES | --dir DIR) [--file COMMENTS.json]   (one review comment or an array, as in the review JSON: id, label, decoration, subject, discussion, hunk, side, start, end; stdin when --file is omitted)',
       'reply' => 'dcr reply (--repo ROOT --name SERIES | --dir DIR) [--key KEY] [--json] <thread-id> <text>',
       'evidence' => 'dcr evidence attach (--repo ROOT --name SERIES | --dir DIR) --file ITEMS.json [--replace previous-qa|all]   (ITEMS: [{"path", "title", "result": "passed|failed", "observed", "comment_id"?, "page"?}]; previous-qa, the default, replaces the last QA review; all replaces every recording, only when the reviewer asks to start over)'
     }.freeze
@@ -76,6 +77,7 @@ module DCR
       when 'wait' then wait(state, options)
       when 'comments' then comments(state, options)
       when 'reply' then reply(state, options, argv, parser)
+      when 'comment' then comment(state, options, directory(options, parser))
       when 'export' then export(options, directory(options, parser))
       when 'preview' then preview(state, options, argv, parser)
       when 'evidence' then evidence(options, directory(options, parser), argv, parser)
@@ -218,6 +220,36 @@ module DCR
       raw = options[:file] ? File.read(File.expand_path(options[:file]), Previews::LIMIT + 1) : ($stdin.tty? ? raise(ArgumentError, 'Give the HTML with --file or on stdin') : $stdin.read(Previews::LIMIT + 1))
       state.submit_preview(options[:path], Previews.build(raw, title: options[:title]), key: options[:key])
       puts "The preview of #{options[:path]} is ready in the review."
+    end
+
+    COMMENT_FIELDS = %w[id label decoration subject discussion hunk side start end].freeze
+
+    # While a review is in progress the agent posts each comment as soon as it is sure of it; the
+    # open page shows it beside the code and announces it. `dcr series finish` keeps them.
+    def comment(state, options, directory)
+      require_relative '../../scripts/series'
+      raw = options[:file] ? File.read(File.expand_path(options[:file])) : ($stdin.tty? ? raise(ArgumentError, 'Give the comment JSON with --file or on stdin') : $stdin.read)
+      input = JSON.parse(raw)
+      comments = input.is_a?(Array) ? input : [input]
+      raise ArgumentError, 'Give one comment object or an array of them' if comments.empty? || !comments.all?(Hash)
+      history = ReviewSeries.manifest(directory)
+      payload = ReviewSeries.latest(directory, history)
+      snapshot, review = payload.values_at('snapshot', 'review')
+      raise ArgumentError, 'This review is finished. Comments are posted only while a review is in progress (`dcr series start --in-progress`).' unless review['status'] == 'in_progress'
+      hunks = DynamicReviews.hunk_index(snapshot)
+      ids = Array(review['comments']).map { |existing| existing['id'] }
+      comments = comments.map do |entry|
+        unknown = entry.keys - COMMENT_FIELDS
+        raise ArgumentError, "Unknown comment field(s): #{unknown.join(', ')}" unless unknown.empty?
+        raise ArgumentError, 'A comment discussion must be text' if entry.key?('discussion') && !entry['discussion'].is_a?(String)
+        DynamicReviews.validate_comment(entry, hunks)
+        raise ArgumentError, "Comment id #{entry['id']} is used twice" if ids.include?(entry['id'])
+        ids << entry['id']
+        entry
+      end
+      entry = history['revisions'].last
+      state.post_comments(State.review_key(entry['fingerprint'], history['name'], entry['number']), comments)
+      puts "Posted #{comments.length == 1 ? "comment #{comments.first['id']}" : "#{comments.length} comments"} to the open review."
     end
 
     def reply(state, options, argv, parser)

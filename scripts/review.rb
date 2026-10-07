@@ -224,8 +224,12 @@ module DynamicReviews
   def self.validate(snapshot, review)
     ReviewQA.validate(review['qa'], snapshot, review)
     ReviewPreviews.validate(review['previews'], snapshot, full: review['preview_scope'] != 'targeted')
+    raise ArgumentError, 'Review status can only be in_progress' if review.key?('status') && review['status'] != 'in_progress'
+    # A review published while the agent is still reading assigns every range to the walkthrough,
+    # but explains them only once it is finished.
+    in_progress = review['status'] == 'in_progress'
     files = snapshot.fetch('files').to_h { |file| [file.fetch('id'), file] }
-    hunks = files.values.flat_map { |file| file.fetch('hunks').map { |hunk| [hunk['id'], [file['id'], hunk]] } }.to_h
+    hunks = hunk_index(snapshot)
     covered, seen = [], []
     review.fetch('groups').each do |group|
       group.fetch('layers').each do |layer|
@@ -250,7 +254,7 @@ module DynamicReviews
           raise ArgumentError, "Unknown file: #{fid}" unless files.key?(fid)
           covered << fid
           item.fetch('summaries', {}).each do |hid, summary|
-            raise ArgumentError, "Invalid summary: #{hid}" unless hunks.dig(hid, 0) == fid && summary.is_a?(String) && !summary.strip.empty?
+            raise ArgumentError, "Invalid summary: #{hid}" unless hunks.dig(hid, 0) == fid && summary.is_a?(String) && (in_progress || !summary.strip.empty?)
             seen << hid
           end
         end
@@ -265,19 +269,30 @@ module DynamicReviews
     ids = []
     Array(review['comments']).each do |comment|
       ids << comment.fetch('id')
-      raise ArgumentError, 'Comment ID must be unique and URL-safe' unless comment['id'].match?(/\A[a-zA-Z0-9-]+\z/) && ids.uniq == ids
-      raise ArgumentError, 'Invalid Conventional Comments label' unless LABELS.include?(comment['label'])
-      raise ArgumentError, 'Comment must explicitly be blocking or non-blocking' unless %w[blocking non-blocking].include?(comment['decoration'])
-      raise ArgumentError, 'Comment subject is required' if comment.fetch('subject').strip.empty?
-      side = comment.fetch('side')
-      raise ArgumentError, 'Comment side must be old or new' unless %w[old new].include?(side)
-      hunk = hunks.dig(comment['hunk'], 1)
-      raise ArgumentError, 'Comment must anchor to a collected hunk' unless hunk
-      first, last = comment.values_at('start', 'end')
-      numbers = diff_rows(hunk)['unified'].filter_map { |line| line[side] }
-      unless first.is_a?(Integer) && last.is_a?(Integer) && first <= last && (first..last).all? { |line| numbers.include?(line) }
-        raise ArgumentError, "Comment range is outside its #{side} hunk: #{comment['id']}"
-      end
+      raise ArgumentError, 'Comment ID must be unique and URL-safe' unless ids.uniq == ids
+      validate_comment(comment, hunks)
+    end
+  end
+
+  def self.hunk_index(snapshot)
+    snapshot.fetch('files').flat_map { |file| file.fetch('hunks').map { |hunk| [hunk['id'], [file['id'], hunk]] } }.to_h
+  end
+
+  # One review comment against the captured hunks: also used for comments posted to an open review.
+  def self.validate_comment(comment, hunks)
+    raise ArgumentError, 'A comment must be a JSON object' unless comment.is_a?(Hash)
+    raise ArgumentError, 'Comment ID must be unique and URL-safe' unless comment['id'].is_a?(String) && comment['id'].match?(/\A[a-zA-Z0-9-]+\z/)
+    raise ArgumentError, 'Invalid Conventional Comments label' unless LABELS.include?(comment['label'])
+    raise ArgumentError, 'Comment must explicitly be blocking or non-blocking' unless %w[blocking non-blocking].include?(comment['decoration'])
+    raise ArgumentError, 'Comment subject is required' unless comment['subject'].is_a?(String) && !comment['subject'].strip.empty?
+    side = comment.fetch('side')
+    raise ArgumentError, 'Comment side must be old or new' unless %w[old new].include?(side)
+    hunk = hunks.dig(comment['hunk'], 1)
+    raise ArgumentError, 'Comment must anchor to a collected hunk' unless hunk
+    first, last = comment.values_at('start', 'end')
+    numbers = diff_rows(hunk)['unified'].filter_map { |line| line[side] }
+    unless first.is_a?(Integer) && last.is_a?(Integer) && first <= last && (first..last).all? { |line| numbers.include?(line) }
+      raise ArgumentError, "Comment range is outside its #{side} hunk: #{comment['id']}"
     end
   end
 

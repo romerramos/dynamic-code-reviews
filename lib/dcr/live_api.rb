@@ -94,7 +94,7 @@ module DCR
     def snapshot(key)
       raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
       state = @state.read
-      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'previews' => preview_status(state['previews'][key]), 'latest_revision' => latest_revision, 'listening' => @state.listening?,
+      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'comments' => state['comments'][key] || [], 'previews' => preview_status(state['previews'][key]), 'latest_revision' => latest_revision, 'listening' => @state.listening?,
        'pending' => state['outbox'].count { |entry| entry['seq'] > state['acked'] && entry['key'] == key }}
     end
 

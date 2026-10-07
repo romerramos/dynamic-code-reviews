@@ -8,7 +8,7 @@ require 'rbconfig'
 ROOT = File.expand_path('..', __dir__)
 SCRIPTS = File.join(ROOT, 'scripts')
 
-SERIES_COMMANDS = %w[start prepare publish qa previews enrich refresh list].freeze
+SERIES_COMMANDS = %w[start prepare publish finish qa previews enrich refresh list].freeze
 REVIEW_COMMANDS = %w[collect render extract].freeze
 
 USAGE = <<~TEXT
@@ -20,6 +20,7 @@ USAGE = <<~TEXT
     previews render                Render template previews from a spec
     serve                          Serve a review with the QA recorder panel and live conversation threads
     wait | comments | reply        The agent's side of a served review: receive the reviewer's comments, list threads, answer one
+    comment                        Post a review comment to a review in progress; the open page shows it at once
     preview submit | fail          The agent's side of a template preview request
     evidence attach                The agent's side of a QA request: attach recordings to their comments as one revision
     export                         One offline HTML file with comments, replies and recordings baked in
@@ -42,7 +43,7 @@ when 'series'
 when 'previews'
   abort USAGE unless ARGV.first == 'render'
   run_script('previews.rb', *ARGV)
-when 'wait', 'comments', 'reply', 'export', 'preview', 'evidence'
+when 'wait', 'comments', 'comment', 'reply', 'export', 'preview', 'evidence'
   require_relative '../lib/dcr/live_cli'
   DCR::LiveCLI.run(command, ARGV)
 when 'serve' then run_script('qa_capture.rb', *ARGV)

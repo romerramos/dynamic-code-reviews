@@ -168,6 +168,12 @@ installation first; do not overwrite it or layer another copy over the same name
 
 ## Live review
 
+Invoking the skill opens the review in your browser first, with every changed
+file in reading order and the running app attached when it finds one. The
+agent's comments then arrive beside the code while you read, each with a
+notice; explanations, findings and test results follow as the finished
+review. QA and template previews open once it is done.
+
 `dcr serve --repo <root> --name <series>` serves a saved review with
 comment threads (the skill does this by default and opens the page). The reviewer sends a comment to the agent, the agent's `dcr wait` receives it and
 `dcr reply` answers in the open page. The saved HTML never needs the server. Record a clip in the page and attach it to a comment, or run `dcr export` (or use Export HTML) for one offline file that carries your comments, the agent's replies and the recordings. See SKILL.md

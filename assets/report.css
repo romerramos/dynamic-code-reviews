@@ -837,3 +837,12 @@ dialog.stage::backdrop{background:#16203766;backdrop-filter:blur(4px)}
 
 /* A hidden control must stay hidden whatever display rule its class carries. */
 .act[hidden],.stage-foot[hidden],.stage-examples[hidden]{display:none!important}
+/* A review published while the agent is still writing it. */
+.review-progress{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:start;margin:22px 0 6px;padding:16px 18px;border:1px solid #dcdaf7;border-radius:10px;background:#f6f6fe}
+.review-progress h3{margin:0 0 4px;font-size:15px;font-weight:600;color:var(--ink)}
+.review-progress p{margin:0;font-size:14px;line-height:1.6;color:#4b5263}
+.review-progress .review-progress-count{margin-top:8px;font-size:13px;color:var(--muted)}
+.review-progress-dot{width:10px;height:10px;margin-top:6px;border-radius:50%;background:var(--color-primary);animation:preview-pulse 1.4s ease-in-out infinite}
+.review-in-progress [aria-disabled="true"]{opacity:.45;cursor:not-allowed}
+@media(max-width:740px){.review-progress{grid-template-columns:auto minmax(0,1fr)}.review-progress .btn{grid-column:2}}
+@media(prefers-reduced-motion:reduce){.review-progress-dot{animation:none}}

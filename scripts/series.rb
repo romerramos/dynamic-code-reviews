@@ -3,6 +3,7 @@
 
 # Incremental review storage and reuse. Ruby standard library + Git only.
 require_relative 'review'
+require_relative '../lib/dcr/state'
 require 'cgi'
 require 'securerandom'
 
@@ -210,6 +211,7 @@ module ReviewSeries
     raise ArgumentError, 'Series belongs to another checkout' unless history['repo'] == File.realpath(repo)
     raise ArgumentError, 'Branch changed; choose the correct series or start a new one' unless history['branch'] == branch(repo)
     previous = latest(path, history)
+    raise ArgumentError, 'The latest revision is still in progress; finish it with `dcr series finish` first' if previous.dig('review', 'status') == 'in_progress'
     if history['origin_mode'] == 'pr'
       raise ArgumentError, 'PR series requires explicitly verified --base and --head refs' unless base && head
       current_base = DynamicReviews.git(repo, 'merge-base', DynamicReviews.sha(repo, base), DynamicReviews.sha(repo, head)).strip
@@ -461,9 +463,14 @@ module ReviewSeries
     end
   end
 
-  def start(repo:, name:, report: nil, snapshot: nil, review: nil, **_unused)
+  def start(repo:, name:, report: nil, snapshot: nil, review: nil, in_progress: false, **_unused)
     raise ArgumentError, 'Provide --report or both --snapshot and --review' unless report || (snapshot && review)
+    raise ArgumentError, '--in-progress starts from --snapshot and --review' if in_progress && report
     payload = report ? DynamicReviews.extract(report) : {'snapshot' => read(snapshot), 'review' => read(review)}
+    if in_progress
+      payload['review']['status'] = 'in_progress'
+      assign_outline_ranges(payload['review'], payload.fetch('snapshot'))
+    end
     snapshot = payload.fetch('snapshot')
     root = DynamicReviews.git(repo, 'rev-parse', '--show-toplevel').strip
     raise ArgumentError, 'Report belongs to another checkout' unless snapshot['repo'] == root
@@ -481,8 +488,50 @@ module ReviewSeries
       end
       history = {'version' => 1, 'name' => name, 'repo' => root, 'branch' => branch(root), 'base' => snapshot['base'], 'origin_mode' => snapshot['mode'], 'revisions' => []}
       states = Array(review['findings']).map { |f| {'id' => f['id'], 'status' => 'open', 'change' => 'new', 'title' => f['title'], 'reason' => 'Recorded in the original review.'} }
-      summary = report ? 'Original review imported. Its captured scope and validation remain historical.' : 'Initial review saved as the starting point for this series.'
+      summary = if report then 'Original review imported. Its captured scope and validation remain historical.'
+                elsif in_progress then 'Review in progress: the changes are ready to read while the agent reviews them.'
+                else 'Initial review saved as the starting point for this series.'
+                end
       append(path, history, snapshot, review, {'summary' => summary, 'groups' => {}, 'files' => [], 'finding_states' => states})
+    end
+  end
+
+  # An outline names files, not ranges: give each file's ranges to its first item, unexplained
+  # for now, so the walkthrough shows them and comments can be found in it.
+  def assign_outline_ranges(review, snapshot)
+    ranges = snapshot.fetch('files').to_h { |file| [file['id'], file['hunks'].map { |hunk| hunk['id'] }] }
+    items = Array(review['groups']).flat_map { |group| Array(group['layers']) }.flat_map { |layer| Array(layer['items']) }
+    taken = items.flat_map { |item| (item['summaries'] || {}).keys }
+    items.each do |item|
+      free = Array(ranges[item['file']]) - taken
+      next if item.key?('summaries') || free.empty?
+      item['summaries'] = free.to_h { |id| [id, ''] }
+      taken.concat(free)
+    end
+  end
+
+  # Completes a series started --in-progress: the full review replaces the outline as a new
+  # revision of the same code, so the open page keeps the reader's progress and conversations.
+  # Comments the agent posted to the open page are kept; one with the same id in the review wins.
+  def finish(repo:, name:, review:, **_unused)
+    path = directory(repo, name)
+    locked(path) do
+      history = manifest(path)
+      raise ArgumentError, 'Branch changed; use the original review checkout' unless history['branch'] == branch(repo)
+      payload = latest(path, history)
+      snapshot = payload.fetch('snapshot')
+      raise ArgumentError, 'The latest revision is not in progress; publish increments with `dcr series prepare` and `publish`' unless payload.dig('review', 'status') == 'in_progress'
+      fresh = DynamicReviews.collect(repo: repo, mode: 'series', base: snapshot['base'], head: snapshot['mode'] == 'uncommitted' || snapshot['working_tree'] ? nil : snapshot['head'])
+      raise ArgumentError, 'Code changed while reviewing; start a new series from a fresh snapshot' unless code_key(fresh) == code_key(snapshot) && fresh['head'] == snapshot['head']
+      review = normalize(read(review))
+      %w[history status qa previews preview_scope].each { |field| review.delete(field) }
+      entry = history['revisions'].last
+      posted = DCR::State.new(path).read.dig('comments', DCR::State.review_key(entry['fingerprint'], name, entry['number'])) || []
+      own = Array(review['comments']).map { |comment| comment['id'] }
+      review['comments'] = Array(review['comments']) + posted.reject { |comment| own.include?(comment['id']) }
+      review['context'] = contexts(snapshot, review.delete('context_paths')) if review['context_paths']
+      states = Array(review['findings']).map { |f| {'id' => f['id'], 'status' => 'open', 'change' => 'new', 'title' => f['title'], 'reason' => 'Recorded in the full review.'} }
+      append(path, history, snapshot, review, {'summary' => 'Full review ready: walkthrough explanations, findings and validation.', 'groups' => {}, 'files' => [], 'finding_states' => states})
     end
   end
 
@@ -561,14 +610,15 @@ module ReviewSeries
     command = argv.shift
     options = {}
     parser = OptionParser.new do |p|
-      p.banner = 'ruby series.rb start|prepare|publish|qa|previews|enrich|refresh|list [options]'
+      p.banner = 'ruby series.rb start|prepare|publish|finish|qa|previews|enrich|refresh|list [options]'
       %w[repo name report snapshot review out head base prepared update revision].each { |key| p.on("--#{key} VALUE") { |value| options[key.to_sym] = value } }
       p.on('--working-tree', 'Include current working files with the verified PR head') { options[:working_tree] = true }
       p.on('--record', 'Save an intentional reassessment or a presentation-only refresh revision') { options[:record] = true }
       p.on('--targeted', 'Attach only requested preview files, preserving existing examples') { options[:targeted] = true }
+      p.on('--in-progress', 'start: publish an outline to read while the review is still being written') { options[:in_progress] = true }
     end
     parser.parse!(argv)
-    raise ArgumentError, parser.to_s unless %w[start prepare publish qa previews enrich refresh list].include?(command)
+    raise ArgumentError, parser.to_s unless %w[start prepare publish finish qa previews enrich refresh list].include?(command)
     result = public_send(command, **options)
     puts result.is_a?(String) ? result : JSON.pretty_generate(result)
   end

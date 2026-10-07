@@ -227,6 +227,46 @@ module SeriesChecks
         end
       end
     end
+    checks['opens an outline in progress, keeps posted comments and finishes as the next revision'] = lambda do
+      require_relative '../lib/dcr/live_cli'
+      ReviewChecks.fixture do |root, _commit|
+        Dir.mktmpdir('review-in-progress-') do |out|
+          File.write(File.join(root, 'sample.rb'), "class Sample\n  def value\n    2\n  end\nend\n")
+          snapshot = DynamicReviews.collect(repo: root)
+          file = snapshot['files'].first
+          hid = file['hunks'].first['id']
+          outline = {'title' => 'Sample review', 'summary' => '', 'groups' => [{'title' => 'Values', 'summary' => 'Values.', 'layers' => [{'title' => 'Return a value', 'items' => [{'file' => file['id']}]}]}]}
+          File.write(File.join(out, 'snapshot.json'), JSON.generate(snapshot))
+          File.write(File.join(out, 'outline.json'), JSON.generate(outline))
+          rejects('An unexplained review was saved as finished') { ReviewSeries.start(repo: root, name: 'live-check', snapshot: File.join(out, 'snapshot.json'), review: File.join(out, 'outline.json')) }
+          first = ReviewSeries.start(repo: root, name: 'live-check', snapshot: File.join(out, 'snapshot.json'), review: File.join(out, 'outline.json'), in_progress: true)
+          opened = DynamicReviews.extract(first)['review']
+          assert(opened['status'] == 'in_progress', 'The outline was not marked in progress')
+          assert(opened.dig('groups', 0, 'layers', 0, 'items', 0, 'summaries') == {hid => ''}, 'The outline did not give the walkthrough its ranges')
+          series = File.dirname(File.dirname(first))
+          state = DCR::State.new(series)
+          comment = {'id' => 'value-two', 'hunk' => hid, 'side' => 'new', 'start' => 3, 'end' => 3, 'label' => 'question', 'decoration' => 'non-blocking', 'subject' => 'Why two?'}
+          post = lambda do |value|
+            File.write(File.join(out, 'comment.json'), JSON.generate(value))
+            DCR::LiveCLI.comment(state, {file: File.join(out, 'comment.json')}, series)
+          end
+          post.call(comment)
+          key = DCR::State.review_key(snapshot['fingerprint'], 'live-check', 1)
+          assert(state.read.dig('comments', key).map { |entry| entry['id'] } == ['value-two'], 'The posted comment is not on the open review')
+          rejects('A duplicate comment id was posted') { post.call(comment) }
+          rejects('A comment outside its hunk was posted') { post.call(comment.merge('id' => 'far', 'start' => 40, 'end' => 40)) }
+          rejects('An increment built on an unfinished review') { ReviewSeries.prepare(repo: root, name: 'live-check', out: File.join(out, 'prepared')) }
+          full = outline.merge('summary' => 'Return two.', 'groups' => [{'title' => 'Values', 'summary' => 'Values.', 'layers' => [{'title' => 'Return a value', 'items' => [{'file' => file['id'], 'summaries' => {hid => 'Return two.'}}]}]}])
+          File.write(File.join(out, 'full.json'), JSON.generate(full))
+          second = ReviewSeries.finish(repo: root, name: 'live-check', review: File.join(out, 'full.json'))
+          finished = DynamicReviews.extract(second)['review']
+          assert(!finished.key?('status') && finished['history']['revision'] == 2, 'Finishing did not save a complete next revision')
+          assert(finished['comments'].map { |entry| entry['id'] } == ['value-two'], 'Finishing lost the comment posted while in progress')
+          rejects('A finished review was finished again') { ReviewSeries.finish(repo: root, name: 'live-check', review: File.join(out, 'full.json')) }
+          rejects('A comment was posted to a finished review') { post.call(comment.merge('id' => 'late')) }
+        end
+      end
+    end
     checks['attaches QA and previews in one immutable revision'] = lambda do
       ReviewChecks.fixture do |root, _commit|
         Dir.mktmpdir('review-enrich-check-') do |out|

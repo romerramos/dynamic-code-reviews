@@ -54,10 +54,12 @@ Dir.mktmpdir('dcr-live-test') do |directory|
   fp = 'a' * 64
   carry.save_blob("dynamic-review:#{fp}:feat:1", {'resolvedComments' => ['c1']})
   carry.send_items("dynamic-review:#{fp}:feat:1", [{'id' => 'c1', 'text' => 'x'}])
+  carry.post_comments("dynamic-review:#{fp}:feat:1", [{'id' => 'posted'}])
   revisions = [{'number' => 1, 'fingerprint' => fp}, {'number' => 2, 'fingerprint' => fp}, {'number' => 3, 'fingerprint' => 'b' * 64}]
   carry.carry_forward('feat', revisions)
   carried = carry.read
   assert(carried['blobs']["dynamic-review:#{fp}:feat:2"] == {'resolvedComments' => ['c1']}, 'Progress was not carried to the same-code revision')
+  assert(!carried['comments'].key?("dynamic-review:#{fp}:feat:2"), 'Comments posted while in progress belong to the finished revision, not to a carried copy')
   assert(carried['threads']["dynamic-review:#{fp}:feat:2"]['c1']['live'] == true, 'Threads were not carried to the same-code revision')
   assert(carried['blobs'].keys.none? { |name| name.include?(':feat:3') } && carried['threads'].keys.none? { |name| name.include?(':feat:3') }, 'A different snapshot must not inherit progress')
   carry.agent_reply('c1', 'answer')

@@ -18,7 +18,10 @@ module DCR
     KEY = /\A[A-Za-z0-9_.:-]{1,300}\z/
     AUTHORS = %w[user agent].freeze
 
-    def self.empty = {'version' => 1, 'rev' => 0, 'blobs' => {}, 'threads' => {}, 'previews' => {}, 'outbox' => [], 'acked' => 0, 'seq' => 0}
+    def self.empty = {'version' => 1, 'rev' => 0, 'blobs' => {}, 'threads' => {}, 'previews' => {}, 'comments' => {}, 'outbox' => [], 'acked' => 0, 'seq' => 0}
+
+    # The key the page saves a revision's progress under (see LiveTools.progressKey).
+    def self.review_key(fingerprint, series, number) = "dynamic-review:#{fingerprint}:#{series}:#{number}"
 
     attr_reader :path
 
@@ -100,7 +103,7 @@ module DCR
     def carry_forward(series, revisions)
       pairs = revisions.sort_by { |revision| revision['number'] }.each_cons(2).select { |old, new| old['fingerprint'] == new['fingerprint'] }
       return if pairs.empty?
-      key = ->(revision) { "dynamic-review:#{revision['fingerprint']}:#{series}:#{revision['number']}" }
+      key = ->(revision) { self.class.review_key(revision['fingerprint'], series, revision['number']) }
       update do |state|
         pairs.each do |old, new|
           from, to = key.call(old), key.call(new)
@@ -186,6 +189,23 @@ module DCR
 
     def finish(key)
       update { |state| enqueue(state, 'finish', key, [], 'The reviewer finished this review round.') }
+    end
+
+    # --- comments posted while the review is in progress --------------------------------
+
+    # The agent's review comments, shown on the open page as it writes them. They belong to this
+    # revision only: `series finish` saves them into the full review, which embeds them.
+    def post_comments(key, comments)
+      check_key(key)
+      update do |state|
+        posted = (state['comments'][key] ||= [])
+        taken = posted.map { |comment| comment['id'] }
+        comments.each { |comment| raise ArgumentError, "Comment #{comment['id']} was already posted; use a new id" if taken.include?(comment['id']) }
+        raise ArgumentError, 'At most 200 comments can be posted to one review' if posted.length + comments.length > 200
+        stamp = Time.now.utc.iso8601
+        posted.concat(comments.map { |comment| comment.merge('posted_at' => stamp) })
+        comments
+      end
     end
 
     # --- a QA pass recorded by the agent ------------------------------------------------

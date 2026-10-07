@@ -623,14 +623,47 @@
     if (show) { arrival.hidden = true; window.ReviewPreviews?.show(show.dataset.dcrShowPreview); }
   });
 
+  // --- comments posted while the review is in progress -------------------------------------------
+  // They join the review where they belong (Overview, the code, Your review) and announce
+  // themselves, wherever the reader is. Those already there when the page opens are not news.
+  let postedKnown = false;
+  const receiveComments = list => {
+    const known = new Set((review.comments ||= []).map(comment => comment.id));
+    const fresh = list.filter(comment => !known.has(comment.id));
+    if (!fresh.length) { postedKnown = true; return; }
+    review.comments.push(...fresh);
+    window.ReviewLive?.addComments(fresh);
+    if (postedKnown) announceComments(fresh);
+    postedKnown = true;
+  };
+  const announceComments = list => {
+    const first = list[0];
+    arrival.innerHTML = `<span class="dcr-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span><div><strong>${list.length === 1 ? 'Your agent left a comment' : `Your agent left ${list.length} comments`}</strong><span>${tools.escape(first.subject)}</span></div><button type="button" class="btn btn-sm btn-primary" data-ledger-jump="${tools.escape(first.id)}">View</button><button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
+    arrival.hidden = false;
+    clearTimeout(arrivalTimer);
+    arrivalTimer = setTimeout(() => { arrival.hidden = true; }, 12000);
+  };
+  // The finished review is a new revision of the same code: progress and conversations come along.
+  let finishedAnnounced = false;
+  const announceFinished = () => {
+    if (finishedAnnounced || !review.status || !latest || latest <= (review.history?.revision || 0)) return;
+    finishedAnnounced = true;
+    clearTimeout(arrivalTimer);
+    arrival.innerHTML = `<span class="dcr-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><div><strong>Your review is ready</strong><span>Your progress is kept.</span></div><button type="button" class="btn btn-sm btn-primary" data-dcr-open-latest>Open it</button><button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
+    arrival.hidden = false;
+  };
+  arrival.addEventListener('click', event => { if (event.target.closest('[data-dcr-open-latest]')) { history.replaceState(null, '', '/#overview'); location.reload(); } });
+
   // --- sync ----------------------------------------------------------------------------------
   const apply = data => {
     threads = data.threads; rev = data.rev; latest = data.latest_revision; listening = data.listening; online = true; previews = data.previews || {};
+    receiveComments(data.comments || []);
     if (!seenKnown) { tools.unseen(threads, seen).forEach(item => seen.add(item.id)); saveSeen(); seenKnown = true; }
     const arrived = tools.unseen(threads, seen).filter(item => !announced.has(item.id));
     arrived.forEach(item => announced.add(item.id));
     decorate(); decorateLedger(); renderPanel(); renderUnsent(); renderAgent(); refreshUnread();
     announce(arrived);
+    announceFinished();
     syncPreviews();
   };
   const refresh = async () => apply(await api(`/api/state?key=${encodeURIComponent(key)}`));

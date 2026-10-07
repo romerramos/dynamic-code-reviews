@@ -13,6 +13,8 @@
   const layers = review.groups.flatMap((group, groupIndex) => group.layers.map((layer, layerIndex) => ({...layer, group, id:`g${groupIndex}l${layerIndex}`})));
   const feedback = ReviewTools.overviewFeedback(review);
   const generatedComments = feedback.comments;
+  // Published before the agent finished: the reader starts on the code while comments arrive.
+  const inProgress = review.status === 'in_progress';
   let comments = [];
   const storageKey = `dynamic-review:${snapshot.fingerprint}${review.history ? `:${review.history.series}:${review.history.revision}` : ""}`;
   let saved = {};
@@ -468,7 +470,7 @@
     const colored = highlights(hunk, path);
     const range = (side) => hunk[`${side}_count`] === 0 ? '—' : `${hunk[`${side}_start`]}–${hunk[`${side}_start`] + hunk[`${side}_count`] - 1}`;
     const inlineNote = fileReadingActive() && !comment && !hunk.contextOnly;
-    const heading = hunk.contextOnly || inlineNote ? '' : `<tr class="range-heading" id="${comment ? 'expanded-' : ''}${hunk.id}"><td colspan="${columns}"><div class="range-label"><span>CHANGED RANGE</span><span>Before ${range('old')} &nbsp; / &nbsp; After ${range('new')}</span></div><p>${escape(summary)}</p></td></tr>`;
+    const heading = hunk.contextOnly || inlineNote ? '' : `<tr class="range-heading" id="${comment ? 'expanded-' : ''}${hunk.id}"><td colspan="${columns}"><div class="range-label"><span>CHANGED RANGE</span><span>Before ${range('old')} &nbsp; / &nbsp; After ${range('new')}</span></div>${summary ? `<p>${escape(summary)}</p>` : ''}</td></tr>`;
     const rows = shownRows(hunk, mode).map(row => {
       if (mode === 'split') return `<tr class="code-row">${splitCells(hunk, row.old, 'old', colored, comment, path)}${splitCells(hunk, row.new, 'new', colored, comment, path)}</tr>`;
       const side = row.kind === 'del' ? 'old' : 'new';
@@ -486,7 +488,7 @@
         rows[rowIndex] = rows[rowIndex].replace('<tr class="code-row">', `<tr class="code-row change-anchor" id="${id}">`);
       });
       const note = `<button class="review-note-trigger" aria-expanded="false" aria-haspopup="dialog" popovertarget="note-${hunk.id}" aria-label="Read review note for this change" title="Review note">${icon('sticky-note')}</button><aside id="note-${hunk.id}" class="review-note-popover comment-popover" popover="auto" role="dialog" aria-label="Review note"><header class="popover-heading"><strong>Review note</strong><button class="btn btn-xs btn-circle btn-ghost" popovertarget="note-${hunk.id}" popovertargetaction="hide" aria-label="Close review note">✕</button></header><section class="popover-comment"><p>${escape(summary || 'Changed section')}</p><small>Before ${range('old')} · After ${range('new')}</small></section></aside>`;
-      if (firstChange !== undefined) {
+      if (summary && firstChange !== undefined) {
         const row = rows[firstChange];
         const gutters = [...row.matchAll(/<td class="gutter[^>]*>[\s\S]*?<\/td>/g)];
         const available = gutters.find(cell => !cell[0].includes('comment-trigger'));
@@ -725,6 +727,37 @@
   // Open the stage on a template's preview.
   function showPreview(path) { openStage(path); }
   window.ReviewPreviews = {set: setLivePreviews, show: showPreview};
+  // A served review in progress receives the agent's comments as it writes them (live/live.js).
+  function addLiveComments(list) {
+    const known = new Set(generatedComments.map(comment => comment.id));
+    const added = list.filter(comment => !known.has(comment.id) && ReviewTools.anchor(snapshot, comment)).map(comment => ({...comment}));
+    if (!added.length) return [];
+    generatedComments.push(...added);
+    refreshComments();
+    const scroll = $('content').scrollTop;
+    render(); $('content').scrollTop = scroll;
+    return added;
+  }
+  window.ReviewLive = {addComments: addLiveComments, inProgress};
+  // Until the review is finished, QA and template previews wait: they build on its comments and
+  // would compete with it for the agent. The controls stay visible, greyed, and say why.
+  const LOCKED = '[data-open-previews], [data-copy-qa], [data-request-preview], [data-preview-toggle], [data-try="qa"], [data-try-preview], [data-try-all], [data-start-qa], [data-empty-qa], [data-view="previews"], #qa-connect';
+  if (inProgress) {
+    document.body.classList.add('review-in-progress');
+    const lock = () => document.querySelectorAll(LOCKED).forEach(node => {
+      if (node.getAttribute('aria-disabled') === 'true') return;
+      node.setAttribute('aria-disabled', 'true');
+      node.title = 'Available once your agent finishes the review';
+    });
+    new MutationObserver(lock).observe(document.body, {childList: true, subtree: true});
+    lock();
+    document.addEventListener('click', event => {
+      if (!event.target.closest?.(LOCKED)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      toast('Template previews and QA open once your agent finishes the review.');
+    }, true);
+  }
   function openPreviewHub() {
     $('preview-hub').innerHTML = renderPreviewHub();
     $('previews-dialog').showModal();
@@ -1149,8 +1182,9 @@
     const revision = review.history;
     const qa = review.qa;
     const historyLinks = revision ? `<nav class="overview-history" aria-label="Review history"><a href="${revision.preview ? '' : '../'}current.html">Latest review</a><a href="${revision.preview ? '' : '../'}index.html">All revisions</a></nav>` : '';
-    const empty = !generated.length && !feedback.findings.length && !pending && !unlinkedFlows().some(({flow}) => flow.result === 'failed') ? '<p class="review-empty">No issues found in this review.</p>' : '';
-    return `<div class="overview-reading"><header class="overview-intro"><p class="eyebrow">Review overview</p><h1>${escape(review.title)}</h1><h2 class="what-changed-title">What changed</h2><p class="overview-scope">${escape(ReviewTools.comparisonText(snapshot, review))}</p><p class="lead">${escape(review.summary)}</p>${revision && revision.revision > 1 ? `<p class="overview-update"><strong>Review revision ${revision.revision}</strong> · ${escape(revision.summary)}</p>` : ''}${historyLinks}</header>${renderVisualOptions()}${pending ? `<p class="overview-notice">${pending} previous finding${pending === 1 ? '' : 's'} still need checking. See Review details.</p>` : ''}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${generated.map(commentCard).join('')}${unlinkedFlows().filter(({flow}) => flow.result === 'failed').map(({flow,index}) => qaFlow(flow,index)).join('')}</section>${renderOtherChecks()}${renderMyReview()}</div>`;
+    const empty = !generated.length && !feedback.findings.length && !pending && !unlinkedFlows().some(({flow}) => flow.result === 'failed') ? `<p class="review-empty">${inProgress ? 'No comments yet. They appear here as your agent writes them.' : 'No issues found in this review.'}</p>` : '';
+    const progressBox = inProgress ? `<div class="review-progress" role="status"><span class="review-progress-dot" aria-hidden="true"></span><div><h3>Your review is in progress</h3><p>Start reading now. Your agent's comments appear here and beside the code as it writes them, with a notice when one arrives, even on a file you already read. Explanations, test results and the finished walkthrough follow. Template previews and QA open once it is done.</p><p class="review-progress-count">${generated.length ? `${generated.length} comment${generated.length === 1 ? '' : 's'} so far` : 'No comments yet'}</p></div><button type="button" class="btn btn-sm btn-primary" data-start-reading>Start reading ${icon('arrow-right')}</button></div>` : '';
+    return `<div class="overview-reading"><header class="overview-intro"><p class="eyebrow">Review overview</p><h1>${escape(review.title)}</h1><h2 class="what-changed-title">What changed</h2><p class="overview-scope">${escape(ReviewTools.comparisonText(snapshot, review))}</p><p class="lead">${escape(review.summary)}</p>${revision && revision.revision > 1 ? `<p class="overview-update"><strong>Review revision ${revision.revision}</strong> · ${escape(revision.summary)}</p>` : ''}${historyLinks}${progressBox}</header>${inProgress ? '' : renderVisualOptions()}${pending ? `<p class="overview-notice">${pending} previous finding${pending === 1 ? '' : 's'} still need checking. See Review details.</p>` : ''}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${generated.map(commentCard).join('')}${unlinkedFlows().filter(({flow}) => flow.result === 'failed').map(({flow,index}) => qaFlow(flow,index)).join('')}</section>${renderOtherChecks()}${renderMyReview()}</div>`;
   }
 
   function renderStep(layer) {
@@ -1559,6 +1593,7 @@
       return;
     }
     if (event.target.closest('[data-open-previews]')) { openStage(); return; }
+    if (event.target.closest('[data-start-reading]')) { select(layers[0]?.id || 'files'); return; }
     const showLive = event.target.closest('[data-show-live-preview]');
     if (showLive) { $('previews-dialog').close(); showPreview(showLive.dataset.showLivePreview); return; }
     if (event.target.closest('[data-open-send]')) { openSendDialog(); return; }

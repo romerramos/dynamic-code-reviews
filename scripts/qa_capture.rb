@@ -518,6 +518,7 @@ elsif $PROGRAM_NAME == __FILE__
   puts options[:report] ? "Review with QA panel: #{server.url}/#overview" : "QA recorder: #{server.url}"
   puts "App inside the review: #{server.url}/?app#overview (proxying #{options[:app]} through #{server.app_url})" if server.app_url
   puts 'Open the review in a tab your browser tool controls (Claude in Chrome: its tab group), so you can act in it when the reviewer presses Start QA review.' if server.app_url
+  puts 'No --app: the review shows the older recorder card and has no Start QA review. Find the running app and serve again with --app <url>, or tell the reviewer why it is missing.' if options[:report] && !server.app_url
   puts "Local capture files: #{File.expand_path(options[:directory])}"
   puts "Control: ruby #{__FILE__} control --out #{File.expand_path(options[:directory])} <wait-request|wait-ready|start|still|stop|end|status|reload> [--name NAME]"
   begin
