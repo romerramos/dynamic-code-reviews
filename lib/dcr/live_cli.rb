@@ -50,6 +50,7 @@ module DCR
       'preview' => 'dcr preview submit (--repo ROOT --name SERIES | --dir DIR) --path <template path> [--file FILE] [--title TITLE] [--css STYLESHEET]... [--page-class CLASSES] [--image-map JSON] | dcr preview fail ... --path <template path> --reason TEXT',
       'export' => 'dcr export (--repo ROOT --name SERIES | --dir DIR) [--out FILE]',
       'comment' => 'dcr comment (--repo ROOT --name SERIES | --dir DIR) [--file COMMENTS.json]   (one review comment or an array, as in the review JSON: id, label, decoration, subject, discussion, hunk, side, start, end; stdin when --file is omitted)',
+      'focus' => 'dcr focus (--repo ROOT --name SERIES | --dir DIR)   (brings the browser tab showing the served review to the front)',
       'reply' => 'dcr reply (--repo ROOT --name SERIES | --dir DIR) [--key KEY] [--json] <thread-id> <text>',
       'evidence' => 'dcr evidence attach (--repo ROOT --name SERIES | --dir DIR) --file ITEMS.json [--replace previous-qa|all]   (ITEMS: [{"path", "title", "result": "passed|failed", "observed", "comment_id"?, "page"?}]; previous-qa, the default, replaces the last QA review; all replaces every recording, only when the reviewer asks to start over)'
     }.freeze
@@ -81,6 +82,7 @@ module DCR
       when 'comments' then comments(state, options)
       when 'reply' then reply(state, options, argv, parser)
       when 'comment' then comment(state, options, directory(options, parser))
+      when 'focus' then focus(directory(options, parser))
       when 'export' then export(options, directory(options, parser))
       when 'preview' then preview(state, options, argv, parser)
       when 'evidence' then evidence(options, directory(options, parser), argv, parser)
@@ -273,6 +275,16 @@ module DCR
       entry = history['revisions'].last
       state.post_comments(State.review_key(entry['fingerprint'], history['name'], entry['number']), comments)
       puts "Posted #{comments.length == 1 ? "comment #{comments.first['id']}" : "#{comments.length} comments"} to the open review."
+    end
+
+    # Once the review is open in the agent's browser tab: show it to the reviewer, wherever they are.
+    def focus(directory)
+      require_relative 'focus'
+      endpoint = File.join(directory, '.serve.json')
+      raise ArgumentError, 'The review is not being served. Run `dcr serve` first.' unless File.file?(endpoint)
+      port = Integer(JSON.parse(File.read(endpoint)).fetch('port'))
+      browser = Focus.front("http://127.0.0.1:#{port}/")
+      puts "Brought the review to the front in #{browser}."
     end
 
     def reply(state, options, argv, parser)

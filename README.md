@@ -168,7 +168,7 @@ installation first; do not overwrite it or layer another copy over the same name
 
 ## Live review
 
-Invoking the skill opens the review in your browser first, with every changed
+Invoking the skill opens the review in your browser first, and brings the browser to the front on it, with every changed
 file in reading order and the running app attached when it finds one. The
 agent's comments then arrive beside the code while you read, each with a
 notice; explanations, findings and test results follow as the finished

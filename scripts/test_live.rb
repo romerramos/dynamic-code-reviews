@@ -214,3 +214,25 @@ Dir.mktmpdir('dcr-live-app') do |series|
   assert(!state.read.dig('threads', KEY).key?('app-bad'), 'A rejected app comment must leave no thread')
 end
 puts 'app comments: ok'
+
+# Bringing the review to the front: only running browsers are asked, and a failure says why.
+require_relative '../lib/dcr/focus'
+if RUBY_PLATFORM.include?('darwin')
+  asked = []
+  found = DCR::Focus.front('http://127.0.0.1:1/', running: ->(name) { ['Google Chrome', 'Arc'].include?(name) },
+                                                  run: ->(name, _prefix) { asked << name; [name == 'Arc' ? "found\n" : "\n", ''] })
+  assert(found == 'Arc' && asked == ['Google Chrome', 'Arc'], "Only running browsers are asked, until one has the tab: #{asked}")
+  denied = begin
+    DCR::Focus.front('http://127.0.0.1:1/', running: ->(_) { true }, run: ->(*) { ['', 'execution error: Not authorized to send Apple events to Google Chrome. (-1743)'] })
+  rescue ArgumentError => error
+    error.message
+  end
+  assert(denied.include?('Automation'), "A denied permission must say where to allow it: #{denied}")
+  none = begin
+    DCR::Focus.front('http://127.0.0.1:1/', running: ->(_) { false }, run: ->(*) { raise 'must not run' })
+  rescue ArgumentError => error
+    error.message
+  end
+  assert(none.include?('No supported browser'), 'With no browser running nothing is asked')
+  puts 'focus: ok'
+end
