@@ -363,6 +363,16 @@ elsif $PROGRAM_NAME == __FILE__
     abort 'Use a short lowercase series slug' unless options[:name].match?(/\A[a-z0-9]+(?:-[a-z0-9]+)*\z/)
     options[:report] ||= File.join(File.expand_path(options.fetch(:repo, Dir.pwd)), '.reviews', options[:name], 'current.html')
   end
+  if options[:name]
+    # A page saved by an older version lacks today's UI; rebuild its display files first.
+    require_relative 'series'
+    repo = options.fetch(:repo, Dir.pwd)
+    abort 'No saved review for that series' unless File.file?(options[:report])
+    unless File.read(options[:report])[/<meta name="dcr-ui" content="([0-9a-f]+)">/, 1] == DynamicReviews.ui_version
+      ReviewSeries.refresh(repo: repo, name: options[:name])
+      warn 'Refreshed the saved report with the current review UI. Saved revisions are unchanged.'
+    end
+  end
   options.delete(:repo)
   options.delete(:name)
   options[:directory] ||= Dir.mktmpdir('dcr-capture-')

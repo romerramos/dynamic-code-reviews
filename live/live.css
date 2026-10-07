@@ -7,15 +7,21 @@
 #dcr-panel .dcr-note:empty{display:none}
 .ledger-status{font-size:12px}
 .ledger-status:empty{display:none}
-.dcr-thread{margin:10px 0 0;padding-top:10px;border-top:1px dashed color-mix(in oklab,currentColor 18%,transparent)}
-.dcr-message{margin:0 0 8px;padding:8px 10px;border-radius:8px;border-left:3px solid color-mix(in oklab,currentColor 25%,transparent);background:color-mix(in oklab,currentColor 4%,transparent)}
+.dcr-thread{display:none}
+.dcr-thread.has-content{display:block}
+.dcr-card{padding:0 28px 18px}
+.dcr-popover{margin-top:10px;padding-top:10px;border-top:1px solid var(--line,#e3e5ea)}
+.dcr-state{margin:0 0 8px;font-size:12.5px;color:var(--muted,inherit);opacity:.85}
+.dcr-state:empty{display:none}
+.dcr-message{margin:0 0 8px;padding:8px 12px;border-radius:8px;border-left:3px solid color-mix(in oklab,currentColor 25%,transparent);background:color-mix(in oklab,currentColor 4%,transparent)}
 .dcr-message.dcr-agent{border-left-color:#6048b5;background:color-mix(in oklab,#6048b5 8%,transparent)}
-.dcr-message .dcr-author{display:block;font-size:11px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;opacity:.65}
+.dcr-message .dcr-author{display:block;font-size:12px;font-weight:600;opacity:.7}
 .dcr-message p{margin:2px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
-.dcr-compose textarea{width:100%;font:inherit;font-size:13px;padding:8px;border-radius:8px;border:1px solid color-mix(in oklab,currentColor 22%,transparent);background:transparent;color:inherit;resize:vertical}
-.dcr-compose textarea:focus-visible{outline:2px solid #e09a38;outline-offset:1px}
-.dcr-compose .dcr-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px}
-.dcr-status{font-size:12px;opacity:.7}
+.dcr-reply{margin:10px 0 0}
+.dcr-reply[hidden]{display:none}
+.dcr-reply textarea{width:100%;box-sizing:border-box;font:inherit;font-size:13.5px;padding:8px 10px;border-radius:8px;border:1px solid color-mix(in oklab,currentColor 22%,transparent);background:transparent;color:inherit;resize:vertical}
+.dcr-reply textarea:focus-visible{outline:2px solid #e09a38;outline-offset:1px}
+.dcr-reply .dcr-actions,.dcr-popover>.dcr-actions{display:flex;gap:8px;margin-top:8px}
 #qa-artifacts .dcr-attach-open{margin-left:6px;font-size:12px;padding:3px 9px}
 #qa-artifacts .dcr-attach{display:grid;gap:8px;margin:8px 0 12px;padding:12px;border:1px solid color-mix(in oklab,currentColor 18%,transparent);border-radius:8px;background:transparent}
 #qa-artifacts .dcr-attach label{display:grid;gap:3px;font-size:12px;font-weight:600;margin:0}
@@ -24,3 +30,14 @@
 /* While the recorder is live in this page, the "copy a QA prompt" card is redundant. */
 body.qa-live .visual-qa-option{display:none}
 body.qa-live .evidence-strip:not(:has(button:not(.visual-qa-option))){display:none}
+
+/* "N comments not sent": one quiet line, bottom right, until they are sent. */
+#dcr-unsent{position:fixed;right:24px;bottom:22px;z-index:17;display:flex;align-items:center;gap:14px;padding:9px 10px 9px 16px;border:1px solid var(--line,#e3e5ea);border-left:3px solid var(--yours,#a15c07);border-radius:10px;background:var(--surface,#fff);color:var(--ink,inherit);font-size:13px;box-shadow:0 6px 26px #28324c26}
+#dcr-unsent[hidden]{display:none}
+.range-actions:not([hidden])~#dcr-unsent{bottom:104px}
+.ledger-meta .dcr-row-send{padding:2px 9px;border:1px solid var(--accent,#4f4bc4);border-radius:6px;background:transparent;color:var(--accent,#4f4bc4);font-size:12px;font-weight:550}
+.ledger-meta .dcr-row-send:hover{background:var(--accent-soft,#efeefc);text-decoration:none}
+@media(prefers-reduced-motion:no-preference){#dcr-unsent{animation:dcr-unsent-in .18s ease-out}}
+@keyframes dcr-unsent-in{from{transform:translateY(8px);opacity:0}}
+.ledger-meta{flex-wrap:wrap;gap:4px 12px}
+.ledger-status{white-space:nowrap}

@@ -2,6 +2,7 @@
 # Run with ruby scripts/test_evidence.rb. Uses a disposable git repository and series.
 require 'base64'
 require 'open3'
+require 'timeout'
 require 'rbconfig'
 require_relative 'qa_capture'
 require_relative 'test_series'
@@ -81,6 +82,28 @@ ReviewChecks.fixture do |root, _commit|
     stdout, stderr, status = Open3.capture3(RbConfig.ruby, File.expand_path('../bin/dcr', __dir__), 'export', '--dir', series_dir, '--out', out)
     assert(status.success? && stdout.strip == out && File.read(out) == html && File.stat(out).mode & 0o777 == 0o600, "dcr export failed: #{stderr}")
     puts 'PASS dcr export writes one offline file with threads, progress and recordings, no server token, leaving the saved report unchanged'
+
+    # Serving by name refreshes a page saved by an older UI, and leaves a current one alone.
+    current = File.join(series_dir, 'current.html')
+    stamp = ->(html) { html[/<meta name="dcr-ui" content="([0-9a-f]+)">/, 1] }
+    assert(stamp.call(File.read(current)) == DynamicReviews.ui_version, 'A rendered report must carry the current UI version')
+    serve = lambda do
+      stdin, stdout, stderr, thread = Open3.popen3(RbConfig.ruby, File.expand_path('../bin/dcr', __dir__), 'serve', '--repo', root, '--name', 'evidence')
+      stdin.close
+      url = Timeout.timeout(30) { stdout.gets.to_s }
+      Process.kill('TERM', thread.pid)
+      thread.value
+      [url, stderr.read]
+    end
+    revisions_before = Dir[File.join(series_dir, 'revisions', '*.html')].sort.map { |path| [path, File.read(path)] }
+    url, warning = serve.call
+    assert(url.include?('http://127.0.0.1:') && warning.empty?, "A current report must be served as is: #{warning}")
+    File.write(current, File.read(current).sub(/(<meta name="dcr-ui" content=")[0-9a-f]+/, '\\1old'))
+    url, warning = serve.call
+    assert(url.include?('http://127.0.0.1:') && warning.include?('Refreshed the saved report'), "A stale report must be refreshed before serving: #{warning}")
+    assert(stamp.call(File.read(current)) == DynamicReviews.ui_version, 'The refreshed report does not carry the current UI version')
+    assert(Dir[File.join(series_dir, 'revisions', '*.html')].sort.map { |path| [path, File.read(path)] } == revisions_before, 'Refreshing changed a saved revision')
+    puts 'PASS serving by name refreshes a report from an older UI first and never touches saved revisions'
 
     server = QACapture::Server.new(directory: captures, report: File.join(series_dir, 'current.html'))
     Thread.new { server.run }

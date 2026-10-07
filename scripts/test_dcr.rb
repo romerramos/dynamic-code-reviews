@@ -35,7 +35,7 @@ class DcrDispatchTest < Minitest::Test
     Dir.mktmpdir('dcr-serve-') do |repo|
       _out, err, status = dcr('serve', '--repo', repo, '--name', 'nothing-here')
       refute status.success?
-      assert_match(/existing HTML file/, err)
+      assert_match(/No saved review for that series/, err)
     end
   end
 

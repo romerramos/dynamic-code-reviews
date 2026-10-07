@@ -259,7 +259,7 @@
   }
 
   function commentHTML(comment) {
-    return `<section class="popover-comment"><p class="comment-location">${escape(ReviewTools.anchor(snapshot, comment)?.file.path || '')}</p><div class="thread-badges">${threadBadges(comment)}</div><p class="comment-location">${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}</p><h4>${escape(comment.subject)}</h4>${ReviewTools.commentBody(comment, review.qa) ? `<p class="comment-discussion">${escape(ReviewTools.commentBody(comment, review.qa))}</p>` : ''}${ReviewTools.evidenceFlows(review.qa, comment).length ? `<button class="btn btn-xs btn-soft" data-evidence="${escape(comment.id)}">See visual evidence</button>` : ''}<div class="comment-actions"><button class="btn btn-xs btn-ghost" data-copy="${escape(comment.id)}">${icon('copy')} Copy for LLMs</button>${comment.personal ? `<button class="btn btn-xs btn-ghost" data-edit="${escape(comment.id)}">${icon('pencil')} Edit</button><button class="btn btn-xs btn-ghost" data-delete="${escape(comment.id)}">${icon('trash-2')} Delete</button>` : ""}</div></section>`;
+    return `<section class="popover-comment" data-comment-id="${escape(comment.id)}"><p class="comment-location">${escape(ReviewTools.anchor(snapshot, comment)?.file.path || '')}</p><div class="thread-badges">${threadBadges(comment)}</div><p class="comment-location">${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}</p><h4>${escape(comment.subject)}</h4>${ReviewTools.commentBody(comment, review.qa) ? `<p class="comment-discussion">${escape(ReviewTools.commentBody(comment, review.qa))}</p>` : ''}${ReviewTools.evidenceFlows(review.qa, comment).length ? `<button class="btn btn-xs btn-soft" data-evidence="${escape(comment.id)}">See visual evidence</button>` : ''}<div class="comment-actions"><button class="btn btn-xs btn-ghost" data-copy="${escape(comment.id)}">${icon('copy')} Copy for LLMs</button>${comment.personal ? `<button class="btn btn-xs btn-ghost" data-edit="${escape(comment.id)}">${icon('pencil')} Edit</button><button class="btn btn-xs btn-ghost" data-delete="${escape(comment.id)}">${icon('trash-2')} Delete</button>` : ""}</div></section>`;
   }
 
   function commentTrigger(hunk, side, number, comment = null, path) {
@@ -1014,8 +1014,39 @@
     const previews = previewsPossible ? `<section class="ledger-previews"><strong>Template previews</strong><p data-preview-summary>${previewSummary(lifecycle())}</p><button type="button" class="btn btn-sm btn-soft" data-open-previews>Open previews</button></section>` : '';
     $('ledger-body').innerHTML = `${empty}${byFile}${stepNotes}${previews}`;
     $('ledger-footer').dataset.base = entries.length || notes.length ? '1' : '';
-    if (!$('ledger-footer').querySelector('[data-live-footer]')) $('ledger-footer').innerHTML = entries.length || notes.length ? '<button type="button" class="btn btn-sm btn-ghost" data-copy-all>Copy all for LLMs</button>' : '';
+    if (!$('ledger-footer').querySelector('[data-live-footer]')) $('ledger-footer').innerHTML = entries.length || notes.length ? '<button type="button" class="btn btn-sm btn-soft" data-open-send>Review and copy</button>' : '';
   }
+  // Review and send: look over what you wrote, tick what goes out, then copy it for an LLM or,
+  // in a served review, send it to your agent.
+  const sendRows = () => comments.filter(comment => comment.personal && !comment.resolved);
+  const sendChecked = () => [...$('send-list').querySelectorAll('input:checked')].map(input => comments.find(comment => comment.id === input.value)).filter(Boolean);
+  function updateSendCount() {
+    const count = sendChecked().length;
+    $('send-copy').textContent = count ? `Copy ${count === 1 ? '1 comment' : `${count} comments`} for LLMs` : 'Copy for LLMs';
+    $('send-copy').disabled = !count;
+    $('send-dialog').dispatchEvent(new CustomEvent('send-selection', {detail:{ids:sendChecked().map(comment => comment.id)}}));
+  }
+  function openSendDialog() {
+    const rows = sendRows();
+    $('send-list').innerHTML = rows.length ? rows.map(comment => {
+      const found = comment.general ? null : ReviewTools.anchor(snapshot, comment);
+      const where = comment.general ? 'General comment' : `${found?.file.path || ''} · ${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}`;
+      return `<li><label><input type="checkbox" value="${escape(comment.id)}" checked><span class="send-text"><span class="send-where">${escape(where)}</span><span class="send-subject">${escape(comment.subject)}</span></span></label></li>`;
+    }).join('') : '<li class="send-empty">Nothing to send yet. Select lines in a diff and write a comment.</li>';
+    $('send-dialog').showModal();
+    $('send-dialog').dispatchEvent(new CustomEvent('send-open'));
+    updateSendCount();
+    $('send-list').querySelector('input')?.focus();
+  }
+  $('send-list').addEventListener('change', updateSendCount);
+  $('close-send').onclick = () => $('send-dialog').close();
+  $('send-copy').onclick = async () => {
+    const chosen = sendChecked();
+    if (!chosen.length) return;
+    $('send-dialog').close();
+    await copyText(ReviewTools.reviewText(snapshot, chosen, [], review.qa));
+  };
+
   function setLedger(open) { state.ledgerOpen = open; persist(); renderLedger(); }
   $('ledger-toggle').onclick = () => setLedger(!ledgerOpen());
   $('ledger-close').onclick = () => setLedger(false);
@@ -1226,6 +1257,7 @@
       return;
     }
     if (event.target.closest('[data-open-previews]')) { openPreviewHub(); return; }
+    if (event.target.closest('[data-open-send]')) { openSendDialog(); return; }
     const removePreview = event.target.closest('[data-remove-preview]');
     if (removePreview) {
       visualState.previews = visualState.previews.filter(path => path !== removePreview.dataset.removePreview);
@@ -1480,7 +1512,7 @@
   $('prev').innerHTML = icon('chevron-left');
   $('next').innerHTML = icon('chevron-right');
   $('view-icon').innerHTML = icon('sliders-horizontal');
-  $('ledger-toggle').innerHTML = `${icon('panel-right')}<b id="ledger-count" class="ledger-count" hidden></b>`;
+  $('ledger-toggle').innerHTML = `${icon('panel-right')}<span class="ledger-label">Your review</span><b id="ledger-count" class="ledger-count" hidden></b>`;
   $('ledger-close').innerHTML = icon('x');
   $('zen-toggle').innerHTML = icon('maximize-2');
   $('zen-exit').innerHTML = `${icon('minimize-2')}<span>Exit focus</span>`;
@@ -1530,7 +1562,7 @@
       }
       return;
     }
-    if (/INPUT|TEXTAREA|SELECT/.test(event.target.tagName) || event.metaKey || event.ctrlKey || event.altKey || $('details-dialog').open || $('comment-editor').open || $('copy-dialog').open || $('previews-dialog').open || $('comment-popover').matches(':popover-open')) return;
+    if (/INPUT|TEXTAREA|SELECT/.test(event.target.tagName) || event.metaKey || event.ctrlKey || event.altKey || $('details-dialog').open || $('comment-editor').open || $('copy-dialog').open || $('previews-dialog').open || $('send-dialog').open || $('comment-popover').matches(':popover-open')) return;
     const key = event.key.toLowerCase();
     if (key === 'j' || key === 'k') { event.preventDefault(); step(key === 'j' ? 1 : -1); }
     if (key === 'z') chooseReadingMode(!focusMode);

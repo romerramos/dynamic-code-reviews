@@ -664,8 +664,10 @@ body.ledger-open .ledger{display:flex}
 .ledger-previews p{margin:0 0 8px;color:var(--muted)}
 .ledger-footer{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
 .ledger-footer:empty{display:none}
-.ledger-toggle{position:relative}
-.ledger-count{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--accent);color:#fff;font-size:10px;font-weight:600;line-height:16px;text-align:center}
+.ledger-toggle{display:inline-flex;align-items:center;gap:6px;width:auto;padding:0 10px}
+.ledger-label{font-size:13px;font-weight:550}
+.ledger-count{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:#fff;font-size:11px;font-weight:600;line-height:18px;text-align:center}
+@media(max-width:900px){.ledger-label{display:none}}
 .ledger-count[hidden]{display:none}
 @media(min-width:1500px){
   body.ledger-open .workspace{grid-template-columns:320px minmax(0,1fr) 310px}
@@ -696,3 +698,15 @@ body.zen.ledger-open .workspace,body.zen.ledger-open.sidebar-collapsed .workspac
 .evidence-strip .btn svg{width:15px;height:15px}
 .evidence-strip small{margin-left:4px;font-size:12px;color:var(--muted)}
 .evidence-strip small:empty{display:none}
+
+/* Review and send. */
+.send-list{list-style:none;margin:14px 0;padding:0;max-height:46vh;overflow-y:auto;border-top:1px solid var(--line)}
+.send-list li{border-bottom:1px solid var(--line)}
+.send-list label{display:flex;align-items:flex-start;gap:12px;padding:10px 4px;cursor:pointer}
+.send-list input{margin-top:3px}
+.send-list input:disabled+.send-text{opacity:.55}
+.send-text{display:grid;gap:1px;min-width:0}
+.send-where{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.send-subject{overflow-wrap:anywhere}
+.send-tag{margin-left:6px;font-size:12px;color:var(--muted)}
+.send-empty{padding:14px 4px;color:var(--muted)}
