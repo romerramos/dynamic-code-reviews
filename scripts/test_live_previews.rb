@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 # Run with ruby scripts/test_live_previews.rb. Template previews the agent builds for a served review.
+ENV['DCR_FOCUS'] = '0' # never raise the reader's browser from a test
 require 'tmpdir'
 require 'base64'
 ENV['DCR_CONFIG_DIR'] = Dir.mktmpdir('dcr-config')

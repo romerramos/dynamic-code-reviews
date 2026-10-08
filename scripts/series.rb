@@ -515,7 +515,7 @@ module ReviewSeries
   # Comments the agent posted to the open page are kept; one with the same id in the review wins.
   def finish(repo:, name:, review:, **_unused)
     path = directory(repo, name)
-    locked(path) do
+    saved = locked(path) do
       history = manifest(path)
       raise ArgumentError, 'Branch changed; use the original review checkout' unless history['branch'] == branch(repo)
       payload = latest(path, history)
@@ -533,6 +533,12 @@ module ReviewSeries
       states = Array(review['findings']).map { |f| {'id' => f['id'], 'status' => 'open', 'change' => 'new', 'title' => f['title'], 'reason' => 'Recorded in the full review.'} }
       append(path, history, snapshot, review, {'summary' => 'Full review ready: walkthrough explanations, findings and validation.', 'groups' => {}, 'files' => [], 'finding_states' => states})
     end
+    # The full review is ready: bring the open page forward, where it offers the new revision.
+    if ENV['DCR_FOCUS'] != '0' && File.file?(File.join(path, '.serve.json'))
+      require_relative '../lib/dcr/focus'
+      DCR::Focus.served(path) rescue nil
+    end
+    saved
   end
 
   def append(path, history, snapshot, review, increment)

@@ -434,6 +434,7 @@ module QACapture
         %(<meta http-equiv="Content-Security-Policy" content="#{report_csp}">)
       end
       if path == '/'
+        bring_forward
         # Saved progress and settings go in first, ahead of the early theme script and the
         # review script, which each read them once on load.
         html = html.dup.insert(html.index('<title>') || html.index('<script') || 0, @live.bootstrap_script) if @live
@@ -445,6 +446,20 @@ module QACapture
         html = html.dup.insert(at, panel)
       end
       respond(client, 200, html, 'text/html; charset=utf-8', report_csp)
+    end
+
+    # The first time the review page loads, raise the browser showing it, so the reviewer notices
+    # it is ready even while busy elsewhere. Once per server; failures stay quiet (dcr focus says why).
+    def bring_forward
+      return if @brought_forward || !@live || ENV['DCR_FOCUS'] == '0'
+      @brought_forward = true
+      require_relative '../lib/dcr/focus'
+      Thread.new do
+        sleep 1.5 # let the tab take the address and the page its title
+        DCR::Focus.front(DCR::Focus.prefixes(@port, @shared_origin), title: DCR::Focus.title_of(@report))
+      rescue StandardError
+        nil
+      end
     end
 
     # The running app is the only page the review may frame.

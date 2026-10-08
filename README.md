@@ -66,7 +66,7 @@ your projects keep working.
 | Ruby 3.1+ and Git on `PATH` | Everything. Ruby's standard library only, no gems. |
 | A browser | Reading the review. Chrome, Edge, Brave, Arc, Firefox or Safari. |
 | A browser tool for the agent (Claude in Chrome, or computer use) | Opening the review in a tab the agent can also use, for QA. Optional. |
-| macOS | Bringing the browser to the front (`dcr focus`). Elsewhere the agent tells you which tab. |
+| macOS, or Linux with Hyprland (Omarchy), Sway or X11 (`wmctrl` or `xdotool`) | Bringing the browser to the front when the review opens and when it is ready (`dcr focus`). Elsewhere the agent tells you which tab. |
 | Tailscale | Optional. Opening reviews from your other devices. |
 | `gh`, or a GitHub or Linear connector | Optional. Reviewing a pull request with its real base and linked issues. |
 | `gh`, signed in | Optional. Posting comments and reviews to the pull request from the review page. Without it, Comment on GitHub copies the comment and opens its lines. |

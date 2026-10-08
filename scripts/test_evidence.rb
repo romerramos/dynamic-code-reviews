@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 # Run with ruby scripts/test_evidence.rb. Uses a disposable git repository and series.
+ENV['DCR_FOCUS'] = '0' # never raise the reader's browser from a test
 require 'base64'
 require 'open3'
 require 'timeout'

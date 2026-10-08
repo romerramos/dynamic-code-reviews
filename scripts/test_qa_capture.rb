@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+ENV['DCR_FOCUS'] = '0' # never raise the reader's browser from a test
 require 'tmpdir'
 require_relative 'qa_capture'
 

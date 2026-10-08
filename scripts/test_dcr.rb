@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 # Run with ruby scripts/test_dcr.rb. The dispatcher only forwards to the helper scripts.
+ENV['DCR_FOCUS'] = '0' # never raise the reader's browser from a test
 require 'minitest/autorun'
 require 'json'
 require 'open3'

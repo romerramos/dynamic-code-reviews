@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 # Run with ruby scripts/test_live.rb. Stdlib only; starts a loopback server in a temp directory.
+ENV['DCR_FOCUS'] = '0' # never raise the reader's browser from a test
 require 'tmpdir'
 ENV['DCR_CONFIG_DIR'] = Dir.mktmpdir('dcr-config') # never touch the real user settings
 require 'open3'
@@ -246,6 +247,39 @@ if RUBY_PLATFORM.include?('darwin')
   assert(none.include?('No supported browser'), 'With no browser running nothing is asked')
   puts 'focus: ok'
 end
+prefixes = DCR::Focus.prefixes(4100, 'https://box.tail1.ts.net:4100')
+assert(prefixes == ['http://127.0.0.1:4100/', 'http://localhost:4100/', 'https://box.tail1.ts.net:4100/'], "A served review is looked for at every address: #{prefixes}")
+asked = nil
+DCR::Focus.front(prefixes, platform: 'arm64-darwin', running: ->(name) { name == 'Google Chrome' }, run: ->(_name, given) { asked = given; ["found\n", ''] })
+assert(asked == prefixes, 'macOS must look for the tailnet address too')
+
+# Linux: the window whose title is the review's, raised through the window manager in use.
+title = 'Share verdicts · Dynamic Code Reviews'
+linux = lambda do |env, replies|
+  calls = []
+  command = ->(*args) { calls << args; replies.fetch(args.first(2).join(' '), ['', true]) }
+  result = begin
+    DCR::Focus.front([], title: title, platform: 'x86_64-linux', env: env, command: command)
+  rescue ArgumentError => error
+    error.message
+  end
+  [result, calls]
+end
+hypr = JSON.generate([{class: 'Alacritty', title: 'nvim', address: '0x1'}, {class: 'chromium', title: 'Mail - Chromium', address: '0x2'}, {class: 'chromium', title: "(1) #{title} - Chromium", address: '0x3'}])
+result, calls = linux.({'HYPRLAND_INSTANCE_SIGNATURE' => 'x'}, {'hyprctl clients' => [hypr, true]})
+assert(result == 'chromium' && calls.last == %w[hyprctl dispatch focuswindow address:0x3], "Hyprland must raise the review's window: #{calls.inspect}")
+background = JSON.generate([{class: 'chromium', title: 'Mail - Chromium', address: '0x2'}])
+result, calls = linux.({'HYPRLAND_INSTANCE_SIGNATURE' => 'x'}, {'hyprctl clients' => [background, true]})
+assert(result.include?('not its active tab') && calls.last == %w[hyprctl dispatch focuswindow address:0x2], 'Without a matching title the browser is still raised, and the reviewer is told which tab')
+tree = JSON.generate({nodes: [{nodes: [{id: 7, pid: 1, app_id: 'firefox', name: "#{title} — Mozilla Firefox"}]}]})
+result, calls = linux.({'SWAYSOCK' => '/run/sway'}, {'swaymsg -t' => [tree, true]})
+assert(result == 'firefox' && calls.last == ['swaymsg', '[con_id=7] focus'], "Sway must raise the review's window: #{calls.inspect}")
+wm = "0x04000007  0 google-chrome.Google-chrome  box #{title} - Google Chrome\n"
+result, calls = linux.({'DISPLAY' => ':0'}, {'wmctrl -lx' => [wm, true]})
+assert(result == 'google-chrome.Google-chrome' && calls.last == %w[wmctrl -i -a 0x04000007], "X11 must raise the review's window: #{calls.inspect}")
+result, = linux.({}, {})
+assert(result.include?('does not let programs raise a window'), 'An unsupported desktop must say so')
+puts 'focus on Linux (Hyprland, Sway, X11): ok'
 
 # Sharing on the tailnet: only with Tailscale running, MagicDNS and HTTPS certificates; otherwise it says why.
 require_relative '../lib/dcr/share'

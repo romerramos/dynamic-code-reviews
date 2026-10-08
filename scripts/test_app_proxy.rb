@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 # The review's app proxy against fixture apps over plain HTTP and over HTTPS with a local CA.
+ENV['DCR_FOCUS'] = '0' # never raise the reader's browser from a test
 require 'socket'
 require 'openssl'
 require 'json'

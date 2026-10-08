@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
+ENV['DCR_FOCUS'] = '0' # never raise the reader's browser from a test
 require_relative 'test_review'
 require_relative 'series'
 

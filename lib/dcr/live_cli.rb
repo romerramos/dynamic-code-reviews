@@ -352,10 +352,7 @@ module DCR
     # Once the review is open in the agent's browser tab: show it to the reviewer, wherever they are.
     def focus(directory)
       require_relative 'focus'
-      endpoint = File.join(directory, '.serve.json')
-      raise ArgumentError, 'The review is not being served. Run `dcr serve` first.' unless File.file?(endpoint)
-      port = Integer(JSON.parse(File.read(endpoint)).fetch('port'))
-      browser = Focus.front("http://127.0.0.1:#{port}/")
+      browser = Focus.served(directory)
       puts "Brought the review to the front in #{browser}."
     end
 
