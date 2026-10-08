@@ -2,6 +2,7 @@
 
 require 'json'
 require 'uri'
+require_relative 'github'
 require_relative 'settings'
 require_relative 'state'
 
@@ -13,10 +14,11 @@ module DCR
     BODY_LIMIT = 4 * 1024 * 1024
 
     # evidence: callable taking the request hash, for attaching a recording to the series.
-    def initialize(directory, settings: Settings.new, evidence: nil)
+    def initialize(directory, settings: Settings.new, evidence: nil, github: GitHub.new(directory))
       @state = State.new(directory)
       @settings = settings
       @evidence = evidence
+      @github = github
     end
 
     attr_reader :state
@@ -53,13 +55,40 @@ module DCR
       when ['POST', '/api/send'] then (input = json(body); [200, {'queued' => @state.send_items(input['key'], input['items']).length}])
       when ['POST', '/api/message'] then (input = json(body); [200, {'message' => @state.user_message(input['key'], input['id'], input['body'])}])
       when ['POST', '/api/finish'] then [200, {'entry' => @state.finish(json(body)['key'])}]
+      when ['GET', '/api/github'] then [200, @github.status(key)]
+      when ['POST', '/api/github/comment'] then github_comment(json(body))
+      when ['POST', '/api/github/pending'] then (input = json(body); [200, @state.github_pending(input['key'], input['id'], input['pending'] == true)])
+      when ['POST', '/api/github/review'] then github_review(json(body))
       else [404, {'error' => 'Not found'}]
       end
     rescue ArgumentError, KeyError, JSON::ParserError, TypeError => error
       [400, {'error' => error.message}]
+    rescue GitHub::Error => error
+      [502, {'error' => error.message}]
     end
 
     private
+
+    # Posting the same comment twice (a double click, a second device) returns the first post.
+    def github_comment(input)
+      key, item = input['key'], input['item']
+      raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
+      raise ArgumentError, 'Expected a comment' unless item.is_a?(Hash)
+      done = @state.read.dig('github', key, 'posted', item['id'].to_s)
+      return [200, {'posted' => {item['id'] => done}}] if done
+      entry = @state.github_posted(key, {item['id'] => @github.comment(key, item)})
+      [200, {'posted' => {item['id'] => entry['posted'][item['id']]}}]
+    end
+
+    def github_review(input)
+      key = input['key']
+      raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
+      posted = @state.read.dig('github', key, 'posted') || {}
+      items = Array(input['items']).reject { |item| item.is_a?(Hash) && posted.key?(item['id'].to_s) }
+      result = @github.review(key, input['event'].to_s, input['body'], items)
+      entry = @state.github_posted(key, result['comments'], review: {'url' => result['url'], 'event' => result['event']})
+      [200, {'posted' => entry['posted'].slice(*result['comments'].keys), 'review' => result['url']}]
+    end
 
     def manifest
       path = File.join(File.dirname(@state.path), 'manifest.json')
@@ -94,7 +123,7 @@ module DCR
     def snapshot(key)
       raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
       state = @state.read
-      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'comments' => state['comments'][key] || [], 'previews' => preview_status(state['previews'][key]), 'latest_revision' => latest_revision, 'listening' => @state.listening?,
+      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'github' => state['github'][key] || {}, 'comments' => state['comments'][key] || [], 'previews' => preview_status(state['previews'][key]), 'latest_revision' => latest_revision, 'listening' => @state.listening?,
        'pending' => state['outbox'].count { |entry| entry['seq'] > state['acked'] && entry['key'] == key }}
     end
 

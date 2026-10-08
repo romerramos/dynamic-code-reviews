@@ -203,6 +203,14 @@ globalThis.ReviewTools = (() => {
     const body = commentBody(comment, qa);
     return `${comment.label} (${comment.decoration}): ${comment.subject}\n\n${location}${body}`.trim();
   }
+  // What GitHub needs to post a comment: the paste-ready text and, for a line comment, its file,
+  // side and lines. The server decides whether the lines are in the diff.
+  function githubItem(snapshot, comment, qa) {
+    const body = postingText(snapshot, comment, qa, {placed: true});
+    const found = comment.general ? null : anchor(snapshot, comment);
+    if (!found) return {id: comment.id, body, general: true};
+    return {id: comment.id, body, general: false, path: found.file.path, side: comment.side === 'old' ? 'LEFT' : 'RIGHT', line: comment.end, start_line: comment.start};
+  }
   // The conversation with the agent under a comment lives outside the saved review: a served or
   // exported review registers where to find it, and copies for an LLM then carry it along.
   let conversationSource = () => null;
@@ -427,5 +435,5 @@ globalThis.ReviewTools = (() => {
     return out.join('');
   }
 
-  return {markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, overviewFeedback, comparisonText, scopeLabel, sha256, githubLink, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  return {markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, scopeLabel, sha256, githubLink, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();

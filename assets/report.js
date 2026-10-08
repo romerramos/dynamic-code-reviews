@@ -241,7 +241,10 @@
   // request. The text, type and blocking choice survive the page re-rendering, so nothing is lost.
   // In a served review it first asks who the comment is for: your agent (a question that stays in this
   // review and is sent at once) or the PR (a typed review comment, saved to post on GitHub).
-  const composer = {text: '', label: 'note', blocking: false, mode: 'agent', node: null, shownFor: '', sender: null};
+  // Who the composer is for is remembered, so a run of PR comments does not mean switching each time.
+  const composerModeKey = 'dcr-composer-mode';
+  const savedMode = (() => { try { return localStorage.getItem(composerModeKey); } catch { return null; } })();
+  const composer = {text: '', label: 'note', blocking: false, mode: savedMode === 'pr' ? 'pr' : 'agent', node: null, shownFor: '', sender: null};
   const prLabel = snapshot.mode === 'pr' || review.history?.origin_mode === 'pr' ? 'PR comment' : 'Review comment';
   const composerModes = {
     agent: {placeholder: 'Ask your agent about these lines. It answers here; nothing goes to GitHub.', hint: 'to ask'},
@@ -258,11 +261,11 @@
     form.innerHTML = `<header class="composer-head"><div class="composer-modes" role="radiogroup" aria-label="Who is this comment for?" hidden><label class="composer-mode"><input type="radio" name="composer-mode" value="agent"><span>${icon('sparkles')}Ask agent</span></label><label class="composer-mode"><input type="radio" name="composer-mode" value="pr"><span>${icon('message-square')}${prLabel}</span></label></div><span class="composer-where"></span><button type="button" class="act act-quiet act-icon" data-composer-cancel aria-label="Cancel comment" title="Cancel (Esc)">${icon('x')}</button></header>
       <div class="composer-types" role="radiogroup" aria-label="Type of comment">${composerTypes.map(type => `<label class="composer-type"><input type="radio" name="composer-label" value="${type}"><span>${icon(commentTypes[type][0])}${commentTypes[type][1]}</span></label>`).join('')}</div>
       <textarea class="composer-text" rows="3" aria-label="Your comment"></textarea>
-      <footer class="composer-foot"><label class="composer-blocking"><input type="checkbox" name="composer-blocking"><span>Blocks approval</span></label><span class="composer-hint"><kbd>⌘</kbd><kbd>↵</kbd> <span data-composer-hint></span></span><div class="composer-actions"><button type="button" class="act act-quiet" data-composer-cancel>Cancel</button><button type="submit" class="act act-pr" data-composer-save>Save comment</button><button type="submit" class="act act-agent" data-composer-send hidden>${icon('send')}Ask agent</button></div></footer>`;
+      <footer class="composer-foot"><label class="composer-blocking"><input type="checkbox" name="composer-blocking"><span>Blocks approval</span></label><span class="composer-hint"><kbd>⌘</kbd><kbd>↵</kbd> <span data-composer-hint></span></span><div class="composer-actions"><button type="button" class="act act-quiet" data-composer-cancel>Cancel</button><button type="submit" class="act act-pr" data-composer-save>Save comment</button><button type="submit" class="act act-secondary" data-gh-action="open" hidden>Copy &amp; open on GitHub ${icon('arrow-up-right')}</button><button type="submit" class="act act-secondary" data-gh-action="single" hidden>Add single comment</button><button type="submit" class="act act-gh" data-gh-action="review" hidden></button><button type="submit" class="act act-agent" data-composer-send hidden>${icon('send')}Ask agent</button></div></footer><p class="composer-gh" data-composer-gh role="status" aria-live="polite" hidden></p>`;
     const text = form.querySelector('.composer-text');
     const refresh = () => {
       composer.text = text.value;
-      form.querySelectorAll('[data-composer-save], [data-composer-send]').forEach(button => { button.disabled = !text.value.trim(); });
+      syncComposerButtons();
     };
     text.addEventListener('input', refresh);
     text.addEventListener('keydown', event => {
@@ -270,7 +273,11 @@
       else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); form.requestSubmit(); }
     });
     form.addEventListener('change', event => {
-      if (event.target.name === 'composer-mode') { composer.mode = event.target.value; syncComposerMode(); }
+      if (event.target.name === 'composer-mode') {
+        composer.mode = event.target.value;
+        try { localStorage.setItem(composerModeKey, composer.mode); } catch { /* remembered for this page only */ }
+        syncComposerMode();
+      }
       if (event.target.name === 'composer-label') composer.label = event.target.value;
       if (event.target.name === 'composer-blocking') composer.blocking = event.target.checked;
       form.querySelector('.composer-types').dataset.type = composer.label;
@@ -285,14 +292,40 @@
       const ask = composerMode() === 'agent';
       const comment = {hunk: selection.hunk, side: selection.side, start: selection.start, end: selection.end, id: `mine-${crypto.randomUUID()}`,
         label: ask ? 'question' : composer.label, decoration: !ask && composer.blocking ? 'blocking' : 'non-blocking', audience: ask ? 'agent' : 'pr', subject: entered.subject, discussion: entered.discussion};
-      commitComment(comment);
+      // ⌘ Enter means the main button, as on GitHub: Start a review / Add review comment.
+      const action = ask ? 'ask' : event.submitter?.dataset.ghAction || composerPrimary();
+      if (action === 'open') {
+        // Open first, while the click still counts as the reader's own; then save and copy.
+        const link = ReviewTools.githubLink(snapshot, review, comment);
+        if (link) window.open(link, '_blank', 'noopener');
+        commitComment(comment, false);
+        copyText(ReviewTools.postingText(snapshot, comment, review.qa, {placed: true}), 'Saved and copied. Paste it into the comment box on GitHub.');
+        return;
+      }
+      commitComment(comment, action === 'single' || action === 'review' ? false : undefined);
       if (ask) composer.sender(comment.id);
+      else if (action === 'single') github.provider.post(comment.id);
+      else if (action === 'review') github.provider.pend(comment.id, true);
     });
     composer.node = form;
     syncComposerFields();
     return form;
   }
   const splitComment = ReviewTools.splitComment;
+  // What the PR buttons can do right now: post through the server (gh), copy and open, or only save.
+  function composerGitHub() {
+    if (!ReviewTools.githubLink(snapshot, review, {general: true})) return 'save';
+    return ghLive() ? 'post' : 'open';
+  }
+  const composerPrimary = () => ({post: 'review', open: 'save', save: 'save'})[composerGitHub()];
+  function syncComposerButtons() {
+    const form = composer.node;
+    if (!form) return;
+    const empty = !form.querySelector('.composer-text').value.trim();
+    const ready = ghStatus().phase === 'ready';
+    form.querySelectorAll('[data-composer-save], [data-composer-send], [data-gh-action="open"]').forEach(button => { button.disabled = empty; });
+    form.querySelectorAll('[data-gh-action="single"], [data-gh-action="review"]').forEach(button => { button.disabled = empty || !ready; });
+  }
   // Asking the agent needs a served review; a saved page only drafts comments for the PR.
   const composerMode = () => composer.sender ? composer.mode : 'pr';
   function syncComposerMode() {
@@ -303,8 +336,26 @@
     form.querySelector(`input[name="composer-mode"][value="${mode}"]`).checked = true;
     form.querySelector('.composer-text').placeholder = composerModes[mode].placeholder;
     form.querySelector('[data-composer-hint]').textContent = composerModes[mode].hint;
-    form.querySelector('[data-composer-save]').hidden = mode === 'agent';
-    form.querySelector('[data-composer-send]').hidden = mode !== 'agent';
+    const gh = mode === 'agent' ? 'agent' : composerGitHub();
+    form.querySelector('[data-composer-send]').hidden = gh !== 'agent';
+    form.querySelector('[data-composer-save]').hidden = gh !== 'save' && gh !== 'open';
+    form.querySelector('[data-composer-save]').className = `act ${gh === 'open' ? 'act-secondary' : 'act-pr'}`;
+    form.querySelector('[data-gh-action="open"]').hidden = gh !== 'open';
+    form.querySelector('[data-gh-action="single"]').hidden = gh !== 'post';
+    const review = form.querySelector('[data-gh-action="review"]');
+    review.hidden = gh !== 'post';
+    review.textContent = ghPending() ? 'Add review comment' : 'Start a review';
+    if (gh === 'post') form.querySelector('[data-composer-hint]').textContent = ghPending() ? 'to add to your review' : 'to start a review';
+    // Who it posts as, and where: the reader knows before clicking. Waiting and failures say so.
+    const line = form.querySelector('[data-composer-gh]');
+    const status = ghStatus();
+    let html = '';
+    if (gh === 'post' && status.phase === 'ready') html = `<span class="gh-dot is-ready" aria-hidden="true"></span>Commenting as <b>@${escape(status.login)}</b> on ${escape(status.repo)} #${escape(status.number)}${ghPending() ? ` · <b>${ghPending()}</b> pending in your review` : ''}`;
+    else if (gh === 'post') html = `${status.phase === 'checking' ? '<span class="gh-spinner" aria-hidden="true"></span>' : '<span class="gh-dot" aria-hidden="true"></span>'}${escape(status.text || '')}`;
+    else if (gh === 'open' && ghStatus().phase === 'unavailable') html = `<span class="gh-dot" aria-hidden="true"></span>${escape(ghStatus().text)} Copy &amp; open still works.`;
+    if (line.dataset.html !== html) { line.innerHTML = html; line.dataset.html = html; }
+    line.hidden = !html;
+    syncComposerButtons();
   }
   function syncComposerFields() {
     const form = composer.node;
@@ -312,7 +363,6 @@
     form.querySelector(`input[name="composer-label"][value="${composer.label}"]`).checked = true;
     form.querySelector('input[name="composer-blocking"]').checked = composer.blocking;
     form.querySelector('.composer-types').dataset.type = composer.label;
-    form.querySelectorAll('[data-composer-save], [data-composer-send]').forEach(button => { button.disabled = !composer.text.trim(); });
     syncComposerMode();
   }
   function removeComposer(reset = false) {
@@ -345,7 +395,8 @@
     }
   }
   // Save a comment you wrote: used by the composer and the dialog alike.
-  function commitComment(comment) {
+  // message: the toast to show; false when the caller reports what happens next (posting, say).
+  function commitComment(comment, message) {
     state.personalComments = state.personalComments.filter(existing => existing.id !== comment.id);
     state.personalComments.push(comment);
     state.resolvedComments = state.resolvedComments.filter(id => id !== comment.id);
@@ -353,7 +404,8 @@
     const stored = persist();
     clearSelection();
     const scroll = $('content').scrollTop; render(); $('content').scrollTop = scroll;
-    toast(stored ? 'Your comment is saved in this browser.' : 'Browser storage is unavailable. Copy or export your review before closing.');
+    if (!stored) toast('Browser storage is unavailable. Copy or export your review before closing.');
+    else if (message !== false) toast(message || 'Your comment is saved in this browser.');
   }
   window.ReviewComposer = {setSender(fn) { composer.sender = fn; composerNode(); syncComposerMode(); }};
 
@@ -1014,6 +1066,60 @@
     if (!link) return `<button class="btn btn-${size} btn-soft" ${data.copy}>${icon('copy')} Copy for comment</button>`;
     return `<a class="btn btn-${size} gh-act" href="${escape(link)}" target="_blank" rel="noopener noreferrer" ${data.github} title="Copies the comment and opens ${comment.general ? 'the pull request' : 'these lines'} on GitHub, ready to paste">Comment on GitHub ${icon('arrow-up-right')}</a>`;
   }
+  // --- GitHub -------------------------------------------------------------------------------------
+  // A served review posts to the pull request itself: the live layer connects a provider that runs
+  // `gh` on this computer. Otherwise the comment is copied and its lines open on GitHub. Wherever a
+  // comment appears it shows the same GitHub state, as GitHub does: not posted, Pending in your
+  // review, posting, posted (with its link), or not posted with the reason and Try again.
+  const github = {provider: null};
+  const ghStatus = () => github.provider?.status() || {phase: 'none'};
+  const ghState = id => github.provider?.stateOf(id) || {state: 'note'};
+  const ghPending = () => github.provider?.pendingCount() || 0;
+  const ghPostable = comment => comment.audience !== 'agent' && !!ReviewTools.githubLink(snapshot, review, comment);
+  const ghLive = () => ['ready', 'checking', 'offline'].includes(ghStatus().phase);
+  const ghWhere = posted => ({file: 'Posted as a comment on the file: these lines are not part of the pull request\'s diff.', review: 'Posted in your review\'s summary.', conversation: 'Posted in the pull request\'s conversation.'})[posted.where] || 'Posted on these lines.';
+  function ghBadge(comment) {
+    if (!ghPostable(comment)) return '';
+    const state = ghState(comment.id);
+    if (state.state === 'pending') return `<span class="gh-tag gh-tag-pending" title="In your pending GitHub review. It is posted when you finish your review.">Pending</span>`;
+    if (state.state === 'failed') return `<span class="gh-tag gh-tag-failed" title="${escape(state.error)}">${icon('circle-alert')}Not posted</span>`;
+    if (state.state === 'posted') return `<a class="gh-tag gh-tag-posted" href="${escape(state.url)}" target="_blank" rel="noopener noreferrer" title="${escape(ghWhere(state))} Open it on GitHub.">${icon('check')}On GitHub</a>`;
+    return '';
+  }
+  function githubControls(comment, size = 'sm') {
+    const id = escape(comment.id);
+    if (!ghPostable(comment) || !ghLive()) return comment.audience === 'agent' ? '' : githubAction(comment, {copy: `data-copy-comment="${id}"`, github: `data-github="${id}"`}, size);
+    const status = ghStatus();
+    const state = ghState(comment.id);
+    if (state.state === 'posted') return `<a class="btn btn-${size} gh-posted" href="${escape(state.url)}" target="_blank" rel="noopener noreferrer" title="${escape(ghWhere(state))}">${icon('check')}Posted · View on GitHub ${icon('arrow-up-right')}</a>`;
+    if (state.state === 'posting') return `<button type="button" class="btn btn-${size} gh-act gh-busy" disabled><span class="gh-spinner" aria-hidden="true"></span>Posting to GitHub…</button>`;
+    // Until GitHub answers, say so where the buttons will be, rather than showing dead buttons.
+    if (status.phase === 'checking') return `<span class="gh-wait" role="status"><span class="gh-spinner" aria-hidden="true"></span>Connecting to GitHub…</span>`;
+    const off = status.phase === 'ready' ? '' : `disabled title="${escape(status.text || '')}"`;
+    if (state.state === 'pending') return `<button type="button" class="btn btn-${size} btn-ghost" data-gh-unpend="${id}" ${off}>Remove from review</button>`;
+    const error = state.state === 'failed' ? `<span class="gh-error" role="alert">${icon('circle-alert')}<span>${escape(state.error)}</span></span>` : '';
+    return `${error}<button type="button" class="btn btn-${size} gh-act" data-gh-post="${id}" ${off} title="Post this comment on the pull request now">${state.state === 'failed' ? 'Try again' : 'Comment on GitHub'}</button><button type="button" class="btn btn-${size} btn-ghost" data-gh-pend="${id}" ${off} title="Keep it pending, and post it with your other comments when you finish your review">${ghPending() ? 'Add to review' : 'Start a review'}</button>`;
+  }
+  const ghSlot = (comment, size = 'sm') => `<span class="gh-slot" data-gh-slot="${escape(comment.id)}" data-size="${size}">${githubControls(comment, size)}</span>`;
+  const ghBadgeSlot = comment => `<span class="gh-slot" data-gh-badge="${escape(comment.id)}">${ghBadge(comment)}</span>`;
+  // State changes redraw only the GitHub parts of what is on screen; nothing else moves.
+  function refreshGitHub() {
+    document.querySelectorAll('[data-gh-slot]').forEach(slot => {
+      const comment = comments.find(entry => entry.id === slot.dataset.ghSlot);
+      if (!comment) return;
+      const html = githubControls(comment, slot.dataset.size);
+      if (slot.dataset.html !== html) { slot.innerHTML = html; slot.dataset.html = html; }
+    });
+    document.querySelectorAll('[data-gh-badge]').forEach(slot => {
+      const comment = comments.find(entry => entry.id === slot.dataset.ghBadge);
+      const html = comment ? ghBadge(comment) : '';
+      if (slot.dataset.html !== html) { slot.innerHTML = html; slot.dataset.html = html; }
+    });
+    // A posted comment lives on GitHub now: edit or delete it there.
+    document.querySelectorAll('[data-edit], [data-delete]').forEach(item => { item.hidden = ghState(item.dataset.edit || item.dataset.delete).state === 'posted'; });
+    if (composer.node) syncComposerMode();
+  }
+  window.ReviewGitHub = {connect(provider) { github.provider = provider; refreshGitHub(); }, refresh: refreshGitHub};
   const menuItem = (attrs, label, symbol = '') => `<button type="button" class="more-item" ${attrs}>${symbol ? icon(symbol) : ''}${label}</button>`;
   const moreMenu = (items, size = 'sm') => `<details class="more-menu"><summary class="btn btn-${size} btn-ghost more-toggle" aria-label="More actions" title="More actions">${icon('ellipsis')}</summary><div class="more-list">${items.join('')}</div></details>`;
   // A comment's actions: GitHub (when it is a comment for the PR) and the menu.
@@ -1021,19 +1127,20 @@
     const id = escape(comment.id);
     const found = ReviewTools.anchor(snapshot, comment);
     const forAgent = comment.audience === 'agent';
-    const github = !forAgent && ReviewTools.githubLink(snapshot, review, comment);
+    const prLink = !forAgent && ReviewTools.githubLink(snapshot, review, comment);
+    const posted = ghState(comment.id).state === 'posted';
     const items = [
-      github ? menuItem(`data-copy-comment="${id}"`, 'Copy for comment', 'copy') : '',
+      prLink ? menuItem(`data-copy-comment="${id}"`, 'Copy for comment', 'copy') : '',
       menuItem(`data-copy="${id}"`, 'Copy for LLMs', 'copy'),
       found && !found.fullFile ? menuItem(`data-comment="${id}"`, 'Open in diff', 'arrow-right') : '',
-      comment.personal ? menuItem(`data-edit="${id}"`, 'Edit', 'pencil') + menuItem(`data-delete="${id}"`, 'Delete', 'trash-2') : ''
+      comment.personal && !posted ? menuItem(`data-edit="${id}"`, 'Edit', 'pencil') + menuItem(`data-delete="${id}"`, 'Delete', 'trash-2') : ''
     ];
-    return `${forAgent ? '' : githubAction(comment, {copy: `data-copy-comment="${id}"`, github: `data-github="${id}"`}, size)}${moreMenu(items, size)}`;
+    return `${forAgent ? '' : ghSlot(comment, size)}${moreMenu(items, size)}`;
   }
   function threadBadges(comment) {
     if (comment.audience === 'agent') return `<span class="thread-type type-purple" title="A question for your agent. It stays in this review."><span class="thread-type-icon">${icon('sparkles')}</span>For your agent</span>${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}`;
     const [symbol, title, hint, tone] = commentTypes[comment.label] || commentTypes.note;
-    return `<span class="thread-type type-${tone}" title="${hint}"><span class="thread-type-icon">${icon(symbol)}</span>${title}</span><span class="thread-priority ${comment.decoration === 'blocking' ? 'is-blocking' : 'is-optional'}">${comment.decoration === 'blocking' ? `${icon('circle-alert')} Blocking` : 'Non-blocking'}</span>${comment.severity ? `<span class="thread-severity">${escape(comment.severity)}</span>` : ''}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${comment.personal ? '<span class="thread-author">Your comment</span>' : ''}`;
+    return `<span class="thread-type type-${tone}" title="${hint}"><span class="thread-type-icon">${icon(symbol)}</span>${title}</span><span class="thread-priority ${comment.decoration === 'blocking' ? 'is-blocking' : 'is-optional'}">${comment.decoration === 'blocking' ? `${icon('circle-alert')} Blocking` : 'Non-blocking'}</span>${comment.severity ? `<span class="thread-severity">${escape(comment.severity)}</span>` : ''}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${comment.personal ? '<span class="thread-author">Your comment</span>' : ''}${ghBadgeSlot(comment)}`;
   }
   function commentCard(comment) {
     const found = ReviewTools.anchor(snapshot, comment);
@@ -1433,7 +1540,7 @@
     if (!open) return;
     const groups = new Map();
     entries.forEach(entry => { if (!groups.has(entry.path)) groups.set(entry.path, []); groups.get(entry.path).push(entry); });
-    const row = entry => `<li class="ledger-item" data-ledger="${escape(entry.id)}" data-state="${entry.resolved ? 'resolved' : 'draft'}"><button type="button" class="ledger-jump" data-ledger-jump="${escape(entry.id)}"><span class="ledger-where">${escape(entry.where)}</span><span class="ledger-subject">${escape(entry.subject)}</span></button><div class="ledger-meta"><button type="button" data-resolve="${escape(entry.id)}">${entry.resolved ? 'Reopen' : 'Resolve'}</button><button type="button" data-copy="${escape(entry.id)}">Copy for LLMs</button></div></li>`;
+    const row = entry => `<li class="ledger-item" data-ledger="${escape(entry.id)}" data-state="${entry.resolved ? 'resolved' : 'draft'}"><button type="button" class="ledger-jump" data-ledger-jump="${escape(entry.id)}"><span class="ledger-where">${escape(entry.where)}</span><span class="ledger-subject">${escape(entry.subject)}</span></button><div class="ledger-meta">${ghBadgeSlot(comments.find(comment => comment.id === entry.id) || {})}<button type="button" data-resolve="${escape(entry.id)}">${entry.resolved ? 'Reopen' : 'Resolve'}</button><button type="button" data-copy="${escape(entry.id)}">Copy for LLMs</button></div></li>`;
     const byFile = [...groups].map(([path, list]) => `<section class="ledger-group"><h3>${escape(path)}</h3><ul class="ledger-list">${list.map(row).join('')}</ul></section>`).join('');
     const stepNotes = notes.length ? `<section class="ledger-group"><h3>Step notes</h3><ul class="ledger-list">${notes.map(note => `<li class="ledger-item" data-state="draft"><button type="button" class="ledger-jump" data-ledger-step="${escape(note.id)}"><span class="ledger-where">${escape(note.title)}</span><span class="ledger-subject">${escape(note.text)}</span></button></li>`).join('')}</ul></section>` : '';
     const empty = !entries.length && !notes.length ? '<p class="ledger-note">Select lines in a diff and write a comment. What you say, and what your agent answers, collects here.</p>' : '';
@@ -1681,12 +1788,20 @@
   }, true);
   document.addEventListener('scroll', () => closeMenus(), true);
   document.addEventListener('click', async event => {
+    // Posting goes through the served review's provider, which shows its own progress.
+    const ghAct = event.target.closest('[data-gh-post], [data-gh-pend], [data-gh-unpend]');
+    if (ghAct && github.provider) {
+      if (ghAct.dataset.ghPost) github.provider.post(ghAct.dataset.ghPost);
+      else if (ghAct.dataset.ghPend) github.provider.pend(ghAct.dataset.ghPend, true);
+      else github.provider.pend(ghAct.dataset.ghUnpend, false);
+      return;
+    }
     // Comment on GitHub is a link, so the browser opens it; the copy starts first, while this page
     // still has focus, which is what the clipboard needs. Nothing may be awaited before it.
-    const github = event.target.closest('[data-github], [data-github-finding]');
-    if (github) {
-      const finding = github.dataset.githubFinding !== undefined && review.findings?.[Number(github.dataset.githubFinding)];
-      const comment = finding ? {...findingComment(finding), discussion: finding.body} : comments.find(comment => comment.id === github.dataset.github);
+    const githubLink = event.target.closest('[data-github], [data-github-finding]');
+    if (githubLink) {
+      const finding = githubLink.dataset.githubFinding !== undefined && review.findings?.[Number(githubLink.dataset.githubFinding)];
+      const comment = finding ? {...findingComment(finding), discussion: finding.body} : comments.find(comment => comment.id === githubLink.dataset.github);
       if (comment) copyText(ReviewTools.postingText(snapshot, comment, finding ? undefined : review.qa, {placed: true}), 'Copied. Paste it into the comment box on GitHub.');
       return;
     }

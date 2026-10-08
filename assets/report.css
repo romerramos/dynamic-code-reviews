@@ -881,3 +881,33 @@ dialog.stage::backdrop{background:#16203766;backdrop-filter:blur(4px)}
 .popover-comment .comment-actions .btn.dcr-act-reply{color:#5548c8;background:#fff;border-color:#5548c8}
 .popover-comment .comment-actions .btn.gh-act{color:#1f2633;background:#fff;border-color:#cfd5df}
 .popover-comment .comment-actions .more-toggle{background:transparent;border-color:transparent}
+
+/* GitHub, as GitHub shows it: green for what commits to the pull request (Start a review, Submit
+   review), neutral for a single comment, an amber Pending tag while a comment waits in your review
+   and a green tag once it is on GitHub. Spinners say that something is on its way. */
+.gh-slot{display:contents}
+.more-item[hidden]{display:none}
+.act-gh{background:#1f883d;color:#fff}
+.act-gh:hover:not(:disabled){background:#1a7f37}
+.act-gh:disabled{background:color-mix(in oklab,#1f883d 45%,var(--surface));color:#fff}
+.gh-tag{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:999px;font-size:11.5px;font-weight:600;line-height:1;white-space:nowrap;text-decoration:none}
+.gh-tag svg{width:12px;height:12px}
+.gh-tag-pending{border:1px solid #d4a72c;background:#fff8c5;color:#7d4e00}
+.gh-tag-posted{border:1px solid #4ac26b;background:#dafbe1;color:#116329}
+.gh-tag-posted:hover{text-decoration:underline}
+.btn.gh-posted{gap:6px;border:1px solid #4ac26b;background:#dafbe1;color:#116329;font-weight:550}
+.btn.gh-posted:hover{background:#c8f5d2;border-color:#1f883d}
+.btn.gh-posted svg{width:14px;height:14px}
+.btn.gh-busy{gap:8px;opacity:1}
+.gh-spinner{flex:none;display:inline-block;width:13px;height:13px;border:2px solid color-mix(in oklab,currentColor 25%,transparent);border-top-color:currentColor;border-radius:50%;animation:gh-spin .7s linear infinite}
+@keyframes gh-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.gh-spinner{animation-duration:2s}}
+.gh-error{order:-1;display:inline-flex;align-items:flex-start;gap:6px;flex-basis:100%;margin:0 0 4px;color:#b42318;font-size:12.5px;line-height:1.4}
+.gh-error svg{flex:none;width:14px;height:14px;margin-top:1px}
+.gh-dot{flex:none;display:inline-block;width:7px;height:7px;border-radius:50%;background:#8a8f9c}
+.gh-dot.is-ready{background:#1f883d}
+.composer-gh{display:flex;align-items:center;gap:7px;margin:8px 0 0;color:var(--muted);font-size:12.5px}
+.composer-gh b{color:var(--ink);font-weight:600}
+.ledger-meta .gh-tag{height:18px;font-size:11px}
+.gh-wait{display:inline-flex;align-items:center;gap:8px;padding:0 6px;color:var(--muted);font-size:12.5px}
+.gh-tag-failed{border:1px solid #f2b8b5;background:#fdecea;color:#912018}

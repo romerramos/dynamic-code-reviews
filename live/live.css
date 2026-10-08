@@ -214,3 +214,55 @@ body.dcr-has-app #qa-panel{display:none}
 .dcr-try-templates button:hover,.dcr-try-link:hover{text-decoration:underline}
 @media(min-width:1500px){.dcr-try-body.has-both{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}.dcr-try-body.has-both .dcr-try-app{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:700px){.dcr-try-app{grid-template-columns:1fr}}
+
+/* GitHub work in progress, bottom right: a spinner while it runs, then what happened and its link. */
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#dcr-gh-note{position:fixed;right:24px;bottom:22px;z-index:19;display:flex;align-items:center;gap:10px;max-width:min(460px,calc(100vw - 32px));padding:11px 10px 11px 14px;border:1px solid var(--line,#e3e5ea);border-radius:12px;background:var(--surface,#fff);color:var(--ink,inherit);font-size:13.5px;line-height:1.4;box-shadow:0 8px 30px #28324c30}
+#dcr-gh-note[hidden]{display:none}
+#dcr-gh-note[data-tone="done"] .gh-mark{color:#1f883d}
+#dcr-gh-note[data-tone="error"]{border-color:#f2b8b5}
+#dcr-gh-note[data-tone="error"] .gh-mark{color:#b42318}
+#dcr-gh-note .gh-mark svg{display:block;width:16px;height:16px}
+#dcr-gh-note .gh-note-text{flex:1;min-width:0}
+.gh-note-link{display:inline-flex;align-items:center;gap:4px;flex:none;padding:4px 6px;border:0;background:none;color:var(--accent,#4f4bc4);font:inherit;font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap;cursor:pointer}
+.gh-note-link:hover{text-decoration:underline}
+.gh-note-link svg{width:13px;height:13px}
+@media(prefers-reduced-motion:no-preference){#dcr-gh-note{animation:dcr-unsent-in .18s ease-out}}
+.range-actions:not([hidden])~#dcr-gh-note{bottom:104px}
+@media(min-width:1500px){body.ledger-open #dcr-gh-note{right:344px}}
+#dcr-unsent.is-github{border-left-color:#d4a72c}
+#dcr-unsent.is-github .btn-primary{border-color:#1f883d;background:#1f883d;color:#fff}
+
+/* Finish your review: GitHub's summary and outcome, then the pending comments. */
+.dcr-gh-box{display:grid;gap:14px;max-width:520px}
+.dcr-gh-box header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.dcr-gh-box h2{margin:0;font-size:17px}
+.dcr-gh-box header p{margin:3px 0 0;font-size:13px}
+.dcr-gh-box .gh-summary{width:100%;box-sizing:border-box;min-height:84px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-size:14px;line-height:1.5;resize:vertical}
+.dcr-gh-box .gh-summary:focus-visible{outline:2px solid #1f883d;outline-offset:1px}
+.gh-events{display:grid;gap:2px;margin:0;padding:0;border:0}
+.gh-event{display:flex;align-items:flex-start;gap:10px;padding:7px 8px;border-radius:8px;cursor:pointer}
+.gh-event:hover{background:color-mix(in oklab,var(--ink) 4%,transparent)}
+.gh-event input{margin-top:3px;accent-color:#1f883d}
+.gh-event span{display:grid;gap:1px}
+.gh-event b{font-size:14px;font-weight:600}
+.gh-event small{color:var(--muted);font-size:12.5px;line-height:1.4}
+.gh-event.is-off{cursor:not-allowed;opacity:.6}
+.gh-pending-list summary{color:var(--muted);font-size:13px;cursor:pointer}
+.gh-pending-list .send-list{margin:8px 0 0;max-height:32vh}
+.gh-pending-list li{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 2px}
+.gh-finish-state{display:flex;align-items:flex-start;gap:9px;margin:0;padding:10px 12px;border-radius:8px;background:color-mix(in oklab,var(--ink) 4%,var(--surface));font-size:13.5px;line-height:1.45}
+.gh-finish-state[hidden]{display:none}
+.gh-finish-state[data-tone="done"]{background:#dafbe1;color:#116329}
+.gh-finish-state[data-tone="error"]{background:#fdecea;color:#912018}
+.gh-finish-state .gh-mark svg{display:block;width:17px;height:17px;margin-top:1px}
+.gh-finish-state .gh-spinner{margin-top:3px}
+.dcr-gh-actions{display:flex;justify-content:flex-end;gap:8px}
+.dcr-gh-actions .act-gh{min-width:132px}
+.dcr-gh-actions a.act{text-decoration:none}
+html[data-theme="dark"] .gh-finish-state[data-tone="done"]{background:#12301d;color:#7ee2a0}
+html[data-theme="dark"] .gh-finish-state[data-tone="error"]{background:#3b1a1d;color:#ffb4ab}
+#dcr-gh-note:not([hidden])~#dcr-unsent{bottom:88px}
+.ledger-item[data-gh-row][data-state="pending"]::before{background:#d4a72c}
+.ledger-item[data-gh-row][data-state="posted"]::before{background:#1f883d}
+.dcr-gh-box [hidden]{display:none}

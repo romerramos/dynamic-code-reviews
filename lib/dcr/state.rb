@@ -18,7 +18,7 @@ module DCR
     KEY = /\A[A-Za-z0-9_.:-]{1,300}\z/
     AUTHORS = %w[user agent].freeze
 
-    def self.empty = {'version' => 1, 'rev' => 0, 'blobs' => {}, 'threads' => {}, 'previews' => {}, 'comments' => {}, 'outbox' => [], 'acked' => 0, 'seq' => 0}
+    def self.empty = {'version' => 1, 'rev' => 0, 'blobs' => {}, 'threads' => {}, 'previews' => {}, 'comments' => {}, 'github' => {}, 'outbox' => [], 'acked' => 0, 'seq' => 0}
 
     # The key the page saves a revision's progress under (see LiveTools.progressKey).
     def self.review_key(fingerprint, series, number) = "dynamic-review:#{fingerprint}:#{series}:#{number}"
@@ -189,6 +189,44 @@ module DCR
 
     def finish(key)
       update { |state| enqueue(state, 'finish', key, [], 'The reviewer finished this review round.') }
+    end
+
+    # --- comments on GitHub ----------------------------------------------------------------
+    # Which comments wait in the reviewer's pending GitHub review, and which were posted (with
+    # their link). Kept here, not in the browser, so every device shows the same.
+
+    def github_pending(key, id, pending)
+      check_key(key)
+      raise ArgumentError, 'Invalid comment id' unless id.to_s.match?(ID)
+      update do |state|
+        entry = github_entry(state, key)
+        raise ArgumentError, 'That comment is already on GitHub' if entry['posted'].key?(id)
+        if pending then entry['pending'][id] = Time.now.utc.iso8601
+        else entry['pending'].delete(id)
+        end
+        entry
+      end
+    end
+
+    def github_posted(key, results, review: nil)
+      check_key(key)
+      update do |state|
+        entry = github_entry(state, key)
+        results.each do |id, posted|
+          entry['pending'].delete(id)
+          entry['posted'][id] = posted.merge('at' => Time.now.utc.iso8601)
+        end
+        (entry['reviews'] << review.merge('at' => Time.now.utc.iso8601)) if review
+        entry
+      end
+    end
+
+    def github_entry(state, key)
+      state['github'][key] ||= {}
+      state['github'][key]['pending'] ||= {}
+      state['github'][key]['posted'] ||= {}
+      state['github'][key]['reviews'] ||= []
+      state['github'][key]
     end
 
     # --- comments posted while the review is in progress --------------------------------

@@ -274,8 +274,9 @@
   panel.setAttribute('aria-label', 'Live review');
   const ico = name => (window.ReviewIcons?.[name] || '').replace('<svg', '<svg aria-hidden="true" focusable="false"');
   panel.innerHTML = `<p class="dcr-foot-status" role="status"><span class="dcr-dot" aria-hidden="true"></span><span class="dcr-summary"></span></p>
+    <button type="button" class="act act-gh act-block" data-gh-finish hidden>${ico('check')}<span>Finish your review</span><b class="act-count"></b></button>
     <button type="button" class="act act-primary act-block" data-open-send>${ico('send')}<span>Review and send</span><b class="act-count"></b></button>
-    <div class="dcr-foot-row"><button type="button" class="act act-secondary" data-dcr-export title="Download one offline file with your comments, the replies and any recordings">${ico('download')}Export</button><button type="button" class="act act-secondary" data-dcr-finish title="Send anything unsent and tell your agent this round is done">${ico('check-check')}Finish review</button></div>
+    <div class="dcr-foot-row"><button type="button" class="act act-secondary" data-dcr-export title="Download one offline file with your comments, the replies and any recordings">${ico('download')}Export</button><button type="button" class="act act-secondary" data-dcr-finish title="Send anything unsent and tell your agent this round is done">${ico('check-check')}Finish with agent</button></div>
     <p class="dcr-note" aria-live="polite"></p>`;
   panel.dataset.liveFooter = '1';
   const holder = document.createElement('div');
@@ -292,13 +293,16 @@
     const summary = tools.summary(comments(), threads, resolved());
     const mine = comments().filter(comment => comment.personal).length;
     const parts = [];
+    const onGitHub = Object.keys(ghData.posted || {}).length;
     if (!online) parts.push('Server stopped');
-    else if (!mine && !summary.waiting && !summary.answered) parts.push('No comments yet');
+    else if (!mine && !summary.waiting && !summary.answered && !ghPendingIds().length && !onGitHub) parts.push('No comments yet');
     else {
-      parts.push(`${mine} comment${mine === 1 ? '' : 's'}`);
+      if (mine) parts.push(`${mine} comment${mine === 1 ? '' : 's'}`);
+      if (onGitHub) parts.push(`${onGitHub} on GitHub`);
       if (summary.drafts) parts.push(`${summary.drafts} not sent`);
       if (summary.waiting) parts.push(`${summary.waiting} with your agent`);
       if (summary.answered) parts.push(`${summary.answered} answered`);
+      if (ghPendingIds().length) parts.push(`${ghPendingIds().length} pending on GitHub`);
     }
     set(panel.querySelector('.dcr-summary'), 'textContent', parts.join(' · '));
     panel.querySelector('.dcr-foot-status .dcr-dot').dataset.tone = !online ? 'off' : summary.drafts ? 'work' : 'ok';
@@ -312,8 +316,14 @@
     set(send.querySelector('.act-count'), 'textContent', String(summary.drafts));
     set(send, 'disabled', !online);
     set(finish, 'disabled', !online);
-    finish.classList.toggle('act-primary', !summary.drafts);
-    finish.classList.toggle('act-secondary', !!summary.drafts);
+    // Pending GitHub comments make finishing that review the main action, as on GitHub.
+    const ghFinish = panel.querySelector('[data-gh-finish]');
+    const pendingCount = ghPendingIds().length;
+    ghFinish.hidden = !pendingCount;
+    set(ghFinish.querySelector('.act-count'), 'textContent', String(pendingCount));
+    set(ghFinish, 'disabled', !online);
+    finish.classList.toggle('act-primary', !summary.drafts && !pendingCount);
+    finish.classList.toggle('act-secondary', !!summary.drafts || !!pendingCount);
   };
   const sendDrafts = async () => {
     const pending = tools.drafts(comments(), threads, resolved());
@@ -331,11 +341,161 @@
         flash('Exported. The file opens offline with your comments and your agent\'s replies.');
         return;
       }
+      if (event.target.closest('[data-gh-finish]')) { openFinish(); return; }
       if (event.target.closest('[data-dcr-finish]')) {
         await sendDrafts(); await api('/api/finish', {key}); await refresh();
         flash('Finished. Your agent will pick this round up and reply here.');
       }
     } catch (error) { flash(error.message); }
+  });
+
+  // --- GitHub ---------------------------------------------------------------------------------
+  // The review posts to the pull request through this server, which runs `gh` signed in on this
+  // computer: one click, one request, no agent involved. A comment can be posted now (Add single
+  // comment) or kept pending and posted with the others when you finish your review, as on GitHub.
+  // Every step is visible: connecting, posting, posted with its link, or why it did not post.
+  let ghStatus = {phase: 'checking', text: 'Connecting to GitHub…'};
+  let ghData = {pending: {}, posted: {}};
+  const ghPosting = new Set();
+  const ghFailed = new Map();
+  const ghPendingIds = () => { const known = new Set(comments().map(comment => comment.id)); return Object.keys(ghData.pending || {}).filter(id => known.has(id) && !ghData.posted?.[id]); };
+  const ghRefresh = () => { decorateLedger(); window.ReviewGitHub?.refresh(); renderPanel(); renderUnsent(); };
+  const ghProvider = {
+    status: () => !online ? {phase: 'offline', text: 'The review server stopped. Restart `dcr serve` to post to GitHub.'} : ghStatus,
+    stateOf: id => ghData.posted?.[id] ? {state: 'posted', ...ghData.posted[id]} : ghPosting.has(id) ? {state: 'posting'}
+      : ghFailed.has(id) ? {state: 'failed', error: ghFailed.get(id)} : ghData.pending?.[id] ? {state: 'pending'} : {state: 'note'},
+    pendingCount: () => ghPendingIds().length,
+    async post(id) {
+      const comment = comments().find(entry => entry.id === id);
+      if (!comment || ghPosting.has(id)) return;
+      ghPosting.add(id); ghFailed.delete(id); ghRefresh();
+      ghNotice('busy', 'Posting your comment to GitHub…');
+      try {
+        const result = await api('/api/github/comment', {key, item: globalThis.ReviewTools.githubItem(snapshot, comment, review.qa)});
+        const posted = result.posted[id];
+        ghData.posted = {...ghData.posted, [id]: posted};
+        ghNotice('done', {lines: `Posted on ${where(comment)}.`, file: 'Posted on the file: those lines are not in the pull request\'s diff.', conversation: 'Posted in the pull request\'s conversation.'}[posted.where] || 'Posted on GitHub.', posted.url);
+      } catch (error) {
+        ghFailed.set(id, error.message);
+        ghNotice('error', `Not posted. ${error.message}`);
+      } finally { ghPosting.delete(id); ghRefresh(); }
+    },
+    async pend(id, on) {
+      try {
+        const entry = await api('/api/github/pending', {key, id, pending: on});
+        ghData = {...ghData, ...entry}; ghFailed.delete(id); ghRefresh();
+        const count = ghPendingIds().length;
+        ghNotice('done', on ? `Added to your review · ${count} pending. Finish your review to post ${count === 1 ? 'it' : 'them'}.` : `Removed from your review${count ? ` · ${count} pending` : ''}.`, null, on ? 'finish' : null);
+      } catch (error) { ghNotice('error', error.message); }
+    }
+  };
+  const where = comment => {
+    const found = globalThis.ReviewTools.anchor(snapshot, comment);
+    return found ? `${found.file.path.split('/').pop()}, ${comment.start === comment.end ? `line ${comment.start}` : `lines ${comment.start}–${comment.end}`}` : 'the pull request';
+  };
+  const loadGitHub = async () => {
+    try {
+      const status = await api(`/api/github?key=${encodeURIComponent(key)}`);
+      ghStatus = status.ready ? {phase: 'ready', ...status} : {phase: 'unavailable', text: status.reason};
+    } catch (error) { ghStatus = {phase: 'unavailable', text: error.message}; }
+    ghRefresh();
+  };
+  if (window.ReviewGitHub && globalThis.ReviewTools.githubLink(snapshot, review, {general: true})) { window.ReviewGitHub.connect(ghProvider); loadGitHub(); }
+
+  // One notice for GitHub work, bottom right: a spinner while it runs, then the result with its link.
+  const ghNote = document.createElement('div');
+  ghNote.id = 'dcr-gh-note';
+  ghNote.hidden = true;
+  ghNote.setAttribute('role', 'status');
+  ghNote.setAttribute('aria-live', 'polite');
+  document.body.append(ghNote);
+  let ghNoteTimer;
+  const ghNotice = (tone, text, url = null, action = null) => {
+    clearTimeout(ghNoteTimer);
+    ghNote.dataset.tone = tone;
+    const mark = tone === 'busy' ? '<span class="gh-spinner" aria-hidden="true"></span>' : tone === 'done' ? `<span class="gh-mark">${ico('check')}</span>` : `<span class="gh-mark">${ico('circle-alert')}</span>`;
+    ghNote.innerHTML = `${mark}<span class="gh-note-text">${tools.escape(text)}</span>${url ? `<a class="gh-note-link" href="${tools.escape(url)}" target="_blank" rel="noopener noreferrer">View on GitHub ${ico('arrow-up-right')}</a>` : ''}${action === 'finish' ? '<button type="button" class="gh-note-link" data-gh-finish>Finish your review</button>' : ''}${tone === 'busy' ? '' : '<button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>'}`;
+    ghNote.hidden = false;
+    if (tone !== 'busy') ghNoteTimer = setTimeout(() => { ghNote.hidden = true; }, tone === 'error' ? 15000 : 8000);
+  };
+  ghNote.addEventListener('click', event => {
+    if (event.target.closest('[data-gh-finish]')) { ghNote.hidden = true; openFinish(); }
+    else if (event.target.closest('.dcr-dismiss, .gh-note-link')) ghNote.hidden = true;
+  });
+
+  // Finish your review: GitHub's own choice of a summary and Comment, Approve or Request changes,
+  // with the pending comments listed. It reports progress in place and ends on the review's link.
+  const finishDialog = document.createElement('dialog');
+  finishDialog.id = 'dcr-gh-finish';
+  finishDialog.className = 'modal dcr-gh-finish';
+  finishDialog.setAttribute('aria-labelledby', 'dcr-gh-finish-title');
+  document.body.append(finishDialog);
+  const EVENTS = [
+    ['COMMENT', 'Comment', 'Submit general feedback without explicit approval.'],
+    ['APPROVE', 'Approve', 'Give your approval to merge these changes.'],
+    ['REQUEST_CHANGES', 'Request changes', 'Submit feedback that must be addressed before merging.']
+  ];
+  const openFinish = () => {
+    const ids = ghPendingIds();
+    if (!ids.length) return;
+    const own = ghStatus.phase === 'ready' && ghStatus.author && ghStatus.author === ghStatus.login;
+    const rows = ids.map(id => comments().find(comment => comment.id === id)).map(comment => `<li><span class="send-text"><span class="send-where">${tools.escape(where(comment))}</span><span class="send-subject">${tools.escape(comment.subject)}</span></span><button type="button" class="act act-quiet act-icon" data-gh-drop="${tools.escape(comment.id)}" aria-label="Remove from review" title="Remove from review">${ico('x')}</button></li>`).join('');
+    finishDialog.innerHTML = `<form method="dialog" class="modal-box dcr-gh-box">
+      <header><div><h2 id="dcr-gh-finish-title">Finish your review</h2><p class="muted">${ids.length} pending comment${ids.length === 1 ? '' : 's'} on ${tools.escape(ghStatus.repo || '')} #${tools.escape(ghStatus.number || '')}${ghStatus.login ? `, as <b>@${tools.escape(ghStatus.login)}</b>` : ''}</p></div><button type="button" class="act act-quiet act-icon" data-gh-close aria-label="Close" title="Close (Esc)">${ico('x')}</button></header>
+      <textarea class="gh-summary" name="body" rows="4" placeholder="Leave a comment" aria-label="Review summary"></textarea>
+      <fieldset class="gh-events"><legend class="sr-only">Review outcome</legend>${EVENTS.map(([value, label, hint], index) => {
+        const blocked = own && value !== 'COMMENT';
+        return `<label class="gh-event${blocked ? ' is-off' : ''}"><input type="radio" name="event" value="${value}" ${index === 0 ? 'checked' : ''} ${blocked ? 'disabled' : ''}><span><b>${label}</b><small>${blocked ? 'Pull request authors can\'t approve or request changes on their own pull request.' : hint}</small></span></label>`;
+      }).join('')}</fieldset>
+      <details class="gh-pending-list" ${ids.length <= 4 ? 'open' : ''}><summary>${ids.length} pending comment${ids.length === 1 ? '' : 's'}</summary><ul class="send-list">${rows}</ul></details>
+      <p class="gh-finish-state" role="status" aria-live="polite" hidden></p>
+      <footer class="dcr-gh-actions"><button type="button" class="act act-quiet" data-gh-close>Cancel</button><button type="button" class="act act-gh" data-gh-submit>Submit review</button></footer></form>`;
+    finishDialog.showModal();
+    finishDialog.querySelector('.gh-summary').focus();
+    const status = ghProvider.status();
+    if (status.phase !== 'ready') {
+      finishDialog.querySelector('[data-gh-submit]').disabled = true;
+      finishState(status.phase === 'checking' ? 'busy' : 'error', `${status.phase === 'checking' ? '<span class="gh-spinner" aria-hidden="true"></span>' : `<span class="gh-mark">${ico('circle-alert')}</span>`}<span>${tools.escape(status.text || '')}</span>`);
+    }
+  };
+  const finishState = (tone, html) => {
+    const line = finishDialog.querySelector('.gh-finish-state');
+    line.dataset.tone = tone;
+    line.innerHTML = html;
+    line.hidden = !html;
+  };
+  finishDialog.addEventListener('click', async event => {
+    if (event.target.closest('[data-gh-close]')) { finishDialog.close(); return; }
+    const drop = event.target.closest('[data-gh-drop]');
+    if (drop) { await ghProvider.pend(drop.dataset.ghDrop, false); if (ghPendingIds().length) openFinish(); else finishDialog.close(); return; }
+    const submit = event.target.closest('[data-gh-submit]');
+    if (!submit) return;
+    const form = finishDialog.querySelector('form');
+    const event_ = form.elements.event.value;
+    const ids = ghPendingIds();
+    const items = ids.map(id => comments().find(comment => comment.id === id)).filter(Boolean).map(comment => globalThis.ReviewTools.githubItem(snapshot, comment, review.qa));
+    form.querySelectorAll('button, textarea, input').forEach(control => { control.disabled = true; });
+    submit.innerHTML = '<span class="gh-spinner" aria-hidden="true"></span>Submitting…';
+    finishState('busy', `Posting ${items.length} comment${items.length === 1 ? '' : 's'} as one review on GitHub…`);
+    ids.forEach(id => ghPosting.add(id)); ghRefresh();
+    try {
+      const result = await api('/api/github/review', {key, event: event_, body: form.elements.body.value, items});
+      ghData.posted = {...ghData.posted, ...result.posted};
+      ids.forEach(id => { delete ghData.pending[id]; });
+      const loose = Object.values(result.posted).filter(posted => posted.where === 'review').length;
+      const label = {COMMENT: 'Review submitted', APPROVE: 'Approved', REQUEST_CHANGES: 'Changes requested'}[event_];
+      finishDialog.querySelector('.gh-events').hidden = true;
+      finishDialog.querySelector('.gh-summary').hidden = true;
+      finishDialog.querySelector('.gh-pending-list').hidden = true;
+      finishDialog.querySelector('header p').textContent = `Posted on ${ghStatus.repo} #${ghStatus.number} as @${ghStatus.login}.`;
+      finishState('done', `<span class="gh-mark">${ico('check')}</span><span><b>${label}.</b> ${items.length} comment${items.length === 1 ? '' : 's'} posted on GitHub${loose ? `; ${loose} in the review's summary because ${loose === 1 ? 'its lines are' : 'their lines are'} not in the diff` : ''}.</span>`);
+      finishDialog.querySelector('.dcr-gh-actions').innerHTML = `<button type="button" class="act act-quiet" data-gh-close>Close</button><a class="act act-secondary" href="${tools.escape(result.review)}" target="_blank" rel="noopener noreferrer">View on GitHub ${ico('arrow-up-right')}</a>`;
+    } catch (error) {
+      form.querySelectorAll('button, textarea, input:not([data-off])').forEach(control => { control.disabled = false; });
+      form.querySelectorAll('.gh-event.is-off input').forEach(input => { input.disabled = true; });
+      submit.textContent = 'Try again';
+      finishState('error', `<span class="gh-mark">${ico('circle-alert')}</span><span>Not submitted. ${tools.escape(error.message)}</span>`);
+    } finally { ids.forEach(id => ghPosting.delete(id)); ghRefresh(); }
   });
 
   // --- recordings -----------------------------------------------------------------------------
@@ -486,19 +646,32 @@
       const html = `<h3>Conversations with your agent</h3><ul class="ledger-list">${joined.map(rowFor).join('')}</ul>`;
       if (section.dataset.html !== html) { section.innerHTML = html; section.dataset.html = html; }
     }
+    // The agent's comments you put on GitHub (pending or posted), so the panel shows your whole GitHub review.
+    const onGitHub = comments().filter(comment => !mine.has(comment.id) && (ghData.pending?.[comment.id] || ghData.posted?.[comment.id]));
+    let ghGroup = body.querySelector(':scope > .dcr-gh-group');
+    if (!onGitHub.length) ghGroup?.remove();
+    else {
+      if (!ghGroup) { ghGroup = document.createElement('section'); ghGroup.className = 'ledger-group dcr-gh-group'; section ? section.after(ghGroup) : body.prepend(ghGroup); }
+      const html = `<h3>On GitHub</h3><ul class="ledger-list">${onGitHub.map(comment => `<li class="ledger-item" data-gh-row data-state="${ghData.posted?.[comment.id] ? 'posted' : 'pending'}"><button type="button" class="ledger-jump" data-ledger-jump="${tools.escape(comment.id)}"><span class="ledger-where">${tools.escape(whereOf(comment))}</span><span class="ledger-subject">${tools.escape(comment.subject)}</span></button><div class="ledger-meta"><span class="gh-slot" data-gh-badge="${tools.escape(comment.id)}"></span></div></li>`).join('')}</ul>`;
+      if (ghGroup.dataset.html !== html) { ghGroup.innerHTML = html; ghGroup.dataset.html = html; window.ReviewGitHub?.refresh(); }
+    }
     const byId = new Map(comments().map(comment => [comment.id, comment]));
     if (current && !hasConversation(threads[current])) closeConversation();
     body.querySelectorAll('.ledger-item[data-ledger]').forEach(item => {
       const thread = threads[item.dataset.ledger];
       const own = !item.dataset.conversation;
-      const state = item.dataset.state === 'resolved' && own ? 'resolved' : STATE[thread?.delivery] || 'draft';
+      // A comment for the PR is about GitHub, not the agent: its stroke follows its GitHub state.
+      const forPR = byId.get(item.dataset.ledger)?.audience === 'pr' && !thread;
+      const ghRow = ghData.posted?.[item.dataset.ledger] ? 'posted' : ghData.pending?.[item.dataset.ledger] ? 'pending' : 'draft';
+      if (item.dataset.ghRow === undefined && forPR) item.dataset.ghRow = '';
+      const state = item.dataset.state === 'resolved' && own ? 'resolved' : forPR ? ghRow : STATE[thread?.delivery] || 'draft';
       set(item.dataset, 'state', state);
       const meta = item.querySelector('.ledger-meta');
       let status = meta.querySelector('.ledger-status');
       if (!status) { status = document.createElement('span'); status.className = 'ledger-status'; meta.prepend(status); }
       // An unsent comment shows its Send button instead of saying it is unsent.
       const model = online ? tools.statusModel(thread, listening) : null;
-      const text = state === 'resolved' || (state === 'draft' && online) ? '' : model?.text || 'Not sent';
+      const text = state === 'resolved' || forPR || (state === 'draft' && online) ? '' : model?.text || 'Not sent';
       const tone = model?.tone || 'off';
       // A narrow row says it in a few words; the whole sentence is its tooltip.
       const short = !model ? text : {done: 'Replied', work: 'Agent is answering', wait: 'Sent', idle: thread?.delivery === 'delivered' ? 'No answer yet' : 'Sent · no agent listening'}[tone] || text;
@@ -508,7 +681,7 @@
       if (unseenIn(thread) && !fresh) { fresh = Object.assign(document.createElement('span'), {className: 'dcr-new', textContent: 'New'}); status.after(fresh); }
       if (!unseenIn(thread) && fresh) fresh.remove();
       let send = meta.querySelector('.dcr-row-send');
-      const canSend = own && state === 'draft' && online;
+      const canSend = own && !forPR && state === 'draft' && online;
       if (canSend && !send) { send = Object.assign(document.createElement('button'), {type: 'button', className: 'dcr-row-send', textContent: 'Send to agent'}); send.dataset.dcrRowSend = item.dataset.ledger; status.after(send); }
       if (!canSend && send) send.remove();
       item.querySelector(':scope > .ledger-reply')?.remove(); // the peek replaces the old one-line answer
@@ -554,10 +727,17 @@
   unsent.innerHTML = '<span></span><button type="button" class="btn btn-sm btn-primary" data-open-send>Review and send</button>';
   document.body.append(unsent);
   const renderUnsent = () => {
-    const count = tools.drafts(comments(), threads, resolved()).length;
+    const pending = ghPendingIds().length;
+    const count = pending || tools.drafts(comments(), threads, resolved()).length;
     unsent.hidden = !count || !online || document.body.classList.contains('ledger-open');
-    set(unsent.querySelector('span'), 'textContent', `${count} comment${count === 1 ? '' : 's'} not sent`);
+    unsent.classList.toggle('is-github', !!pending);
+    set(unsent.querySelector('span'), 'textContent', pending ? `${pending} comment${pending === 1 ? '' : 's'} pending in your GitHub review` : `${count} comment${count === 1 ? '' : 's'} not sent`);
+    const button = unsent.querySelector('button');
+    set(button, 'textContent', pending ? 'Finish your review' : 'Review and send');
+    button.toggleAttribute('data-open-send', !pending);
+    button.toggleAttribute('data-gh-finish', !!pending);
   };
+  unsent.addEventListener('click', event => { if (event.target.closest('[data-gh-finish]')) openFinish(); });
   new MutationObserver(renderUnsent).observe(document.body, {attributes: true, attributeFilter: ['class']});
 
   // The send dialog gains its second action. Comments already with the agent are shown but not selectable.
@@ -795,11 +975,13 @@
   // --- sync ----------------------------------------------------------------------------------
   const apply = data => {
     threads = data.threads; rev = data.rev; latest = data.latest_revision; listening = data.listening; online = true; previews = data.previews || {};
+    const ghNext = {pending: data.github?.pending || {}, posted: data.github?.posted || {}};
+    if (JSON.stringify(ghNext) !== JSON.stringify({pending: ghData.pending, posted: ghData.posted})) ghData = ghNext;
     receiveComments(data.comments || []);
     if (!seenKnown) { tools.unseen(threads, seen).forEach(item => seen.add(item.id)); saveSeen(); seenKnown = true; }
     const arrived = tools.unseen(threads, seen).filter(item => !announced.has(item.id));
     arrived.forEach(item => announced.add(item.id));
-    decorate(); decorateLedger(); renderPanel(); renderUnsent(); renderAgent(); refreshUnread();
+    decorate(); decorateLedger(); window.ReviewGitHub?.refresh(); renderPanel(); renderUnsent(); renderAgent(); refreshUnread();
     announce(arrived);
     announceFinished();
     syncPreviews();

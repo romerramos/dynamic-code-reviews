@@ -52,6 +52,14 @@ reviewTools.setConversationSource(null);
 assert.ok(!reviewTools.commentText(withRepo, comments[1]).includes('Conversation'), 'clearing the source restores the plain copy');
 console.log('PASS Copy for LLMs carries the conversation, the thread id and the dcr command; sending to the agent does not');
 
+// What GitHub receives: the paste-ready text, and for a line comment its file, side and lines.
+const item = reviewTools.githubItem(snapshot, comments[1]);
+assert.deepEqual({...item, body: undefined}, {id: 'mine-1', body: undefined, general: false, path: 'app/a.rb', side: 'RIGHT', line: 1, start_line: 1});
+assert.match(item.body, /^question \(non-blocking\): Why\?/);
+assert.ok(!item.body.includes('File: app/a.rb'), 'a comment placed on its lines does not repeat its location');
+assert.deepEqual(reviewTools.githubItem(snapshot, {id: 'g', general: true, label: 'note', decoration: 'non-blocking', subject: 'Overall', discussion: ''}), {id: 'g', body: 'note (non-blocking): Overall', general: true});
+console.log('PASS a comment becomes a GitHub line or conversation comment with paste-ready text');
+
 assert.equal(tools.actionLabel(undefined), 'Ask agent');
 assert.equal(tools.actionLabel({live:true}), 'Reply');
 console.log('PASS the action is Ask agent until the comment is with the agent, then Reply');

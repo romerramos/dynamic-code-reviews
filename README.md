@@ -69,6 +69,7 @@ your projects keep working.
 | macOS | Bringing the browser to the front (`dcr focus`). Elsewhere the agent tells you which tab. |
 | Tailscale | Optional. Opening reviews from your other devices. |
 | `gh`, or a GitHub or Linear connector | Optional. Reviewing a pull request with its real base and linked issues. |
+| `gh`, signed in | Optional. Posting comments and reviews to the pull request from the review page. Without it, Comment on GitHub copies the comment and opens its lines. |
 | Node.js 18+ | Only for the maintainer checks below. |
 
 No npm, Docker, database, API key or network connection is needed to collect and render a review.
@@ -209,6 +210,7 @@ Run focused checks for what you change, from this folder:
 ruby scripts/test_review.rb        # collection, rendering, validation
 ruby scripts/test_series.rb        # series, in-progress reviews, increments
 ruby scripts/test_live.rb          # live server state, threads, focus, tailnet sharing
+ruby scripts/test_github.rb        # posting to the pull request through gh (a stand-in gh, nothing reaches GitHub)
 ruby scripts/test_live_previews.rb # preview requests, stylesheets, stand-ins
 ruby scripts/test_app_proxy.rb     # the running app inside the review
 node scripts/test_ui.js            # the review page's own logic

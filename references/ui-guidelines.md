@@ -149,6 +149,13 @@ thing: recording now (a red dot on **Record**, a red pill reading **Stop m:ss** 
   opens on and follows the newest message unless the reader scrolled up, and one reply
   field pinned below it (grows, send icon, ⌘/Ctrl Enter). Only one conversation is open
   at a time. Status words in rows stay short (Replied, Sent, Agent is answering).
+- **GitHub follows GitHub.** Green (#1f883d) marks what commits to the PR: Start a review /
+  Add review comment, Finish your review and Submit review. A single comment is neutral. Tags:
+  yellow Pending, green On GitHub (a link), red Not posted (the reason in its title). Every wait
+  shows a spinner and says what it waits for (Connecting to GitHub…, Posting to GitHub…,
+  Submitting…); every result says where it went (these lines, the file, the conversation, the
+  review's summary) with View on GitHub. One notice at the bottom right carries progress and
+  results; it stacks above the pending reminder, never on it.
 - **On this app** is the sibling of Your review: a 360px column, one row per thing said
   about the app (a comment, or a recording with its conversation), newest first, a 3px
   left stroke for state, no cards and no avatars. A row shows the element name and kind,
