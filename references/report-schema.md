@@ -206,12 +206,13 @@ branch changes since their merge base, and cumulative series scope separately.
 For PRs, supply verified names with their captured endpoints:
 
 ```json
-{"comparison": {"base": "<snapshot.base>", "head": "<snapshot.head>", "base_label": "main", "head_label": "feat/inbox-state", "pr_number": 123}}
+{"comparison": {"base": "<snapshot.base>", "head": "<snapshot.head>", "base_label": "main", "head_label": "feat/inbox-state", "pr_number": 123, "pr_title": "STO-123 Keep inbox state"}}
 ```
 
 These are display labels, not instructions to collect a different diff. Use the
 snapshot merge-base SHA for `base`, not a newer base branch tip. Labels are only
-used when both SHAs match; otherwise the UI shows captured SHAs. Refresh names
+used when both SHAs match; otherwise the UI shows captured SHAs. `pr_title` is the
+PR's live title, shown in the header instead of the head SHA. Refresh names
 from live PR metadata for each review. `history.origin_mode` is helper-owned.
 Do not call a cumulative working-tree series merely “uncommitted changes”.
 

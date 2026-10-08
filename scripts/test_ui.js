@@ -92,6 +92,8 @@ const qa = {flows:[{assets:[{comment_id:'c1'},{comment_id:'c1'}]},{assets:[]},{a
 assert.deepEqual(tools.evidenceFlows(qa,{id:'c1'}),[0,2]);
 assert.deepEqual(tools.evidenceFlows(qa,{id:'c1',personal:true}),[]);
 assert.deepEqual(tools.evidenceFlows(undefined,{id:'c1'}),[]);
+assert.equal(tools.scopeLabel({...endpoints,mode:'pr'},{comparison:{...comparison,pr_title:'STO-42 Inbox state'}}), '#123 · STO-42 Inbox state', 'a PR names itself by its title, which carries the issue key');
+assert.equal(tools.scopeLabel({...endpoints,mode:'pr',head:'newhead123'},{comparison:{...comparison,pr_title:'STO-42 Inbox state'}}), 'pr · newhead1', 'a title bound to other endpoints is not shown');
 console.log('PASS scope labels distinguish review modes and evidence links target unique flows');
 const evidenceComment = {...comment,id:'c1',discussion:''};
 const evidenceQA = {flows:[{comment_id:'c1',steps:['Open the list.','Reopen the conversation.'],expected:'Row returns.',observed:'Row is missing.',assets:[]}]};

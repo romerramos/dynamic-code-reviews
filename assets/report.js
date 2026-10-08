@@ -1964,7 +1964,8 @@
   }
   document.title = `${review.title} · Dynamic Code Reviews`;
   $('repo-label').textContent = snapshot.repo.split('/').pop();
-  $('scope').innerHTML = `<span class="badge neutral">${snapshot.mode === 'series' ? (snapshot.working_tree ? 'Series + working tree' : 'Committed series') : escape(snapshot.mode)} · ${escape(snapshot.head.slice(0,8))}</span>`;
+  const scope = ReviewTools.scopeLabel(snapshot, review);
+  $('scope').innerHTML = `<span class="badge neutral" title="${escape(scope)}">${escape(scope)}</span>`;
   $('file-total').textContent = `${files.size} files`;
   const hash = location.hash.slice(1);
   if (['overview','files', ...layers.map(layer => layer.id)].includes(hash)) state.view = hash;

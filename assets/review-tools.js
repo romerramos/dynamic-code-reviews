@@ -277,16 +277,26 @@ globalThis.ReviewTools = (() => {
       : `Run video QA driven by this saved review. Choose a small set of meaningful checks from its findings, walkthroughs and changed user flows; determine the scenarios yourself. Record short videos preserving the computer-use pointer already rendered by the harness. Attach each finding's evidence to its relevant review comment using comment_id, and retain relevant successful walkthrough/flow checks as compact evidence. Discover the app and prepare access yourself. Prepare and verify control of the app tab before opening the recorder. Wait for sharing without asking for a typed reply. Capture the useful flows directly; do not run a routine cursor probe or synthesize cursor overlays.`;
     return `Use the dynamic-code-reviews skill to extend this saved review.\n\nReview context:\n${JSON.stringify(metadata, null, 2)}\n\n${task}\n\nRead the latest saved revision and verify its snapshot and the current checkout before attaching evidence. If code changed, review that change first; do not label new-code evidence as belonging to the old snapshot. Preserve existing findings, comments and evidence. Complete only the requested additions, publish one revision for this batch, and return the updated report link. Copying this prompt does not authorize changes to application source.`;
   }
+  // Labels belong to these exact endpoints; old labels must not describe new code.
+  function comparisonLabels(snapshot, review = {}) {
+    const supplied = review.comparison;
+    return supplied?.base === snapshot.base && supplied?.head === snapshot.head ? supplied : {};
+  }
+  const prReview = (snapshot, review = {}) => snapshot.mode === 'pr' || (snapshot.mode === 'series' && review.history?.origin_mode === 'pr');
+  // The header badge: a PR's number and title when known (its title names the issue), else the scope and head.
+  function scopeLabel(snapshot, review = {}) {
+    const labels = comparisonLabels(snapshot, review);
+    if (prReview(snapshot, review) && labels.pr_title) return `${labels.pr_number ? `#${labels.pr_number} · ` : ''}${labels.pr_title}`;
+    return `${snapshot.mode === 'series' ? (snapshot.working_tree ? 'Series + working tree' : 'Committed series') : snapshot.mode} · ${String(snapshot.head).slice(0, 8)}`;
+  }
   function comparisonText(snapshot, review = {}) {
     const short = value => String(value || 'unknown').slice(0, 8);
-    const supplied = review.comparison;
-    // Labels belong to these exact endpoints; old labels must not describe new code.
-    const labels = supplied?.base === snapshot.base && supplied?.head === snapshot.head ? supplied : {};
+    const labels = comparisonLabels(snapshot, review);
     const before = labels.base_label || short(snapshot.base);
     const after = labels.head_label || short(snapshot.head);
     if (snapshot.mode === 'uncommitted') return 'Uncommitted changes · staged and unstaged edits, plus non-ignored untracked files, compared with HEAD';
     if (snapshot.mode === 'series' && snapshot.working_tree) return `Cumulative review · committed and uncommitted changes compared with ${before}`;
-    if (snapshot.mode === 'pr' || (snapshot.mode === 'series' && review.history?.origin_mode === 'pr')) return `${labels.pr_number ? `PR #${labels.pr_number}` : 'PR review'} · ${after} compared with ${before} · branch changes since their merge base`;
+    if (prReview(snapshot, review)) return `${labels.pr_number ? `PR #${labels.pr_number}` : 'PR review'} · ${after} compared with ${before} · branch changes since their merge base`;
     if (snapshot.mode === 'commit') return `Commit review · ${short(snapshot.head)} compared with ${before}`;
     return `Cumulative review · ${after} compared with ${before}`;
   }
@@ -353,5 +363,5 @@ globalThis.ReviewTools = (() => {
     return out.join('');
   }
 
-  return {markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, displayRows, splitComment, sourceText, commentText, reviewText, overviewFeedback, comparisonText, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  return {markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, displayRows, splitComment, sourceText, commentText, reviewText, overviewFeedback, comparisonText, scopeLabel, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();
