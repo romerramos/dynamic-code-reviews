@@ -15,7 +15,7 @@ globalThis.LiveTools = (() => {
   // The text the agent receives for a first send: the same captured code and comment as
   // "Copy for LLMs", plus anything the reader wrote while composing.
   function sendText(snapshot, review, comment, note = '') {
-    const text = globalThis.ReviewTools.commentText(snapshot, {...comment, resolved: false}, review.qa);
+    const text = globalThis.ReviewTools.commentText(snapshot, {...comment, resolved: false}, review.qa, {conversation: false});
     return note.trim() ? `${text}\n\nReviewer's message:\n${note.trim()}` : text;
   }
 

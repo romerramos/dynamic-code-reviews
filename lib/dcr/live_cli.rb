@@ -48,7 +48,7 @@ module DCR
 
     USAGE = {
       'wait' => 'dcr wait (--repo ROOT --name SERIES | --dir DIR) [--timeout SECONDS] [--json]',
-      'comments' => 'dcr comments (--repo ROOT --name SERIES | --dir DIR) [--json]',
+      'comments' => 'dcr comments (--repo ROOT --name SERIES | --dir DIR) [--thread ID] [--json]   (--thread prints that one conversation in full: the comment as sent, then every message)',
       'preview' => 'dcr preview submit (--repo ROOT --name SERIES | --dir DIR) --path <template path> [--file FILE] [--title TITLE] [--css STYLESHEET]... [--page-class CLASSES] [--image-map JSON] | dcr preview fail ... --path <template path> --reason TEXT',
       'export' => 'dcr export (--repo ROOT --name SERIES | --dir DIR) [--out FILE]',
       'comment' => 'dcr comment (--repo ROOT --name SERIES | --dir DIR) [--file COMMENTS.json]   (one review comment or an array, as in the review JSON: id, label, decoration, subject, discussion, hunk, side, start, end; stdin when --file is omitted)',
@@ -67,6 +67,7 @@ module DCR
         p.on('--name SLUG') { |v| options[:name] = v }
         p.on('--dir PATH') { |v| options[:dir] = v }
         p.on('--key KEY') { |v| options[:key] = v }
+        p.on('--thread ID') { |v| options[:thread] = v }
         p.on('--out FILE') { |v| options[:out] = v }
         p.on('--path PATH') { |v| options[:path] = v }
         p.on('--file FILE') { |v| options[:file] = v }
@@ -200,6 +201,7 @@ module DCR
     end
 
     def comments(state, options)
+      return thread(state, options) if options[:thread]
       data = state.read
       threads = data['threads'].transform_values { |by_id| by_id.reject { |_, thread| thread['messages'].empty? && thread['delivery'] == 'draft' } }
       if options[:json]
@@ -213,6 +215,24 @@ module DCR
         end
         puts "#{state.pending.length} message(s) waiting for the agent."
       end
+    end
+
+    # One conversation in full, as a pasted "Copy for LLMs" points to it: the comment and code as
+    # first sent, then every message, newest revision first when a thread was carried forward.
+    def thread(state, options)
+      id = options[:thread]
+      data = state.read
+      key = options[:key] || data['threads'].select { |_, threads| threads.key?(id) }.keys.max_by { |name| name.split(':').last.to_i }
+      found = key && data.dig('threads', key, id)
+      raise ArgumentError, "No thread #{id}. `dcr comments` lists the threads of this review." unless found
+      sent = data['outbox'].reverse.find { |entry| entry['kind'] == 'send' && entry['thread_ids'].include?(id) && !entry['text'].start_with?("Follow-up in thread #{id}:") }
+      return puts(JSON.pretty_generate({'id' => id, 'key' => key, 'comment' => sent&.fetch('text')}.merge(found))) if options[:json]
+      out = ["Thread: #{id} [#{found['delivery']}#{found['live'] ? ', live' : ''}]"]
+      out << "The comment as sent:\n\n#{sent['text']}" if sent
+      found['messages'].each { |message| out << "#{message['author'] == 'agent' ? 'Agent' : 'Reviewer'} · #{message['at']}\n#{message['body']}" }
+      out << 'No messages yet.' if found['messages'].empty?
+      out << "Answer with: dcr reply #{flags(options)} #{id} '<your answer>'" if found['live']
+      puts out.join("\n\n---\n\n")
     end
 
     def export(options, directory)

@@ -203,7 +203,26 @@ globalThis.ReviewTools = (() => {
     const body = commentBody(comment, qa);
     return `${comment.label} (${comment.decoration}): ${comment.subject}\n\n${location}${body}`.trim();
   }
-  function commentText(snapshot, comment, qa) {
+  // The conversation with the agent under a comment lives outside the saved review: a served or
+  // exported review registers where to find it, and copies for an LLM then carry it along.
+  let conversationSource = () => null;
+  const setConversationSource = source => { conversationSource = typeof source === 'function' ? source : () => null; };
+  const shellWord = value => /^[\w@%+=:,./-]+$/.test(value) ? value : `'${String(value).replace(/'/g, `'\\''`)}'`;
+  function conversationText(snapshot, comment) {
+    const found = conversationSource(comment.id);
+    const messages = (found?.messages || []).filter(message => String(message.body || '').trim());
+    if (!messages.length) return '';
+    const when = at => { const date = new Date(at); return Number.isFinite(date.getTime()) ? ` · ${date.toISOString().slice(0, 16).replace('T', ' ')} UTC` : ''; };
+    const lines = messages.map(message => `${message.author === 'agent' ? 'Agent' : 'Reviewer'}${when(message.at)}\n${String(message.body).trim()}`);
+    const where = found.series && snapshot.repo ? `\nLatest messages: dcr comments --repo ${shellWord(snapshot.repo)} --name ${shellWord(found.series)} --thread ${shellWord(comment.id)}` : '';
+    return `\n\nConversation with the agent\n\n${lines.join('\n\n')}\n\nThread: ${comment.id}${where}`;
+  }
+  // conversation: false leaves the agent's conversation out, as in the first message sent to it.
+  function commentText(snapshot, comment, qa, {conversation = true} = {}) {
+    const tail = conversation ? conversationText(snapshot, comment) : '';
+    return commentOnly(snapshot, comment, qa) + tail;
+  }
+  function commentOnly(snapshot, comment, qa) {
     const found = anchor(snapshot, comment);
     const body = commentBody(comment, qa);
     if (comment.general) return `General comment · ${snapshot.head}\nSnapshot: ${snapshot.fingerprint}${comment.resolved ? '\nConversation: resolved locally (not verification that the code was fixed)' : ''}\n\n${postingText(snapshot, comment, qa)}`;
@@ -408,5 +427,5 @@ globalThis.ReviewTools = (() => {
     return out.join('');
   }
 
-  return {markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, displayRows, splitComment, sourceText, commentText, reviewText, overviewFeedback, comparisonText, scopeLabel, sha256, githubLink, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  return {markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, overviewFeedback, comparisonText, scopeLabel, sha256, githubLink, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();

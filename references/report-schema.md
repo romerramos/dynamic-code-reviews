@@ -69,7 +69,10 @@ Users can edit/delete their comments, see them under User comments, and copy the
 whole review including general step notes. Every generated/personal comment has
 Copy for LLMs with path, source side, source revision/capture, numbered snippet
 and Conventional Comment. Finding copies identify their snippet as the related
-hunk rather than claiming a more precise range than was provided.
+hunk rather than claiming a more precise range than was provided. In a served or
+exported review, a comment with a conversation also copies every message (who and
+when, then the text), its thread id and the `dcr comments --thread` command that
+prints the latest messages. What is sent to the agent leaves the conversation out.
 
 Personal comments and notes persist in browser storage when available, scoped to
 this snapshot/revision. They do not sync or publish externally. Copy for LLMs and

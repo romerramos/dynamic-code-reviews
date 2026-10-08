@@ -139,6 +139,16 @@ thing: recording now (a red dot on **Record**, a red pill reading **Stop m:ss** 
   the selector is a muted detail that gives way. Copy, Cancel and **Send to agent** (the
   primary). ⌘/Ctrl Enter sends, Esc closes it, a second Esc leaves Comment mode, a third
   closes the app.
+- **Your review conversations** follow the list-then-chat pattern: the panel is a list and
+  never holds reply fields. Closed, a row with a conversation has one quiet peek: Agent and
+  when, three lines of the latest answer, Open conversation with the message count and a
+  chevron. Opening it replaces the panel's head, list and footer with that conversation:
+  a bar with Back (Escape) and Close, the row's place and subject with Show in the code,
+  then a scrolling area (the comment as a muted quote, the messages without avatars: who
+  and when on one line, agent names in the accent, rendered Markdown, never folded) that
+  opens on and follows the newest message unless the reader scrolled up, and one reply
+  field pinned below it (grows, send icon, ⌘/Ctrl Enter). Only one conversation is open
+  at a time. Status words in rows stay short (Replied, Sent, Agent is answering).
 - **On this app** is the sibling of Your review: a 360px column, one row per thing said
   about the app (a comment, or a recording with its conversation), newest first, a 3px
   left stroke for state, no cards and no avatars. A row shows the element name and kind,

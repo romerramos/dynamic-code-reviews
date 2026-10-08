@@ -91,11 +91,20 @@
   // The conversation under a comment is a plain thread: who, when, then the text. A line above it
   // says what is happening (sent, being worked on, replied). On an Overview card the one action
   // sits in the card's footer beside Copy and Resolve; in the diff popover it ends the thread.
-  const cardBlock = (id, variant) => {
+  // In Your review the thread is narrow and always ready to answer: the comment it started from,
+  // then the messages, then a reply field that grows as you type (⌘/Ctrl Enter sends).
+  const quoteHTML = comment => {
+    const text = comment ? plain(comment.discussion) || comment.subject : '';
+    return text ? `<blockquote class="dcr-quote"><span>${comment.personal ? 'Your comment' : 'The finding'}</span><p>${tools.escape(text)}</p></blockquote>` : '';
+  };
+  const composeHTML = () => `<form class="dcr-reply dcr-compose" hidden><textarea rows="1" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea><button type="submit" class="dcr-send" aria-label="Send reply" title="Send reply (⌘ Enter)">${ico('send')}</button></form>`;
+  const cardBlock = (id, variant, comment) => {
     const block = document.createElement('div');
     block.className = `dcr-thread dcr-${variant}`;
     block.dataset.dcr = id;
-    block.innerHTML = `<div class="dcr-state" role="status" aria-live="polite"></div><div class="dcr-convo"></div><form class="dcr-reply" hidden><textarea rows="3" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea><div class="dcr-actions"><button type="submit" class="btn btn-sm btn-primary">Send reply</button><button type="button" class="btn btn-sm btn-ghost" data-dcr-cancel>Cancel</button></div></form>${variant === 'popover' ? `<div class="dcr-actions"><button type="button" class="btn btn-sm btn-primary" data-dcr-act data-dcr-for="${tools.escape(id)}"></button></div>` : ''}`;
+    block.innerHTML = variant === 'ledger'
+      ? `<div class="dcr-scroll">${quoteHTML(comment)}<div class="dcr-convo"></div><div class="dcr-state" role="status" aria-live="polite"></div></div>${composeHTML()}`
+      : `<div class="dcr-state" role="status" aria-live="polite"></div><div class="dcr-convo"></div><form class="dcr-reply" hidden><textarea rows="3" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea><div class="dcr-actions"><button type="submit" class="btn btn-sm btn-primary">Send reply</button><button type="button" class="btn btn-sm btn-ghost" data-dcr-cancel>Cancel</button></div></form>${variant === 'popover' ? `<div class="dcr-actions"><button type="button" class="btn btn-sm btn-primary" data-dcr-act data-dcr-for="${tools.escape(id)}"></button></div>` : ''}`;
     block.querySelector('textarea').value = drafts.get(id) || '';
     return block;
   };
@@ -104,7 +113,7 @@
     ? `<span class="dcr-dot dcr-tone-${model.tone}" aria-hidden="true"></span><span>${tools.escape(model.text)}</span>${model.typing ? '<span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span>' : ''}${at ? `<time data-at="${tools.escape(at)}">${tools.escape(tools.relativeTime(at))}</time>` : ''}`
     : '';
   // Long answers start clamped; the button appears only when something is actually hidden.
-  const clampLong = root => root.querySelectorAll('.dcr-body').forEach(body => {
+  const clampLong = root => root.closest('.dcr-ledger') || root.querySelectorAll('.dcr-body').forEach(body => {
     if (body.dataset.clamped || !body.offsetParent) return; // measure only what is on screen
     body.dataset.clamped = '1';
     const line = parseFloat(getComputedStyle(body).lineHeight) || 24;
@@ -115,6 +124,7 @@
   });
   const refreshBlock = block => {
     const id = block.dataset.dcr;
+    const ledger = block.classList.contains('dcr-ledger');
     const thread = threads[id];
     const sent = !!thread && (thread.live || thread.delivery !== 'draft');
     // The DOM re-serialises markup (an escaped quote comes back as a quote), so compare the
@@ -125,12 +135,25 @@
     const signature = (thread?.messages || []).map(message => message.id + (message.author === 'agent' && !seen.has(message.id) ? '!' : '')).join('|');
     const model = online ? tools.statusModel(thread, listening) : {tone: 'off', text: 'The review server stopped. Restart `dcr serve` to send or receive.'};
     // The reply carries its own time; the status line only says that it came.
-    const status = stateHTML(model, '');
-    const statusSignature = model ? `${model.tone}|${model.text}` : '';
+    // In Your review the row already says it replied; under the thread only work in progress shows.
+    const status = ledger && model?.tone === 'done' ? '' : stateHTML(model, '');
+    const statusSignature = status ? `${model.tone}|${model.text}` : '';
     const form = block.querySelector('.dcr-reply');
-    if (!sent && !form.hidden) form.hidden = true;
+    if (ledger) {
+      set(form, 'hidden', !sent);
+      const field = form.querySelector('textarea');
+      set(field, 'disabled', !online);
+      set(field, 'placeholder', online ? 'Reply to your agent' : 'The review server stopped');
+      set(form.querySelector('.dcr-send'), 'disabled', !online);
+    } else if (!sent && !form.hidden) form.hidden = true;
     block.classList.toggle('has-content', !!(html || status || !form.hidden));
-    if (convo.dataset.sig !== signature) { convo.innerHTML = html; convo.dataset.sig = signature; watchMessages(convo); }
+    if (convo.dataset.sig !== signature) {
+      // A chat follows new messages, unless you have scrolled up to read.
+      const scroller = ledger && block.querySelector('.dcr-scroll');
+      const following = scroller && scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80;
+      convo.innerHTML = html; convo.dataset.sig = signature; watchMessages(convo);
+      if (following) scroller.scrollTop = scroller.scrollHeight;
+    }
     clampLong(convo);
     const stateEl = block.querySelector('.dcr-state');
     if (stateEl.dataset.sig !== statusSignature) { stateEl.innerHTML = status; stateEl.dataset.sig = statusSignature; }
@@ -177,7 +200,11 @@
 
   document.addEventListener('input', event => {
     const field = event.target.closest('.dcr-thread textarea');
-    if (field) drafts.set(field.closest('.dcr-thread').dataset.dcr, field.value);
+    if (!field) return;
+    const id = field.closest('.dcr-thread').dataset.dcr;
+    drafts.set(id, field.value);
+    // The same reply may be open on the card and in Your review: keep them one draft.
+    document.querySelectorAll(`.dcr-thread[data-dcr="${CSS.escape(id)}"] textarea`).forEach(other => { if (other !== field) other.value = field.value; });
   });
   // The block that shows a comment's conversation: in its card, or in the popover.
   const blockFor = button => button.closest('.dcr-thread') || button.closest('article, .popover-comment')?.querySelector('.dcr-thread');
@@ -221,16 +248,24 @@
     const field = form.querySelector('textarea');
     const text = field.value.trim();
     if (!text) { field.focus(); return; }
+    if (form.querySelector('[type="submit"]').disabled) return; // ⌘ Enter while the last reply is still sending
     form.querySelector('[type="submit"]').disabled = true;
+    const ledger = block.classList.contains('dcr-ledger');
     try {
       await api('/api/message', {key, id, body: text});
       drafts.delete(id);
-      field.value = '';
-      form.hidden = true;
+      document.querySelectorAll(`.dcr-thread[data-dcr="${CSS.escape(id)}"] textarea`).forEach(other => { other.value = ''; });
+      if (!ledger) form.hidden = true;
       await refresh();
-      flash(tools.statusModel(threads[id], listening)?.text || 'Reply sent to your agent.');
+      // In Your review the conversation itself shows the reply and what happens next.
+      if (!ledger) flash(tools.statusModel(threads[id], listening)?.text || 'Reply sent to your agent.');
+      else if (field.isConnected) { field.focus(); const scroller = block.querySelector('.dcr-scroll'); scroller.scrollTop = scroller.scrollHeight; }
     } catch (error) { flash(error.message); }
-    finally { form.querySelector('[type="submit"]').disabled = false; }
+    finally { form.querySelector('[type="submit"]').disabled = !online; }
+  });
+  document.addEventListener('keydown', event => {
+    const field = event.target.closest?.('.dcr-reply textarea');
+    if (field && event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); field.form.requestSubmit(); }
   });
 
   // --- the Overview panel ------------------------------------------------------------------
@@ -347,49 +382,138 @@
   if (artifacts) { new MutationObserver(decorateRecordings).observe(artifacts, {childList: true}); decorateRecordings(); }
 
   // --- rows in "Your review" ---------------------------------------------------------------------
+  // Your review is a list. A row with a conversation shows who answered last and how the answer
+  // starts; opening it shows that one conversation in place of the list, as a chat: a back button,
+  // the comment it started from and every message, scrolling, and one reply field pinned to the
+  // bottom. The row's title still jumps to the code.
   const STATE = {sent: 'sent', delivered: 'sent', answered: 'answered'};
   const plain = tools.snippet;
   const unseenIn = thread => (thread?.messages || []).some(message => message.author === 'agent' && !seen.has(message.id));
-  const rowFor = (comment, thread) => {
+  const hasConversation = thread => !!thread && (thread.live || thread.delivery !== 'draft' || thread.messages?.length > 0);
+  const whereOf = comment => {
     const found = globalThis.ReviewTools.anchor(snapshot, comment);
-    const where = comment.general ? 'General comment' : `${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}`;
-    const last = [...(thread.messages || [])].reverse().find(message => message.author === 'agent');
-    return `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-state="${STATE[thread.delivery] || 'draft'}" data-conversation="1"><button type="button" class="ledger-jump" data-ledger-jump="${tools.escape(comment.id)}"><span class="ledger-where">${tools.escape(found?.file.path || 'General')} · ${tools.escape(where)}</span><span class="ledger-subject">${tools.escape(comment.subject)}</span></button><div class="ledger-meta"><span class="ledger-status">${tools.escape(tools.statusText(thread, listening))}</span>${unseenIn(thread) ? '<span class="dcr-new">New</span>' : ''}</div>${last ? `<p class="ledger-reply"><b>Agent</b> ${tools.escape(plain(last.body))}</p>` : ''}</li>`;
+    const lines = comment.general ? 'General comment' : `${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}`;
+    return `${found?.file.path || 'General'} · ${lines}`;
   };
+  const rowFor = comment => `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-conversation="1"><button type="button" class="ledger-jump" data-ledger-jump="${tools.escape(comment.id)}"><span class="ledger-where">${tools.escape(whereOf(comment))}</span><span class="ledger-subject">${tools.escape(comment.subject)}</span></button><div class="ledger-meta"></div></li>`;
+  const peekHTML = thread => {
+    const count = (thread.messages || []).length;
+    const last = [...(thread.messages || [])].reverse().find(message => message.author === 'agent');
+    const label = count ? `Open conversation · ${count} message${count === 1 ? '' : 's'}` : 'Open conversation';
+    return `${last ? `<span class="dcr-peek-who"><b>Agent</b><time data-at="${tools.escape(last.at || '')}">${tools.escape(tools.relativeTime(last.at))}</time></span><span class="dcr-peek-text">${tools.escape(plain(last.body))}</span>` : ''}<span class="dcr-peek-more"><span>${label}</span>${ico('chevron-right')}</span>`;
+  };
+  const decoratePeek = (item, comment, thread) => {
+    let peek = item.querySelector(':scope > .dcr-peek');
+    if (!hasConversation(thread)) { peek?.remove(); return; }
+    if (!peek) {
+      peek = Object.assign(document.createElement('button'), {type: 'button', className: 'dcr-peek'});
+      peek.dataset.dcrOpen = item.dataset.ledger;
+      peek.setAttribute('aria-label', `Open the conversation about ${comment?.subject || 'this comment'}`);
+      item.append(peek);
+    }
+    const html = peekHTML(thread);
+    if (peek.dataset.html !== html) { peek.innerHTML = html; peek.dataset.html = html; }
+  };
+
+  // The open conversation: it takes the panel's place until Back (or Escape).
+  const ledgerPanel = document.getElementById('ledger');
+  const view = document.createElement('section');
+  view.className = 'dcr-detail';
+  view.hidden = true;
+  view.setAttribute('aria-label', 'Conversation with your agent');
+  view.innerHTML = `<header class="dcr-detail-bar"><button type="button" class="dcr-back" data-dcr-back>${ico('chevron-left')}<span>Your review</span></button><button type="button" class="icon-button" data-dcr-close aria-label="Close your review" title="Close">${ico('x')}</button></header>
+    <div class="dcr-detail-title"><span class="ledger-where"></span><strong></strong><button type="button" class="dcr-detail-code" data-ledger-jump>${ico('arrow-up-right')}<span>Show in the code</span></button></div><div class="dcr-detail-slot"></div>`;
+  ledgerPanel?.append(view);
+  let current = null;
+  const openConversation = (id, {focus = true} = {}) => {
+    const comment = comments().find(entry => entry.id === id);
+    if (!comment || !hasConversation(threads[id]) || !ledgerPanel) return false;
+    if (!document.body.classList.contains('ledger-open')) document.getElementById('ledger-toggle')?.click();
+    current = id;
+    view.querySelector('.dcr-detail-title .ledger-where').textContent = whereOf(comment);
+    view.querySelector('.dcr-detail-title strong').textContent = comment.subject;
+    view.querySelector('[data-ledger-jump]').dataset.ledgerJump = id;
+    const block = cardBlock(id, 'ledger', comment);
+    view.querySelector('.dcr-detail-slot').replaceChildren(block);
+    view.hidden = false;
+    ledgerPanel.classList.add('dcr-in-convo');
+    refreshBlock(block);
+    const scroller = block.querySelector('.dcr-scroll');
+    scroller.scrollTop = scroller.scrollHeight; // a conversation opens on its newest message
+    if (focus) block.querySelector('textarea:not([disabled])')?.focus({preventScroll: true});
+    else view.querySelector('[data-dcr-back]').focus({preventScroll: true});
+    return true;
+  };
+  const closeConversation = () => {
+    const id = current;
+    current = null;
+    view.hidden = true;
+    view.querySelector('.dcr-detail-slot').replaceChildren();
+    ledgerPanel?.classList.remove('dcr-in-convo');
+    return id;
+  };
+  view.addEventListener('click', event => {
+    if (event.target.closest('[data-dcr-back]')) {
+      const id = closeConversation();
+      decorateLedger();
+      document.querySelector(`#ledger-body .ledger-item[data-ledger="${CSS.escape(id || '')}"] .dcr-peek`)?.focus({preventScroll: false});
+    }
+    if (event.target.closest('[data-dcr-close]')) { closeConversation(); document.getElementById('ledger-close')?.click(); }
+  });
+  ledgerPanel?.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || !current) return;
+    event.preventDefault();
+    event.stopPropagation();
+    view.querySelector('[data-dcr-back]').click();
+  });
+  document.addEventListener('click', event => {
+    const open = event.target.closest('[data-dcr-open]');
+    if (open) openConversation(open.dataset.dcrOpen);
+  });
+  // From an announced answer: open that conversation in Your review, rather than leaving the page.
+  const showConversation = id => openConversation(id);
   const decorateLedger = () => {
     const body = document.getElementById('ledger-body');
     if (!body) return;
-    // Your own comments gain their delivery state and the agent's latest answer.
-    body.querySelectorAll('.ledger-item[data-ledger]:not([data-conversation])').forEach(item => {
+    // Conversations about the agent's own findings that you have joined, above your own comments.
+    const mine = new Set(comments().filter(comment => comment.personal).map(comment => comment.id));
+    const joined = comments().filter(comment => !mine.has(comment.id) && hasConversation(threads[comment.id]) && (threads[comment.id].delivery !== 'draft' || threads[comment.id].messages?.length));
+    let section = body.querySelector(':scope > .dcr-convos');
+    if (!joined.length) section?.remove();
+    else {
+      if (!section) { section = document.createElement('section'); section.className = 'ledger-group dcr-convos'; body.prepend(section); }
+      // Only the list of rows decides the markup; states and answers are filled in below.
+      const html = `<h3>Conversations with your agent</h3><ul class="ledger-list">${joined.map(rowFor).join('')}</ul>`;
+      if (section.dataset.html !== html) { section.innerHTML = html; section.dataset.html = html; }
+    }
+    const byId = new Map(comments().map(comment => [comment.id, comment]));
+    if (current && !hasConversation(threads[current])) closeConversation();
+    body.querySelectorAll('.ledger-item[data-ledger]').forEach(item => {
       const thread = threads[item.dataset.ledger];
-      const state = item.dataset.state === 'resolved' ? 'resolved' : STATE[thread?.delivery] || 'draft';
+      const own = !item.dataset.conversation;
+      const state = item.dataset.state === 'resolved' && own ? 'resolved' : STATE[thread?.delivery] || 'draft';
       set(item.dataset, 'state', state);
       const meta = item.querySelector('.ledger-meta');
       let status = meta.querySelector('.ledger-status');
       if (!status) { status = document.createElement('span'); status.className = 'ledger-status'; meta.prepend(status); }
       // An unsent comment shows its Send button instead of saying it is unsent.
-      set(status, 'textContent', state === 'resolved' || (state === 'draft' && online) ? '' : tools.statusText(thread, listening) || 'Not sent');
+      const model = online ? tools.statusModel(thread, listening) : null;
+      const text = state === 'resolved' || (state === 'draft' && online) ? '' : model?.text || 'Not sent';
+      const tone = model?.tone || 'off';
+      // A narrow row says it in a few words; the whole sentence is its tooltip.
+      const short = !model ? text : {done: 'Replied', work: 'Agent is answering', wait: 'Sent', idle: thread?.delivery === 'delivered' ? 'No answer yet' : 'Sent · no agent listening'}[tone] || text;
+      const statusHTML = text ? `<span class="dcr-dot dcr-tone-${tone}" aria-hidden="true"></span>${tools.escape(short)}${model?.typing ? '<span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span>' : ''}` : '';
+      if (status.dataset.html !== statusHTML) { status.innerHTML = statusHTML; status.dataset.html = statusHTML; status.title = text; }
       let fresh = meta.querySelector('.dcr-new');
       if (unseenIn(thread) && !fresh) { fresh = Object.assign(document.createElement('span'), {className: 'dcr-new', textContent: 'New'}); status.after(fresh); }
       if (!unseenIn(thread) && fresh) fresh.remove();
       let send = meta.querySelector('.dcr-row-send');
-      const canSend = state === 'draft' && online;
+      const canSend = own && state === 'draft' && online;
       if (canSend && !send) { send = Object.assign(document.createElement('button'), {type: 'button', className: 'dcr-row-send', textContent: 'Send to agent'}); send.dataset.dcrRowSend = item.dataset.ledger; status.after(send); }
       if (!canSend && send) send.remove();
-      const last = [...(thread?.messages || [])].reverse().find(message => message.author === 'agent');
-      let reply = item.querySelector(':scope > .ledger-reply');
-      if (last && !reply) { reply = document.createElement('p'); reply.className = 'ledger-reply'; item.append(reply); }
-      if (reply) { if (last) { const text = plain(last.body); if (reply.dataset.text !== text) { reply.replaceChildren(Object.assign(document.createElement('b'), {textContent: 'Agent'}), ` ${text}`); reply.dataset.text = text; } } else reply.remove(); }
+      item.querySelector(':scope > .ledger-reply')?.remove(); // the peek replaces the old one-line answer
+      decoratePeek(item, byId.get(item.dataset.ledger), thread);
     });
-    // Conversations about the agent's own findings that you have joined.
-    const mine = new Set(comments().filter(comment => comment.personal).map(comment => comment.id));
-    const rows = comments().filter(comment => !mine.has(comment.id) && threads[comment.id] && (threads[comment.id].delivery !== 'draft' || threads[comment.id].messages?.length))
-      .map(comment => rowFor(comment, threads[comment.id])).join('');
-    let section = body.querySelector(':scope > .dcr-convos');
-    if (!rows) { section?.remove(); return; }
-    if (!section) { section = document.createElement('section'); section.className = 'ledger-group dcr-convos'; body.prepend(section); }
-    const html = `<h3>Conversations with your agent</h3><ul class="ledger-list">${rows}</ul>`;
-    if (section.dataset.html !== html) { section.innerHTML = html; section.dataset.html = html; }
   };
 
   // --- send from where you write ---------------------------------------------------------------
@@ -567,15 +691,21 @@
   document.body.append(arrival);
   let arrivalTimer;
   const announce = items => {
+    // An answer in the conversation open in Your review is already in front of you.
+    items = items.filter(item => !(item.thread === current && document.body.classList.contains('ledger-open')));
     if (!items.length) return;
     const first = comments().find(comment => comment.id === items[0].thread);
     const many = new Set(items.map(item => item.thread)).size > 1;
-    arrival.innerHTML = `<span class="dcr-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span><div><strong>${many ? 'Your agent replied to several comments' : 'Your agent replied'}</strong>${!many && first ? `<span>${tools.escape(first.subject)}</span>` : ''}</div>${first ? `<button type="button" class="btn btn-sm btn-primary" data-ledger-jump="${tools.escape(first.id)}">View</button>` : ''}<button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
+    arrival.innerHTML = `<span class="dcr-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span><div><strong>${many ? 'Your agent replied to several comments' : 'Your agent replied'}</strong>${!many && first ? `<span>${tools.escape(first.subject)}</span>` : ''}</div>${first ? `<button type="button" class="btn btn-sm btn-primary" data-dcr-show-convo="${tools.escape(first.id)}">View</button>` : ''}<button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
     arrival.hidden = false;
     clearTimeout(arrivalTimer);
     arrivalTimer = setTimeout(() => { arrival.hidden = true; }, 12000);
   };
-  arrival.addEventListener('click', event => { if (event.target.closest('[data-ledger-jump], .dcr-dismiss')) arrival.hidden = true; });
+  arrival.addEventListener('click', event => {
+    const show = event.target.closest('[data-dcr-show-convo]');
+    if (show) { arrival.hidden = true; showConversation(show.dataset.dcrShowConvo); return; }
+    if (event.target.closest('[data-ledger-jump], .dcr-dismiss')) arrival.hidden = true;
+  });
 
   // "5 min ago" stays true while the page is open.
   setInterval(() => document.querySelectorAll('time[data-at]').forEach(node => set(node, 'textContent', tools.relativeTime(node.dataset.at))), 30000);
@@ -658,6 +788,9 @@
     arrival.hidden = false;
   };
   arrival.addEventListener('click', event => { if (event.target.closest('[data-dcr-open-latest]')) { history.replaceState(null, '', '/#overview'); location.reload(); } });
+
+  // Copy for LLMs carries the conversation, and where to read the rest of it.
+  globalThis.ReviewTools.setConversationSource(id => threads[id]?.messages?.length ? {messages: threads[id].messages, series: review.history?.series} : null);
 
   // --- sync ----------------------------------------------------------------------------------
   const apply = data => {

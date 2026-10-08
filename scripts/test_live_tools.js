@@ -36,6 +36,22 @@ assert.ok(!/Conversation: resolved/.test(tools.sendText(snapshot, review, {...co
 assert.ok(!tools.sendText(snapshot, review, comments[0]).includes("Reviewer's message"));
 console.log('PASS the first send carries captured code, the comment and the reader note, reusing Copy for LLMs formatting');
 
+// Copy for LLMs carries the conversation once there is one; the first send to the agent never does.
+const reviewTools = globalThis.ReviewTools;
+const convo = {'mine-1': {messages: [{id:'m1', author:'user', body:'Is it bounded?', at:'2026-10-08T10:00:00Z'}, {id:'m2', author:'agent', body:'Yes: `limit` caps it.', at:'2026-10-08T10:02:00Z'}]}};
+reviewTools.setConversationSource(id => convo[id] ? {messages: convo[id].messages, series: 'feature'} : null);
+const withRepo = {...snapshot, repo: '/Users/me/my app'};
+const copied = reviewTools.commentText(withRepo, comments[1]);
+assert.match(copied, /question \(non-blocking\): Why\?\n\nConversation with the agent\n\nReviewer · 2026-10-08 10:00 UTC\nIs it bounded\?\n\nAgent · 2026-10-08 10:02 UTC\nYes: `limit` caps it\./);
+assert.match(copied, /\nThread: mine-1\nLatest messages: dcr comments --repo '\/Users\/me\/my app' --name feature --thread mine-1$/, 'the thread id and a quoted command to read the latest messages');
+assert.match(reviewTools.reviewText(withRepo, [comments[1]]), /Conversation with the agent/, 'Copy all carries conversations too');
+assert.ok(!reviewTools.commentText(withRepo, comments[0]).includes('Conversation with the agent'), 'a comment without messages copies as before');
+assert.ok(!tools.sendText(withRepo, review, comments[1]).includes('Conversation with the agent'), 'the first send does not repeat the conversation to the agent');
+assert.ok(!reviewTools.commentText(snapshot, comments[1]).includes('Latest messages'), 'without the repository path there is no command, only the thread id');
+reviewTools.setConversationSource(null);
+assert.ok(!reviewTools.commentText(withRepo, comments[1]).includes('Conversation'), 'clearing the source restores the plain copy');
+console.log('PASS Copy for LLMs carries the conversation, the thread id and the dcr command; sending to the agent does not');
+
 assert.equal(tools.actionLabel(undefined), 'Ask agent');
 assert.equal(tools.actionLabel({live:true}), 'Reply');
 console.log('PASS the action is Ask agent until the comment is with the agent, then Reply');

@@ -5,6 +5,10 @@
   const data = window.__DCR_EXPORT;
   const content = document.getElementById('content');
   if (!data || !content || !globalThis.LiveTools) return;
+  // Copy for LLMs carries the replies here too; `dcr comments` reads the saved series, no server needed.
+  let series;
+  try { series = JSON.parse(document.getElementById('data').textContent).review.history?.series; } catch { /* no command line then */ }
+  globalThis.ReviewTools?.setConversationSource(id => data.threads[id]?.messages?.length ? {messages: data.threads[id].messages, series} : null);
   const decorate = () => {
     content.querySelectorAll('article.review-thread[data-thread-id]').forEach(card => {
       const id = card.dataset.threadId;
