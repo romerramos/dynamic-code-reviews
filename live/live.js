@@ -298,11 +298,11 @@
     else if (!mine && !summary.waiting && !summary.answered && !ghPendingIds().length && !onGitHub) parts.push('No comments yet');
     else {
       if (mine) parts.push(`${mine} comment${mine === 1 ? '' : 's'}`);
-      if (onGitHub) parts.push(`${onGitHub} on GitHub`);
+      if (onGitHub) parts.push(`${onGitHub} posted on GitHub`);
       if (summary.drafts) parts.push(`${summary.drafts} not sent`);
       if (summary.waiting) parts.push(`${summary.waiting} with your agent`);
       if (summary.answered) parts.push(`${summary.answered} answered`);
-      if (ghPendingIds().length) parts.push(`${ghPendingIds().length} pending on GitHub`);
+      if (ghPendingIds().length) parts.push(`${ghPendingIds().length} pending`);
     }
     set(panel.querySelector('.dcr-summary'), 'textContent', parts.join(' · '));
     panel.querySelector('.dcr-foot-status .dcr-dot').dataset.tone = !online ? 'off' : summary.drafts ? 'work' : 'ok';
@@ -384,8 +384,6 @@
       try {
         const entry = await api('/api/github/pending', {key, id, pending: on});
         ghData = {...ghData, ...entry}; ghFailed.delete(id); ghRefresh();
-        const count = ghPendingIds().length;
-        ghNotice('done', on ? `Added to your review · ${count} pending. Finish your review to post ${count === 1 ? 'it' : 'them'}.` : `Removed from your review${count ? ` · ${count} pending` : ''}.`, null, on ? 'finish' : null);
       } catch (error) { ghNotice('error', error.message); }
     }
   };
@@ -661,7 +659,10 @@
       const thread = threads[item.dataset.ledger];
       const own = !item.dataset.conversation;
       // A comment for the PR is about GitHub, not the agent: its stroke follows its GitHub state.
-      const forPR = byId.get(item.dataset.ledger)?.audience === 'pr' && !thread;
+      // Anything not written for the agent and not sent to it is for the PR once the review can post there.
+      const audience = byId.get(item.dataset.ledger)?.audience;
+      const sentToAgent = thread && (thread.live || thread.delivery !== 'draft');
+      const forPR = !sentToAgent && (audience === 'pr' || (audience !== 'agent' && ghProvider.status().phase === 'ready'));
       const ghRow = ghData.posted?.[item.dataset.ledger] ? 'posted' : ghData.pending?.[item.dataset.ledger] ? 'pending' : 'draft';
       if (item.dataset.ghRow === undefined && forPR) item.dataset.ghRow = '';
       const state = item.dataset.state === 'resolved' && own ? 'resolved' : forPR ? ghRow : STATE[thread?.delivery] || 'draft';
@@ -685,6 +686,9 @@
       if (canSend && !send) { send = Object.assign(document.createElement('button'), {type: 'button', className: 'dcr-row-send', textContent: 'Send to agent'}); send.dataset.dcrRowSend = item.dataset.ledger; status.after(send); }
       if (!canSend && send) send.remove();
       item.querySelector(':scope > .ledger-reply')?.remove(); // the peek replaces the old one-line answer
+      // With the server connected the agent is one click away, so Copy for LLMs stays in the card's ⋯ menu.
+      const copy = meta.querySelector('[data-copy]');
+      if (copy) set(copy, 'hidden', online);
       decoratePeek(item, byId.get(item.dataset.ledger), thread);
     });
   };
