@@ -1,21 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
   <title>Dynamic Code Reviews</title>
   <defs>
-    <linearGradient id="dcr-tile" x1="8" y1="4" x2="53" y2="60" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#8981FF"/>
-      <stop offset=".5" stop-color="#655BE8"/>
-      <stop offset="1" stop-color="#4435A8"/>
-    </linearGradient>
-    <linearGradient id="dcr-badge" x1="39" y1="35" x2="55" y2="60" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#CDFFE9"/>
-      <stop offset="1" stop-color="#7CE5BF"/>
-    </linearGradient>
+    <linearGradient id="dcr-tile" x1="12" y1="4" x2="52" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#2E2970"/><stop offset="1" stop-color="#100E29"/></linearGradient>
+    <linearGradient id="dcr-line" x1="12" y1="0" x2="34" y2="0" gradientUnits="userSpaceOnUse"><stop stop-color="#7AF5C9"/><stop offset="1" stop-color="#3AD29E"/></linearGradient>
+    <linearGradient id="dcr-note" x1="36" y1="16" x2="54" y2="36" gradientUnits="userSpaceOnUse"><stop stop-color="#BDB3FF"/><stop offset="1" stop-color="#7A69FF"/></linearGradient>
   </defs>
-  <rect x="2" y="2" width="56" height="56" rx="16" fill="url(#dcr-tile)"/>
-  <rect x="3" y="3" width="54" height="54" rx="15" stroke="white" stroke-opacity=".2"/>
-  <path d="m22 19-8 9 8 9m16-18 8 9-8 9" stroke="#F9F8FF" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="m33 18-6 20" stroke="#D6D1FF" stroke-width="3.2" stroke-linecap="round"/>
-  <circle cx="47" cy="47" r="14" fill="#4435A8"/>
-  <circle cx="47" cy="47" r="12" fill="url(#dcr-badge)"/>
-  <path d="m41.5 47 3.7 3.7 7.3-8" stroke="#175747" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="url(#dcr-tile)"/>
+  <rect x="4.5" y="4.5" width="55" height="55" rx="15.5" stroke="#fff" stroke-opacity=".14"/>
+  <rect x="12" y="19" width="20" height="6" rx="3" fill="#fff" fill-opacity=".28"/>
+  <rect x="12" y="30" width="22" height="6" rx="3" fill="url(#dcr-line)"/>
+  <rect x="12" y="41" width="14" height="6" rx="3" fill="#fff" fill-opacity=".28"/>
+  <path d="M44.5 17a9.5 9.5 0 1 1-4.6 17.8L35.5 36.6l1.4-4.6A9.5 9.5 0 0 1 44.5 17Z" fill="url(#dcr-note)"/>
+  <path d="M44.5 21.6c.5 2.4 1.4 3.3 3.8 3.9-2.4.6-3.3 1.5-3.8 3.9-.5-2.4-1.4-3.3-3.8-3.9 2.4-.6 3.3-1.5 3.8-3.9Z" fill="#fff"/>
 </svg>

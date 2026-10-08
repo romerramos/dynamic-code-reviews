@@ -342,15 +342,16 @@ module DynamicReviews
     prism = LANGUAGES.map { |lang| File.read(File.join(ASSETS, "vendor/prism-#{lang}.min.js")) }.join("\n")
     icons = Dir[File.join(ASSETS, 'vendor/lucide/*.svg')].sort.to_h { |path| [File.basename(path, '.svg'), File.read(path)] }
     scripts = "window.Prism = {manual: true};\nwindow.ReviewIcons = #{JSON.generate(icons)};\n#{prism}\n#{File.read(File.join(ASSETS, 'vendor/glightbox/glightbox.min.js'))}\n#{File.read(File.join(ASSETS, 'review-tools.js'))}\n#{File.read(File.join(ASSETS, 'report.js'))}"
-    replacements = {'__UI_VERSION__' => ui_version, '__STYLES__' => styles, '__SCRIPTS__' => scripts.gsub(%r{</script}i, '<\\/script'), '__REVIEW_DATA__' => payload, '__ICON__' => File.read(File.join(ASSETS, 'icon.svg'))}
-    html = File.read(File.join(ASSETS, 'report.html')).gsub(/__UI_VERSION__|__STYLES__|__SCRIPTS__|__REVIEW_DATA__|__ICON__/) { |token| replacements.fetch(token) }
+    icon = File.read(File.join(ASSETS, 'icon.svg'))
+    replacements = {'__UI_VERSION__' => ui_version, '__STYLES__' => styles, '__SCRIPTS__' => scripts.gsub(%r{</script}i, '<\\/script'), '__REVIEW_DATA__' => payload, '__ICON__' => icon, '__FAVICON__' => "data:image/svg+xml;base64,#{[icon].pack('m0')}"}
+    html = File.read(File.join(ASSETS, 'report.html')).gsub(/__UI_VERSION__|__STYLES__|__SCRIPTS__|__REVIEW_DATA__|__ICON__|__FAVICON__/) { |token| replacements.fetch(token) }
     html
   end
 
   # Identifies the report UI a page was rendered with, so an older saved page can be refreshed
   # before it is served. Covers the files that make up the page, not the vendored libraries.
   def self.ui_version
-    files = %w[report.html report.css report.js review-tools.js].map { |name| File.join(ASSETS, name) } + [File.join(__dir__, 'dark_theme.rb')]
+    files = %w[report.html report.css report.js review-tools.js icon.svg].map { |name| File.join(ASSETS, name) } + [File.join(__dir__, 'dark_theme.rb')]
     Digest::SHA256.hexdigest(files.map { |path| File.read(path) }.join("\0"))[0, 16]
   end
 
