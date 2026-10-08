@@ -20,8 +20,10 @@ files that open offline.
   Your browser comes to the front on the review tab when it is ready.
 - **A walkthrough grouped by behaviour**, not by folder, with a reading order and a note on each
   changed range. Read file by file or step by step, in unified or split view, light or dark.
-- **A conversation with your agent.** Comment on any line, then Send to agent. The agent replies in
+- **A conversation with your agent.** Comment on any line and choose Ask agent. The agent replies in
   the page; it explains and suggests, and never changes your code from the review.
+- **Straight to the PR.** On a pull request review, Comment on GitHub copies a comment and opens its
+  lines in the PR's Files changed tab, ready to paste. Nothing is posted for you.
 - **Template previews.** For a changed Rails view or ViewComponent, ask for a preview: the agent draws
   it from the code with the app's real stylesheet, then checks it before handing it over. Show it at
   phone, tablet or desktop width, wrapped to its content or fitted to the screen.

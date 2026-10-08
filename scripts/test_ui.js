@@ -95,6 +95,24 @@ assert.deepEqual(tools.evidenceFlows(undefined,{id:'c1'}),[]);
 assert.equal(tools.scopeLabel({...endpoints,mode:'pr'},{comparison:{...comparison,pr_title:'STO-42 Inbox state'}}), '#123 · STO-42 Inbox state', 'a PR names itself by its title, which carries the issue key');
 assert.equal(tools.scopeLabel({...endpoints,mode:'pr',head:'newhead123'},{comparison:{...comparison,pr_title:'STO-42 Inbox state'}}), 'pr · newhead1', 'a title bound to other endpoints is not shown');
 console.log('PASS scope labels distinguish review modes and evidence links target unique flows');
+{
+  const prFile = {id:'f9', path:'app/helpers/site_helper.rb', hunks:[{id:'h9', rows:{unified:[{kind:'del', old:40, text:'a'}, {kind:'add', new:40, text:'b'}, {kind:'add', new:41, text:'c'}]}}]};
+  const pr = {...endpoints, mode:'pr', files:[prFile]};
+  const labels = {comparison:{...comparison, pr_url:'https://github.com/acme/orion/pull/123'}};
+  const diff = `https://github.com/acme/orion/pull/123/files#diff-${require('node:crypto').createHash('sha256').update(prFile.path).digest('hex')}`;
+  assert.equal(tools.githubLink(pr, labels, {hunk:'h9', side:'new', start:40, end:41}), `${diff}R40-R41`, 'a range opens on its after lines in Files changed');
+  assert.equal(tools.githubLink(pr, labels, {hunk:'h9', side:'old', start:40, end:40}), `${diff}L40`, 'a removed line opens on its before line');
+  assert.equal(tools.githubLink(pr, labels, {general:true}), 'https://github.com/acme/orion/pull/123', 'a general comment opens the conversation');
+  assert.equal(tools.githubLink({...pr, head:'moved'}, labels, {hunk:'h9', side:'new', start:40, end:40}), null, 'a PR URL bound to other endpoints is not used');
+  assert.equal(tools.githubLink(pr, {comparison:{...labels.comparison, pr_url:'https://evil.test/acme/orion/pull/123'}}, {general:true}), null, 'only github.com pull request URLs');
+  assert.equal(tools.githubLink({...pr, mode:'uncommitted'}, labels, {general:true}), null, 'only PR reviews have a PR to post to');
+  const placed = {hunk:'h9', side:'new', start:40, end:41, label:'issue', decoration:'blocking', subject:'Broken', discussion:'Detail'};
+  assert.match(tools.postingText(pr, placed), /File: app\/helpers\/site_helper\.rb/, 'pasted anywhere, the comment says where it belongs');
+  assert.equal(tools.postingText(pr, placed, undefined, {placed:true}), 'issue (blocking): Broken\n\nDetail', 'pasted on its own lines, it does not repeat them');
+  for (const text of ['', 'abc', 'app/é/😀.rb', 'x'.repeat(55), 'y'.repeat(64)]) assert.equal(tools.sha256(text), require('node:crypto').createHash('sha256').update(text).digest('hex'));
+}
+console.log('PASS Comment on GitHub links the PR lines GitHub names by the SHA-256 of the file path');
+
 const evidenceComment = {...comment,id:'c1',discussion:''};
 const evidenceQA = {flows:[{comment_id:'c1',steps:['Open the list.','Reopen the conversation.'],expected:'Row returns.',observed:'Row is missing.',assets:[]}]};
 const post = tools.postingText(snapshot,evidenceComment,evidenceQA);

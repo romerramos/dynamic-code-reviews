@@ -239,7 +239,14 @@
   // --- Commenting where you read: the composer opens directly under the selected lines ----------------
   // Click a line number or drag over several; the composer grows out of the code, like a review on a pull
   // request. The text, type and blocking choice survive the page re-rendering, so nothing is lost.
-  const composer = {text: '', label: 'note', blocking: false, node: null, shownFor: '', sender: null};
+  // In a served review it first asks who the comment is for: your agent (a question that stays in this
+  // review and is sent at once) or the PR (a typed review comment, saved to post on GitHub).
+  const composer = {text: '', label: 'note', blocking: false, mode: 'agent', node: null, shownFor: '', sender: null};
+  const prLabel = snapshot.mode === 'pr' || review.history?.origin_mode === 'pr' ? 'PR comment' : 'Review comment';
+  const composerModes = {
+    agent: {placeholder: 'Ask your agent about these lines. It answers here; nothing goes to GitHub.', hint: 'to ask'},
+    pr: {placeholder: 'Leave a comment. The first line is the headline; add detail below it.', hint: 'to save'}
+  };
   const composerTypes = ['note', 'question', 'suggestion', 'issue'];
   function composerNode() {
     if (composer.node) return composer.node;
@@ -248,10 +255,10 @@
     form.className = 'composer';
     form.noValidate = true;
     form.setAttribute('aria-label', 'Add a comment');
-    form.innerHTML = `<header class="composer-head"><span class="composer-where"></span><button type="button" class="act act-quiet act-icon" data-composer-cancel aria-label="Cancel comment" title="Cancel (Esc)">${icon('x')}</button></header>
+    form.innerHTML = `<header class="composer-head"><div class="composer-modes" role="radiogroup" aria-label="Who is this comment for?" hidden><label class="composer-mode"><input type="radio" name="composer-mode" value="agent"><span>${icon('sparkles')}Ask agent</span></label><label class="composer-mode"><input type="radio" name="composer-mode" value="pr"><span>${icon('message-square')}${prLabel}</span></label></div><span class="composer-where"></span><button type="button" class="act act-quiet act-icon" data-composer-cancel aria-label="Cancel comment" title="Cancel (Esc)">${icon('x')}</button></header>
       <div class="composer-types" role="radiogroup" aria-label="Type of comment">${composerTypes.map(type => `<label class="composer-type"><input type="radio" name="composer-label" value="${type}"><span>${icon(commentTypes[type][0])}${commentTypes[type][1]}</span></label>`).join('')}</div>
-      <textarea class="composer-text" rows="3" aria-label="Your comment" placeholder="Leave a comment. The first line is the headline; add detail below it."></textarea>
-      <footer class="composer-foot"><label class="composer-blocking"><input type="checkbox" name="composer-blocking"><span>Blocks approval</span></label><span class="composer-hint"><kbd>⌘</kbd><kbd>↵</kbd> to save</span><div class="composer-actions"><button type="button" class="act act-quiet" data-composer-cancel>Cancel</button><button type="submit" class="act act-secondary" data-composer-save>Comment</button><button type="button" class="act act-primary" data-composer-send hidden>${icon('send')}Comment and send</button></div></footer>`;
+      <textarea class="composer-text" rows="3" aria-label="Your comment"></textarea>
+      <footer class="composer-foot"><label class="composer-blocking"><input type="checkbox" name="composer-blocking"><span>Blocks approval</span></label><span class="composer-hint"><kbd>⌘</kbd><kbd>↵</kbd> <span data-composer-hint></span></span><div class="composer-actions"><button type="button" class="act act-quiet" data-composer-cancel>Cancel</button><button type="submit" class="act act-pr" data-composer-save>Save comment</button><button type="submit" class="act act-agent" data-composer-send hidden>${icon('send')}Ask agent</button></div></footer>`;
     const text = form.querySelector('.composer-text');
     const refresh = () => {
       composer.text = text.value;
@@ -263,29 +270,42 @@
       else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); form.requestSubmit(); }
     });
     form.addEventListener('change', event => {
+      if (event.target.name === 'composer-mode') { composer.mode = event.target.value; syncComposerMode(); }
       if (event.target.name === 'composer-label') composer.label = event.target.value;
       if (event.target.name === 'composer-blocking') composer.blocking = event.target.checked;
       form.querySelector('.composer-types').dataset.type = composer.label;
     });
     form.addEventListener('click', event => {
       if (event.target.closest('[data-composer-cancel]')) clearSelection();
-      if (event.target.closest('[data-composer-send]')) { composer.sendAfter = true; form.requestSubmit(); }
     });
     form.addEventListener('submit', event => {
       event.preventDefault();
       const entered = splitComment(composer.text);
       if (!entered.subject || !selection) return;
-      const send = composer.sendAfter; composer.sendAfter = false;
+      const ask = composerMode() === 'agent';
       const comment = {hunk: selection.hunk, side: selection.side, start: selection.start, end: selection.end, id: `mine-${crypto.randomUUID()}`,
-        label: composer.label, decoration: composer.blocking ? 'blocking' : 'non-blocking', subject: entered.subject, discussion: entered.discussion};
+        label: ask ? 'question' : composer.label, decoration: !ask && composer.blocking ? 'blocking' : 'non-blocking', audience: ask ? 'agent' : 'pr', subject: entered.subject, discussion: entered.discussion};
       commitComment(comment);
-      if (send && composer.sender) composer.sender(comment.id);
+      if (ask) composer.sender(comment.id);
     });
     composer.node = form;
     syncComposerFields();
     return form;
   }
   const splitComment = ReviewTools.splitComment;
+  // Asking the agent needs a served review; a saved page only drafts comments for the PR.
+  const composerMode = () => composer.sender ? composer.mode : 'pr';
+  function syncComposerMode() {
+    const form = composer.node;
+    const mode = composerMode();
+    form.dataset.mode = mode;
+    form.querySelector('.composer-modes').hidden = !composer.sender;
+    form.querySelector(`input[name="composer-mode"][value="${mode}"]`).checked = true;
+    form.querySelector('.composer-text').placeholder = composerModes[mode].placeholder;
+    form.querySelector('[data-composer-hint]').textContent = composerModes[mode].hint;
+    form.querySelector('[data-composer-save]').hidden = mode === 'agent';
+    form.querySelector('[data-composer-send]').hidden = mode !== 'agent';
+  }
   function syncComposerFields() {
     const form = composer.node;
     form.querySelector('.composer-text').value = composer.text;
@@ -293,6 +313,7 @@
     form.querySelector('input[name="composer-blocking"]').checked = composer.blocking;
     form.querySelector('.composer-types').dataset.type = composer.label;
     form.querySelectorAll('[data-composer-save], [data-composer-send]').forEach(button => { button.disabled = !composer.text.trim(); });
+    syncComposerMode();
   }
   function removeComposer(reset = false) {
     const row = composer.node?.closest('tr.inline-compose');
@@ -334,7 +355,7 @@
     const scroll = $('content').scrollTop; render(); $('content').scrollTop = scroll;
     toast(stored ? 'Your comment is saved in this browser.' : 'Browser storage is unavailable. Copy or export your review before closing.');
   }
-  window.ReviewComposer = {setSender(fn) { composer.sender = fn; composerNode().querySelector('[data-composer-send]').hidden = !fn; }};
+  window.ReviewComposer = {setSender(fn) { composer.sender = fn; composerNode(); syncComposerMode(); }};
 
   // Dragging over line numbers selects a range; the composer opens when the pointer is released.
   document.addEventListener('pointerdown', event => {
@@ -373,8 +394,8 @@
     $('comment-editor').showModal();
     $('editor-subject').focus();
   }
-  async function copyText(text) {
-    try { await navigator.clipboard.writeText(text); toast('Copied to clipboard.'); }
+  async function copyText(text, done = 'Copied to clipboard.') {
+    try { await navigator.clipboard.writeText(text); toast(done); }
     catch {
       closeComments();
       $('copy-text').value = text;
@@ -384,7 +405,7 @@
   }
 
   function commentHTML(comment) {
-    return `<section class="popover-comment" data-comment-id="${escape(comment.id)}"><p class="comment-location">${escape(ReviewTools.anchor(snapshot, comment)?.file.path || '')}</p><div class="thread-badges">${threadBadges(comment)}</div><p class="comment-location">${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}</p><h4>${escape(comment.subject)}</h4>${ReviewTools.commentBody(comment, review.qa) ? `<div class="comment-discussion">${ReviewTools.markdown(ReviewTools.commentBody(comment, review.qa))}</div>` : ''}${ReviewTools.evidenceFlows(review.qa, comment).length ? `<button class="btn btn-xs btn-soft" data-evidence="${escape(comment.id)}">See visual evidence</button>` : ''}<div class="comment-actions"><button class="btn btn-xs btn-ghost" data-copy="${escape(comment.id)}">${icon('copy')} Copy for LLMs</button>${comment.personal ? `<button class="btn btn-xs btn-ghost" data-edit="${escape(comment.id)}">${icon('pencil')} Edit</button><button class="btn btn-xs btn-ghost" data-delete="${escape(comment.id)}">${icon('trash-2')} Delete</button>` : ""}</div></section>`;
+    return `<section class="popover-comment" data-comment-id="${escape(comment.id)}"><p class="comment-location">${escape(ReviewTools.anchor(snapshot, comment)?.file.path || '')}</p><div class="thread-badges">${threadBadges(comment)}</div><p class="comment-location">${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}</p><h4>${escape(comment.subject)}</h4>${ReviewTools.commentBody(comment, review.qa) ? `<div class="comment-discussion">${ReviewTools.markdown(ReviewTools.commentBody(comment, review.qa))}</div>` : ''}${ReviewTools.evidenceFlows(review.qa, comment).length ? `<button class="btn btn-xs btn-soft" data-evidence="${escape(comment.id)}">See visual evidence</button>` : ''}<div class="comment-actions">${commentActions(comment, 'xs')}</div></section>`;
   }
 
   function commentTrigger(hunk, side, number, comment = null, path) {
@@ -985,7 +1006,32 @@
     polish:['sparkles', 'Polish', 'A finishing touch', 'teal'],
     quibble:['message-circle', 'Quibble', 'A minor concern', 'slate']
   };
+  // Where a comment can go. Ask agent stays in this review; GitHub leaves it, so it says so (↗) and
+  // copies the comment on the way, ready to paste on the lines it opens. Without a GitHub PR the slot
+  // copies the comment for pasting anywhere. Everything else waits behind the ⋯ menu.
+  function githubAction(comment, data, size = 'sm') {
+    const link = ReviewTools.githubLink(snapshot, review, comment);
+    if (!link) return `<button class="btn btn-${size} btn-soft" ${data.copy}>${icon('copy')} Copy for comment</button>`;
+    return `<a class="btn btn-${size} gh-act" href="${escape(link)}" target="_blank" rel="noopener noreferrer" ${data.github} title="Copies the comment and opens ${comment.general ? 'the pull request' : 'these lines'} on GitHub, ready to paste">Comment on GitHub ${icon('arrow-up-right')}</a>`;
+  }
+  const menuItem = (attrs, label, symbol = '') => `<button type="button" class="more-item" ${attrs}>${symbol ? icon(symbol) : ''}${label}</button>`;
+  const moreMenu = (items, size = 'sm') => `<details class="more-menu"><summary class="btn btn-${size} btn-ghost more-toggle" aria-label="More actions" title="More actions">${icon('ellipsis')}</summary><div class="more-list">${items.join('')}</div></details>`;
+  // A comment's actions: GitHub (when it is a comment for the PR) and the menu.
+  function commentActions(comment, size = 'sm') {
+    const id = escape(comment.id);
+    const found = ReviewTools.anchor(snapshot, comment);
+    const forAgent = comment.audience === 'agent';
+    const github = !forAgent && ReviewTools.githubLink(snapshot, review, comment);
+    const items = [
+      github ? menuItem(`data-copy-comment="${id}"`, 'Copy for comment', 'copy') : '',
+      menuItem(`data-copy="${id}"`, 'Copy for LLMs', 'copy'),
+      found && !found.fullFile ? menuItem(`data-comment="${id}"`, 'Open in diff', 'arrow-right') : '',
+      comment.personal ? menuItem(`data-edit="${id}"`, 'Edit', 'pencil') + menuItem(`data-delete="${id}"`, 'Delete', 'trash-2') : ''
+    ];
+    return `${forAgent ? '' : githubAction(comment, {copy: `data-copy-comment="${id}"`, github: `data-github="${id}"`}, size)}${moreMenu(items, size)}`;
+  }
   function threadBadges(comment) {
+    if (comment.audience === 'agent') return `<span class="thread-type type-purple" title="A question for your agent. It stays in this review."><span class="thread-type-icon">${icon('sparkles')}</span>For your agent</span>${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}`;
     const [symbol, title, hint, tone] = commentTypes[comment.label] || commentTypes.note;
     return `<span class="thread-type type-${tone}" title="${hint}"><span class="thread-type-icon">${icon(symbol)}</span>${title}</span><span class="thread-priority ${comment.decoration === 'blocking' ? 'is-blocking' : 'is-optional'}">${comment.decoration === 'blocking' ? `${icon('circle-alert')} Blocking` : 'Non-blocking'}</span>${comment.severity ? `<span class="thread-severity">${escape(comment.severity)}</span>` : ''}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${comment.personal ? '<span class="thread-author">Your comment</span>' : ''}`;
   }
@@ -994,7 +1040,7 @@
     if (!found && !comment.general) return '';
     const id = escape(comment.id);
     const range = found ? `${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}` : '';
-    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${escape(found?.file.path || 'General comment')}</span><span class="thread-range">${found ? range : ''}</span></div><details class="thread-details" ${comment.resolved ? '' : 'open'}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}"><span class="thread-badges">${threadBadges(comment)}</span><strong>${escape(comment.subject)}</strong><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${comment.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(comment.discussion)}</div>` : ''}${commentEvidence(comment)}</div>${found ? found.fullFile ? `<button class="thread-source btn btn-sm btn-ghost" type="button" data-comment="${id}">View in file · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : `<button class="thread-source btn btn-sm btn-ghost" type="button" data-open-code="${id}" aria-haspopup="dialog" aria-label="${escape(`View code for ${found.file.path}, ${range}: ${comment.subject}`)}">View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : ''}</details><div class="thread-footer"><div class="comment-actions"><button class="btn btn-sm btn-soft" data-copy-comment="${id}">${icon('copy')} Copy for comment</button><button class="btn btn-sm btn-ghost" data-copy="${id}">${icon('copy')} Copy for LLMs</button>${found && !found.fullFile ? `<button class="btn btn-sm btn-ghost" data-comment="${id}">Open in diff ${icon('arrow-right')}</button>` : ''}${comment.personal ? `<button class="btn btn-sm btn-ghost" data-edit="${id}">${icon('pencil')} Edit</button><button class="btn btn-sm btn-ghost" data-delete="${id}">${icon('trash-2')} Delete</button>` : ''}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
+    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${escape(found?.file.path || 'General comment')}</span><span class="thread-range">${found ? range : ''}</span></div><details class="thread-details" ${comment.resolved ? '' : 'open'}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}"><span class="thread-badges">${threadBadges(comment)}</span><strong>${escape(comment.subject)}</strong><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${comment.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(comment.discussion)}</div>` : ''}${commentEvidence(comment)}</div>${found ? found.fullFile ? `<button class="thread-source btn btn-sm btn-ghost" type="button" data-comment="${id}">View in file · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : `<button class="thread-source btn btn-sm btn-ghost" type="button" data-open-code="${id}" aria-haspopup="dialog" aria-label="${escape(`View code for ${found.file.path}, ${range}: ${comment.subject}`)}">View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : ''}</details><div class="thread-footer"><div class="comment-actions">${commentActions(comment)}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
   }
   function toggleResolved(id) {
     const comment = comments.find(comment => comment.id === id);
@@ -1028,7 +1074,7 @@
       discussion:`${finding.body}\n\nThe snippet covers the related diff hunk; the finding may concern only part of it.`};
   }
   function findingCard(finding, index) {
-    return `<article class="review-comment"><span class="badge blocking">${escape(finding.severity)}</span><p class="comment-location">${escape(hunkFiles.get(finding.hunk).path)}</p><h3>${escape(finding.title)}</h3><div class="comment-discussion">${ReviewTools.markdown(finding.body)}</div><div class="comment-actions"><button class="btn btn-sm btn-ghost" data-hunk="${escape(finding.hunk)}">See changed code →</button><button class="btn btn-sm btn-soft" data-post-finding="${index}">${icon('copy')} Copy for comment</button><button class="btn btn-sm btn-ghost" data-copy-finding="${index}">${icon('copy')} Copy for LLMs</button></div></article>`;
+    return `<article class="review-comment"><span class="badge blocking">${escape(finding.severity)}</span><p class="comment-location">${escape(hunkFiles.get(finding.hunk).path)}</p><h3>${escape(finding.title)}</h3><div class="comment-discussion">${ReviewTools.markdown(finding.body)}</div><div class="comment-actions">${githubAction(findingComment(finding), {copy: `data-post-finding="${index}"`, github: `data-github-finding="${index}"`})}<button class="btn btn-sm btn-ghost" data-hunk="${escape(finding.hunk)}">See changed code →</button>${moreMenu([ReviewTools.githubLink(snapshot, review, findingComment(finding)) ? menuItem(`data-post-finding="${index}"`, 'Copy for comment', 'copy') : '', menuItem(`data-copy-finding="${index}"`, 'Copy for LLMs', 'copy')])}</div></article>`;
   }
   function renderQAAsset(asset, poster = null) {
     const media = asset.data_uri.startsWith('data:video/')
@@ -1622,7 +1668,32 @@
     const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
     tabs[next].click(); tabs[next].focus({preventScroll:true});
   });
+  // The ⋯ menus float over the page, since cards clip their overflow: above their button when it fits.
+  const closeMenus = (except = null) => document.querySelectorAll('details.more-menu[open]').forEach(open => { if (open !== except) open.open = false; });
+  document.addEventListener('toggle', event => {
+    const menu = event.target;
+    if (!menu.matches?.('details.more-menu') || !menu.open) return;
+    const button = menu.querySelector('summary').getBoundingClientRect();
+    const list = menu.querySelector('.more-list');
+    const height = list.offsetHeight;
+    list.style.left = `${Math.max(8, Math.min(button.left, innerWidth - list.offsetWidth - 8))}px`;
+    list.style.top = `${button.top - height - 6 >= 8 ? button.top - height - 6 : Math.min(button.bottom + 6, innerHeight - height - 8)}px`;
+  }, true);
+  document.addEventListener('scroll', () => closeMenus(), true);
   document.addEventListener('click', async event => {
+    // Comment on GitHub is a link, so the browser opens it; the copy starts first, while this page
+    // still has focus, which is what the clipboard needs. Nothing may be awaited before it.
+    const github = event.target.closest('[data-github], [data-github-finding]');
+    if (github) {
+      const finding = github.dataset.githubFinding !== undefined && review.findings?.[Number(github.dataset.githubFinding)];
+      const comment = finding ? {...findingComment(finding), discussion: finding.body} : comments.find(comment => comment.id === github.dataset.github);
+      if (comment) copyText(ReviewTools.postingText(snapshot, comment, finding ? undefined : review.qa, {placed: true}), 'Copied. Paste it into the comment box on GitHub.');
+      return;
+    }
+    // The ⋯ menus: one open at a time, closed by a choice or a click elsewhere.
+    const menu = event.target.closest('details.more-menu');
+    closeMenus(menu);
+    if (menu && event.target.closest('.more-item')) menu.open = false;
     // Keep the checkbox independent from the native disclosure summary.
     if (event.target.closest('.file-viewed')) { event.stopPropagation(); return; }
     ledgerClick(event);
@@ -1783,6 +1854,10 @@
     const resolution = event.target.closest('[data-resolve]');
     if (resolution) toggleResolved(resolution.dataset.resolve);
   });
+  document.addEventListener('keydown', event => {
+    const menu = document.querySelector('details.more-menu[open]');
+    if (event.key === 'Escape' && menu) { event.stopPropagation(); menu.open = false; menu.querySelector('summary').focus(); }
+  }, true);
   $('comment-popover').addEventListener('toggle', event => {
     if (event.newState !== 'closed' || $('comment-popover').matches(':popover-open')) return;
     const anchor = commentAnchor;
@@ -1919,6 +1994,8 @@
     if (!subject || !editorRange) return;
     const comment = {...editorRange, id:editingID || `mine-${crypto.randomUUID()}`, label:$('editor-label').value,
       decoration:$('editor-blocking').checked ? 'blocking' : 'non-blocking', subject, discussion:$('editor-discussion').value.trim()};
+    const audience = state.personalComments.find(existing => existing.id === editingID)?.audience;
+    if (audience) comment.audience = audience;
     $('comment-editor').close();
     commitComment(comment);
   };

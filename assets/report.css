@@ -845,3 +845,39 @@ dialog.stage::backdrop{background:#16203766;backdrop-filter:blur(4px)}
 .review-in-progress [aria-disabled="true"]{opacity:.45;cursor:not-allowed}
 @media(max-width:740px){.review-progress{grid-template-columns:auto minmax(0,1fr)}.review-progress .btn{grid-column:2}}
 @media(prefers-reduced-motion:reduce){.review-progress-dot{animation:none}}
+
+/* Where a comment goes. Ask agent (violet) stays in this review; GitHub (neutral, ↗) leaves it. */
+.gh-act{gap:6px;border:1px solid #cfd5df;background:#fff;color:#1f2633;font-weight:550}.btn-sm.gh-act{font-size:13px}
+.gh-act:hover{border-color:#9aa4b4;background:#f6f7f9;color:#11161f}
+.gh-act svg{width:14px;height:14px}
+.more-menu{position:relative;display:inline-flex}
+.more-menu>summary{list-style:none;padding:0 8px}
+.more-menu>summary::-webkit-details-marker{display:none}
+.more-menu>summary svg{width:16px;height:16px}
+.more-menu[open]>summary{background:#eef0f4}
+.more-list{position:fixed;z-index:1000;min-width:200px;padding:5px;background:#fff;border:1px solid #dde2ea;border-radius:10px;box-shadow:0 12px 32px rgba(17,22,31,.16)}
+.more-item{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:0;border-radius:7px;background:none;color:#253043;font-size:13px;font-weight:500;line-height:1.2;text-align:left;cursor:pointer}
+.more-item:hover,.more-item:focus-visible{background:#f1f3f7;outline:none}
+.more-item svg{width:15px;height:15px;color:#6a7486}
+.composer-head{gap:12px}
+.composer-where{margin-left:auto}
+.composer-modes{display:inline-flex;gap:2px;padding:3px;border-radius:9px;background:#eef0f4}
+.composer-modes[hidden]{display:none}
+.composer-mode input{position:absolute;opacity:0;pointer-events:none}
+.composer-mode span{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:7px;color:#5e6878;font-size:13px;font-weight:600;cursor:pointer}
+.composer-mode span svg{width:14px;height:14px}
+.composer-mode:hover span{color:#1f2633}
+.composer-mode input:checked+span{background:#fff;color:#1f2633;box-shadow:0 1px 2px rgba(17,22,31,.12),0 0 0 1px rgba(17,22,31,.06)}
+.composer-mode input[value="agent"]:checked+span{color:#5548c8}
+.composer-mode input:focus-visible+span{outline:2px solid #5548c8;outline-offset:2px}
+.composer[data-mode="agent"] .composer-types,.composer[data-mode="agent"] .composer-blocking{display:none}
+.composer[data-mode="agent"] .composer-text{border-color:color-mix(in oklab,#5548c8 45%,#d5dbe5)}
+.act-agent{background:#5548c8;color:#fff}
+.act-agent:hover:not(:disabled){background:#4a3db8}
+.act-pr{background:var(--ink);color:var(--surface)}
+.act-pr:hover:not(:disabled){background:color-mix(in oklab,var(--ink) 88%,var(--surface))}
+.act[hidden]{display:none}
+.popover-comment .comment-actions .btn.btn-primary{color:#fff;background:#5548c8;border-color:#5548c8}
+.popover-comment .comment-actions .btn.dcr-act-reply{color:#5548c8;background:#fff;border-color:#5548c8}
+.popover-comment .comment-actions .btn.gh-act{color:#1f2633;background:#fff;border-color:#cfd5df}
+.popover-comment .comment-actions .more-toggle{background:transparent;border-color:transparent}

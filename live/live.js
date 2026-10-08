@@ -135,7 +135,7 @@
     const stateEl = block.querySelector('.dcr-state');
     if (stateEl.dataset.sig !== statusSignature) { stateEl.innerHTML = status; stateEl.dataset.sig = statusSignature; }
     actionButtons(id).forEach(button => {
-      set(button, 'textContent', sent ? 'Reply' : 'Send to agent');
+      set(button, 'textContent', sent ? 'Reply' : 'Ask agent');
       set(button, 'disabled', !online);
       button.classList.toggle('btn-primary', !sent);
       button.classList.toggle('dcr-act-reply', sent);
@@ -416,7 +416,7 @@
     });
   }
 
-  // The composer in the code gets its "Comment and send" action: save, then hand the comment to your agent.
+  // The composer in the code gets its Ask agent mode: save, then hand the comment to your agent.
   window.ReviewComposer?.setSender(async id => {
     try { await sendComment(id); flash(tools.statusModel(threads[id], listening)?.text || 'Saved and sent to your agent.'); }
     catch (error) { flash(`Saved, but not sent: ${error.message}`); }
@@ -483,7 +483,12 @@
     let added = false;
     popover?.querySelectorAll('.popover-comment[data-comment-id]').forEach(section => {
       if (section.querySelector(':scope > .dcr-thread')) return;
-      section.append(cardBlock(section.dataset.commentId, 'popover'));
+      const block = cardBlock(section.dataset.commentId, 'popover');
+      section.append(block);
+      // One row of actions, after the conversation, led by Ask agent as on the cards.
+      const actions = section.querySelector(':scope > .comment-actions');
+      const act = block.querySelector(':scope > .dcr-actions');
+      if (actions && act) { act.firstElementChild.classList.replace('btn-sm', 'btn-xs'); actions.prepend(act.firstElementChild); act.remove(); section.append(actions); }
       added = true;
     });
     if (!added) return;

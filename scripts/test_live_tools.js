@@ -24,7 +24,8 @@ assert.deepEqual(tools.drafts(comments, {'mine-1':{delivery:'sent', live:true}})
 assert.deepEqual(tools.drafts(comments, {'mine-1':{delivery:'draft', live:false, messages:[{author:'user'}]}}).map(comment => comment.id), ['mine-1'], 'a private note keeps the comment a draft');
 assert.deepEqual(tools.drafts(comments, {}, ['mine-1']), [], 'resolved comments are not sent');
 assert.deepEqual(tools.summary(comments, {a:{delivery:'sent'}, b:{delivery:'answered'}, c:{delivery:'answered'}}), {drafts:1, waiting:1, answered:2});
-console.log('PASS drafts exclude findings, sent and resolved comments, and a private note does not send');
+assert.deepEqual(tools.drafts([{...personal, personal:true, audience:'pr'}, {...personal, personal:true, id:'mine-2', audience:'agent'}], {}).map(comment => comment.id), ['mine-2'], 'a PR comment is for GitHub, not an unsent message');
+console.log('PASS drafts exclude findings, sent and resolved comments, and a private note does not send; PR comments are not agent drafts');
 
 const text = tools.sendText(snapshot, review, comments[0], '  please check the caller too ');
 assert.match(text, /File: app\/a\.rb/);
@@ -35,9 +36,9 @@ assert.ok(!/Conversation: resolved/.test(tools.sendText(snapshot, review, {...co
 assert.ok(!tools.sendText(snapshot, review, comments[0]).includes("Reviewer's message"));
 console.log('PASS the first send carries captured code, the comment and the reader note, reusing Copy for LLMs formatting');
 
-assert.equal(tools.actionLabel(undefined), 'Send to agent');
+assert.equal(tools.actionLabel(undefined), 'Ask agent');
 assert.equal(tools.actionLabel({live:true}), 'Reply');
-console.log('PASS the action is Send to agent until the comment is with the agent, then Reply');
+console.log('PASS the action is Ask agent until the comment is with the agent, then Reply');
 
 // Reading an answer: formatting that helps, and nothing that can become markup.
 const md = tools.markdown('Observed: `to_h` is **there**.\nSecond line.\n\n- one `a<b>`\n- two\n\n1. first\n2. second\n\n```ruby\nx = "<b>"\n```\nSee [docs](https://example.com/x?a=1&b=2).');

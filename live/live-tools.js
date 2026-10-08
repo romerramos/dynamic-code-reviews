@@ -19,13 +19,13 @@ globalThis.LiveTools = (() => {
     return note.trim() ? `${text}\n\nReviewer's message:\n${note.trim()}` : text;
   }
 
-  // Comments the reader wrote and has not sent. Resolved ones are skipped; findings are
-  // the agent's own and are never "drafts".
+  // Comments the reader wrote for the agent and has not sent. Resolved ones are skipped; findings
+  // are the agent's own, and a PR comment is meant for GitHub, so neither is a "draft".
   function drafts(comments, threads, resolved = []) {
-    return comments.filter(comment => comment.personal && !resolved.includes(comment.id) && !threads[comment.id]?.live && threads[comment.id]?.delivery !== 'sent');
+    return comments.filter(comment => comment.personal && comment.audience !== 'pr' && !resolved.includes(comment.id) && !threads[comment.id]?.live && threads[comment.id]?.delivery !== 'sent');
   }
 
-  const actionLabel = thread => thread?.live ? 'Reply' : 'Send to agent';
+  const actionLabel = thread => thread?.live ? 'Reply' : 'Ask agent';
 
   // --- reading an agent's answer -----------------------------------------------------------------
   const markdown = text => globalThis.ReviewTools.markdown(text);

@@ -206,13 +206,14 @@ branch changes since their merge base, and cumulative series scope separately.
 For PRs, supply verified names with their captured endpoints:
 
 ```json
-{"comparison": {"base": "<snapshot.base>", "head": "<snapshot.head>", "base_label": "main", "head_label": "feat/inbox-state", "pr_number": 123, "pr_title": "STO-123 Keep inbox state"}}
+{"comparison": {"base": "<snapshot.base>", "head": "<snapshot.head>", "base_label": "main", "head_label": "feat/inbox-state", "pr_number": 123, "pr_title": "STO-123 Keep inbox state", "pr_url": "https://github.com/acme/app/pull/123"}}
 ```
 
 These are display labels, not instructions to collect a different diff. Use the
 snapshot merge-base SHA for `base`, not a newer base branch tip. Labels are only
 used when both SHAs match; otherwise the UI shows captured SHAs. `pr_title` is the
-PR's live title, shown in the header instead of the head SHA. Refresh names
+PR's live title, shown in the header instead of the head SHA. `pr_url` is its GitHub
+address; Comment on GitHub links each comment's lines in Files changed from it. Refresh names
 from live PR metadata for each review. `history.origin_mode` is helper-owned.
 Do not call a cumulative working-tree series merely “uncommitted changes”.
 
@@ -228,7 +229,8 @@ validation. Result labels remain explicit even without color. Older flows withou
 
 User comments supports both anchored code comments and general comments added
 from the overview. These are browser-local records, not authored report JSON.
-Copy for comment is plain paste-ready feedback for GitHub/Linear; Copy for LLMs
+Copy for comment is plain paste-ready feedback for GitHub/Linear (Comment on GitHub
+copies it without the location, since it is pasted on the lines); Copy for LLMs
 adds captured source context. Both include the complete structured QA reproduction.
 General comments have no fabricated source range. Copy all includes general,
 anchored and resolved user comments plus step notes, and excludes generated comments.

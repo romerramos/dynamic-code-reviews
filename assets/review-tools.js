@@ -195,10 +195,11 @@ globalThis.ReviewTools = (() => {
     });
     return [comment.discussion, ...evidence].filter(Boolean).join('\n\n');
   }
-  function postingText(snapshot, comment, qa) {
+  // placed: the text is pasted on the lines themselves (Comment on GitHub), so it needs no location.
+  function postingText(snapshot, comment, qa, {placed = false} = {}) {
     const found = anchor(snapshot, comment);
     if (!found && !comment.general) throw new Error('Comment range is not present in this snapshot.');
-    const location = found ? `File: ${found.file.path} (${comment.side === 'new' ? 'after' : 'before'} lines ${comment.start}–${comment.end})\n\n` : '';
+    const location = found && !(placed && !found.fullFile) ? `File: ${found.file.path} (${comment.side === 'new' ? 'after' : 'before'} lines ${comment.start}–${comment.end})\n\n` : '';
     const body = commentBody(comment, qa);
     return `${comment.label} (${comment.decoration}): ${comment.subject}\n\n${location}${body}`.trim();
   }
@@ -289,6 +290,50 @@ globalThis.ReviewTools = (() => {
     if (prReview(snapshot, review) && labels.pr_title) return `${labels.pr_number ? `#${labels.pr_number} · ` : ''}${labels.pr_title}`;
     return `${snapshot.mode === 'series' ? (snapshot.working_tree ? 'Series + working tree' : 'Committed series') : snapshot.mode} · ${String(snapshot.head).slice(0, 8)}`;
   }
+  // SHA-256 of a string's UTF-8 bytes, as hex. GitHub names a file's diff by it, and a saved
+  // report opened from disk has no crypto.subtle to ask.
+  function sha256(text) {
+    // The round constants: the fractional parts of the cube roots of the first 64 primes.
+    const prime = n => { for (let d = 2; d * d <= n; d++) if (n % d === 0) return false; return true; };
+    const k = [];
+    for (let n = 2; k.length < 64; n++) if (prime(n)) k.push(Math.floor((Math.cbrt(n) % 1) * 2 ** 32));
+    const h = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+    const message = new TextEncoder().encode(String(text));
+    const bits = message.length * 8;
+    const bytes = [...message, 0x80];
+    while (bytes.length % 64 !== 56) bytes.push(0);
+    for (let i = 7; i >= 0; i--) bytes.push(Math.floor(bits / 2 ** (i * 8)) & 255);
+    const rotr = (x, n) => (x >>> n) | (x << (32 - n));
+    for (let at = 0; at < bytes.length; at += 64) {
+      const w = [];
+      for (let i = 0; i < 64; i++) {
+        if (i < 16) w[i] = (bytes[at + i * 4] << 24) | (bytes[at + i * 4 + 1] << 16) | (bytes[at + i * 4 + 2] << 8) | bytes[at + i * 4 + 3];
+        else w[i] = (w[i - 16] + (rotr(w[i - 15], 7) ^ rotr(w[i - 15], 18) ^ (w[i - 15] >>> 3)) + w[i - 7] + (rotr(w[i - 2], 17) ^ rotr(w[i - 2], 19) ^ (w[i - 2] >>> 10))) | 0;
+      }
+      let [a, b, c, d, e, f, g, hh] = h;
+      for (let i = 0; i < 64; i++) {
+        const t1 = (hh + (rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25)) + ((e & f) ^ (~e & g)) + k[i] + w[i]) | 0;
+        const t2 = ((rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+        [hh, g, f, e, d, c, b, a] = [g, f, e, (d + t1) | 0, c, b, a, (t1 + t2) | 0];
+      }
+      h.forEach((value, i) => { h[i] = (value + [a, b, c, d, e, f, g, hh][i]) | 0; });
+    }
+    return h.map(value => (value >>> 0).toString(16).padStart(8, '0')).join('');
+  }
+  // Where to paste a comment on the PR: its lines in GitHub's Files changed tab (a file's diff is
+  // `diff-<sha256 of its path>`, its lines R<n> after and L<n> before), the file when the lines are
+  // outside the diff, the conversation for a general comment. Null without a verified GitHub PR URL.
+  function githubLink(snapshot, review, comment) {
+    const url = comparisonLabels(snapshot, review).pr_url;
+    if (!prReview(snapshot, review) || !/^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+$/.test(url || '')) return null;
+    if (comment.general) return url;
+    const found = anchor(snapshot, comment);
+    if (!found) return null;
+    const file = `${url}/files#diff-${sha256(found.file.path)}`;
+    if (found.fullFile) return file;
+    const side = comment.side === 'new' ? 'R' : 'L';
+    return `${file}${side}${comment.start}${comment.end !== comment.start ? `-${side}${comment.end}` : ''}`;
+  }
   function comparisonText(snapshot, review = {}) {
     const short = value => String(value || 'unknown').slice(0, 8);
     const labels = comparisonLabels(snapshot, review);
@@ -363,5 +408,5 @@ globalThis.ReviewTools = (() => {
     return out.join('');
   }
 
-  return {markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, displayRows, splitComment, sourceText, commentText, reviewText, overviewFeedback, comparisonText, scopeLabel, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  return {markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, displayRows, splitComment, sourceText, commentText, reviewText, overviewFeedback, comparisonText, scopeLabel, sha256, githubLink, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();
