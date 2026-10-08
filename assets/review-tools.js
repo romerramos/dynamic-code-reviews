@@ -310,5 +310,48 @@ globalThis.ReviewTools = (() => {
     });
     return {comments, findings:remaining};
   }
-  return {focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, displayRows, splitComment, sourceText, commentText, reviewText, overviewFeedback, comparisonText, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[char]));
+  // Agent-written text (comments, findings, answers) as a small, safe subset of Markdown: paragraphs,
+  // lists, fenced code, `code`, **bold**, *italic* and https links. Everything is escaped first, so
+  // nothing a message contains can become markup.
+  const inline = text => {
+    const parts = String(text).split(/(`[^`]+`)/);
+    return parts.map(part => {
+      if (/^`[^`]+`$/.test(part)) return `<code>${escapeHTML(part.slice(1, -1).replace(/\s*\n\s*/g, ' '))}</code>`;
+      return escapeHTML(part)
+        .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,;:!?]|$)/g, '$1<em>$2</em>')
+        .replace(/\[([^\]\n]+)\]\((https:\/\/[^\s)]+)\)/g, (match, label, url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`)
+        .replace(/\n/g, '<br>');
+    }).join('');
+  };
+  function markdown(text) {
+    const lines = String(text ?? '').replace(/\r\n?/g, '\n').split('\n');
+    const out = [];
+    for (let i = 0; i < lines.length;) {
+      const line = lines[i];
+      if (/^\s*```/.test(line)) {
+        const code = [];
+        i++;
+        while (i < lines.length && !/^\s*```/.test(lines[i])) code.push(lines[i++]);
+        i++;
+        out.push(`<pre><code>${escapeHTML(code.join('\n'))}</code></pre>`);
+      } else if (/^\s*[-*] +\S/.test(line) || /^\s*\d+[.)] +\S/.test(line)) {
+        const ordered = /^\s*\d+[.)] /.test(line);
+        const marker = ordered ? /^\s*\d+[.)] +/ : /^\s*[-*] +/;
+        const items = [];
+        while (i < lines.length && marker.test(lines[i])) items.push(`<li>${inline(lines[i++].replace(marker, ''))}</li>`);
+        out.push(`<${ordered ? 'ol' : 'ul'}>${items.join('')}</${ordered ? 'ol' : 'ul'}>`);
+      } else if (!line.trim()) {
+        i++;
+      } else {
+        const para = [];
+        while (i < lines.length && lines[i].trim() && !/^\s*```/.test(lines[i]) && !/^\s*[-*] +\S/.test(lines[i]) && !/^\s*\d+[.)] +\S/.test(lines[i])) para.push(lines[i++]);
+        out.push(`<p>${inline(para.join('\n'))}</p>`);
+      }
+    }
+    return out.join('');
+  }
+
+  return {markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, displayRows, splitComment, sourceText, commentText, reviewText, overviewFeedback, comparisonText, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();

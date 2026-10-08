@@ -28,45 +28,7 @@ globalThis.LiveTools = (() => {
   const actionLabel = thread => thread?.live ? 'Reply' : 'Send to agent';
 
   // --- reading an agent's answer -----------------------------------------------------------------
-  // A small, safe subset of Markdown: paragraphs, lists, fenced code, `code`, **bold**, *italic*
-  // and https links. Everything is escaped first, so nothing a message contains can become markup.
-  const inline = text => {
-    const parts = String(text).split(/(`[^`\n]+`)/);
-    return parts.map(part => {
-      if (/^`[^`\n]+`$/.test(part)) return `<code>${escape(part.slice(1, -1))}</code>`;
-      return escape(part)
-        .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
-        .replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,;:!?]|$)/g, '$1<em>$2</em>')
-        .replace(/\[([^\]\n]+)\]\((https:\/\/[^\s)]+)\)/g, (match, label, url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`);
-    }).join('');
-  };
-  function markdown(text) {
-    const lines = String(text ?? '').replace(/\r\n?/g, '\n').split('\n');
-    const out = [];
-    for (let i = 0; i < lines.length;) {
-      const line = lines[i];
-      if (/^\s*```/.test(line)) {
-        const code = [];
-        i++;
-        while (i < lines.length && !/^\s*```/.test(lines[i])) code.push(lines[i++]);
-        i++;
-        out.push(`<pre><code>${escape(code.join('\n'))}</code></pre>`);
-      } else if (/^\s*[-*] +\S/.test(line) || /^\s*\d+[.)] +\S/.test(line)) {
-        const ordered = /^\s*\d+[.)] /.test(line);
-        const marker = ordered ? /^\s*\d+[.)] +/ : /^\s*[-*] +/;
-        const items = [];
-        while (i < lines.length && marker.test(lines[i])) items.push(`<li>${inline(lines[i++].replace(marker, ''))}</li>`);
-        out.push(`<${ordered ? 'ol' : 'ul'}>${items.join('')}</${ordered ? 'ol' : 'ul'}>`);
-      } else if (!line.trim()) {
-        i++;
-      } else {
-        const para = [];
-        while (i < lines.length && lines[i].trim() && !/^\s*```/.test(lines[i]) && !/^\s*[-*] +\S/.test(lines[i]) && !/^\s*\d+[.)] +\S/.test(lines[i])) para.push(inline(lines[i++]));
-        out.push(`<p>${para.join('<br>')}</p>`);
-      }
-    }
-    return out.join('');
-  }
+  const markdown = text => globalThis.ReviewTools.markdown(text);
 
   // The start of an answer as plain text for a narrow list: its first paragraph with the Markdown marks
   // removed. Underscores stay; they are part of identifiers such as `to_params`.

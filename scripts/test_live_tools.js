@@ -55,6 +55,7 @@ for (const hostile of ['<img src=x onerror=alert(1)>', '`<script>alert(1)</scrip
 }
 assert.equal(tools.markdown(''), '');
 assert.equal(tools.markdown('a\n\n\nb'), '<p>a</p><p>b</p>');
+assert.equal(tools.markdown('Call `phone_to\nnumber(@site)` once.'), '<p>Call <code>phone_to number(@site)</code> once.</p>', 'a code span wrapped across lines stays one span');
 console.log('PASS answers render paragraphs, lists, code and links, and hostile text stays inert');
 
 assert.equal(tools.snippet('I would keep `Data`. **Observed:** `to_params` uses `with` and `to_h`; see [the docs](https://x.test).\n\nSecond paragraph.'), 'I would keep Data. Observed: to_params uses with and to_h; see the docs.', 'only the first paragraph, marks removed, identifiers intact');
