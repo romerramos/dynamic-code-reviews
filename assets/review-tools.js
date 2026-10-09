@@ -141,33 +141,79 @@ globalThis.ReviewTools = (() => {
   }
   // Render-time view of a hunk's rows with whitespace-only changes shown as unchanged
   // context. The captured rows are never altered, so comment anchors and copied code keep
-  // their original lines. Like `git diff -w`, all whitespace is ignored.
+  // their original lines. Like `git diff -w`, all whitespace is ignored, and lines are matched
+  // in order across a whole changed block (its longest common run), so re-indented code inside
+  // a new wrapper shows only the lines that really changed.
   const squeeze = text => String(text ?? '').replace(/\s+/g, '');
-  function displayRows(rows, mode, ignoreWhitespace) {
-    if (!ignoreWhitespace) return rows;
-    const context = (before, after) => ({kind:'context', text:after.text, old:before.old, new:after.new});
-    if (mode === 'split') {
-      return rows.map(row => row.old?.kind === 'del' && row.new?.kind === 'add' && squeeze(row.old.text) === squeeze(row.new.text)
-        ? {old:context(row.old, row.new), new:context(row.old, row.new)} : row);
+  const MATCH_LIMIT = 4000000; // removed × added lines compared; past it, only equal-sized blocks fold
+  // [[removedIndex, addedIndex], ...] of lines equal but for whitespace, in order.
+  function matchIgnoringWhitespace(removed, added) {
+    const a = removed.map(row => squeeze(row.text)), b = added.map(row => squeeze(row.text));
+    if (a.length * b.length > MATCH_LIMIT) return a.length === b.length ? a.flatMap((text, at) => text === b[at] ? [[at, at]] : []) : [];
+    const width = b.length + 1;
+    const table = new Uint32Array((a.length + 1) * width);
+    for (let i = a.length - 1; i >= 0; i--) for (let j = b.length - 1; j >= 0; j--) {
+      table[i * width + j] = a[i] === b[j] ? table[(i + 1) * width + j + 1] + 1 : Math.max(table[(i + 1) * width + j], table[i * width + j + 1]);
     }
+    const pairs = [];
+    for (let i = 0, j = 0; i < a.length && j < b.length;) {
+      if (a[i] === b[j]) { pairs.push([i, j]); i++; j++; }
+      else if (table[(i + 1) * width + j] >= table[i * width + j + 1]) i++;
+      else j++;
+    }
+    return pairs;
+  }
+  // One changed block (its removals, then its additions) with the whitespace-only pairs folded
+  // into context; the real changes between them stay grouped, removals before additions.
+  function foldBlock(removed, added) {
+    const context = (before, after) => ({kind:'context', text:after.text, old:before.old, new:after.new});
+    const result = [];
+    let i = 0, j = 0;
+    for (const [at, to] of [...matchIgnoringWhitespace(removed, added), [removed.length, added.length]]) {
+      result.push(...removed.slice(i, at), ...added.slice(j, to));
+      if (at < removed.length) result.push(context(removed[at], added[to]));
+      i = at + 1; j = to + 1;
+    }
+    return result;
+  }
+  function foldUnified(rows) {
     const result = [];
     for (let index = 0; index < rows.length;) {
       if (rows[index].kind === 'context') { result.push(rows[index++]); continue; }
       const removed = [], added = [];
-      while (index < rows.length && rows[index].kind === 'del') removed.push(rows[index++]);
-      while (index < rows.length && rows[index].kind === 'add') added.push(rows[index++]);
-      if (removed.length !== added.length) { result.push(...removed, ...added); continue; }
-      // Equal-sized block: fold each matching pair, keeping the genuine changes between
-      // them grouped (removals, then additions) as the diff normally shows them.
-      let runRemoved = [], runAdded = [];
-      const flush = () => { result.push(...runRemoved, ...runAdded); runRemoved = []; runAdded = []; };
-      removed.forEach((row, at) => {
-        if (squeeze(row.text) === squeeze(added[at].text)) { flush(); result.push(context(row, added[at])); }
-        else { runRemoved.push(row); runAdded.push(added[at]); }
-      });
-      flush();
+      while (index < rows.length && rows[index].kind !== 'context') (rows[index].kind === 'del' ? removed : added).push(rows[index++]);
+      result.push(...foldBlock(removed, added));
     }
     return result;
+  }
+  // Split rows from unified ones, paired as the captured split is: within each changed run,
+  // the nth removal beside the nth addition.
+  function pairSplit(unified) {
+    const rows = [];
+    let removed = [], added = [];
+    const flush = () => { for (let at = 0; at < Math.max(removed.length, added.length); at++) rows.push({old:removed[at] ?? null, new:added[at] ?? null}); removed = []; added = []; };
+    unified.forEach(line => {
+      if (line.kind === 'context') { flush(); rows.push({old:line, new:line}); }
+      else (line.kind === 'del' ? removed : added).push(line);
+    });
+    flush();
+    return rows;
+  }
+  function displayRows(rows, mode, ignoreWhitespace) {
+    if (!ignoreWhitespace) return rows;
+    if (mode !== 'split') return foldUnified(rows);
+    // A split hunk lists each changed run's removals and additions side by side; read them back
+    // in unified order, fold, and pair again.
+    const unified = [];
+    let removed = [], added = [];
+    const flush = () => { unified.push(...removed, ...added); removed = []; added = []; };
+    rows.forEach(row => {
+      if (row.old?.kind === 'context' || row.new?.kind === 'context') { flush(); unified.push(row.new || row.old); return; }
+      if (row.old) removed.push(row.old);
+      if (row.new) added.push(row.new);
+    });
+    flush();
+    return pairSplit(foldUnified(unified));
   }
   // A comment typed in one box: the first line is the headline, the rest is the detail. A single
   // long line is cut at a word near 140 characters, the remainder becoming the detail.

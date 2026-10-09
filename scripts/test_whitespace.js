@@ -27,10 +27,21 @@ assert.deepEqual([folded[0].old, folded[0].new, folded[1].old, folded[2].new], [
 const interleaved = [{kind:'del', old:1, text:'a'}, {kind:'del', old:2, text:'b'}, {kind:'del', old:3, text:'c'}, {kind:'add', new:1, text:'A'}, {kind:'add', new:2, text:' b'}, {kind:'add', new:3, text:'C'}];
 assert.deepEqual(tools.displayRows(interleaved, 'unified', true).map(row => row.kind + (row.old ?? '') + (row.new ?? '')), ['del1', 'add1', 'context22', 'del3', 'add3'].map(x => x), 'real changes around a folded line stay grouped as removals then additions');
 const uneven = [{kind:'del', old:1, text:'x'}, {kind:'add', new:1, text:'x'}, {kind:'add', new:2, text:'y'}];
-assert.deepEqual(tools.displayRows(uneven, 'unified', true).map(row => row.kind), ['del', 'add', 'add'], 'unequal counts are left alone');
+assert.deepEqual(tools.displayRows(uneven, 'unified', true).map(row => row.kind), ['context', 'add'], 'blocks of different sizes are matched line by line, like git diff -w');
+// A block wrapped in a new condition: every line re-indented, two really changed.
+const body = ['<span class="chip">', '<button data-action="old#open">', '<%= label %>', '</button>', '<%= link_to list_path %>', '</span>'];
+const wrapped = [
+  ...body.map((text, at) => ({kind:'del', old:20 + at, text:`      ${text}`})),
+  {kind:'add', new:20, text:'      <% if selected.any? %>'},
+  ...body.map((text, at) => ({kind:'add', new:21 + at, text:`        ${text.replace('old#open', 'filters#open').replace('list_path', 'without_assignee_path')}`})),
+  {kind:'add', new:27, text:'      <% end %>'}
+];
+assert.deepEqual(tools.displayRows(wrapped, 'unified', true).map(row => `${row.kind}${row.old ?? ''}/${row.new ?? ''}`),
+  ['add/20', 'context20/21', 'del21/', 'add/22', 'context22/23', 'context23/24', 'del24/', 'add/25', 'context25/26', 'add/27'],
+  'a re-indented block inside a new wrapper shows only the wrapper and the lines that really changed');
 const pureAdd = [{kind:'add', new:1, text:'  '}];
 assert.deepEqual(tools.displayRows(pureAdd, 'unified', true).map(row => row.kind), ['add'], 'an added blank line is still a change');
-console.log('PASS a reindented line folds beside a real change, uneven blocks and added lines are never hidden');
+console.log('PASS a reindented line folds beside a real change, re-indented blocks show only real changes, added lines are never hidden');
 
 const split = [
   {old:{kind:'del', old:1, text:'\tfoo()'}, new:{kind:'add', new:1, text:'  foo()'}},
@@ -41,8 +52,11 @@ const split = [
 const splitShown = tools.displayRows(split, 'split', true);
 assert.deepEqual([splitShown[0].old.kind, splitShown[0].new.kind, splitShown[0].old.old, splitShown[0].new.new], ['context', 'context', 1, 1]);
 assert.deepEqual([splitShown[1].old.kind, splitShown[1].new.kind], ['del', 'add']);
-assert.equal(splitShown[2], split[2]);
-console.log('PASS split rows fold per row and keep unpaired and different lines');
+assert.deepEqual(splitShown[2], {old:null, new:split[2].new}, 'an unpaired addition stays on its own');
+assert.deepEqual([splitShown[3].old.kind, splitShown.length], ['context', 4]);
+const splitWrapped = tools.displayRows([{old:{kind:'del', old:1, text:'  a'}, new:{kind:'add', new:1, text:'<% if x %>'}}, {old:null, new:{kind:'add', new:2, text:'    a'}}, {old:null, new:{kind:'add', new:3, text:'<% end %>'}}], 'split', true);
+assert.deepEqual(splitWrapped.map(row => [row.old?.kind ?? null, row.new?.kind ?? null]), [[null, 'add'], ['context', 'context'], [null, 'add']], 'split rows are matched across the block, not only side by side');
+console.log('PASS split rows fold across the block and keep unpaired and different lines');
 
 // Anchors are computed from the captured rows, so a comment on a folded line still resolves.
 const snapshot = {files:[{id:'f', path:'a.rb', hunks:[{id:'h', rows:{unified}}]}]};
