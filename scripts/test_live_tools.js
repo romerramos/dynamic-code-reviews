@@ -227,3 +227,12 @@ assert.deepEqual(tools.settle(codexAgent, {agent:'codex', model:null, effort:nul
 assert.deepEqual(tools.settle(codexAgent, {agent:'codex', model:'gpt-a', effort:'xhigh'}), {agent:'codex', model:'gpt-a', effort:'low'}, 'an effort the model does not take becomes one it does');
 assert.deepEqual(tools.settle({slug:'antigravity', efforts:['low', 'medium'], models:[{id:'m1'}, {id:'m2'}]}, {agent:'antigravity'}), {agent:'antigravity', model:'m1', effort:'medium'}, 'with no default said, the first model it lists');
 console.log('PASS adversaries: who is asked, their marks, their status, models and efforts from the CLIs, and the card that sets them');
+
+// Whose judgement it is: the model and effort, tiny, beside the agent's name.
+assert.equal(globalThis.ReviewTools.modelText('opencode/big-pickle', null), 'big-pickle', 'a provider path is dropped');
+assert.equal(globalThis.ReviewTools.modelText('grok-4.7', 'high'), 'grok-4.7 · high');
+assert.equal(globalThis.ReviewTools.modelText(null, 'high'), '', 'no model, no label');
+assert.match(tools.messagesHTML({messages:[{id:'m', author:'agent', agent:'grok', model:'grok-4.7', effort:'high', body:'ok'}]}), /<strong>Grok<\/strong><span class="dcr-model"[^>]*>grok-4\.7 · high<\/span>/);
+assert.doesNotMatch(tools.messagesHTML({messages:[{id:'m', author:'agent', agent:'grok', body:'ok'}]}), /dcr-model/, 'an agent that did not say shows no label');
+assert.match(tools.opinionsHTML({adversary:'codex', opinions:{opencode:{id:'o', body:'Fine.', verdict:'agree', model:'opencode/big-pickle'}}}), /<strong>opencode<\/strong><span class="dcr-model"[^>]*>big-pickle<\/span>/);
+console.log('PASS each agent is labelled with the model and effort it answered on, when known');

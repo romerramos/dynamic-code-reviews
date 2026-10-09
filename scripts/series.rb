@@ -197,6 +197,7 @@ module ReviewSeries
     review['validation'] = []
     review['sections'] = []
     review['coverage'] = ''
+    review.delete('risk_ranking') # a judgement of this change's risk, made again for each increment
     review.delete('history')
     review.delete('qa') # Captures prove a particular runtime/snapshot, never an automatic increment.
     review.delete('previews') # Rendered from one snapshot's templates; re-render after code changes.
@@ -254,7 +255,7 @@ module ReviewSeries
 
   def apply_update(draft, update)
     review = copy(draft)
-    allowed = %w[title headline summary effort coverage validation sections flow file_categories qa comparison]
+    allowed = %w[title headline summary effort coverage validation sections flow file_categories qa comparison risk_ranking]
     update.fetch('review', {}).each do |key, value|
       raise ArgumentError, "Unsupported review update: #{key}" unless allowed.include?(key)
       review[key] = value
@@ -528,6 +529,9 @@ module ReviewSeries
       posted = DCR::State.new(path).read.dig('comments', DCR::State.review_key(entry['fingerprint'], name, entry['number'])) || []
       own = Array(review['comments']).map { |comment| comment['id'] }
       review['comments'] = Array(review['comments']) + posted.reject { |comment| own.include?(comment['id']) }
+      # The Risk ranking the agent posted while reviewing, unless the full review brings its own.
+      ranked = DCR::State.new(path).read.dig('risk_rankings', DCR::State.review_key(entry['fingerprint'], name, entry['number']))
+      review['risk_ranking'] = ranked.except('posted_at') if ranked&.key?('files') && !review.key?('risk_ranking')
       # Comments written straight into the review are the finishing agent's, like the posted ones.
       author = DCR::Agents.detect
       review['comments'].each { |comment| comment['agent'] ||= author } if author

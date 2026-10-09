@@ -36,7 +36,8 @@ module DCR
       end,
       'gemini' => ->(prompt, _out, model, _effort) { [['gemini', '-p', prompt, '--approval-mode', 'plan', '-o', 'text'] + flag('-m', model), nil] },
       'grok' => ->(prompt, _out, model, effort) { [['grok', '-p', prompt, '--permission-mode', 'plan'] + flag('-m', model) + flag('--reasoning-effort', effort), nil] },
-      'antigravity' => ->(prompt, _out, model, effort) { [['agy', '-p', prompt, '--mode', 'plan'] + flag('--model', model) + flag('--effort', effort), nil] },
+      # Antigravity's model names carry the effort (gemini-3.8-flash-high); it refuses --effort beside one.
+      'antigravity' => ->(prompt, _out, model, _effort) { [['agy', '-p', prompt, '--mode', 'plan'] + flag('--model', model), nil] },
       # opencode's built-in plan agent cannot edit, and a headless run denies anything it would ask for.
       'opencode' => ->(prompt, _out, model, _effort) { [['opencode', 'run', '--agent', 'plan'] + flag('-m', model) + [prompt], nil] }
     }.freeze
@@ -45,8 +46,7 @@ module DCR
     # model; Antigravity and opencode build them into the model's name).
     EFFORTS = {
       'claude' => %w[low medium high xhigh max],
-      'grok' => %w[low medium high],
-      'antigravity' => %w[low medium high xhigh max]
+      'grok' => %w[low medium high]
     }.freeze
 
     # A CLI that would stop to ask for a sign-in is left out rather than left hanging.

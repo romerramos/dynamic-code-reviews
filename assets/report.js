@@ -112,7 +112,7 @@
         const slash = file.path.lastIndexOf('/');
         const filename = file.path.slice(slash + 1);
         const directory = slash < 0 ? '' : file.path.slice(0, slash);
-        return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" aria-current="${state.navFile === id && state.view === layer.id ? 'location' : 'false'}" title="${escape(file.path)}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}"><span class="file-status" aria-hidden="true">${fileViewed(file) ? icon('check') : ''}</span><span class="nav-file-label"><span class="nav-file-name">${escape(filename)}</span>${directory ? `<small class="nav-file-directory">${escape(directory)}</small>` : ''}</span>${navPreviewMark(file)}</button></li>`;
+        return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" aria-current="${state.navFile === id && state.view === layer.id ? 'location' : 'false'}" title="${escape(file.path)}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}"><span class="file-status" aria-hidden="true">${fileViewed(file) ? icon('check') : ''}</span><span class="nav-file-label"><span class="nav-file-name">${escape(filename)}</span>${directory ? `<small class="nav-file-directory">${escape(directory)}</small>` : ''}</span>${riskMark(file)}${navPreviewMark(file)}</button></li>`;
       };
       matching.forEach(layer => {
         const count = layerComments(layer).length;
@@ -1140,16 +1140,17 @@
   }
   // Who wrote a comment: its agent's mark and name. The served page credits replies the same way.
   const AGENT_NAMES = {claude:'Claude', codex:'Codex', gemini:'Gemini', grok:'Grok', antigravity:'Antigravity', cursor:'Cursor', opencode:'opencode'};
-  function agentBadge(slug) {
+  function agentBadge(slug, comment = {}) {
     if (!slug) return '';
     const name = AGENT_NAMES[slug] || slug.charAt(0).toUpperCase() + slug.slice(1);
     const mark = window.ReviewBrands?.[slug] || `<b>${escape(name.charAt(0))}</b>`;
-    return `<span class="thread-by" title="Written by ${escape(name)}">by<span class="agent-face" data-agent="${escape(slug)}" aria-hidden="true">${mark}</span>${escape(name)}</span>`;
+    const model = ReviewTools.modelText(comment.model, comment.effort);
+    return `<span class="thread-by" title="Written by ${escape(model ? `${name}, ${model}` : name)}">by<span class="agent-face" data-agent="${escape(slug)}" aria-hidden="true">${mark}</span>${escape(name)}${model ? `<span class="thread-model">${escape(model)}</span>` : ''}</span>`;
   }
   function threadBadges(comment) {
     if (comment.audience === 'agent') return `<span class="thread-type type-purple" title="A question for your agent. It stays in this review."><span class="thread-type-icon">${icon('sparkles')}</span>For your agent</span>${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}`;
     const [symbol, title, hint, tone] = commentTypes[comment.label] || commentTypes.note;
-    return `<span class="thread-type type-${tone}" title="${hint}"><span class="thread-type-icon">${icon(symbol)}</span>${title}</span><span class="thread-priority ${comment.decoration === 'blocking' ? 'is-blocking' : 'is-optional'}">${comment.decoration === 'blocking' ? `${icon('circle-alert')} Blocking` : 'Non-blocking'}</span>${comment.severity ? `<span class="thread-severity">${escape(comment.severity)}</span>` : ''}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${comment.personal ? '<span class="thread-author">Your comment</span>' : agentBadge(comment.agent)}${ghBadgeSlot(comment)}`;
+    return `<span class="thread-type type-${tone}" title="${hint}"><span class="thread-type-icon">${icon(symbol)}</span>${title}</span><span class="thread-priority ${comment.decoration === 'blocking' ? 'is-blocking' : 'is-optional'}">${comment.decoration === 'blocking' ? `${icon('circle-alert')} Blocking` : 'Non-blocking'}</span>${comment.severity ? `<span class="thread-severity">${escape(comment.severity)}</span>` : ''}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${comment.personal ? '<span class="thread-author">Your comment</span>' : agentBadge(comment.agent, comment)}${ghBadgeSlot(comment)}`;
   }
   function commentCard(comment) {
     const found = ReviewTools.anchor(snapshot, comment);
@@ -1389,6 +1390,68 @@
     return `<section class="section-card card increment-card"><div class="eyebrow">Revision ${escape(revision.revision)} · ${revision.revision === 1 ? 'Starting point' : 'Since your last review'}</div><h2>${revision.revision === 1 ? 'The first saved review' : 'What changed this time'}</h2><p>${escape(revision.summary)}</p>${revision.revision > 1 ? `<div class="metrics"><span class="badge">${changed.length} changed files</span><span class="badge neutral">${revision.reused_ranges || 0} range explanations reused</span><span class="badge neutral">${revision.inspected_ranges || 0} ranges required inspection</span></div><p class="muted">The walkthrough below shows the complete change since the series base. Reuse describes explanations, not a fresh test run or approval.</p>` : ''}${changed.length ? `<details><summary>Files changed since the previous revision</summary><ul>${changed.map(file => `<li><span class="badge neutral">${escape(file.state)}</span> <code>${escape(file.path)}</code></li>`).join('')}</ul></details>` : ''}${revision.changed_context?.length ? `<p>Dependency context changed: ${revision.changed_context.map(escape).join(', ')}. Previous explanations required rechecking.</p>` : ''}${states.length ? `<details open><summary>Finding history</summary>${states.map(item => `<div class="finding-state"><span class="badge ${item.status === 'resolved' ? 'success' : 'warning'}">${escape(item.id)} · ${escape(item.change || item.status)}</span><strong>${escape(item.title)}</strong><p>${escape(item.reason)}</p></div>`).join('')}</details>` : ''}<div class="history-links"><a href="${revision.preview ? '' : '../'}current.html">Latest review</a><a href="${revision.preview ? '' : '../'}index.html">All revisions</a><a href="${revision.preview ? 'revisions/' : ''}${String(revision.revision).padStart(3, '0')}.html">Original saved snapshot</a></div></section>`;
   }
 
+  // --- Risk ranking: which changed files could hurt most, and why -----------------------------
+  // The agent scores each changed file against a fixed rubric and lists the risky ones with one
+  // sentence of evidence. A finished review carries it; an open one gets it while the reader starts
+  // on the diff (the live layer calls ReviewRisk.set): 'ranking' until then, {none} when no file
+  // stands out.
+  let riskRanking = review.risk_ranking || null;
+  let riskRedoable = false; // Rank again: offered by the served page only (ReviewRisk.allowRedo)
+  const riskRedo = (label = 'Rank again') => `<button type="button" class="risk-redo" data-risk-redo${riskRedoable ? '' : ' hidden'} title="Ask your agent to rank the risky files">${icon('refresh-cw')}<span>${label}</span></button>`;
+  const riskOf = fid => riskRanking?.files?.find(entry => entry.file === fid);
+  // The sidebar marks the files the ranking calls MEDIUM or worse, so the ranking follows the reader.
+  function riskMark(file) {
+    const entry = riskOf(file.id);
+    if (!entry || entry.score < 35) return '';
+    const level = ReviewTools.riskLevel(entry.score);
+    return `<span class="nav-risk risk-${level.key}" title="${escape(`${entry.score}% · ${level.label}: ${entry.reason}`)}" aria-label="${escape(`${level.label} risk`)}"></span>`;
+  }
+  function renderRiskRanking() {
+    if (riskRanking === 'ranking') {
+      return `<section class="risk-rank risk-pending" aria-labelledby="risk-title" role="status"><span class="risk-pending-mark" aria-hidden="true"><i></i><i></i><i></i></span><div><h2 id="risk-title">Risk ranking</h2><p>Your agent is scoring the changed files for security, data volume, money and the other risks. It appears here when ready; start reading meanwhile.</p></div></section>`;
+    }
+    if (riskRanking?.none) {
+      return `<section class="risk-rank risk-none" aria-labelledby="risk-title"><h2 id="risk-title">Risk ranking</h2><p>No file stands out: ${escape(riskRanking.none)}</p>${riskRedo()}</section>`;
+    }
+    // A served review that has none yet (finished before the ranking existed) can ask for one.
+    if (!riskRanking?.files) return riskRedoable ? `<section class="risk-rank risk-none" aria-labelledby="risk-title"><h2 id="risk-title">Risk ranking</h2><p>Not ranked yet.</p>${riskRedo('Rank the files')}</section>` : '';
+    const layerOf = fid => layers.find(layer => layer.items.some(item => item.file === fid));
+    const ranked = ReviewTools.riskFiles(riskRanking).filter(entry => files.has(entry.file));
+    const calm = files.size - ranked.length;
+    const rows = ranked.map(entry => {
+      const file = files.get(entry.file);
+      const level = ReviewTools.riskLevel(entry.score);
+      const slash = file.path.lastIndexOf('/');
+      const layer = layerOf(entry.file);
+      const name = `<span class="risk-dir">${escape(slash < 0 ? '' : file.path.slice(0, slash + 1))}</span><span class="risk-name">${escape(file.path.slice(slash + 1))}</span>${entry.line ? `<span class="risk-line">:${entry.line}</span>` : ''}`;
+      const path = layer ? `<button type="button" class="risk-path" data-file-link="${escape(entry.file)}" data-file-layer="${escape(layer.id)}" title="Open ${escape(file.path)}">${name}</button>` : `<span class="risk-path">${name}</span>`;
+      return `<li class="risk-row risk-${level.key}"><span class="risk-score"><span class="risk-bar" aria-hidden="true"><i style="width:${Math.max(4, entry.score)}%"></i></span><b>${entry.score}% · ${level.label}</b></span><div class="risk-what"><div class="risk-top">${path}<span class="risk-tags">${entry.tags.map(tag => `<span class="risk-tag">${escape(ReviewTools.riskTag(tag))}</span>`).join('')}</span></div><p class="risk-reason">${escape(entry.reason)}</p></div></li>`;
+    }).join('');
+    return `<section class="risk-rank" aria-labelledby="risk-title"><header class="risk-head"><h2 id="risk-title">Risk ranking</h2>${riskRanking.summary ? `<p>${escape(riskRanking.summary)}</p>` : ''}${riskRedo()}</header><ol class="risk-rows">${rows}</ol>${calm > 0 ? `<p class="risk-calm">${calm} other ${calm === 1 ? 'file' : 'files'}: low risk.</p>` : ''}</section>`;
+  }
+  window.ReviewRisk = {
+    allowRedo(on) {
+      if (riskRedoable === !!on) return;
+      riskRedoable = !!on;
+      document.querySelectorAll('[data-risk-redo]').forEach(button => { button.hidden = !riskRedoable; });
+      if (!document.querySelector('#content .risk-rank')) this.refresh(); // the "not ranked yet" line appears
+    },
+    refresh() {
+      const current = document.querySelector('#content .risk-rank');
+      const html = renderRiskRanking();
+      if (current) current.outerHTML = html || '';
+      else if (html) document.querySelector('#content .overview-comments')?.insertAdjacentHTML('beforebegin', html);
+      renderNavigation();
+    },
+    // posted: what the agent last sent ({files}, {none}, or {requested} while it ranks), or null.
+    set(posted) {
+      const next = posted?.files ? posted : posted?.requested ? 'ranking' : posted?.none ? {none: posted.none} : review.risk_ranking || (inProgress ? 'ranking' : null);
+      if (JSON.stringify(next) === JSON.stringify(riskRanking)) return;
+      riskRanking = next;
+      this.refresh();
+    }
+  };
+
   function renderOverview() {
     const generated = comments.filter(comment => !comment.personal);
     const pending = (review.history?.finding_states || []).filter(item => item.status === 'needs-rechecking').length;
@@ -1397,7 +1460,7 @@
     const historyLinks = revision ? `<nav class="overview-history" aria-label="Review history"><a href="${revision.preview ? '' : '../'}current.html">Latest review</a><a href="${revision.preview ? '' : '../'}index.html">All revisions</a></nav>` : '';
     const empty = !generated.length && !feedback.findings.length && !pending && !unlinkedFlows().some(({flow}) => flow.result === 'failed') ? `<p class="review-empty">${inProgress ? 'No comments yet. They appear here as your agent writes them.' : 'No issues found in this review.'}</p>` : '';
     const progressBox = inProgress ? `<div class="review-progress" role="status"><span class="review-progress-dot" aria-hidden="true"></span><div><h3>Your review is in progress</h3><p>Start reading now. Your agent's comments appear here and beside the code as it writes them, with a notice when one arrives, even on a file you already read. Explanations, test results and the finished walkthrough follow. Template previews and QA open once it is done.</p><p class="review-progress-count">${generated.length ? `${generated.length} comment${generated.length === 1 ? '' : 's'} so far` : 'No comments yet'}</p></div><button type="button" class="btn btn-sm btn-primary" data-start-reading>Start reading ${icon('arrow-right')}</button></div>` : '';
-    return `<div class="overview-reading"><header class="overview-intro"><p class="eyebrow">Review overview</p><h1>${escape(review.title)}</h1><h2 class="what-changed-title">What changed</h2><p class="overview-scope">${escape(ReviewTools.comparisonText(snapshot, review))}</p><p class="lead">${escape(review.summary)}</p>${revision && revision.revision > 1 ? `<p class="overview-update"><strong>Review revision ${revision.revision}</strong> · ${escape(revision.summary)}</p>` : ''}${historyLinks}${progressBox}</header>${inProgress ? '' : renderVisualOptions()}${pending ? `<p class="overview-notice">${pending} previous finding${pending === 1 ? '' : 's'} still need checking. See Review details.</p>` : ''}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${generated.map(commentCard).join('')}${unlinkedFlows().filter(({flow}) => flow.result === 'failed').map(({flow,index}) => qaFlow(flow,index)).join('')}</section>${renderOtherChecks()}${renderMyReview()}</div>`;
+    return `<div class="overview-reading"><header class="overview-intro"><p class="eyebrow">Review overview</p><h1>${escape(review.title)}</h1><h2 class="what-changed-title">What changed</h2><p class="overview-scope">${escape(ReviewTools.comparisonText(snapshot, review))}</p><p class="lead">${escape(review.summary)}</p>${revision && revision.revision > 1 ? `<p class="overview-update"><strong>Review revision ${revision.revision}</strong> · ${escape(revision.summary)}</p>` : ''}${historyLinks}${progressBox}</header>${inProgress ? '' : renderVisualOptions()}${pending ? `<p class="overview-notice">${pending} previous finding${pending === 1 ? '' : 's'} still need checking. See Review details.</p>` : ''}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}${renderRiskRanking()}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${generated.map(commentCard).join('')}${unlinkedFlows().filter(({flow}) => flow.result === 'failed').map(({flow,index}) => qaFlow(flow,index)).join('')}</section>${renderOtherChecks()}${renderMyReview()}</div>`;
   }
 
   function renderStep(layer) {

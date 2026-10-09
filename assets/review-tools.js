@@ -481,5 +481,25 @@ globalThis.ReviewTools = (() => {
     return out.join('');
   }
 
-  return {markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, scopeLabel, sha256, githubLink, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  // Whose judgement it is: an agent's model and effort as a short label ("grok-4.7 · high",
+  // "big-pickle"), without a provider path; '' when the agent did not say.
+  function modelText(model, effort) {
+    const name = String(model || '').trim().split('/').pop();
+    return name ? `${name}${effort ? ` · ${effort}` : ''}` : '';
+  }
+
+  // --- the Overview's Risk ranking -----------------------------------------------------------
+  // The changed files the agent judged risky, scored against a fixed rubric. The level is written
+  // from the score, so every file reads the same way: 80+ CRITICAL, 60+ HIGH, 35+ MEDIUM, else LOW.
+  const RISK_LEVELS = [[80, 'critical', 'CRITICAL'], [60, 'high', 'HIGH'], [35, 'medium', 'MEDIUM'], [0, 'low', 'LOW']];
+  function riskLevel(score) {
+    const [, key, label] = RISK_LEVELS.find(([min]) => Number(score) >= min) || RISK_LEVELS[3];
+    return {key, label};
+  }
+  const RISK_TAGS = {security: 'Security', 'data-volume': 'Data volume', schema: 'Schema', money: 'Money', background: 'Background work', contract: 'Contract', 'shared-code': 'Shared code', 'user-facing': 'User-facing'};
+  const riskTag = tag => RISK_TAGS[tag] || tag;
+  // Most risky first; files of equal score keep the agent's order.
+  const riskFiles = ranking => [...(ranking?.files || [])].sort((a, b) => b.score - a.score);
+
+  return {modelText, riskLevel, riskTag, riskFiles, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, scopeLabel, sha256, githubLink, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();

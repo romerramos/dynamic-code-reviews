@@ -49,16 +49,22 @@ module DCR
       You may operate the running app in that tab, run `dcr record` and `dcr evidence attach`, read files and run read-only commands. You may also add the records the flows need to the development database (through the app, or the project's seeds, factories or console run against development) and update the QA notes file the request names. Do not edit, create or delete files in the project, and do not run formatters, generators, migrations, installs or git commands that change anything. Use only development data; never record credentials or unrelated screens.
     TEXT
 
+    RISK_RULE = <<~TEXT.strip
+      RISK RANKING REQUEST. The reviewer asked you to rank this review's risky files again. Follow "Rank the risk" in the skill's SKILL.md: score each changed file against its rubric, with one sentence of evidence for each file you list.
+      You may read files, search and run read-only commands, and write the JSON to a temporary file outside the project. Do not edit, create or delete anything in the project.
+    TEXT
+
     USAGE = {
-      'wait' => 'dcr wait (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--timeout SECONDS] [--json]',
+      'wait' => 'dcr wait (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--model ID] [--effort LEVEL] [--timeout SECONDS] [--json]',
       'comments' => 'dcr comments (--repo ROOT --name SERIES | --dir DIR) [--thread ID] [--json]   (--thread prints that one conversation in full: the comment as sent, then every message)',
       'preview' => 'dcr preview submit (--repo ROOT --name SERIES | --dir DIR) --path <template path> [--file FILE] [--title TITLE] [--css STYLESHEET]... [--page-class CLASSES] [--image-map JSON] | dcr preview fail ... --path <template path> --reason TEXT',
       'export' => 'dcr export (--repo ROOT --name SERIES | --dir DIR) [--out FILE]',
-      'comment' => 'dcr comment (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--no-second-opinion] [--file COMMENTS.json]   (one review comment or an array, as in the review JSON: id, label, decoration, subject, discussion, hunk, side, start, end, plus an optional context: one or two plain sentences on what the change tries to do, for the second opinion; stdin when --file is omitted)',
+      'risk-ranking' => 'dcr risk-ranking (--repo ROOT --name SERIES | --dir DIR) (--file RANKING.json | --none REASON)   (the Overview\'s Risk ranking: {summary, files: [{file, score, tags, reason, line}]}, as in the review JSON\'s risk_ranking; --none when no file stands out)',
+      'comment' => 'dcr comment (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--model ID] [--effort LEVEL] [--no-second-opinion] [--file COMMENTS.json]   (one review comment or an array, as in the review JSON: id, label, decoration, subject, discussion, hunk, side, start, end, plus an optional context: one or two plain sentences on what the change tries to do, for the second opinion; stdin when --file is omitted)',
       'stop' => 'dcr stop (--repo ROOT --name SERIES | --dir DIR | --all)   (stops the served review and its `dcr wait`; --all stops every review served on this computer)',
       'link' => 'dcr link (--repo ROOT --name SERIES | --dir DIR)   (the served review\'s addresses: on this computer, and on your tailnet when shared)',
       'focus' => 'dcr focus (--repo ROOT --name SERIES | --dir DIR)   (brings the browser tab showing the served review to the front)',
-      'reply' => 'dcr reply (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--key KEY] [--json] <thread-id> <text>',
+      'reply' => 'dcr reply (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--model ID] [--effort LEVEL] [--key KEY] [--json] <thread-id> <text>',
       'second-opinion' => 'dcr second-opinion (--repo ROOT --name SERIES | --dir DIR) --comment ID [--comment ID]... [--agent AUTHOR] [--context TEXT]   (asks the reviewer\'s adversaries to check a posted comment; `dcr comment` does this by itself)',
       'evidence' => 'dcr evidence attach (--repo ROOT --name SERIES | --dir DIR) --file ITEMS.json [--replace previous-qa|all]   (ITEMS: [{"path", "title", "result": "passed|failed", "observed", "comment_id"?, "page"?}]; previous-qa, the default, replaces the last QA review; all replaces every recording, only when the reviewer asks to start over)'
     }.freeze
@@ -85,9 +91,12 @@ module DCR
         p.on('--all') { options[:all] = true }
         p.on('--replace MODE', %w[previous-qa all]) { |v| options[:replace] = v.tr('-', '_').to_sym }
         p.on('--agent NAME', 'Who you are: claude, codex, gemini, grok... (detected when omitted)') { |v| options[:agent] = Agents.check(v) }
+        p.on('--model ID', 'The model you run on, as you know it (claude-opus-5-5, gpt-6.1-sol...)') { |v| options[:model] = model_option(v, 'model') }
+        p.on('--effort LEVEL', 'Your reasoning effort, when you know it (low, medium, high...)') { |v| options[:effort] = model_option(v, 'effort') }
         p.on('--comment ID') { |v| (options[:comments] ||= []) << v }
         p.on('--context TEXT') { |v| options[:context] = v }
         p.on('--no-second-opinion') { options[:second_opinion] = false }
+        p.on('--none REASON') { |v| options[:none] = v }
       end
       parser.parse!(argv)
       return stop(options, parser) if command == 'stop'
@@ -97,6 +106,7 @@ module DCR
       when 'comments' then comments(state, options)
       when 'reply' then reply(state, options, argv, parser)
       when 'comment' then comment(state, options, directory(options, parser))
+      when 'risk-ranking' then risk_ranking(state, options, directory(options, parser))
       when 'focus' then focus(directory(options, parser))
       when 'link' then link(directory(options, parser))
       when 'export' then export(options, directory(options, parser))
@@ -127,7 +137,7 @@ module DCR
     def wait_for(state, options)
       deadline = options[:timeout] && Time.now + options[:timeout]
       loop do
-        state.heartbeat(agent(options)) # tells the open page that something, and who, is listening
+        state.heartbeat(agent(options), options[:model], options[:effort]) # tells the open page that something, who, and on what, is listening
         pending = state.pending
         unless pending.empty?
           puts options[:json] ? JSON.pretty_generate('instructions' => REPLY_ONLY, 'entries' => pending) : render(pending, flags(options))
@@ -152,16 +162,19 @@ module DCR
       sends = entries.select { |entry| entry['kind'] == 'send' }
       previews = entries.select { |entry| entry['kind'] == 'preview' }
       qas = entries.select { |entry| entry['kind'] == 'qa' }
+      risks = entries.select { |entry| entry['kind'] == 'risk' }
       ids = sends.flat_map { |entry| entry['thread_ids'] }.uniq
-      conversation = sends.any? || finish || (previews.empty? && qas.empty?) # a pure task request is not a conversation
+      conversation = sends.any? || finish || (previews.empty? && qas.empty? && risks.empty?) # a pure task request is not a conversation
       out = []
       out << REPLY_ONLY if conversation
       out << PREVIEW_RULE if previews.any?
       out << QA_RULE if qas.any?
+      out << RISK_RULE if risks.any?
       out << (finish ? 'The reviewer finished this round.' : 'The reviewer sent you the following from the review.') if conversation
       sends.each { |entry| out << "---\nThread: #{entry['thread_ids'].join(', ')}\n\n#{entry['text']}" }
       previews.each { |entry| out << "---\n#{preview_request(entry, flags)}" }
       qas.each { |entry| out << "---\nThread: #{entry['thread_ids'].join(', ')}\n\n#{entry['text']}" }
+      out << "---\nPost it with: dcr risk-ranking #{flags} --file <ranking.json>   (or --none '<why, in a few words>')" if risks.any?
       out << '---'
       out << "Answer each thread with: dcr reply #{flags} <thread-id> '<your answer: what you found, and what you would change if anything>'" unless ids.empty?
       out << 'Do not resolve threads; the reviewer resolves them.' unless ids.empty? || finish
@@ -169,6 +182,7 @@ module DCR
       out << 'Finish received: send any outstanding replies, then stop waiting unless the reviewer asks for another round.' if finish
       out << if conversation then 'Reminder: reply only. No file changes, no commits, no pushes.'
              elsif qas.any? then 'Reminder: record and attach only, with development data you add as needed. No changes to the project\'s files, no commits, no pushes.'
+             elsif risks.any? && previews.empty? then 'Reminder: post the risk ranking only; change nothing in the project.'
              else 'Reminder: submit HTML only, change nothing in the project.'
              end
       out.join("\n\n")
@@ -327,11 +341,35 @@ module DCR
       end
       author = agent(options, state)
       contexts = comments.to_h { |entry| [entry['id'], entry['context']] }
-      comments = comments.map { |entry| entry.except('context').merge(author ? {'agent' => author} : {}) }
+      model, effort = own_model(options, state)
+      comments = comments.map { |entry| entry.except('context').merge({'agent' => author, 'model' => model, 'effort' => effort}.compact) }
       entry = history['revisions'].last
       state.post_comments(State.review_key(entry['fingerprint'], history['name'], entry['number']), comments)
       puts "Posted #{comments.length == 1 ? "comment #{comments.first['id']}" : "#{comments.length} comments"} to the open review."
       ask_others(directory, comments, author, contexts) unless options[:second_opinion] == false
+    end
+
+    # The Risk ranking: the open page shows it at once. While the review is in progress `dcr series
+    # finish` keeps it; on a finished one (the reviewer asked to rank it again) it lives beside it.
+    # --none says no file stands out.
+    def risk_ranking(state, options, directory)
+      require_relative '../../scripts/series'
+      history = ReviewSeries.manifest(directory)
+      payload = ReviewSeries.latest(directory, history)
+      entry = history['revisions'].last
+      key = State.review_key(entry['fingerprint'], history['name'], entry['number'])
+      if options[:none]
+        raise ArgumentError, 'Say in a few words why no file stands out' if options[:none].strip.empty? || options[:none].length > 200
+        state.post_risk_ranking(key, {'none' => options[:none].strip})
+        return puts('No risky files for this review; the open page says so.')
+      end
+      raw = options[:file] ? File.read(File.expand_path(options[:file])) : ($stdin.tty? ? raise(ArgumentError, 'Give the ranking JSON with --file or on stdin, or --none REASON') : $stdin.read)
+      ranking = JSON.parse(raw)
+      DynamicReviews.validate_risk_ranking(ranking, payload['snapshot'].fetch('files').to_h { |file| [file['id'], file] })
+      state.post_risk_ranking(key, ranking)
+      kept = payload.dig('review', 'status') == 'in_progress' ? '`dcr series finish` keeps it' : 'saved revisions keep what they had'
+      count = ranking['files'].length
+      puts "Posted the risk ranking (#{count} #{count == 1 ? 'file' : 'files'}) to the open review; #{kept}."
     end
 
     # Each comment is checked by the reviewer's adversaries in the background; the answers appear in
@@ -363,6 +401,21 @@ module DCR
 
     # Who is running this command: --agent, what its CLI left in the environment, or the listener.
     def agent(options, state = nil) = options[:agent] || Agents.detect || state&.listener
+
+    # The model and effort behind a comment or reply: what the agent said, else what it said while
+    # listening (the same agent, still on the same model).
+    def own_model(options, state)
+      return [options[:model], options[:effort]] if options[:model]
+      said = state&.listener_model
+      said && (!options[:agent] || options[:agent] == state.listener) ? said.values_at('model', 'effort') : [nil, options[:effort]]
+    end
+
+    def model_option(value, what)
+      value = value.to_s.strip
+      pattern = what == 'model' ? %r{\A[\w.:/@#+-]{1,80}\z} : /\A[a-z]{2,12}\z/
+      raise ArgumentError, "--#{what} is a short name like #{what == 'model' ? 'claude-opus-5-5' : 'high'}" unless value.match?(pattern)
+      value
+    end
 
     # Served reviews keep running in the background until stopped. This stops the review server of one
     # series (or every one with --all) and the `dcr wait` listening for it. A server removes its tailnet
@@ -414,7 +467,8 @@ module DCR
     def reply(state, options, argv, parser)
       id, *words = argv
       raise ArgumentError, parser.to_s unless id && !words.empty?
-      message = state.agent_reply(id, words.join(' '), key: options[:key], agent: agent(options, state))
+      model, effort = own_model(options, state)
+      message = state.agent_reply(id, words.join(' '), key: options[:key], agent: agent(options, state), model: model, effort: effort)
       puts options[:json] ? JSON.generate(message) : "Replied to #{id}."
     end
   end

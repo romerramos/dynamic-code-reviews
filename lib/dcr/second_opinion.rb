@@ -149,7 +149,7 @@ module DCR
         Thread.new do
           answer = ask.call(agent, yield(agent, adversarial), dir: repo, model: model, effort: effort)
           word, body = on_comment ? verdict(answer) : [nil, tidy(answer)]
-          state.add_opinion(key, id, agent, body, verdict: word, adversary: adversarial)
+          state.add_opinion(key, id, agent, body, verdict: word, adversary: adversarial, model: model, effort: effort)
           AgentCatalog::Results.record(agent)
           [agent, word || 'answered']
         rescue ArgumentError, SystemCallError => error

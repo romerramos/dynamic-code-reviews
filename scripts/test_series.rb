@@ -256,6 +256,21 @@ module SeriesChecks
           assert(state.read.dig('comments', key).map { |entry| entry['id'] } == ['value-two'], 'The posted comment is not on the open review')
           rejects('A duplicate comment id was posted') { post.call(comment) }
           rejects('A comment outside its hunk was posted') { post.call(comment.merge('id' => 'far', 'start' => 40, 'end' => 40)) }
+          # The Risk ranking arrives while the reader is on the diff, checked against the snapshot.
+          risk = {'summary' => 'The value changes for every caller.', 'files' => [{'file' => file['id'], 'score' => 72, 'tags' => %w[shared-code user-facing], 'reason' => 'Every caller of value now gets two.', 'line' => 3}]}
+          map = lambda do |value|
+            File.write(File.join(out, 'risk.json'), JSON.generate(value))
+            DCR::LiveCLI.risk_ranking(state, {file: File.join(out, 'risk.json')}, series)
+          end
+          rejects('An empty risk ranking was posted') { map.call(risk.merge('files' => [])) }
+          rejects('A ranking of an unknown file was posted') { map.call(risk.merge('files' => [risk['files'][0].merge('file' => 'nope')])) }
+          rejects('A tag outside the rubric was posted') { map.call(risk.merge('files' => [risk['files'][0].merge('tags' => ['browser-history'])])) }
+          rejects('A file ranked twice was posted') { map.call(risk.merge('files' => risk['files'] * 2)) }
+          rejects('A reason with a line break was posted') { map.call(risk.merge('files' => [risk['files'][0].merge('reason' => "One\nTwo")])) }
+          DCR::LiveCLI.risk_ranking(state, {none: 'Only copy changed'}, series)
+          assert(state.read.dig('risk_rankings', key, 'none') == 'Only copy changed', 'Saying no file stands out was not kept')
+          map.call(risk)
+          assert(state.read.dig('risk_rankings', key, 'files').length == 1, 'The posted risk ranking is not on the open review')
           rejects('An increment built on an unfinished review') { ReviewSeries.prepare(repo: root, name: 'live-check', out: File.join(out, 'prepared')) }
           full = outline.merge('summary' => 'Return two.', 'groups' => [{'title' => 'Values', 'summary' => 'Values.', 'layers' => [{'title' => 'Return a value', 'items' => [{'file' => file['id'], 'summaries' => {hid => 'Return two.'}}]}]}])
           File.write(File.join(out, 'full.json'), JSON.generate(full))
@@ -263,8 +278,17 @@ module SeriesChecks
           finished = DynamicReviews.extract(second)['review']
           assert(!finished.key?('status') && finished['history']['revision'] == 2, 'Finishing did not save a complete next revision')
           assert(finished['comments'].map { |entry| entry['id'] } == ['value-two'], 'Finishing lost the comment posted while in progress')
+          assert(finished['risk_ranking'] == risk, 'Finishing lost the risk ranking posted while in progress')
           rejects('A finished review was finished again') { ReviewSeries.finish(repo: root, name: 'live-check', review: File.join(out, 'full.json')) }
           rejects('A comment was posted to a finished review') { post.call(comment.merge('id' => 'late')) }
+          # Rank again, on the finished review: the page shows it ranking and dcr wait hands the agent the task.
+          done_key = DCR::State.review_key(snapshot['fingerprint'], 'live-check', 2)
+          state.request_risk_ranking(done_key)
+          assert(state.read.dig('risk_rankings', done_key, 'requested'), 'A requested risk ranking does not show as being ranked')
+          printed = DCR::LiveCLI.render(state.pending.last(1), '--repo r --name s')
+          assert(printed.start_with?('RISK RANKING REQUEST.') && printed.include?('Rank the risk') && printed.include?('dcr risk-ranking --repo r --name s --file') && !printed.include?('REPLY ONLY'), "dcr wait must hand over the risk ranking request as a task:\n#{printed}")
+          map.call(risk)
+          assert(state.read.dig('risk_rankings', done_key, 'files').length == 1, 'A ranking redone on a finished review was not kept')
         end
       end
     end

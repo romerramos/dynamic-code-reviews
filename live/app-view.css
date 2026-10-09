@@ -110,7 +110,7 @@ dialog.dcr-app:focus{outline:0}
 .dcr-app-thumb{grid-column:2;grid-row:1/span 3;align-self:start;width:64px;height:40px;overflow:hidden;border-radius:6px;background:#0b0d12}
 .dcr-app-thumb :is(video,img){display:block;width:100%;height:100%;object-fit:cover}
 .dcr-app-row-state{display:flex;align-items:center;gap:8px;margin:0;padding:2px 16px 12px 19px;color:var(--muted);font-size:12px}
-.dcr-app-new{flex:none;padding:0 6px;border-radius:999px;background:var(--accent);color:#fff;font-size:10.5px;font-weight:600;line-height:17px}
+.dcr-app-new,.dcr-app-row-title .dcr-app-new{flex:none;padding:0 6px;border-radius:999px;background:var(--accent);color:#fff;font-size:10.5px;font-weight:600;line-height:17px}
 .dcr-app-media{padding:0 16px 10px 19px}
 .dcr-app-media :is(video,img){display:block;width:100%;max-height:220px;object-fit:contain;border-radius:8px;background:#0b0d12}
 .dcr-app-row-tools{display:flex;align-items:center;gap:10px;min-width:0;margin:0;padding:0 16px 10px 19px;font-size:12px}
@@ -135,7 +135,9 @@ dialog.dcr-app:focus{outline:0}
 .dcr-app-msg-body a{color:var(--accent)}
 
 .dcr-app-reply{display:flex;align-items:flex-end;gap:6px;margin:0 16px 14px 19px;padding:5px 5px 5px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
-.dcr-app-reply:focus-within{border-color:var(--accent)}
+.dcr-app-reply:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+/* One ring, the reply field's: the dialog's focus outline would draw a second, smaller box inside it. */
+.dcr-app .dcr-app-reply textarea:focus,.dcr-app .dcr-app-reply textarea:focus-visible{outline:0}
 .dcr-app-reply textarea{flex:1;min-height:22px;max-height:160px;padding:4px 0;border:0;outline:0;background:transparent;color:var(--ink);font:13.5px/1.45 var(--review-font-family);resize:none;field-sizing:content}
 .dcr-app-reply .dcr-app-icon{color:var(--accent)}
 
@@ -225,18 +227,20 @@ dialog.dcr-qa-done footer{display:flex;justify-content:flex-end;gap:8px}
 .dcr-qa-older li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;color:var(--muted)}
 .dcr-qa-older span{overflow:hidden;color:var(--ink);text-overflow:ellipsis;white-space:nowrap}
 
-/* While the agent prepares between recordings: a frosted band across the top of the app, fading
-   into it, that says so. It never takes a click, and it is hidden before a recording starts. */
-.dcr-app-prep{position:absolute;inset:0 0 auto;z-index:3;display:flex;align-items:center;justify-content:center;gap:14px;height:112px;padding:0 24px 22px;pointer-events:none;
-  background:linear-gradient(to bottom,color-mix(in oklab,var(--surface) 82%,transparent) 0%,color-mix(in oklab,var(--surface) 70%,transparent) 62%,transparent 100%);
-  -webkit-backdrop-filter:blur(10px) saturate(1.1);backdrop-filter:blur(10px) saturate(1.1);
-  -webkit-mask-image:linear-gradient(to bottom,#000 60%,transparent);mask-image:linear-gradient(to bottom,#000 60%,transparent)}
+/* While the agent prepares between recordings: a veil over the whole app, so it plainly reads
+   "hands off, wait", and a card at the top saying what is happening. The veil is a light wash with
+   a slight blur: the reviewer sees it is covered, while an agent that works from screenshots can
+   still read the page. It never takes a click, and it is hidden before a recording starts. */
+.dcr-app-prep{position:absolute;inset:0;z-index:3;display:flex;justify-content:center;align-items:flex-start;padding:28px 24px;pointer-events:none;
+  background:color-mix(in oklab,var(--surface) 52%,transparent);-webkit-backdrop-filter:blur(1.5px) saturate(.85);backdrop-filter:blur(1.5px) saturate(.85)}
 .dcr-app-prep[hidden]{display:none}
+.dcr-app-prep-card{display:flex;align-items:center;gap:14px;max-width:min(520px,100%);padding:14px 20px 14px 16px;border:1px solid color-mix(in oklab,var(--accent) 28%,var(--line));border-radius:14px;background:var(--surface);box-shadow:0 10px 30px #1b21332b}
 .dcr-app-prep-spin{flex:none;width:26px;height:26px;border-radius:50%;border:2.5px solid color-mix(in oklab,var(--accent) 22%,transparent);border-top-color:var(--accent);animation:dcr-prep-spin .9s linear infinite}
 .dcr-app-prep-text{display:grid;gap:2px;min-width:0}
 .dcr-app-prep-text strong{color:var(--ink);font-size:15px;font-weight:650;letter-spacing:-.01em}
 .dcr-app-prep-text span{color:var(--muted);font-size:13px}
 @keyframes dcr-prep-spin{to{transform:rotate(360deg)}}
-@media(prefers-reduced-motion:no-preference){.dcr-app-prep:not([hidden]){animation:dcr-prep-in .25s ease-out}}
-@keyframes dcr-prep-in{from{opacity:0;transform:translateY(-8px)}}
+@media(prefers-reduced-motion:no-preference){.dcr-app-prep:not([hidden]){animation:dcr-prep-in .25s ease-out}.dcr-app-prep:not([hidden]) .dcr-app-prep-card{animation:dcr-prep-card .3s ease-out}}
+@keyframes dcr-prep-in{from{opacity:0}}
+@keyframes dcr-prep-card{from{opacity:0;transform:translateY(-8px)}}
 @media(prefers-reduced-motion:reduce){.dcr-app-prep-spin{animation-duration:2.4s}}

@@ -47,7 +47,7 @@ module DCR
         - Move to an element before clicking it (hover, then click), at a human pace, so the pointer travels the way a person's would.
         - The app is the large pane in the middle of the App view; act inside it. Change the page with the address field at the top of the App view. Do not close the App view, reload the review or open another tab.
         - For a step that needs the browser's Back or Forward, use the arrows at the left of the App view's address field. They move the app's own history only, never the review's, so such a step can be recorded. Never use the browser's own Back. Each arrow's tooltip names where it leads, and after one is used the status line under the app says where it went, including "the same address" when an entry repeats the one before, which a glance at the page cannot show.
-        - Between recordings the App view draws a band across the top of the app saying you are preparing, so the reviewer knows nothing is being recorded yet. Clicks pass through it, and it is gone before a recording starts; ignore it.
+        - Between recordings the App view covers the app with a light veil saying you are preparing, so the reviewer knows nothing is being recorded yet. Clicks pass through it, and it is gone before a recording starts; ignore it.
 
         Prepare first (not recorded); this is what makes the clips worth watching:
         - QA notes: #{notes} — #{known}

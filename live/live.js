@@ -15,6 +15,7 @@
   let latest = null;
   let listening; // is an agent waiting for messages? undefined: an older server that cannot say
   let listener = null; // which agent is listening (claude, codex, ...), when it said
+  let listenerModel = null; // {model, effort} it said it runs on
   const openOpinions = new Map(); // comment id -> the agents whose opinions are open
   const baseTitle = document.title;
   // Agent messages the reader has been shown. First visit to a review marks the history as seen,
@@ -123,7 +124,7 @@
     const kind = (comment.audience === 'agent' ? 'question for your agent' : [comment.label, comment.decoration].filter(Boolean).join(' · ')).replace(/^./, letter => letter.toUpperCase());
     const long = text.length > 320 || text.split(/\n\s*\n/).length > 2;
     const body = text ? `<div class="dcr-body${long ? ' is-clamped' : ''}">${tools.markdown(text)}</div>${long ? '<button type="button" class="dcr-more">Show more</button>' : ''}` : '';
-    return `<article class="dcr-msg dcr-origin${comment.personal ? ' dcr-you' : ' dcr-agent'}">${avatar}<div class="dcr-msg-main"><header class="dcr-msg-head"><strong>${who}</strong><span class="dcr-role">${tools.escape(kind)}</span></header>${body}</div></article>`;
+    return `<article class="dcr-msg dcr-origin${comment.personal ? ' dcr-you' : ' dcr-agent'}">${avatar}<div class="dcr-msg-main"><header class="dcr-msg-head"><strong>${who}</strong>${comment.personal ? '' : tools.modelHTML(comment)}<span class="dcr-role">${tools.escape(kind)}</span></header>${body}</div></article>`;
   };
   const advToggleHTML = '<button type="button" class="dcr-adv-toggle" data-dcr-adv hidden aria-pressed="false"></button>';
   const composeHTML = () => `<form class="dcr-reply dcr-compose" hidden><textarea rows="1" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea>${advToggleHTML}<button type="submit" class="dcr-send" aria-label="Send reply" title="Send reply (⌘ Enter)">${ico('send')}</button></form>`;
@@ -341,6 +342,18 @@
   document.addEventListener('keydown', event => {
     const field = event.target.closest?.('.dcr-reply textarea');
     if (field && event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); field.form.requestSubmit(); }
+  });
+
+  // Rank again: the agent redoes the Risk ranking; the page shows it ranking until the new one arrives.
+  document.addEventListener('click', async event => {
+    const button = event.target.closest('[data-risk-redo]');
+    if (!button) return;
+    button.disabled = true;
+    try {
+      await api('/api/risk-ranking', {key});
+      window.ReviewRisk?.set({requested: true});
+      flash(listening === false ? 'Asked for a new risk ranking. Your agent ranks the files when it continues the review.' : 'Asked your agent to rank the risky files again.');
+    } catch (error) { flash(error.message); button.disabled = false; }
   });
 
   // --- the Overview panel ------------------------------------------------------------------
@@ -956,7 +969,8 @@
   };
   const renderPresenceCard = model => {
     const agent = model.face ? tools.agentInfo(model.face) : null;
-    const who = agent ? `<strong>${tools.escape(agent.name)}</strong>${agent.company ? `<span>${tools.escape(agent.company)}</span>` : ''}` : `<strong>${model.tone === 'off' ? 'No agent connected' : 'Your agent'}</strong>`;
+    const runs = agent && listenerModel ? tools.modelHTML(listenerModel) : '';
+    const who = agent ? `<strong>${tools.escape(agent.name)}</strong>${agent.company || runs ? `<span>${tools.escape(agent.company)}${agent.company && runs ? ' · ' : ''}${runs}</span>` : ''}` : `<strong>${model.tone === 'off' ? 'No agent connected' : 'Your agent'}</strong>`;
     const connect = model.tone === 'off' && online ? `<p class="dcr-presence-help">Ask your agent to continue this review, or run this where it works:</p><div class="dcr-presence-cmd"><code>${tools.escape(connectCommand())}</code><button type="button" class="icon-button" data-dcr-copy-wait aria-label="Copy the command" title="Copy">${ico('copy')}</button></div>` : '';
     const html = `<header>${tools.avatarHTML(model.face, '')}<div class="dcr-presence-who">${who}</div></header><p class="dcr-presence-line dcr-presence-${model.tone}"><span class="dcr-presence-dot" aria-hidden="true"></span>${tools.escape(model.hint)}</p>${connect}`;
     if (presenceMain.dataset.html !== html) { presenceMain.innerHTML = html; presenceMain.dataset.html = html; }
@@ -1196,10 +1210,13 @@
 
   // --- sync ----------------------------------------------------------------------------------
   const apply = data => {
-    threads = data.threads; rev = data.rev; latest = data.latest_revision; listening = data.listening; listener = data.agent || listener; online = true; previews = data.previews || {};
+    threads = data.threads; rev = data.rev; latest = data.latest_revision; listening = data.listening; listener = data.agent || listener; listenerModel = data.agent_model || (data.agent ? null : listenerModel); online = true; previews = data.previews || {};
     const ghNext = {pending: data.github?.pending || {}, posted: data.github?.posted || {}};
     if (JSON.stringify(ghNext) !== JSON.stringify({pending: ghData.pending, posted: ghData.posted})) ghData = ghNext;
     receiveComments(data.comments || []);
+    // The Risk ranking the agent posts while the reader is already on the diff; until then, a placeholder.
+    if ('risk_ranking' in data) window.ReviewRisk?.set(data.risk_ranking);
+    window.ReviewRisk?.allowRedo(online);
     if (!seenKnown) { tools.unseen(threads, seen).forEach(item => seen.add(item.id)); saveSeen(); seenKnown = true; }
     const arrived = tools.unseen(threads, seen).filter(item => !announced.has(item.id));
     arrived.forEach(item => announced.add(item.id));

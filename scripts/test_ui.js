@@ -195,3 +195,10 @@ for (const [oldText,newText,oldCount,newCount] of [['','new',0,1],['old','',1,0]
  assert.deepEqual(tools.fullFileHunks({id:'edge',source:{old:oldText,new:newText},hunks:[h]}),[h]);
 }
 console.log('PASS focus preserves walkthrough order and complete source line coverage');
+
+// Risk ranking: the level is written from the score, tags read as words, most risky first.
+assert.deepEqual([80, 79, 60, 35, 34, 0].map(score => tools.riskLevel(score).label), ['CRITICAL', 'HIGH', 'HIGH', 'MEDIUM', 'LOW', 'LOW']);
+assert.deepEqual(['security', 'data-volume', 'shared-code', 'other'].map(tools.riskTag), ['Security', 'Data volume', 'Shared code', 'other']);
+assert.deepEqual(tools.riskFiles({files:[{file:'a', score:40}, {file:'b', score:90}, {file:'c', score:40}]}).map(entry => entry.file), ['b', 'a', 'c'], 'most risky first; equal scores keep the order given');
+assert.deepEqual(tools.riskFiles(null), []);
+console.log('PASS the risk ranking writes each level and tag in words, most risky first');

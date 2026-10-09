@@ -69,7 +69,7 @@
     </header>
     <div class="dcr-app-body">
       <div class="dcr-app-canvas">
-        <div class="dcr-app-pane"><iframe title="The app under review" name="dcr-app-frame"></iframe><div class="dcr-app-prep" role="status" aria-live="polite" hidden><span class="dcr-app-prep-spin" aria-hidden="true"></span><span class="dcr-app-prep-text"><strong data-prep-title></strong><span data-prep-detail></span></span></div></div>
+        <div class="dcr-app-pane"><iframe title="The app under review" name="dcr-app-frame"></iframe><div class="dcr-app-prep" role="status" aria-live="polite" hidden><div class="dcr-app-prep-card"><span class="dcr-app-prep-spin" aria-hidden="true"></span><span class="dcr-app-prep-text"><strong data-prep-title></strong><span data-prep-detail></span></span></div></div></div>
         <form class="dcr-app-compose" data-app-compose hidden aria-label="Comment on this element">
           <p class="dcr-app-target"></p>
           <textarea name="body" rows="3" placeholder="What should change here?" aria-label="Your comment"></textarea>
@@ -411,7 +411,7 @@
   };
   const messagesHTML = (thread, unread) => thread.messages.map(message => {
     const agent = message.author === 'agent';
-    return `<li class="dcr-app-msg${agent ? ' is-agent' : ''}"><p class="dcr-app-msg-head"><strong>${agent ? 'Your agent' : 'You'}</strong><time datetime="${esc(message.at)}" data-at="${esc(message.at)}">${esc(time(message.at))}</time>${agent && unread.has(message.id) ? '<span class="dcr-app-new">New</span>' : ''}</p>
+    return `<li class="dcr-app-msg${agent ? ' is-agent' : ''}"><p class="dcr-app-msg-head"><strong>${agent ? 'Your agent' : 'You'}</strong>${agent && tools ? tools.modelHTML(message) : ''}<time datetime="${esc(message.at)}" data-at="${esc(message.at)}">${esc(time(message.at))}</time>${agent && unread.has(message.id) ? '<span class="dcr-app-new">New</span>' : ''}</p>
       <div class="dcr-app-msg-body">${agent && tools ? tools.markdown(message.body) : `<p>${esc(message.body).replace(/\n/g, '<br>')}</p>`}</div></li>`;
   }).join('');
   const recordingHTML = rec => rec?.url ? (rec.kind === 'clip' ? `<video src="${rec.url}" controls muted playsinline preload="metadata"></video>` : `<img src="${rec.url}" alt="Still of ${esc(rec.page)}">`) : '';
@@ -430,7 +430,7 @@
     const first = row.thread?.messages.find(message => message.author === 'user')?.body || row.rec?.draft.note || '';
     const unread = new Set(row.thread ? row.thread.messages.filter(message => message.author === 'agent').map(message => message.id).filter(id => !seen().has(id)) : []);
     const head = `<button type="button" class="dcr-app-row-head" data-row-toggle aria-expanded="${open}">
-        <span class="dcr-app-row-title"><strong>${esc(title.name)}</strong>${title.kind ? `<span>${esc(title.kind)}</span>` : ''}${unread.size ? '<span class="dcr-app-new">New</span>' : ''}</span>
+        <span class="dcr-app-row-title"><strong>${esc(title.name)}</strong>${title.kind ? `<span>${esc(title.kind)}</span>` : ''}${unread.size && !open ? '<span class="dcr-app-new">New</span>' : ''}</span>
         <span class="dcr-app-row-where"><span>${esc(title.path)}</span><time data-at="${esc(row.at)}">${esc(time(row.at))}</time></span>
         ${!open && first ? `<span class="dcr-app-row-text">${esc(first)}</span>` : ''}
         ${!open && row.rec?.url ? `<span class="dcr-app-thumb">${recordingHTML(row.rec).replace(' controls', '')}</span>` : ''}

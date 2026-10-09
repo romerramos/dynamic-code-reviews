@@ -19,7 +19,7 @@ module DCR
     KEY = /\A[A-Za-z0-9_.:-]{1,300}\z/
     AUTHORS = %w[user agent].freeze
 
-    def self.empty = {'version' => 1, 'rev' => 0, 'blobs' => {}, 'threads' => {}, 'previews' => {}, 'comments' => {}, 'github' => {}, 'outbox' => [], 'acked' => 0, 'seq' => 0}
+    def self.empty = {'version' => 1, 'rev' => 0, 'blobs' => {}, 'threads' => {}, 'previews' => {}, 'comments' => {}, 'risk_rankings' => {}, 'github' => {}, 'outbox' => [], 'acked' => 0, 'seq' => 0}
 
     # The key the page saves a revision's progress under (see LiveTools.progressKey).
     def self.review_key(fingerprint, series, number) = "dynamic-review:#{fingerprint}:#{series}:#{number}"
@@ -74,10 +74,11 @@ module DCR
     LISTENING = '.listening'
     LISTENING_SECONDS = 4
 
-    # agent: who is listening (claude, codex, ...), so the page can say so by name.
-    def heartbeat(agent = nil)
+    # agent: who is listening (claude, codex, ...), so the page can say so by name; model and effort:
+    # what it runs on, when it said, so the reader knows whose judgement they are reading.
+    def heartbeat(agent = nil, model = nil, effort = nil)
       FileUtils.mkdir_p(@directory)
-      File.write(File.join(@directory, LISTENING), "#{Time.now.to_f} #{agent}".strip, perm: 0o600)
+      File.write(File.join(@directory, LISTENING), [Time.now.to_f, agent || '-', model || '-', effort || '-'].join(' '), perm: 0o600)
     end
 
     def clear_heartbeat
@@ -92,11 +93,19 @@ module DCR
     end
 
     # The agent listening right now, when it said who it is.
-    def listener
-      return nil unless listening?
-      File.read(File.join(@directory, LISTENING)).split[1]
+    def listener = listening_fields[0]
+
+    # {'model', 'effort'} the listening agent said it runs on, or nil.
+    def listener_model
+      model, effort = listening_fields[1, 2]
+      model ? {'model' => model, 'effort' => effort}.compact : nil
+    end
+
+    def listening_fields
+      return [] unless listening?
+      File.read(File.join(@directory, LISTENING)).split.drop(1).map { |field| field == '-' ? nil : field }
     rescue Errno::ENOENT
-      nil
+      []
     end
 
     # --- browser progress -------------------------------------------------------------
@@ -143,12 +152,13 @@ module DCR
 
     # agent: which agent wrote an agent message (claude, codex, ...). role 'adversary' marks the
     # second opinion that challenges a comment; it is not an answer to the reviewer.
-    def add_message(state, key, id, author, body, agent: nil, role: nil, verdict: nil)
+    def add_message(state, key, id, author, body, agent: nil, role: nil, verdict: nil, model: nil, effort: nil)
       raise ArgumentError, 'Invalid author' unless AUTHORS.include?(author)
       body = text(body)
       thread = thread(state, key, id)
       message = {'id' => SecureRandom.hex(6), 'author' => author, 'body' => body, 'at' => Time.now.utc.iso8601}
       message['agent'] = Agents.check(agent) if agent && author == 'agent'
+      message.merge!({'model' => model, 'effort' => effort}.compact) if author == 'agent' # whose judgement it is
       message['role'] = role if role
       message['verdict'] = verdict if verdict
       thread['messages'] << message
@@ -206,12 +216,12 @@ module DCR
       end
     end
 
-    def agent_reply(id, body, key: nil, agent: nil)
+    def agent_reply(id, body, key: nil, agent: nil, model: nil, effort: nil)
       update do |state|
         # A thread carried across revisions exists under several keys; the reviewer reads the newest.
         key ||= state['threads'].select { |_, threads| threads.key?(id) }.keys.max_by { |name| name.split(':').last.to_i }
         raise ArgumentError, "No thread #{id}. Reply to an id printed by `dcr wait`." unless key
-        add_message(state, key, id, 'agent', body, agent: agent)
+        add_message(state, key, id, 'agent', body, agent: agent, model: model, effort: effort)
       end
     end
 
@@ -232,7 +242,7 @@ module DCR
     end
 
     # verdict: agree, partly or disagree, when the answer said so.
-    def add_opinion(key, id, agent, body, verdict: nil, adversary: false)
+    def add_opinion(key, id, agent, body, verdict: nil, adversary: false, model: nil, effort: nil)
       agent = Agents.check(agent)
       update do |state|
         awaiting(state, key, id, agent).each do |copy|
@@ -242,8 +252,8 @@ module DCR
           thread['opinions']&.delete(agent)
           if adversary
             thread['messages'].reject! { |message| message['role'] == 'adversary' && message['agent'] == agent }
-            add_message(state, copy, id, 'agent', body, agent: agent, role: 'adversary', verdict: verdict)
-          else (thread['opinions'] ||= {})[agent] = {'id' => SecureRandom.hex(6), 'body' => text(body), 'verdict' => verdict, 'at' => Time.now.utc.iso8601}.compact
+            add_message(state, copy, id, 'agent', body, agent: agent, role: 'adversary', verdict: verdict, model: model, effort: effort)
+          else (thread['opinions'] ||= {})[agent] = {'id' => SecureRandom.hex(6), 'body' => text(body), 'verdict' => verdict, 'model' => model, 'effort' => effort, 'at' => Time.now.utc.iso8601}.compact
           end
         end
       end
@@ -315,6 +325,24 @@ module DCR
 
     # The agent's review comments, shown on the open page as it writes them. They belong to this
     # revision only: `series finish` saves them into the full review, which embeds them.
+    # The agent's Risk ranking ({summary, files}), or {'none' => reason} when no file stands out,
+    # or {'requested' => at} while the reviewer waits for it to be ranked again. The open page shows
+    # it at once; `dcr series finish` keeps a ranking posted while the review was in progress.
+    def post_risk_ranking(key, ranking)
+      check_key(key)
+      update { |state| state['risk_rankings'][key] = ranking.merge('posted_at' => Time.now.utc.iso8601) }
+    end
+
+    # The reviewer asked for the ranking again: every open page shows it is being ranked, and
+    # `dcr wait` hands the agent the request.
+    def request_risk_ranking(key)
+      check_key(key)
+      update do |state|
+        state['risk_rankings'][key] = {'requested' => Time.now.utc.iso8601}
+        enqueue(state, 'risk', key, [], 'Rank the risk again.')
+      end
+    end
+
     def post_comments(key, comments)
       check_key(key)
       update do |state|

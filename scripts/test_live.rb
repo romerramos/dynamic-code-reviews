@@ -319,3 +319,28 @@ Dir.mktmpdir('dcr-progress') do |repo|
   assert(DCR::ProgressArchive.new(repo, 'feat').path.start_with?(ENV['DCR_CONFIG_DIR']), 'The archive lives outside the project')
 end
 puts 'progress: kept outside the series folder, and viewed files carry to a revision where they did not change'
+
+# Whose judgement it is: the listener, its replies and comments carry the model it said it runs on.
+require_relative '../lib/dcr/live_cli'
+Dir.mktmpdir('dcr-model') do |series|
+  state = DCR::State.new(series)
+  key = 'dynamic-review:abc123:feature:1'
+  state.heartbeat('claude', 'claude-opus-5-5', 'high')
+  assert(state.listener == 'claude' && state.listener_model == {'model' => 'claude-opus-5-5', 'effort' => 'high'}, 'The listener says what it runs on')
+  state.heartbeat('codex')
+  assert(state.listener == 'codex' && state.listener_model.nil?, 'A listener that did not say has no model')
+  state.heartbeat('claude', 'claude-opus-5-5', 'high')
+  state.send_items(key, [{'id' => 'c1', 'text' => 'Why?'}])
+  DCR::LiveCLI.reply(state, {agent: 'claude', key: key}, %w[c1 Because], OptionParser.new)
+  reply = state.read.dig('threads', key, 'c1', 'messages').last
+  assert(reply.values_at('agent', 'model', 'effort') == %w[claude claude-opus-5-5 high], "A reply carries the model its agent listens on: #{reply}")
+  DCR::LiveCLI.reply(state, {agent: 'claude', key: key, model: 'claude-fable-5-1'}, %w[c1 Again], OptionParser.new)
+  assert(state.read.dig('threads', key, 'c1', 'messages').last.values_at('model', 'effort') == ['claude-fable-5-1', nil], 'A model given with the reply wins')
+  begin
+    DCR::LiveCLI.model_option('rm -rf /', 'model')
+    assert(false, 'A model name with spaces was accepted')
+  rescue ArgumentError
+    nil
+  end
+end
+puts 'model: the listener, replies and comments say which model and effort they come from'

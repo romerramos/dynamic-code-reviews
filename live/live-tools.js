@@ -28,6 +28,11 @@ globalThis.LiveTools = (() => {
     const face = agent.mark || (slug ? `<b>${escape(agent.name.charAt(0))}</b>` : SPARK);
     return `<span class="dcr-avatar dcr-face${extra ? ` ${extra}` : ''}" data-agent="${escape(agent.slug)}" title="${escape(agent.company ? `${agent.name} · ${agent.company}` : agent.name)}" aria-hidden="true">${face}</span>`;
   }
+  // The model and effort behind an agent's words, tiny and muted; nothing when it did not say.
+  const modelHTML = item => {
+    const text = globalThis.ReviewTools?.modelText(item?.model, item?.effort);
+    return text ? `<span class="dcr-model" title="Model and effort">${escape(text)}</span>` : '';
+  };
   const VERDICTS = {
     agree: {label: 'Agrees', short: 'Agree', tone: 'agree'},
     partly: {label: 'Partly agrees', short: 'Partly', tone: 'partly'},
@@ -138,9 +143,10 @@ globalThis.LiveTools = (() => {
       const slug = agent ? message.agent || fallback : null;
       const adversary = message.role === 'adversary';
       const who = agent ? escape(agentInfo(slug).name) : 'You';
+      const model = agent ? modelHTML(message) : '';
       const role = adversary ? '<span class="dcr-role">second reviewer</span>' : '';
       const avatar = agent ? avatarHTML(slug) : '<span class="dcr-avatar" aria-hidden="true">Y</span>';
-      return `<article class="dcr-msg ${agent ? 'dcr-agent' : 'dcr-you'}${adversary ? ` dcr-adversary dcr-v-${escape(message.verdict || 'none')}` : ''}" data-msg="${escape(message.id)}">${avatar}<div class="dcr-msg-main"><header class="dcr-msg-head"><strong>${who}</strong>${adversary ? verdictHTML(message.verdict) : ''}${role}<time datetime="${escape(message.at || '')}" data-at="${escape(message.at || '')}">${escape(relativeTime(message.at, now))}</time>${fresh ? '<span class="dcr-new">New</span>' : ''}</header><div class="dcr-body">${markdown(message.body)}</div></div></article>`;
+      return `<article class="dcr-msg ${agent ? 'dcr-agent' : 'dcr-you'}${adversary ? ` dcr-adversary dcr-v-${escape(message.verdict || 'none')}` : ''}" data-msg="${escape(message.id)}">${avatar}<div class="dcr-msg-main"><header class="dcr-msg-head"><strong>${who}</strong>${model}${adversary ? verdictHTML(message.verdict) : ''}${role}<time datetime="${escape(message.at || '')}" data-at="${escape(message.at || '')}">${escape(relativeTime(message.at, now))}</time>${fresh ? '<span class="dcr-new">New</span>' : ''}</header><div class="dcr-body">${markdown(message.body)}</div></div></article>`;
     }).join('');
   }
 
@@ -193,7 +199,7 @@ globalThis.LiveTools = (() => {
       const fresh = opinion.id && !seen.has(opinion.id);
       const verdict = VERDICTS[opinion.verdict] ? `<span class="dcr-op-verdict dcr-v-${opinion.verdict}">${verdictIcon(opinion.verdict)}${VERDICTS[opinion.verdict].short}</span>` : '';
       const chevron = '<svg class="dcr-op-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
-      return `<li class="dcr-op${isOpen ? ' is-open' : ''}"><button type="button" class="dcr-op-toggle" data-dcr-opinion="${escape(agent)}" aria-expanded="${isOpen}">${avatarHTML(agent, 'dcr-face-sm')}<span class="dcr-op-line"><strong>${name}</strong>${verdict}${fresh ? '<span class="dcr-op-new" aria-label="New"></span>' : ''}${isOpen ? `<time data-at="${escape(opinion.at || '')}">${escape(relativeTime(opinion.at))}</time>` : `<span class="dcr-op-snippet">${escape(snippet(opinion.body))}</span>`}</span>${chevron}</button>${isOpen ? `<div class="dcr-op-body dcr-body">${markdown(opinion.body)}</div>` : ''}</li>`;
+      return `<li class="dcr-op${isOpen ? ' is-open' : ''}"><button type="button" class="dcr-op-toggle" data-dcr-opinion="${escape(agent)}" aria-expanded="${isOpen}">${avatarHTML(agent, 'dcr-face-sm')}<span class="dcr-op-line"><strong>${name}</strong>${modelHTML(opinion)}${verdict}${fresh ? '<span class="dcr-op-new" aria-label="New"></span>' : ''}${isOpen ? `<time data-at="${escape(opinion.at || '')}">${escape(relativeTime(opinion.at))}</time>` : `<span class="dcr-op-snippet">${escape(snippet(opinion.body))}</span>`}</span>${chevron}</button>${isOpen ? `<div class="dcr-op-body dcr-body">${markdown(opinion.body)}</div>` : ''}</li>`;
     }).join('');
     return `<section class="dcr-opinions" aria-label="Other opinions"><header class="dcr-opinions-head"><span class="dcr-opinions-title">Other opinions</span>${summary ? `<span class="dcr-consensus dcr-v-${consensusTone(counts)}">${escape(summary)}</span>` : ''}</header><ul class="dcr-ops">${rows}</ul></section>`;
   }
@@ -328,6 +334,6 @@ globalThis.LiveTools = (() => {
   }
 
   return {escape, progressKey, allComments, sendText, drafts, statusText, statusModel, actionLabel, markdown, snippet, relativeTime, messagesHTML, unseen, agentModel, summary,
-    agentInfo, avatarHTML, verdictHTML, verdicts, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
+    agentInfo, avatarHTML, modelHTML, verdictHTML, verdicts, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
     activeAdversaries, facesHTML, agentStatus, modelOptionsHTML, effortLevels, effortOptionsHTML, chosenModel, chosenEffort, settle, adversaryPanelHTML};
 })();

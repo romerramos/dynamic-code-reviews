@@ -650,6 +650,9 @@ html[data-syntax="dracula"][data-theme="dark"]{--tok-comment:#6272a4;--tok-punct
 /* Who wrote a comment, quietly at the end of its badge row: "by (mark) Claude". */
 .thread-by{display:inline-flex;align-items:center;gap:5px;margin-left:auto;color:var(--muted);font-size:12.5px;white-space:nowrap}
 .thread-by .agent-face{margin-left:1px}
+/* The model and effort behind it, when the agent said: tiny, for whoever wants to know. */
+.thread-model,.dcr-model{color:var(--muted);font:500 10.5px/1 var(--mono);letter-spacing:-.01em;opacity:.85;white-space:nowrap}
+.thread-model{margin-left:2px}
 .agent-face{width:18px;height:18px}
 .agent-face b{font-size:9.5px}
 html[data-theme="dark"]{--agent-claude:#ec9a7c;--agent-claude-bg:#3b2620;--agent-codex:#f2f2f2;--agent-codex-bg:#2d2f33;--agent-gemini:#b5a2ec;--agent-gemini-bg:#2c2742;--agent-grok:#111111;--agent-grok-bg:#f2f2f2;--agent-antigravity-bg:#262a33}
@@ -952,3 +955,54 @@ dialog.stage::backdrop{background:#16203766;backdrop-filter:blur(4px)}
 .ledger-meta .gh-tag{height:18px;font-size:11px}
 .gh-wait{display:inline-flex;align-items:center;gap:8px;padding:0 6px;color:var(--muted);font-size:12.5px}
 .gh-tag-failed{border:1px solid #f2b8b5;background:#fdecea;color:#912018}
+
+/* Risk ranking: the changed files most likely to hurt, and why. A quiet card before the comments,
+   in black, white and grey: the level is written, and the bar and its weight follow the score. */
+.risk-rank{margin:30px 0 6px;padding:16px 20px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.risk-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.risk-head h2,.risk-pending h2,.risk-none h2{margin:0;font-size:15px;letter-spacing:-.01em}
+.risk-head p{margin:0;color:var(--muted);font-size:13px}
+.risk-rows{display:grid;margin:0;padding:0;list-style:none}
+.risk-row{display:grid;grid-template-columns:132px minmax(0,1fr);gap:14px;align-items:start;padding:10px 0;border-top:1px solid var(--line)}
+.risk-score{display:grid;gap:5px;padding-top:3px}
+.risk-score b{font-size:11px;font-weight:700;letter-spacing:.03em;white-space:nowrap}
+.risk-bar{display:block;height:4px;border-radius:2px;background:color-mix(in oklab,var(--ink) 9%,transparent);overflow:hidden}
+.risk-bar i{display:block;height:100%;border-radius:2px;background:var(--ink)}
+.risk-critical .risk-bar{height:6px}
+.risk-high .risk-bar i{background:color-mix(in oklab,var(--ink) 78%,transparent)}
+.risk-medium .risk-bar i{background:color-mix(in oklab,var(--ink) 45%,transparent)}
+.risk-low .risk-bar i{background:color-mix(in oklab,var(--ink) 25%,transparent)}
+.risk-low .risk-score b,.risk-medium .risk-score b{color:var(--muted)}
+.risk-top{display:flex;align-items:baseline;gap:8px 10px;flex-wrap:wrap;min-width:0}
+.risk-path{min-width:0;padding:0;border:0;background:none;color:var(--ink);font:12.5px/1.5 var(--mono);text-align:left;overflow-wrap:anywhere;cursor:pointer}
+button.risk-path:hover .risk-name{text-decoration:underline}
+.risk-dir{color:var(--muted)}
+.risk-name{font-weight:600}
+.risk-line{color:var(--muted)}
+.risk-tags{display:inline-flex;flex-wrap:wrap;gap:4px}
+.risk-tag{padding:0 7px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:11px;line-height:18px;white-space:nowrap}
+.risk-reason{margin:3px 0 0;color:var(--ink);font-size:13.5px;line-height:1.5}
+.risk-calm{margin:0;padding-top:10px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+@media(max-width:640px){.risk-row{grid-template-columns:1fr;gap:6px}}
+.risk-redo{display:inline-flex;align-items:center;gap:6px;margin-left:auto;padding:3px 9px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--muted);font-size:12px;font-weight:550;cursor:pointer}
+.risk-redo[hidden]{display:none}
+.risk-redo svg{width:13px;height:13px}
+.risk-redo:hover{border-color:color-mix(in oklab,var(--ink) 35%,transparent);color:var(--ink)}
+/* When no file stands out: one quiet line with the agent's reason, so it can still be ranked again. */
+.risk-none{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 18px;border-style:dashed;background:transparent}
+.risk-none p{margin:0;color:var(--muted);font-size:13px}
+/* While the agent ranks the files: a dashed card and three bars filling in turn. */
+.risk-pending{display:flex;align-items:center;gap:16px;border-style:dashed;background:transparent}
+.risk-pending p{margin:3px 0 0;color:var(--muted);font-size:13px}
+.risk-pending-mark{display:grid;gap:4px;flex:none;width:40px}
+.risk-pending-mark i{display:block;height:4px;border-radius:2px;background:var(--ink);opacity:.15;animation:risk-fill 1.8s infinite ease-in-out}
+.risk-pending-mark i:nth-child(1){width:100%}
+.risk-pending-mark i:nth-child(2){width:70%;animation-delay:.3s}
+.risk-pending-mark i:nth-child(3){width:40%;animation-delay:.6s}
+@keyframes risk-fill{40%{opacity:.6}}
+@media(prefers-reduced-motion:reduce){.risk-pending-mark i{animation:none;opacity:.4}}
+/* The sidebar's mark on a risky file: solid for CRITICAL, ring for HIGH, grey for MEDIUM. */
+.nav-risk{flex:none;width:8px;height:8px;margin-left:auto;border-radius:50%;align-self:center}
+.nav-risk.risk-critical{background:var(--ink)}
+.nav-risk.risk-high{border:2px solid var(--ink)}
+.nav-risk.risk-medium{background:color-mix(in oklab,var(--ink) 35%,transparent)}

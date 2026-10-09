@@ -264,12 +264,41 @@ module DynamicReviews
     Array(review['findings']).each do |finding|
       raise ArgumentError, 'Finding must anchor to a collected hunk' unless hunks.key?(finding['hunk'])
     end
+    validate_risk_ranking(review['risk_ranking'], files) if review.key?('risk_ranking')
     ids = []
     Array(review['comments']).each do |comment|
       ids << comment.fetch('id')
       raise ArgumentError, 'Comment ID must be unique and URL-safe' unless ids.uniq == ids
       validate_comment(comment, hunks)
     end
+  end
+
+  # The Overview's Risk ranking: the changed files the agent judged risky, scored against a fixed
+  # rubric (the tags below), each with one sentence of evidence. Files left out are the calm ones.
+  RISK_TAGS = %w[security data-volume schema money background contract shared-code user-facing].freeze
+
+  def self.validate_risk_ranking(ranking, files)
+    raise ArgumentError, 'risk_ranking must be an object with files' unless ranking.is_a?(Hash) && ranking['files'].is_a?(Array)
+    unknown = ranking.keys - %w[summary files]
+    raise ArgumentError, "Unknown risk_ranking field(s): #{unknown.join(', ')}" unless unknown.empty?
+    text = ->(value, limit) { value.is_a?(String) && !value.strip.empty? && value.length <= limit && !value.include?("\n") }
+    raise ArgumentError, 'A risk ranking summary is one short sentence' if ranking.key?('summary') && !text.call(ranking['summary'], 200)
+    ranked = ranking['files']
+    raise ArgumentError, 'A risk ranking lists 1 to 12 files; send --none when no file stands out' unless ranked.length.between?(1, 12)
+    ranked.each do |entry|
+      raise ArgumentError, 'Each ranked file is an object' unless entry.is_a?(Hash)
+      unknown = entry.keys - %w[file score tags reason line]
+      raise ArgumentError, "Unknown ranked file field(s): #{unknown.join(', ')}" unless unknown.empty?
+      raise ArgumentError, "Unknown file in the risk ranking: #{entry['file'].inspect}" unless files.key?(entry['file'])
+      raise ArgumentError, "#{entry['file']} needs a score from 0 to 100" unless entry['score'].is_a?(Integer) && entry['score'].between?(0, 100)
+      tags = entry['tags']
+      unless tags.is_a?(Array) && tags.length.between?(1, 3) && tags.uniq == tags && (tags - RISK_TAGS).empty?
+        raise ArgumentError, "#{entry['file']} needs 1 to 3 tags from: #{RISK_TAGS.join(', ')}"
+      end
+      raise ArgumentError, "#{entry['file']} needs a one-sentence reason (at most 160 characters)" unless text.call(entry['reason'], 160)
+      raise ArgumentError, "#{entry['file']} line must be a positive line number" if entry.key?('line') && !(entry['line'].is_a?(Integer) && entry['line'].positive?)
+    end
+    raise ArgumentError, 'Rank each file once' unless ranked.map { |entry| entry['file'] }.uniq.length == ranked.length
   end
 
   def self.hunk_index(snapshot)

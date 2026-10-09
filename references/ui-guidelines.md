@@ -75,6 +75,14 @@ from its original snapshot and analysis when refreshing presentation only.
 
 ## Overview comment threads
 
+- **Risk ranking** sits right before Review comments: a quiet card with the agent's one-line
+  summary and the changed files that stand out, most risky first. Each row has a thin score bar
+  and `score% · LEVEL` (black, white and grey; the bar thickens for CRITICAL), the file path that
+  opens it (directory muted, name bold, line when given), small grey rubric tags and one sentence
+  of evidence; a closing line counts the other files as low risk. The sidebar marks files at
+  MEDIUM or worse with a small dot (solid, ring, grey). While the agent ranks, a dashed card with
+  three filling bars says so; when no file stands out, one dashed line gives the reason. A served
+  page adds a quiet **Rank again**; a finished review without a ranking shows nothing.
 - Use a centered reading column bounded to 840px, with 16–17px prose, generous line spacing and 24–28px card padding. Stack the file/range header, subject, concise comment body and embedded evidence, View code action, and action footer. Show each issue once: matched findings add severity to their issue comment; unmatched findings remain visible. No masonry or parallel metadata columns. Keep long file paths wrapping.
 - Highlight code through the same bundled Prism grammar and whole-hunk
   tokenization as the diff, preserving multiline tokens and exact old/new source
@@ -125,9 +133,10 @@ thing: recording now (a red dot on **Record**, a red pill reading **Stop m:ss** 
   an accent banner takes the first line of the App view's bar: what is happening (waiting
   for the agent, running, or sharing stopped with **Share this tab**), a count of
   recordings so far and **Stop QA review**. The view's own controls and Esc are locked;
-  the app pane stays live because the agent's input lands there. Between recordings a frosted
-  band across the top of the app says the agent is preparing (named when known); it never takes
-  a click and is gone before a recording's first frame.
+  the app pane stays live because the agent's input lands there. Between recordings a light veil
+  covers the whole app (a wash and a slight blur, so the reviewer reads "wait" while an agent that
+  works from screenshots can still read the page) with a card at the top saying the agent is
+  preparing (named when known); it never takes a click and is gone before a recording's first frame.
 - **QA reviews in On this app**: the latest QA review is one row (time, number of
   recordings, the report's first line); opened, it shows its clips side by side and the
   agent's report, never a reply field. Earlier QA reviews fold into one row, since each

@@ -80,6 +80,7 @@ Dir.mktmpdir('dcr-ask') do |dir|
     assert(DCR::Agents.ask('codex', 'q', dir: dir) == "Disagree\nNo.", 'Codex is read from its last-message file, not its log')
     assert(DCR::Agents::RUNNERS['codex'].call('q', '/o', 'gpt-x', 'high')[0].each_cons(2).to_a.include?(['-c', 'model_reasoning_effort="high"']) && DCR::Agents::RUNNERS['codex'].call('q', '/o', 'gpt-x', nil)[0].include?('gpt-x'), 'Codex runs on the chosen model and effort')
     assert(DCR::Agents::RUNNERS['claude'].call('q', nil, nil, nil)[0] == %w[claude -p --tools Read,Grep,Glob], 'No model or effort chosen: the CLI keeps its own')
+    assert(DCR::Agents::RUNNERS['antigravity'].call('q', nil, 'gemini-x-high', 'medium')[0] == %w[agy -p q --mode plan --model gemini-x-high], 'Antigravity gets no --effort: its model names carry it')
     assert(DCR::Agents::RUNNERS['opencode'].call('q', nil, 'opencode/big-pickle', nil)[0] == %w[opencode run --agent plan -m opencode/big-pickle q], 'opencode answers through its read-only plan agent')
     begin
       DCR::Agents.ask('claude', 'q', dir: dir, timeout: 1)
@@ -118,6 +119,8 @@ Dir.mktmpdir('dcr-opinions') do |series|
   questions = Array.new(asked.size) { asked.pop }
   assert(questions.map(&:first).sort == %w[codex grok] && questions.all? { |_, _, dir| dir == series }, 'Each agent is asked once, in the repository')
   assert(questions.find { |agent, _| agent == 'codex' }.last(2) == %w[gpt-x low] && questions.find { |agent, _| agent == 'grok' }.last(2) == [nil, nil], 'Each runs on the model and effort the reviewer saved')
+  answered = state.read.dig('threads', key, 'c1', 'messages').find { |message| message['role'] == 'adversary' }
+  assert(answered.values_at('model', 'effort') == %w[gpt-x low], "The second reviewer's answer says which model and effort gave it: #{answered}")
   results = DCR::AgentCatalog::Results.read
   assert(results.dig('codex', 'ok') == true && results.dig('grok', 'ok') == false && results.dig('grok', 'error').include?('did not answer'), "How each answered is remembered for the agent card: #{results}")
   assert(questions.find { |agent, _| agent == 'codex' }[1].include?('Check whether this comment is right'), 'The second reviewer is asked to challenge the comment')

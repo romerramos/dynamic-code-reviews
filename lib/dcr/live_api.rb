@@ -63,6 +63,7 @@ module DCR
       when ['POST', '/api/preview'] then (input = json(body); [200, {'entry' => @state.request_preview(input['key'], input['path'])}])
       when ['POST', '/api/send'] then send_items(json(body))
       when ['POST', '/api/message'] then message(json(body))
+      when ['POST', '/api/risk-ranking'] then (@state.request_risk_ranking(json(body)['key']); [200, {'requested' => true}])
       when ['GET', '/api/adversaries'] then [200, adversaries]
       when ['GET', '/api/agents'] then [200, adversaries.merge('agents' => @catalog.call(query['fresh'] == '1'))]
       when ['POST', '/api/agents'] then (@settings.save_adversaries(json(body)['adversaries']); [200, adversaries])
@@ -192,7 +193,7 @@ module DCR
     def snapshot(key)
       raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
       state = @state.read
-      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'github' => state['github'][key] || {}, 'comments' => state['comments'][key] || [], 'previews' => preview_status(state['previews'][key]), 'latest_revision' => latest_revision, 'listening' => @state.listening?, 'agent' => @state.listener,
+      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'github' => state['github'][key] || {}, 'comments' => state['comments'][key] || [], 'risk_ranking' => state['risk_rankings'][key], 'previews' => preview_status(state['previews'][key]), 'latest_revision' => latest_revision, 'listening' => @state.listening?, 'agent' => @state.listener, 'agent_model' => @state.listener_model,
        'pending' => state['outbox'].count { |entry| entry['seq'] > state['acked'] && entry['key'] == key }}
     end
 
@@ -204,10 +205,10 @@ module DCR
     def poll(key, since)
       deadline = Time.now + POLL_SECONDS
       last_latest = latest_revision
-      last_listening = [@state.listening?, @state.listener]
+      last_listening = [@state.listening?, @state.listener, @state.listener_model]
       loop do
         current = snapshot(key)
-        return current if current['rev'] != since || current['latest_revision'] != last_latest || current.values_at('listening', 'agent') != last_listening || Time.now >= deadline
+        return current if current['rev'] != since || current['latest_revision'] != last_latest || current.values_at('listening', 'agent', 'agent_model') != last_listening || Time.now >= deadline
         sleep 0.4
       end
     end
