@@ -215,10 +215,14 @@ References: [review JSON](references/report-schema.md), [incremental reviews](re
   and `Recorder` (the recorder page, its command queue and uploads). A handler maps a request to a
   response and never touches sockets; `LiveAPI` maps the JSON routes to changes in the series state.
 - **Agents** are named on everything they write (`lib/dcr/agents.rb`): who posted a comment and who
-  replied. A comment the agent posts with `dcr comment` is checked in the background by another
-  installed agent (`lib/dcr/second_opinion.rb`): one second reviewer answers in the conversation,
-  the others are kept as opinions beside it. Claude, Codex, Grok, Antigravity (`agy`) and Gemini CLIs are asked headless
-  and read-only; `DCR_ADVERSARY` and `DCR_SECOND_OPINIONS` choose who, or turn it off.
+  replied. **Adversaries** are other agent CLIs the reviewer chooses in the review page's agent card,
+  each on a model and effort the CLI lists (`lib/dcr/agent_catalog.rb`); none is on until chosen, and
+  the choice is kept in `~/.config/dcr/settings.json` for every review on that computer. A comment the
+  agent posts with `dcr comment` is checked by them in the background (`lib/dcr/second_opinion.rb`):
+  the first answers in the conversation, the others are kept as opinions beside it. The reviewer's
+  own question asks them too only when its **+** is ticked. Claude, Codex, Grok, Antigravity (`agy`),
+  Gemini and opencode CLIs are asked headless and read-only; an agent checks the review it runs only
+  on a model the reviewer named.
 - **State** lives in the series folder: `manifest.json` and the saved pages for revisions, and
   `state.json` for the reviewer's progress and threads (`lib/dcr/state.rb`).
 - `scripts/` holds the command-line entry points that `bin/dcr` dispatches to, and the review and
@@ -233,7 +237,7 @@ ruby scripts/test_review.rb        # collection, rendering, validation
 ruby scripts/test_series.rb        # series, in-progress reviews, increments
 ruby scripts/test_live.rb          # live server state, threads, focus, tailnet sharing
 ruby scripts/test_server.rb        # the served page, the recorder's command queue and uploads
-ruby scripts/test_second_opinion.rb # second opinions: the agent panel, the question, headless runs (stand-in CLIs)
+ruby scripts/test_second_opinion.rb # adversaries: the panel, model lists, the questions, headless runs (stand-in CLIs)
 ruby scripts/test_github.rb        # posting to the pull request through gh (a stand-in gh, nothing reaches GitHub)
 ruby scripts/test_live_previews.rb # preview requests, stylesheets, stand-ins
 ruby scripts/test_app_proxy.rb     # the running app inside the review

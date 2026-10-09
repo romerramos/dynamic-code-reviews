@@ -22,7 +22,7 @@ USAGE = <<~TEXT
     wait | comments | reply        The agent's side of a served review: receive the reviewer's comments, list threads, answer one
     comment                        Post a review comment to a review in progress; the open page shows it at once,
                                    and another installed agent checks it
-    second-opinion                 Ask another installed agent to check a posted comment
+    second-opinion                 Ask the reviewer's adversaries to check a posted comment
     focus                          Bring the browser tab showing the served review to the front
     link                           Print the served review's addresses, including the tailnet one when shared
     stop                           Stop a served review and its wait (--all: every review served on this computer)

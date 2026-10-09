@@ -21,27 +21,40 @@ module DCR
       'cursor' => {'name' => 'Cursor', 'company' => 'Cursor', 'env' => %w[CURSOR_AGENT]},
       'opencode' => {'name' => 'opencode', 'company' => 'opencode', 'env' => %w[OPENCODE]}
     }.freeze
-    # Who challenges a comment first, when several are installed. The author never reviews itself.
-    PREFERENCE = %w[codex claude grok antigravity gemini].freeze
     TIMEOUT = 300
 
     # Left by Claude Code for the commands it runs; a nested `claude -p` refuses to start under them.
     NESTED = %w[CLAUDECODE CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_SESSION_ID CLAUDE_CODE_CHILD_SESSION CLAUDE_CODE_MESSAGING_SOCKET CLAUDE_CODE_MESSAGING_TOKEN CLAUDE_PID].freeze
 
-    # How to ask each one a single question, read-only, with nothing on its screen to answer.
+    # How to ask each one a single question, read-only, with nothing on its screen to answer, on the
+    # model and effort the reviewer chose (nil: the CLI's own setting).
     # Each returns [command, stdin]; the answer is stdout, or the file named by `out`.
     RUNNERS = {
-      'claude' => ->(prompt, _out) { [%w[claude -p --tools Read,Grep,Glob], prompt] },
-      'codex' => ->(prompt, out) { [['codex', 'exec', '--sandbox', 'read-only', '--skip-git-repo-check', '--ephemeral', '--color', 'never', '-o', out, '-'], prompt] },
-      'gemini' => ->(prompt, _out) { [['gemini', '-p', prompt, '--approval-mode', 'plan', '-o', 'text'], nil] },
-      'grok' => ->(prompt, _out) { [['grok', '-p', prompt, '--permission-mode', 'plan'], nil] },
-      'antigravity' => ->(prompt, _out) { [['agy', '-p', prompt, '--mode', 'plan'], nil] }
+      'claude' => ->(prompt, _out, model, effort) { [%w[claude -p --tools Read,Grep,Glob] + flag('--model', model) + flag('--effort', effort), prompt] },
+      'codex' => lambda do |prompt, out, model, effort|
+        [['codex', 'exec', '--sandbox', 'read-only', '--skip-git-repo-check', '--ephemeral', '--color', 'never', '-o', out] + flag('-m', model) + flag('-c', effort && "model_reasoning_effort=\"#{effort}\"") + ['-'], prompt]
+      end,
+      'gemini' => ->(prompt, _out, model, _effort) { [['gemini', '-p', prompt, '--approval-mode', 'plan', '-o', 'text'] + flag('-m', model), nil] },
+      'grok' => ->(prompt, _out, model, effort) { [['grok', '-p', prompt, '--permission-mode', 'plan'] + flag('-m', model) + flag('--reasoning-effort', effort), nil] },
+      'antigravity' => ->(prompt, _out, model, effort) { [['agy', '-p', prompt, '--mode', 'plan'] + flag('--model', model) + flag('--effort', effort), nil] },
+      # opencode's built-in plan agent cannot edit, and a headless run denies anything it would ask for.
+      'opencode' => ->(prompt, _out, model, _effort) { [['opencode', 'run', '--agent', 'plan'] + flag('-m', model) + [prompt], nil] }
+    }.freeze
+
+    # The efforts an agent's CLI takes, where they are not listed per model (Codex lists them per
+    # model; Antigravity and opencode build them into the model's name).
+    EFFORTS = {
+      'claude' => %w[low medium high xhigh max],
+      'grok' => %w[low medium high],
+      'antigravity' => %w[low medium high xhigh max]
     }.freeze
 
     # A CLI that would stop to ask for a sign-in is left out rather than left hanging.
     READY = {
       'gemini' => -> { %w[GEMINI_API_KEY GOOGLE_API_KEY GOOGLE_GENAI_USE_VERTEXAI].any? { |key| ENV[key].to_s != '' } || File.file?(File.join(Dir.home, '.gemini', 'oauth_creds.json')) }
     }.freeze
+
+    def flag(name, value) = value.to_s.empty? ? [] : [name, value.to_s]
 
     def name(slug) = KNOWN.dig(slug, 'name') || slug.to_s.capitalize
 
@@ -57,33 +70,27 @@ module DCR
     # The command an agent's CLI goes by (Antigravity's is `agy`).
     def bin(slug) = KNOWN.dig(slug, 'bin') || slug
 
-    def installed?(slug) = RUNNERS.key?(slug) && ENV.fetch('PATH', '').split(File::PATH_SEPARATOR).any? { |dir| File.executable?(File.join(dir, bin(slug))) } && READY.fetch(slug, -> { true }).call
+    def installed?(slug) = RUNNERS.key?(slug) && ENV.fetch('PATH', '').split(File::PATH_SEPARATOR).any? { |dir| File.executable?(File.join(dir, bin(slug))) }
 
-    # The adversary that answers in the conversation, and the others that weigh in on the side.
-    # DCR_ADVERSARY names the adversary; DCR_SECOND_OPINIONS lists the others, or `off` for none.
-    def panel(author, env = ENV)
-      available = PREFERENCE.select { |slug| slug != author && installed?(slug) }
-      wanted = env['DCR_ADVERSARY'].to_s.strip.downcase
-      return [nil, []] if %w[off none].include?(wanted)
-      adversary = available.include?(wanted) ? wanted : available.first
-      others = env['DCR_SECOND_OPINIONS'].to_s.strip.downcase
-      side = if %w[off none].include?(others) then []
-             elsif others.empty? then available
-             else others.split(/[\s,]+/).select { |slug| available.include?(slug) }
-             end
-      [adversary, side - [adversary]]
+    # The adversaries the reviewer chose (see Settings#adversaries), in their order, that can answer
+    # now: installed, and not the author checking itself. An agent checks its own work only on a
+    # model the reviewer named, since the same model with the same settings mostly agrees with itself.
+    # The first answers in the conversation; the rest weigh in beside it.
+    def panel(author, adversaries)
+      adversaries.select { |entry| installed?(entry['agent']) && (entry['agent'] != author || entry['model']) }
     end
 
     # One question to one agent, run in `dir`. Returns the answer, or raises ArgumentError with a
     # sentence the page can show.
-    def ask(slug, prompt, dir:, timeout: TIMEOUT)
+    def ask(slug, prompt, dir:, model: nil, effort: nil, timeout: TIMEOUT)
       runner = RUNNERS[slug] or raise ArgumentError, "#{name(slug)} cannot be asked from here yet"
+      raise ArgumentError, "#{name(slug)} is not signed in. Run `#{bin(slug)}` once to sign in." unless READY.fetch(slug, -> { true }).call
       out = File.join(Dir.tmpdir, "dcr-#{slug}-#{Process.pid}-#{rand(1 << 30)}.txt")
-      command, input = runner.call(prompt, out)
+      command, input = runner.call(prompt, out, model, effort)
       env = NESTED.to_h { |key| [key, nil] }
       stdout, stderr, status = run(env, command, input, dir, timeout, slug)
       answer = File.file?(out) ? File.read(out) : stdout
-      raise ArgumentError, "#{name(slug)} is not signed in. Run `#{slug}` once to sign in." if (stdout + stderr).match?(/authenticat|sign in|log ?in|oauth_creds/i) && (!status.success? || answer.strip.empty?)
+      raise ArgumentError, "#{name(slug)} is not signed in. Run `#{bin(slug)}` once to sign in." if (stdout + stderr).match?(/authenticat|sign in|log ?in|oauth_creds/i) && (!status.success? || answer.strip.empty?)
       raise ArgumentError, "#{name(slug)} did not answer (#{(stderr.lines.last || 'exit ' + status.exitstatus.to_s).strip[0, 160]})" unless status.success? && !answer.strip.empty?
       answer.strip
     ensure

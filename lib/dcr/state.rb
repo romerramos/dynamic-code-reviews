@@ -212,11 +212,12 @@ module DCR
     # conversation; the rest are kept beside it as opinions, so the conversation stays short.
 
     # adversary: the agent that answers in the conversation; others: those that weigh in beside it.
+    # A question the reviewer asks has no adversary: every agent asked answers beside the conversation.
     def await_opinions(key, id, adversary, others = [])
       update do |state|
         thread = thread(state, key, id)
-        thread['adversary'] = Agents.check(adversary)
-        thread['waiting_on'] = Array(thread['waiting_on']) | ([adversary] + others).map { |agent| Agents.check(agent) }
+        thread['adversary'] = Agents.check(adversary) if adversary
+        thread['waiting_on'] = Array(thread['waiting_on']) | ([adversary].compact + others).map { |agent| Agents.check(agent) }
         # The page shows a wait that outlives the agents' timeout as lost, not as still typing.
         thread['asked_at'] = Time.now.utc.iso8601
       end

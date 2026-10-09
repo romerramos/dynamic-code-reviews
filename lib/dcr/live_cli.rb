@@ -59,7 +59,7 @@ module DCR
       'link' => 'dcr link (--repo ROOT --name SERIES | --dir DIR)   (the served review\'s addresses: on this computer, and on your tailnet when shared)',
       'focus' => 'dcr focus (--repo ROOT --name SERIES | --dir DIR)   (brings the browser tab showing the served review to the front)',
       'reply' => 'dcr reply (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--key KEY] [--json] <thread-id> <text>',
-      'second-opinion' => 'dcr second-opinion (--repo ROOT --name SERIES | --dir DIR) --comment ID [--comment ID]... [--agent AUTHOR] [--context TEXT]   (asks another installed agent to check a posted comment; `dcr comment` does this by itself)',
+      'second-opinion' => 'dcr second-opinion (--repo ROOT --name SERIES | --dir DIR) --comment ID [--comment ID]... [--agent AUTHOR] [--context TEXT]   (asks the reviewer\'s adversaries to check a posted comment; `dcr comment` does this by itself)',
       'evidence' => 'dcr evidence attach (--repo ROOT --name SERIES | --dir DIR) --file ITEMS.json [--replace previous-qa|all]   (ITEMS: [{"path", "title", "result": "passed|failed", "observed", "comment_id"?, "page"?}]; previous-qa, the default, replaces the last QA review; all replaces every recording, only when the reviewer asks to start over)'
     }.freeze
 
@@ -334,11 +334,12 @@ module DCR
       ask_others(directory, comments, author, contexts) unless options[:second_opinion] == false
     end
 
-    # Each comment is checked by another installed agent in the background; the answers appear in
+    # Each comment is checked by the reviewer's adversaries in the background; the answers appear in
     # the open page as they arrive. The log next to the review says what went wrong, if anything.
     def ask_others(directory, comments, author, contexts)
-      adversary, others = Agents.panel(author)
-      return puts('No other agent is installed to give a second opinion.') unless adversary
+      require_relative 'settings'
+      panel = Agents.panel(author, Settings.new.adversaries).map { |adversary| Agents.name(adversary['agent']) }
+      return puts(NO_ADVERSARIES) if panel.empty?
       log = File.open(File.join(directory, '.second-opinions.log'), 'a', 0o600)
       comments.each do |comment|
         command = [RbConfig.ruby, DCR_BIN, 'second-opinion', '--dir', directory, '--comment', comment['id']]
@@ -347,14 +348,16 @@ module DCR
         Process.detach(Process.spawn(*command, in: File::NULL, out: log, err: log, pgroup: true))
       end
       log.close
-      puts "Asked #{Agents.name(adversary)} to check #{comments.length == 1 ? 'it' : 'them'}#{others.empty? ? '' : " (#{others.map { |slug| Agents.name(slug) }.join(' and ')} weigh in on the side)"}; their answers appear in the page."
+      puts "Asked #{panel.first} to check #{comments.length == 1 ? 'it' : 'them'}#{panel.length > 1 ? " (#{panel.drop(1).join(' and ')} weigh in on the side)" : ''}; their answers appear in the page."
     end
+
+    NO_ADVERSARIES = 'No adversaries are set up, so nobody else checks it. The reviewer chooses them in the review page (the agent card).'
 
     def second_opinion(options, directory, parser)
       raise ArgumentError, parser.to_s unless options[:comments]
       require_relative 'second_opinion'
       results = SecondOpinion.run(series_dir: directory, comment_ids: options[:comments], author: agent(options) || 'agent', context: options[:context])
-      return puts('No other agent is installed to give a second opinion.') if results.empty?
+      return puts(NO_ADVERSARIES) if results.empty?
       results.each { |id, answers| puts "#{id}: #{answers.map { |slug, outcome| "#{Agents.name(slug)} #{outcome}" }.join(', ')}" }
     end
 

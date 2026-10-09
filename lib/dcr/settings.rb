@@ -23,26 +23,59 @@ module DCR
     attr_reader :path
 
     # Only known keys with known values; anything else in the file or request is dropped.
-    def read
+    def read = clean(saved)
+
+    def write(input)
+      raise ArgumentError, 'Settings must be an object' unless input.is_a?(Hash)
+      store(read.merge(clean(input)))
+    end
+
+    # The agents that check this reviewer's reviews, in order: [{agent, model, effort}], where a nil
+    # model or effort is the CLI's own setting. Empty means none. Set from the review page, kept
+    # here so every review on this computer uses them; the page's display settings never carry them.
+    def adversaries = adversary_list(saved['adversaries'])
+
+    def save_adversaries(list)
+      raise ArgumentError, 'Adversaries must be a list' unless list.is_a?(Array)
+      store(read, adversary_list(list, strict: true))
+      adversaries
+    end
+
+    private
+
+    MODEL = %r{\A[\w.:/@#+-]{1,120}\z}
+    EFFORT = /\A[a-z]{2,12}\z/
+
+    def saved
       return {} unless File.file?(@path)
-      clean(JSON.parse(File.read(@path)))
+      value = JSON.parse(File.read(@path))
+      value.is_a?(Hash) ? value : {}
     rescue JSON::ParserError
       {}
     end
 
-    def write(input)
-      raise ArgumentError, 'Settings must be an object' unless input.is_a?(Hash)
-      merged = read.merge(clean(input))
+    # The page writes display settings and adversaries separately; each write keeps the other.
+    def store(display, adversaries = self.adversaries)
+      merged = adversaries.empty? ? display : display.merge('adversaries' => adversaries)
       FileUtils.mkdir_p(File.dirname(@path), mode: 0o700)
       temporary = "#{@path}.#{Process.pid}.tmp"
       File.write(temporary, JSON.generate(merged), perm: 0o600)
       File.rename(temporary, @path)
-      merged
+      display
     ensure
       File.unlink(temporary) if temporary && File.file?(temporary)
     end
 
-    private
+    def adversary_list(list, strict: false)
+      return [] unless list.is_a?(Array)
+      list.each_with_object([]) do |entry, out|
+        agent = entry['agent'].to_s if entry.is_a?(Hash)
+        model, effort = entry.values_at('model', 'effort').map { |value| value.to_s.strip.empty? ? nil : value.to_s.strip } if agent
+        valid = agent&.match?(/\A[a-z0-9][a-z0-9-]{0,29}\z/) && (model.nil? || model.match?(MODEL)) && (effort.nil? || effort.match?(EFFORT)) && out.none? { |seen| seen['agent'] == agent }
+        raise ArgumentError, "Invalid adversary: #{entry.inspect[0, 120]}" if strict && !valid
+        out << {'agent' => agent, 'model' => model, 'effort' => effort} if valid
+      end.first(20)
+    end
 
     def clean(input)
       return {} unless input.is_a?(Hash)

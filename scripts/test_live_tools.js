@@ -180,3 +180,40 @@ assert.match(asked, /Second opinions from other agents:\n- Codex \(second review
 assert.match(asked, /- Grok \(agrees\): Looks right to me\./);
 assert.doesNotMatch(asked, /took longer/, 'failures are not sent as opinions');
 console.log('PASS agents are named with their marks; the second reviewer joins the conversation and the others are rows under it, each named once, sent along when you ask your agent');
+
+// Adversaries: the agent card and the + on a question.
+const chosen = [{agent:'codex', model:null, effort:null}, {agent:'claude', model:null, effort:null}, {agent:'opencode', model:'opencode/big-pickle', effort:null}];
+assert.deepEqual(tools.activeAdversaries(chosen, 'claude').map(entry => entry.agent), ['codex', 'opencode'], 'the agent running the review is left out on its own settings');
+assert.deepEqual(tools.activeAdversaries([{agent:'claude', model:'opus'}], 'claude').map(entry => entry.agent), ['claude'], 'and kept on a model the reviewer named');
+assert.deepEqual(tools.activeAdversaries(chosen, 'claude', [{slug:'codex', installed:false}, {slug:'opencode', installed:true}]).map(entry => entry.agent), ['opencode'], 'only an installed agent is asked');
+const many = tools.facesHTML(['codex', 'grok', 'gemini', 'antigravity', 'opencode'], 3);
+assert.equal((many.match(/data-agent=/g) || []).length, 2, 'past the few that fit, the marks give way to a count');
+assert.match(many, /dcr-stack-more">\+3</, 'every adversary is counted, however many');
+const noon = Date.parse('2026-10-09T12:00:00Z');
+assert.deepEqual([tools.agentStatus({ready:true}).text, tools.agentStatus({ready:false, bin:'agy'}).text, tools.agentStatus({ready:null}).text], ['Ready', 'Signed out', 'Installed']);
+assert.match(tools.agentStatus({ready:false, bin:'agy'}).hint, /Run `agy` once/);
+assert.equal(tools.agentStatus({ready:null, last:{ok:true, at:'2026-10-09T10:00:00Z'}}, noon).text, 'Ready', 'a CLI with no status command is ready once it answered');
+assert.equal(tools.agentStatus({ready:null, last:{ok:false, error:'Grok is not signed in.'}}).text, 'Last try failed');
+const opencode = {slug:'opencode', name:'opencode', installed:true, models:[{id:'openai/gpt-5.5'}, {id:'opencode/exo-free', free:true}], efforts:[], suggested:'opencode/big-pickle'};
+const options = tools.modelOptionsHTML(opencode, 'opencode/big-pickle');
+assert.match(options, /^<option value="">Default model<\/option><optgroup label="Free">.*exo-free.*<\/optgroup><optgroup label="Other models">.*opencode\/big-pickle" selected.*gpt-5\.5/s, 'free models come first, and the suggested one is offered even when the CLI did not list it');
+const codex = {slug:'codex', name:'Codex', installed:true, ready:true, efforts:[], models:[{id:'gpt-a', efforts:['low', 'high']}, {id:'gpt-b', efforts:['medium', 'high', 'xhigh']}]};
+assert.deepEqual(tools.effortLevels(codex, 'gpt-a'), ['low', 'high'], 'a model offers the efforts it takes');
+assert.deepEqual(tools.effortLevels(codex, null), ['low', 'high', 'medium', 'xhigh'], 'the default model offers every effort the models take');
+assert.equal(tools.effortOptionsHTML(opencode, 'opencode/big-pickle', null), '', 'no effort to choose when the CLI takes none');
+const catalog = [{slug:'claude', name:'Claude', installed:true, ready:true}, codex, opencode, {slug:'gemini', name:'Gemini', installed:false}];
+const panel = tools.adversaryPanelHTML({catalog, adversaries:[{agent:'opencode', model:'opencode/big-pickle', effort:null}, {agent:'codex', model:null, effort:'high'}], author:'claude', now: noon});
+assert.deepEqual([...panel.matchAll(/data-agent="(\w+)"><label/g)].map(match => match[1]), ['claude', 'codex', 'opencode'], 'rows keep their place, whatever is on');
+assert.match(panel, /2 on/);
+assert.match(panel, /Runs this review: it checks itself only on a model you pick/, 'the running agent says why it is different');
+assert.match(panel, /opencode answers in each comment's conversation; Codex weighs in beside it/, 'one line says the order');
+assert.match(panel, /data-dcr-adv-effort[^>]*>.*value="high" selected/s, 'a row that is on shows its model and effort');
+assert.match(panel, /Not found here: Gemini/);
+assert.match(tools.adversaryPanelHTML({catalog:null}), /Looking for agents/);
+assert.match(tools.adversaryPanelHTML({catalog, adversaries:[], author:'claude'}), /none is on until you choose/, 'none is on until chosen');
+// A question asked of agents that already answered: they read again, and nobody is "checking this comment".
+const reasked = {...debated, waiting_on:['codex', 'grok'], asked_at:'2026-10-09T11:59:00Z'};
+assert.notEqual(tools.statusModel(reasked, true, noon)?.text, 'Codex is checking this comment', 'a second reviewer that already answered is not shown checking again');
+const rereading = tools.opinionsHTML(reasked, {now: noon});
+['Codex', 'Grok'].forEach(name => assert.match(rereading, new RegExp(`is-waiting"><span[^>]*>.*?</span><span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">is reading the code`), `asked again, ${name} shows as reading until its new answer`));
+console.log('PASS adversaries: who is asked, their marks, their status, models and efforts from the CLIs, and the card that sets them');

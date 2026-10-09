@@ -1,12 +1,16 @@
 # frozen_string_literal: true
 
+require_relative 'agent_catalog'
 require_relative 'agents'
+require_relative 'settings'
 require_relative 'state'
 
 module DCR
-  # Second opinions on a comment the review's agent posted: one adversary checks it and answers in
-  # the comment's conversation; other installed agents give a short opinion beside it. Each gets the
-  # same compact question: what the change is for, the code, the comment, and what they think.
+  # The reviewer's adversaries (Settings#adversaries) at work. On a comment the review's agent posted,
+  # the first checks it and answers in the comment's conversation, the others give a short opinion
+  # beside it; each gets the same compact question: what the change is for, the code, the comment.
+  # On a question the reviewer asks with adversaries ticked, every one answers it beside the
+  # review's agent.
   module SecondOpinion
     module_function
 
@@ -77,10 +81,10 @@ module DCR
 
     # Asks the panel about each comment and posts every answer as it arrives. Returns what happened,
     # per comment and agent, for the terminal.
-    def run(series_dir:, comment_ids:, author:, context: nil, repo: nil, ask: Agents.method(:ask))
+    def run(series_dir:, comment_ids:, author:, context: nil, repo: nil, ask: Agents.method(:ask), adversaries: Settings.new.adversaries)
       require_relative '../../scripts/series'
-      adversary, others = Agents.panel(author)
-      return {} unless adversary
+      panel = Agents.panel(author, adversaries)
+      return {} if panel.empty?
       history = ReviewSeries.manifest(series_dir)
       payload = ReviewSeries.latest(series_dir, history)
       entry = history['revisions'].last
@@ -92,21 +96,68 @@ module DCR
       comment_ids.to_h do |id|
         comment = posted.find { |candidate| candidate['id'] == id } or raise ArgumentError, "No comment #{id} in this review"
         excerpt = code(payload['snapshot'], comment)
-        panel = [[adversary, true]] + others.map { |agent| [agent, false] }
-        state.await_opinions(key, id, adversary, others)
-        results = panel.map do |agent, adversarial|
-          Thread.new do
-            question = prompt(asked: agent, author: author, context: context, code: excerpt, comment: comment, adversary: adversarial)
-            word, body = verdict(ask.call(agent, question, dir: repo))
-            state.add_opinion(key, id, agent, body, verdict: word, adversary: adversarial)
-            [agent, word || 'answered']
-          rescue ArgumentError, SystemCallError => error
-            state.opinion_failed(key, id, agent, error.message, adversary: adversarial)
-            [agent, "failed: #{error.message}"]
-          end
-        end.map(&:value)
-        [id, results.to_h]
+        state.await_opinions(key, id, panel.first['agent'], panel.drop(1).map { |adversary| adversary['agent'] })
+        results = consult(state, key, id, panel, repo, ask) do |agent, adversarial|
+          prompt(asked: agent, author: author, context: context, code: excerpt, comment: comment, adversary: adversarial)
+        end
+        [id, results]
       end
+    end
+
+    # A question the reviewer asked with adversaries ticked: each answers it on its own, beside the
+    # review's agent (author), which answers in the conversation as usual. text: what the review's
+    # agent was sent, so they know as much as it does.
+    def question(state:, key:, id:, text:, author:, repo:, ask: Agents.method(:ask), adversaries: Settings.new.adversaries)
+      panel = Agents.panel(author, adversaries)
+      return {} if panel.empty?
+      state.await_opinions(key, id, nil, panel.map { |adversary| adversary['agent'] })
+      consult(state, key, id, panel, repo, ask, on_comment: false) { |agent, _| question_prompt(asked: agent, author: author, text: text) }
+    end
+
+    def question_prompt(asked:, author:, text:)
+      <<~TEXT
+        You are #{Agents.name(asked)}. A reviewer is going through a code change with #{author ? Agents.name(author) : 'their agent'}, the agent running the review, and asked what follows. Give your own, independent answer; the reviewer reads it beside theirs.
+
+        How to answer:
+        - The answer first, in a sentence or two. Then only what supports it.
+        - Plain, simple words. Short paragraphs or a short list; Markdown is fine.
+        - Name the file and line when it helps.
+        - You may read files in this repository to check. Do not change anything.
+
+        ---
+
+        #{text.to_s.strip}
+      TEXT
+    end
+
+    # What adversaries need to answer a follow-up: what the review's agent was first sent about the
+    # thread, the conversation since, and the new message (already the thread's last).
+    def follow_up(state_data, key, id)
+      first = state_data['outbox'].find { |entry| entry['kind'] == 'send' && entry['key'] == key && entry['thread_ids'] == [id] && !entry['text'].start_with?('Follow-up in thread') }
+      *earlier, latest = state_data.dig('threads', key, id, 'messages') || []
+      said = earlier.reject { |message| message['role'] }.map { |message| "#{message['author'] == 'user' ? 'Reviewer' : Agents.name(message['agent'] || 'agent')}: #{message['body']}" }
+      [first&.fetch('text'), said.empty? ? nil : "The conversation so far:\n\n#{said.join("\n\n")}", "The reviewer now asks:\n\n#{latest&.fetch('body')}"].compact.join("\n\n")
+    end
+
+    # Asks every adversary at once and posts each answer as it arrives. On a comment the first
+    # answers in the conversation and each says what it thinks of the comment; on a question
+    # (on_comment false) they all answer beside it. Returns {agent => verdict or what failed}.
+    def consult(state, key, id, panel, repo, ask, on_comment: true)
+      panel.each_with_index.map do |adversary, index|
+        agent, model, effort = adversary.values_at('agent', 'model', 'effort')
+        adversarial = on_comment && index.zero?
+        Thread.new do
+          answer = ask.call(agent, yield(agent, adversarial), dir: repo, model: model, effort: effort)
+          word, body = on_comment ? verdict(answer) : [nil, tidy(answer)]
+          state.add_opinion(key, id, agent, body, verdict: word, adversary: adversarial)
+          AgentCatalog::Results.record(agent)
+          [agent, word || 'answered']
+        rescue ArgumentError, SystemCallError => error
+          state.opinion_failed(key, id, agent, error.message, adversary: adversarial)
+          AgentCatalog::Results.record(agent, error.message)
+          [agent, "failed: #{error.message}"]
+        end
+      end.map(&:value).to_h
     end
   end
 end

@@ -102,11 +102,15 @@ globalThis.LiveTools = (() => {
   const stale = (thread, now) => thread?.delivery === 'delivered' && thread.delivered_at && now - Date.parse(thread.delivered_at) > STALE_MS;
   // Agents asked for a second opinion time out long before this, so a wait this old lost its asker.
   const lostOpinion = (thread, now) => !!thread?.asked_at && now - Date.parse(thread.asked_at) > STALE_MS;
+  // The second reviewer is still checking the comment: asked, and not yet answered in the
+  // conversation. Asked again later about a question, it answers beside it like the others.
+  const checkingComment = thread => !!thread?.adversary && (thread.waiting_on || []).includes(thread.adversary)
+    && !(thread.messages || []).some(message => message.role === 'adversary' && message.agent === thread.adversary);
   function statusModel(thread, listening, now = Date.now(), listener = null) {
     if (!thread) return null;
     const last = [...(thread.messages || [])].reverse().find(message => message.author === 'agent' && message.role !== 'adversary');
     // A second reviewer checking the comment shows in the conversation, like someone typing.
-    if (thread.adversary && (thread.waiting_on || []).includes(thread.adversary) && thread.delivery !== 'sent' && thread.delivery !== 'delivered') {
+    if (checkingComment(thread) && thread.delivery !== 'sent' && thread.delivery !== 'delivered') {
       if (lostOpinion(thread, now)) return {tone: 'idle', text: `${agentInfo(thread.adversary).name} was asked to check this comment ${relativeTime(thread.asked_at, now)} and has not answered. The check may have been interrupted; ask your agent to run it again.`};
       return {tone: 'work', text: `${agentInfo(thread.adversary).name} is checking this comment`, typing: true, agent: thread.adversary};
     }
@@ -172,7 +176,7 @@ globalThis.LiveTools = (() => {
     const opened = new Set(typeof open === 'string' ? [open] : open || []);
     // The second reviewer answers in the conversation; it shows here only when it could not answer.
     const answered = Object.keys(opinions).filter(agent => opinions[agent].role !== 'adversary' || opinions[agent].error);
-    const waiting = (thread?.waiting_on || []).filter(agent => agent !== adversary);
+    const waiting = (thread?.waiting_on || []).filter(agent => agent !== adversary || !checkingComment(thread));
     const agents = [...new Set([...answered, ...waiting])];
     if (!agents.length) return '';
     const counts = tally(thread);
@@ -180,8 +184,10 @@ globalThis.LiveTools = (() => {
     const rows = agents.map(agent => {
       const opinion = opinions[agent];
       const name = escape(agentInfo(agent).name);
-      if (!opinion && lostOpinion(thread, now)) return `<li class="dcr-op is-failed" title="Asked ${escape(relativeTime(thread.asked_at, now))}; the check may have been interrupted">${avatarHTML(agent, 'dcr-face-sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">did not answer</span></span></li>`;
-      if (!opinion) return `<li class="dcr-op is-waiting">${avatarHTML(agent, 'dcr-face-sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">is reading the code</span><span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span></span></li>`;
+      // Asked again, an agent shows as reading until its new answer replaces the old one.
+      const asked = waiting.includes(agent);
+      if (asked && lostOpinion(thread, now)) return `<li class="dcr-op is-failed" title="Asked ${escape(relativeTime(thread.asked_at, now))}; the check may have been interrupted">${avatarHTML(agent, 'dcr-face-sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">did not answer</span></span></li>`;
+      if (asked || !opinion) return `<li class="dcr-op is-waiting">${avatarHTML(agent, 'dcr-face-sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">is reading the code</span><span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span></span></li>`;
       if (opinion.error) return `<li class="dcr-op is-failed" title="${escape(opinion.error)}">${avatarHTML(agent, 'dcr-face-sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">did not answer</span></span></li>`;
       const isOpen = opened.has(agent);
       const fresh = opinion.id && !seen.has(opinion.id);
@@ -212,6 +218,85 @@ globalThis.LiveTools = (() => {
     return {tone: 'off', text: 'No agent connected', hint: 'Nothing is listening yet. Ask your agent to continue this review so it can answer here.'};
   }
 
+  // --- adversaries ----------------------------------------------------------------------------
+  // The agents the reviewer chose to check the review, in their order: the first answers in a
+  // comment's conversation, the rest beside it. An agent checks the review it runs only on a model
+  // the reviewer named (the server keeps the same rule), and only an installed one is asked.
+  const activeAdversaries = (adversaries, author, catalog = null) => (adversaries || []).filter(entry =>
+    (entry.agent !== author || entry.model) && (!catalog || catalog.some(agent => agent.slug === entry.agent && agent.installed)));
+
+  // Overlapping marks, one per agent, however many; past `max` the rest is a count.
+  function facesHTML(slugs, max = 4) {
+    const shown = slugs.slice(0, slugs.length > max ? max - 1 : max);
+    const rest = slugs.length - shown.length;
+    return `<span class="dcr-stack">${shown.map(slug => avatarHTML(slug, 'dcr-face-xs')).join('')}${rest ? `<b class="dcr-stack-more">+${rest}</b>` : ''}</span>`;
+  }
+
+  // How an agent on this computer stands, in a word, with the detail as a hint. A CLI with no status
+  // command cannot say whether it is signed in; its last real answer can.
+  function agentStatus(agent, now = Date.now()) {
+    const last = agent.last;
+    const answered = last?.ok ? `Last answered ${relativeTime(last.at, now)}.` : '';
+    if (agent.ready === false) return {tone: 'off', text: 'Signed out', hint: `Run \`${agent.bin || agent.slug}\` once in a terminal to sign in.`};
+    if (agent.ready === true) return {tone: 'ok', text: 'Ready', hint: [`Signed in.`, answered, last && !last.ok ? `Last try failed: ${last.error}` : ''].filter(Boolean).join(' ')};
+    if (last && !last.ok) return {tone: 'warn', text: 'Last try failed', hint: last.error || ''};
+    if (last?.ok) return {tone: 'ok', text: 'Ready', hint: answered};
+    return {tone: 'idle', text: 'Installed', hint: 'It cannot say whether it is signed in; its first answer will tell.'};
+  }
+
+  const optionHTML = (value, label, current) => `<option value="${escape(value)}"${value === (current || '') ? ' selected' : ''}>${escape(label)}</option>`;
+
+  // The models an agent lists, free ones first; its CLI's own default comes first of all.
+  function modelOptionsHTML(agent, current) {
+    const models = [...(agent.models || [])];
+    for (const id of [agent.suggested, current]) if (id && !models.some(model => model.id === id)) models.unshift({id});
+    const label = model => `${model.label || model.id}${model.default ? ' (its default)' : ''}`;
+    const free = models.filter(model => model.free);
+    const rest = models.filter(model => !model.free);
+    const list = items => items.map(model => optionHTML(model.id, label(model), current)).join('');
+    return optionHTML('', 'Default model', current) + (free.length ? `<optgroup label="Free">${list(free)}</optgroup><optgroup label="Other models">${list(rest)}</optgroup>` : list(rest));
+  }
+
+  // The efforts the chosen model takes (Codex says per model), else the agent's, else every effort its
+  // models take (for its default model); '' when it has none.
+  function effortLevels(agent, model) {
+    const listed = (agent.models || []).find(entry => entry.id === model)?.efforts;
+    if (listed?.length) return listed;
+    if (agent.efforts?.length) return agent.efforts;
+    return [...new Set((agent.models || []).flatMap(entry => entry.efforts || []))];
+  }
+  function effortOptionsHTML(agent, model, current) {
+    const levels = effortLevels(agent, model);
+    if (!levels.length) return '';
+    return optionHTML('', 'Default effort', current) + levels.map(level => optionHTML(level, level.charAt(0).toUpperCase() + level.slice(1), current)).join('');
+  }
+
+  // The Adversaries section of the agent card. catalog: what /api/agents found (null while it looks).
+  function adversaryPanelHTML({catalog, adversaries = [], author = null, error = '', now = Date.now()}) {
+    const refresh = `<button type="button" class="icon-button dcr-adv-recheck" data-dcr-adv-recheck aria-label="Look for agents again" title="Look again"${catalog ? '' : ' disabled'}>${globalThis.ReviewIcons?.['refresh-cw']?.replace('<svg', '<svg aria-hidden="true" focusable="false"') || '↻'}</button>`;
+    const active = activeAdversaries(adversaries, author, catalog);
+    const head = `<header class="dcr-adv-head"><span class="dcr-adv-title" id="dcr-adv-title">Adversaries</span><span class="dcr-adv-count">${active.length ? `${active.length} on` : 'Off'}</span>${refresh}</header>`;
+    if (error) return `${head}<p class="dcr-adv-msg">${escape(error)}</p>`;
+    if (!catalog) return `${head}<p class="dcr-adv-msg">Looking for agents on this computer<span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span></p>`;
+    const installed = catalog.filter(agent => agent.installed);
+    const missing = catalog.filter(agent => !agent.installed).map(agent => agent.name);
+    if (!installed.length) return `${head}<p class="dcr-adv-msg">No agent CLIs found on this computer. Install ${escape(names(missing))} to add an adversary.</p>`;
+    const on = slug => adversaries.find(entry => entry.agent === slug);
+    // Rows keep their place when switched, so nothing moves under the pointer; the line below says the order.
+    const rows = installed.map(agent => {
+      const entry = on(agent.slug);
+      const status = agentStatus(agent, now);
+      const self = agent.slug === author;
+      const effort = entry ? effortOptionsHTML(agent, entry.model, entry.effort) : '';
+      const note = self ? (entry && !entry.model ? '<p class="dcr-adv-note is-warn">Runs this review, so it is skipped until you pick a model.</p>' : '<p class="dcr-adv-note">Runs this review: it checks itself only on a model you pick.</p>') : '';
+      const tune = entry ? `<div class="dcr-adv-tune"><select class="select select-xs" data-dcr-adv-model aria-label="${escape(agent.name)} model">${modelOptionsHTML(agent, entry.model)}</select>${effort ? `<select class="select select-xs" data-dcr-adv-effort aria-label="${escape(agent.name)} effort">${effort}</select>` : ''}</div>` : '';
+      return `<li class="dcr-adv-row${entry ? ' is-on' : ''}" data-agent="${escape(agent.slug)}"><label class="dcr-adv-line">${avatarHTML(agent.slug, 'dcr-face-sm')}<span class="dcr-adv-who"><strong>${escape(agent.name)}</strong><span class="dcr-adv-status is-${status.tone}" title="${escape(status.hint)}">${escape(status.text)}</span></span><input type="checkbox" class="toggle toggle-sm" data-dcr-adv-switch${entry ? ' checked' : ''} aria-label="Use ${escape(agent.name)} as an adversary"></label>${tune}${note}</li>`;
+    }).join('');
+    const who = author ? agentInfo(author).name : 'your agent';
+    const order = active.length ? `${agentInfo(active[0].agent).name} answers in each comment's conversation${active.length > 1 ? `; ${names(active.slice(1).map(entry => agentInfo(entry.agent).name))} weigh${active.length > 2 ? '' : 's'} in beside it` : ''}. On your own questions, tick ${facesHTML(active.map(entry => entry.agent), 3)} to ask them too.` : `Other agents on this computer can check ${escape(who)}'s comments. They spend your own accounts, so none is on until you choose.`;
+    return `${head}<ul class="dcr-adv-list">${rows}</ul><p class="dcr-adv-foot">${order}</p>${missing.length ? `<p class="dcr-adv-missing">Not found here: ${escape(names(missing))}.</p>` : ''}`;
+  }
+
   function summary(comments, threads, resolved = []) {
     const waiting = Object.values(threads).filter(thread => thread.delivery === 'sent').length;
     const answered = Object.values(threads).filter(thread => thread.delivery === 'answered').length;
@@ -219,5 +304,6 @@ globalThis.LiveTools = (() => {
   }
 
   return {escape, progressKey, allComments, sendText, drafts, statusText, statusModel, actionLabel, markdown, snippet, relativeTime, messagesHTML, unseen, agentModel, summary,
-    agentInfo, avatarHTML, verdictHTML, verdicts, tally, tallyText, consensus, opinionsHTML, names, VERDICTS};
+    agentInfo, avatarHTML, verdictHTML, verdicts, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
+    activeAdversaries, facesHTML, agentStatus, modelOptionsHTML, effortLevels, effortOptionsHTML, adversaryPanelHTML};
 })();

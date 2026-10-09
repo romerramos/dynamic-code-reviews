@@ -2,7 +2,9 @@
 
 require 'json'
 require 'uri'
+require_relative 'agent_catalog'
 require_relative 'github'
+require_relative 'second_opinion'
 require_relative 'settings'
 require_relative 'state'
 
@@ -14,11 +16,15 @@ module DCR
     BODY_LIMIT = 4 * 1024 * 1024
 
     # evidence: callable taking the request hash, for attaching a recording to the series.
-    def initialize(directory, settings: Settings.new, evidence: nil, github: GitHub.new(directory))
+    # catalog: callable(fresh) listing the agent CLIs here. ask_adversaries: callable(key, id, text)
+    # that has the reviewer's adversaries answer a question in the background.
+    def initialize(directory, settings: Settings.new, evidence: nil, github: GitHub.new(directory), catalog: nil, ask_adversaries: nil)
       @state = State.new(directory)
       @settings = settings
       @evidence = evidence
       @github = github
+      @catalog = catalog || ->(fresh) { AgentCatalog.list(fresh: fresh) }
+      @ask_adversaries = ask_adversaries || method(:question_in_background)
     end
 
     attr_reader :state
@@ -52,8 +58,11 @@ module DCR
         [200, @evidence.call(json(body))]
       when ['GET', '/api/preview'] then [200, preview_html(key, query['path'])]
       when ['POST', '/api/preview'] then (input = json(body); [200, {'entry' => @state.request_preview(input['key'], input['path'])}])
-      when ['POST', '/api/send'] then (input = json(body); [200, {'queued' => @state.send_items(input['key'], input['items']).length}])
-      when ['POST', '/api/message'] then (input = json(body); [200, {'message' => @state.user_message(input['key'], input['id'], input['body'])}])
+      when ['POST', '/api/send'] then send_items(json(body))
+      when ['POST', '/api/message'] then message(json(body))
+      when ['GET', '/api/adversaries'] then [200, adversaries]
+      when ['GET', '/api/agents'] then [200, adversaries.merge('agents' => @catalog.call(query['fresh'] == '1'))]
+      when ['POST', '/api/agents'] then (@settings.save_adversaries(json(body)['adversaries']); [200, adversaries])
       when ['POST', '/api/finish'] then [200, {'entry' => @state.finish(json(body)['key'])}]
       when ['GET', '/api/github'] then [200, @github.status(key)]
       when ['POST', '/api/github/comment'] then github_comment(json(body))
@@ -68,6 +77,30 @@ module DCR
     end
 
     private
+
+    # The reviewer's adversaries, and the agent running this review, which checks itself only on a model they named.
+    def adversaries = {'adversaries' => @settings.adversaries, 'author' => @state.listener}
+
+    # With adversaries ticked, they answer what the review's agent was sent, beside it.
+    def send_items(input)
+      queued = @state.send_items(input['key'], input['items'])
+      input['items'].each { |item| @ask_adversaries.call(input['key'], item['id'].to_s, item['text'].to_s) } if input['adversaries'] == true
+      [200, {'queued' => queued.length}]
+    end
+
+    def message(input)
+      message = @state.user_message(input['key'], input['id'], input['body'])
+      @ask_adversaries.call(input['key'], input['id'].to_s, SecondOpinion.follow_up(@state.read, input['key'], input['id'].to_s)) if input['adversaries'] == true
+      [200, {'message' => message}]
+    end
+
+    def question_in_background(key, id, text)
+      Thread.new do
+        SecondOpinion.question(state: @state, key: key, id: id, text: text, author: @state.listener, repo: manifest['repo'] || Dir.pwd)
+      rescue StandardError => error
+        warn "Adversaries could not be asked about #{id}: #{error.message}"
+      end
+    end
 
     # Posting the same comment twice (a double click, a second device) returns the first post.
     def github_comment(input)

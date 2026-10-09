@@ -29,6 +29,14 @@
   const previewHtml = new Map(); // path -> {ready_at, html}, fetched once per build
   const previewsAnnounced = new Set();
   const drafts = new Map(); // reply text survives the review re-rendering its cards
+  // Adversaries: other agents that check the review. Chosen in the agent card, kept by the server
+  // for every review on this computer. A question asks them only when its + is ticked, and every
+  // message starts unticked, so nothing spends the reviewer's accounts by accident.
+  let adversaries = [];
+  let catalog = null; // the agent CLIs on this computer, fetched when the agent card opens
+  let catalogError = '';
+  const withAdversaries = new Set(); // thread ids whose next message asks the adversaries too
+  const askable = () => tools.activeAdversaries(adversaries, listener, catalog);
   // Everything here lives inside the observed #content, so write only real changes or the
   // observer would re-trigger itself.
   const set = (node, property, value) => { if (node[property] !== value) node[property] = value; };
@@ -85,9 +93,18 @@
     const comment = comments().find(entry => entry.id === id);
     if (!comment) throw new Error('This comment is not part of the review.');
     if (note) await api('/api/message', {key, id, body: note});
-    await api('/api/send', {key, items: [{id, text: tools.sendText(snapshot, review, comment, note, threads[id])}]});
+    const also = takeAdversaries(id);
+    await api('/api/send', {key, items: [{id, text: tools.sendText(snapshot, review, comment, note, threads[id])}], adversaries: also.length > 0});
     await refresh();
+    return also;
   };
+  // The adversaries a message to this thread asks too, if its + is ticked; unticks it either way.
+  const takeAdversaries = id => {
+    const asked = withAdversaries.has(id) ? askable() : [];
+    withAdversaries.delete(id);
+    return asked;
+  };
+  const sentWith = (text, asked) => asked.length ? `${text.replace(/\.$/, '')}; ${tools.names(asked.map(entry => tools.agentInfo(entry.agent).name))} answer${asked.length > 1 ? '' : 's'} beside it.` : text;
 
   // --- thread cards ------------------------------------------------------------------------
   // The conversation under a comment is a plain thread: who, when, then the text. A line above it
@@ -107,18 +124,34 @@
     const body = text ? `<div class="dcr-body${long ? ' is-clamped' : ''}">${tools.markdown(text)}</div>${long ? '<button type="button" class="dcr-more">Show more</button>' : ''}` : '';
     return `<article class="dcr-msg dcr-origin${comment.personal ? ' dcr-you' : ' dcr-agent'}">${avatar}<div class="dcr-msg-main"><header class="dcr-msg-head"><strong>${who}</strong><span class="dcr-role">${tools.escape(kind)}</span></header>${body}</div></article>`;
   };
-  const composeHTML = () => `<form class="dcr-reply dcr-compose" hidden><textarea rows="1" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea><button type="submit" class="dcr-send" aria-label="Send reply" title="Send reply (⌘ Enter)">${ico('send')}</button></form>`;
+  const advToggleHTML = '<button type="button" class="dcr-adv-toggle" data-dcr-adv hidden aria-pressed="false"></button>';
+  const composeHTML = () => `<form class="dcr-reply dcr-compose" hidden><textarea rows="1" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea>${advToggleHTML}<button type="submit" class="dcr-send" aria-label="Send reply" title="Send reply (⌘ Enter)">${ico('send')}</button></form>`;
   const cardBlock = (id, variant, comment) => {
     const block = document.createElement('div');
     block.className = `dcr-thread dcr-${variant}`;
     block.dataset.dcr = id;
     block.innerHTML = variant === 'ledger'
       ? `<div class="dcr-scroll">${quoteHTML(comment)}<div class="dcr-convo"></div><div class="dcr-state" role="status" aria-live="polite"></div><div class="dcr-opinions-slot"></div></div>${composeHTML()}`
-      : `<div class="dcr-state" role="status" aria-live="polite"></div><div class="dcr-convo"></div><div class="dcr-opinions-slot"></div><form class="dcr-reply" hidden><textarea rows="3" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea><div class="dcr-actions"><button type="submit" class="btn btn-sm btn-primary">Send reply</button><button type="button" class="btn btn-sm btn-ghost" data-dcr-cancel>Cancel</button></div></form>${variant === 'popover' ? `<div class="dcr-actions"><button type="button" class="btn btn-sm btn-primary" data-dcr-act data-dcr-for="${tools.escape(id)}"></button></div>` : ''}`;
+      : `<div class="dcr-state" role="status" aria-live="polite"></div><div class="dcr-convo"></div><div class="dcr-opinions-slot"></div><form class="dcr-reply" hidden><textarea rows="3" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea><div class="dcr-actions"><button type="submit" class="btn btn-sm btn-primary">Send reply</button><button type="button" class="btn btn-sm btn-ghost" data-dcr-cancel>Cancel</button>${advToggleHTML}</div></form>${variant === 'popover' ? `<div class="dcr-actions"><button type="button" class="btn btn-sm btn-primary" data-dcr-act data-dcr-for="${tools.escape(id)}"></button></div>` : ''}`;
     block.querySelector('textarea').value = drafts.get(id) || '';
     return block;
   };
   const actionButtons = id => document.querySelectorAll(`[data-dcr-act][data-dcr-for="${CSS.escape(id)}"]`);
+  // The + that asks the adversaries too: their marks, grey until ticked. Shown only when some can answer.
+  const syncAdvToggles = (toggles, id, show) => {
+    const asked = askable();
+    const on = withAdversaries.has(id);
+    const who = tools.names(asked.map(entry => tools.agentInfo(entry.agent).name));
+    const html = `<span class="dcr-adv-plus" aria-hidden="true">+</span>${tools.facesHTML(asked.map(entry => entry.agent), 3)}`;
+    toggles.forEach(toggle => {
+      set(toggle, 'hidden', !show || !online || !asked.length);
+      if (toggle.dataset.html !== html) { toggle.innerHTML = html; toggle.dataset.html = html; }
+      toggle.dataset.dcrAdvFor = id;
+      if (toggle.getAttribute('aria-pressed') !== String(on)) toggle.setAttribute('aria-pressed', String(on));
+      const label = on ? `${who} will answer too. Click to ask only your agent.` : `Also ask ${who}`;
+      if (toggle.title !== label) { toggle.title = label; toggle.setAttribute('aria-label', label); }
+    });
+  };
   const stateHTML = (model, at) => model
     ? `${model.agent ? tools.avatarHTML(model.agent, 'dcr-face-sm dcr-thinking') : `<span class="dcr-dot dcr-tone-${model.tone}" aria-hidden="true"></span>`}<span>${tools.escape(model.text)}</span>${model.typing ? '<span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span>' : ''}${at ? `<time data-at="${tools.escape(at)}">${tools.escape(tools.relativeTime(at))}</time>` : ''}`
     : '';
@@ -170,7 +203,11 @@
     clampLong(convo);
     const stateEl = block.querySelector('.dcr-state');
     if (stateEl.dataset.sig !== statusSignature) { stateEl.innerHTML = status; stateEl.dataset.sig = statusSignature; }
+    syncAdvToggles(block.querySelectorAll('.dcr-reply .dcr-adv-toggle'), id, true);
     actionButtons(id).forEach(button => {
+      // Before the first ask, its + sits beside Ask agent; after it, in the reply field.
+      if (!button.nextElementSibling?.matches('.dcr-adv-toggle')) button.insertAdjacentHTML('afterend', advToggleHTML);
+      syncAdvToggles([button.nextElementSibling], id, !sent);
       set(button, 'textContent', sent ? 'Reply' : 'Ask agent');
       set(button, 'disabled', !online);
       button.classList.toggle('btn-primary', !sent);
@@ -246,6 +283,13 @@
     }
     const cancel = event.target.closest('[data-dcr-cancel]');
     if (cancel) { const block = cancel.closest('.dcr-thread'); block.querySelector('.dcr-reply').hidden = true; refreshBlock(block); return; }
+    const advToggle = event.target.closest('.dcr-adv-toggle');
+    if (advToggle) {
+      const id = advToggle.dataset.dcrAdvFor;
+      if (!withAdversaries.delete(id)) withAdversaries.add(id);
+      document.querySelectorAll(`.dcr-thread[data-dcr="${CSS.escape(id)}"]`).forEach(refreshBlock);
+      return;
+    }
     const button = event.target.closest('[data-dcr-act]');
     if (!button) return;
     const id = button.dataset.dcrFor;
@@ -262,8 +306,8 @@
     }
     button.disabled = true;
     try {
-      await sendComment(id);
-      flash(tools.statusModel(threads[id], listening)?.text || 'Sent to your agent.');
+      const asked = await sendComment(id);
+      flash(sentWith(tools.statusModel(threads[id], listening)?.text || 'Sent to your agent.', asked));
     } catch (error) { flash(error.message); }
     finally { button.disabled = !online; }
   });
@@ -280,13 +324,14 @@
     form.querySelector('[type="submit"]').disabled = true;
     const ledger = block.classList.contains('dcr-ledger');
     try {
-      await api('/api/message', {key, id, body: text});
+      const asked = takeAdversaries(id);
+      await api('/api/message', {key, id, body: text, adversaries: asked.length > 0});
       drafts.delete(id);
       document.querySelectorAll(`.dcr-thread[data-dcr="${CSS.escape(id)}"] textarea`).forEach(other => { other.value = ''; });
       if (!ledger) form.hidden = true;
       await refresh();
       // In Your review the conversation itself shows the reply and what happens next.
-      if (!ledger) flash(tools.statusModel(threads[id], listening)?.text || 'Reply sent to your agent.');
+      if (!ledger) flash(sentWith(tools.statusModel(threads[id], listening)?.text || 'Reply sent to your agent.', asked));
       else if (field.isConnected) { field.focus(); const scroller = block.querySelector('.dcr-scroll'); scroller.scrollTop = scroller.scrollHeight; }
     } catch (error) { flash(error.message); }
     finally { form.querySelector('[type="submit"]').disabled = !online; }
@@ -761,7 +806,7 @@
 
   // The composer in the code gets its Ask agent mode: save, then hand the comment to your agent.
   window.ReviewComposer?.setSender(async id => {
-    try { await sendComment(id); flash(tools.statusModel(threads[id], listening)?.text || 'Saved and sent to your agent.'); }
+    try { const asked = await sendComment(id); flash(sentWith(tools.statusModel(threads[id], listening)?.text || 'Saved and sent to your agent.', asked)); }
     catch (error) { flash(`Saved, but not sent: ${error.message}`); }
   });
 
@@ -852,7 +897,7 @@
     const button = event.target.closest('[data-dcr-row-send]');
     if (!button) return;
     button.disabled = true;
-    try { await sendComment(button.dataset.dcrRowSend); flash('Sent to your agent.'); }
+    try { flash(sentWith('Sent to your agent.', await sendComment(button.dataset.dcrRowSend))); }
     catch (error) { flash(error.message); button.disabled = false; }
   });
 
@@ -876,7 +921,7 @@
   presence.hidden = true;
   presence.setAttribute('aria-haspopup', 'dialog');
   presence.setAttribute('aria-expanded', 'false');
-  presence.innerHTML = '<span class="dcr-presence-face"></span><span class="dcr-presence-text" role="status"></span>';
+  presence.innerHTML = '<span class="dcr-presence-face"></span><span class="dcr-presence-text" role="status"></span><span class="dcr-presence-adv" hidden></span>';
   const optionsBar = document.querySelector('.toolbar-options');
   if (ledgerButton) ledgerButton.before(presence);
   else optionsBar?.prepend(presence);
@@ -885,6 +930,9 @@
   presenceCard.hidden = true;
   presenceCard.setAttribute('role', 'dialog');
   presenceCard.setAttribute('aria-label', 'Your agent');
+  presenceCard.innerHTML = '<div class="dcr-presence-main"></div><section class="dcr-adv" aria-labelledby="dcr-adv-title"></section>';
+  const presenceMain = presenceCard.querySelector('.dcr-presence-main');
+  const advPanel = presenceCard.querySelector('.dcr-adv');
   document.body.append(presenceCard);
   const typing = '<span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span>';
   const connectCommand = () => `dcr wait --repo ${snapshot.repo || '<repo>'} --name ${review.history?.series || '<series>'} --agent <you>`;
@@ -903,8 +951,56 @@
     const who = agent ? `<strong>${tools.escape(agent.name)}</strong>${agent.company ? `<span>${tools.escape(agent.company)}</span>` : ''}` : `<strong>${model.tone === 'off' ? 'No agent connected' : 'Your agent'}</strong>`;
     const connect = model.tone === 'off' && online ? `<p class="dcr-presence-help">Ask your agent to continue this review, or run this where it works:</p><div class="dcr-presence-cmd"><code>${tools.escape(connectCommand())}</code><button type="button" class="icon-button" data-dcr-copy-wait aria-label="Copy the command" title="Copy">${ico('copy')}</button></div>` : '';
     const html = `<header>${tools.avatarHTML(model.face, '')}<div class="dcr-presence-who">${who}</div></header><p class="dcr-presence-line dcr-presence-${model.tone}"><span class="dcr-presence-dot" aria-hidden="true"></span>${tools.escape(model.hint)}</p>${connect}`;
-    if (presenceCard.dataset.html !== html) { presenceCard.innerHTML = html; presenceCard.dataset.html = html; }
+    if (presenceMain.dataset.html !== html) { presenceMain.innerHTML = html; presenceMain.dataset.html = html; }
   };
+  // The Adversaries section: every agent CLI here, a switch each, and the model and effort of those on.
+  const renderAdversaries = () => {
+    const html = tools.adversaryPanelHTML({catalog, adversaries, author: listener, error: catalogError});
+    if (advPanel.dataset.html !== html) { advPanel.innerHTML = html; advPanel.dataset.html = html; }
+  };
+  // Lists the agents when the card opens. The server keeps the list a few minutes, so reopening is
+  // quick; "Look again" asks the CLIs afresh, after a sign-in or an install.
+  const loadCatalog = async (fresh = false) => {
+    if (fresh) catalog = null;
+    catalogError = '';
+    renderAdversaries();
+    try {
+      const data = await api(`/api/agents${fresh ? '?fresh=1' : ''}`);
+      catalog = data.agents;
+      adversaries = data.adversaries;
+    } catch (error) { if (!catalog) catalogError = `Could not list the agents: ${error.message}`; }
+    renderAdversaries(); decorate(); renderAgent();
+  };
+  const saveAdversaries = async next => {
+    const before = adversaries;
+    adversaries = next; // shown at once; the server's answer is what stays
+    renderAdversaries(); decorate(); renderAgent();
+    try { adversaries = (await api('/api/agents', {adversaries: next})).adversaries; }
+    catch (error) { adversaries = before; flash(error.message); }
+    renderAdversaries(); decorate(); renderAgent();
+  };
+  advPanel.addEventListener('change', event => {
+    const slug = event.target.closest('[data-agent]')?.dataset.agent;
+    const agent = catalog?.find(entry => entry.slug === slug);
+    if (!agent) return;
+    if (event.target.matches('[data-dcr-adv-switch]')) {
+      saveAdversaries(event.target.checked
+        ? [...adversaries.filter(entry => entry.agent !== slug), {agent: slug, model: agent.suggested || null, effort: null}]
+        : adversaries.filter(entry => entry.agent !== slug));
+      return;
+    }
+    const model = event.target.matches('[data-dcr-adv-model]');
+    if (!model && !event.target.matches('[data-dcr-adv-effort]')) return;
+    const value = event.target.value || null;
+    saveAdversaries(adversaries.map(entry => {
+      if (entry.agent !== slug) return entry;
+      if (!model) return {...entry, effort: value};
+      // An effort the new model does not take falls back to its default.
+      const levels = tools.effortLevels(agent, value);
+      return {...entry, model: value, effort: levels.includes(entry.effort) ? entry.effort : null};
+    }));
+  });
+  advPanel.addEventListener('click', event => { if (event.target.closest('[data-dcr-adv-recheck]')) loadCatalog(true); });
   const renderAgent = () => {
     const model = presenceModel();
     presence.hidden = !model;
@@ -915,13 +1011,21 @@
     if (faceSlot.dataset.html !== face) { faceSlot.innerHTML = face; faceSlot.dataset.html = face; }
     const text = presence.querySelector('.dcr-presence-text');
     if (text.dataset.html !== model.label) { text.innerHTML = model.label; text.dataset.html = model.label; }
-    presence.title = model.hint;
-    presence.setAttribute('aria-label', `${text.textContent}. ${model.hint}`);
+    // Who checks the review beside it, as small marks after a plus, like a row in Your review.
+    const asked = askable();
+    const advSlot = presence.querySelector('.dcr-presence-adv');
+    const advHTML = asked.length ? `<span class="dcr-adv-plus" aria-hidden="true">+</span>${tools.facesHTML(asked.map(entry => entry.agent), 3)}` : '';
+    set(advSlot, 'hidden', !asked.length);
+    if (advSlot.dataset.html !== advHTML) { advSlot.innerHTML = advHTML; advSlot.dataset.html = advHTML; }
+    const checkedBy = asked.length ? ` Checked by ${tools.names(asked.map(entry => tools.agentInfo(entry.agent).name))}.` : '';
+    presence.title = model.hint + checkedBy;
+    presence.setAttribute('aria-label', `${text.textContent}. ${model.hint}${checkedBy}`);
     renderPresenceCard(model);
+    renderAdversaries();
   };
   const placePresenceCard = () => {
     const box = presence.getBoundingClientRect();
-    const width = Math.min(320, window.innerWidth - 24);
+    const width = Math.min(360, window.innerWidth - 24);
     presenceCard.style.width = `${width}px`;
     presenceCard.style.top = `${Math.round(box.bottom + 8)}px`;
     presenceCard.style.left = `${Math.round(Math.max(12, Math.min(box.left, window.innerWidth - width - 12)))}px`;
@@ -929,7 +1033,7 @@
   const togglePresenceCard = open => {
     presenceCard.hidden = !open;
     presence.setAttribute('aria-expanded', String(open));
-    if (open) placePresenceCard();
+    if (open) { placePresenceCard(); loadCatalog(); }
   };
   presence.addEventListener('click', () => togglePresenceCard(presenceCard.hidden));
   document.addEventListener('click', event => {
@@ -1099,4 +1203,5 @@
   if (ledger) new MutationObserver(() => { mount(); decorateLedger(); renderPanel(); }).observe(ledger, {childList: true, subtree: true});
   mount();
   poll();
+  api('/api/adversaries').then(data => { adversaries = data.adversaries; decorate(); renderAgent(); }).catch(() => { /* none until the card lists them */ });
 })();
