@@ -976,8 +976,16 @@
       const data = await api(`/api/agents${fresh ? '?fresh=1' : ''}`);
       catalog = data.agents;
       adversaries = data.adversaries;
+      // Choices left as "the CLI's default" become the model and effort it would use, so the card and
+      // the runs say the same thing (the agent running the review keeps its own, unpicked model).
+      const settled = adversaries.map(entry => settleEntry(entry));
+      if (JSON.stringify(settled) !== JSON.stringify(adversaries)) { await saveAdversaries(settled); return; }
     } catch (error) { if (!catalog) catalogError = `Could not list the agents: ${error.message}`; }
     renderAdversaries(); decorate(); renderAgent();
+  };
+  const settleEntry = entry => {
+    const agent = catalog?.find(candidate => candidate.slug === entry.agent);
+    return !agent || (entry.agent === listener && !entry.model) ? entry : tools.settle(agent, entry);
   };
   const saveAdversaries = async next => {
     const before = adversaries;
@@ -993,7 +1001,7 @@
     if (!agent) return;
     if (event.target.matches('[data-dcr-adv-switch]')) {
       saveAdversaries(event.target.checked
-        ? [...adversaries.filter(entry => entry.agent !== slug), {agent: slug, model: agent.suggested || null, effort: null}]
+        ? [...adversaries.filter(entry => entry.agent !== slug), settleEntry({agent: slug, model: null, effort: null})]
         : adversaries.filter(entry => entry.agent !== slug));
       return;
     }
@@ -1003,9 +1011,8 @@
     saveAdversaries(adversaries.map(entry => {
       if (entry.agent !== slug) return entry;
       if (!model) return {...entry, effort: value};
-      // An effort the new model does not take falls back to its default.
-      const levels = tools.effortLevels(agent, value);
-      return {...entry, model: value, effort: levels.includes(entry.effort) ? entry.effort : null};
+      // An effort the new model does not take becomes the one it would use.
+      return tools.settle(agent, {...entry, model: value});
     }));
   });
   advPanel.addEventListener('click', event => { if (event.target.closest('[data-dcr-adv-recheck]')) loadCatalog(true); });

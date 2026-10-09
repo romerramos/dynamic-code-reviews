@@ -26,7 +26,8 @@ module DCR
     @lock = Mutex.new
 
     # [{slug, name, installed, ready (true, false or nil when the CLI cannot say), models, efforts,
-    # suggested, last}], one per agent the review can ask, installed ones first.
+    # default_model and default_effort (what the CLI runs when given none, when it says), suggested,
+    # last}], one per agent the review can ask, installed ones first.
     def list(fresh: false)
       @lock.synchronize do
         @cache = nil if fresh || (@cache && Time.now - @cache[0] > TTL)
@@ -56,12 +57,27 @@ module DCR
       entry['ready'] = ok
       out, = capture('codex', %w[codex debug models])
       entry['models'] = codex_models(out) if out
+      # What Codex runs when it is given no model or effort: its own config, then the model's default.
+      config = File.read(File.join(ENV['CODEX_HOME'] || File.join(Dir.home, '.codex'), 'config.toml')) rescue ''
+      model, effort = codex_defaults(config)
+      if model
+        entry['models'] << {'id' => model} unless entry['models'].any? { |listed| listed['id'] == model }
+        entry['default_model'] = model
+      end
+      entry['default_effort'] = effort if effort
+    end
+
+    # The top-level model and model_reasoning_effort of a Codex config.toml (before any [table]).
+    def codex_defaults(toml)
+      top = toml.to_s.split(/^\s*\[/, 2).first.to_s
+      %w[model model_reasoning_effort].map { |name| top[/^\s*#{name}\s*=\s*"([^"\n]+)"/, 1] }
     end
 
     def probe_grok(entry)
       out, ok = capture('grok', %w[grok models])
       entry['ready'] = signed_in(out, ok)
       entry['models'] = grok_models(out) if ok
+      entry['default_model'] = entry['models'].find { |model| model['default'] }&.dig('id')
     end
 
     def probe_antigravity(entry)

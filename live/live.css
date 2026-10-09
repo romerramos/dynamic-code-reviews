@@ -421,9 +421,11 @@ html[data-theme="dark"]{--dcr-agree:#4cc38a;--dcr-partly:#e0a94a;--dcr-disagree:
 .dcr-adv-status.is-off{color:var(--dcr-partly)}
 .dcr-adv-status.is-off::before{background:var(--dcr-partly)}
 .dcr-adv-tune{display:flex;gap:6px;margin:4px 0 0 29px}
-.dcr-adv-tune select{min-width:0;height:28px;min-height:0;font-size:12.5px}
+/* The classic select keeps its text inside the padding, clear of the arrow; the newer rendering
+   lets a long model name run under it. The effort is short, so the model gets the room. */
+.dcr-adv-tune select{appearance:none;min-width:0;height:28px;min-height:0;font-size:12.5px}
 .dcr-adv-tune [data-dcr-adv-model]{flex:1}
-.dcr-adv-tune [data-dcr-adv-effort]{flex:none;width:auto;min-width:136px}
+.dcr-adv-tune .select[data-dcr-adv-effort]{flex:none;width:108px;min-width:108px}
 .dcr-adv-note{margin:4px 0 0 29px;color:var(--muted,inherit);font-size:12px;line-height:1.4}
 .dcr-adv-note.is-warn{color:var(--dcr-partly)}
 .dcr-adv-foot{margin:10px 0 0;color:var(--muted,inherit);font-size:12px;line-height:1.55}

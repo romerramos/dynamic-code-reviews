@@ -196,7 +196,9 @@ assert.equal(tools.agentStatus({ready:null, last:{ok:true, at:'2026-10-09T10:00:
 assert.equal(tools.agentStatus({ready:null, last:{ok:false, error:'Grok is not signed in.'}}).text, 'Last try failed');
 const opencode = {slug:'opencode', name:'opencode', installed:true, models:[{id:'openai/gpt-5.5'}, {id:'opencode/exo-free', free:true}], efforts:[], suggested:'opencode/big-pickle'};
 const options = tools.modelOptionsHTML(opencode, 'opencode/big-pickle');
-assert.match(options, /^<option value="">Default model<\/option><optgroup label="Free">.*exo-free.*<\/optgroup><optgroup label="Other models">.*opencode\/big-pickle" selected.*gpt-5\.5/s, 'free models come first, and the suggested one is offered even when the CLI did not list it');
+assert.match(options, /^<optgroup label="Free">.*exo-free.*<\/optgroup><optgroup label="Other models">.*opencode\/big-pickle" selected.*gpt-5\.5/s, 'free models come first, and the suggested one is offered even when the CLI did not list it');
+assert.doesNotMatch(options, /Default model/, 'no vague "default" choice when the CLI lists its models');
+assert.match(tools.modelOptionsHTML(opencode, null), /^<option value="" selected>Pick a model<\/option>/, 'an agent left without a model asks for one');
 const codex = {slug:'codex', name:'Codex', installed:true, ready:true, efforts:[], models:[{id:'gpt-a', efforts:['low', 'high']}, {id:'gpt-b', efforts:['medium', 'high', 'xhigh']}]};
 assert.deepEqual(tools.effortLevels(codex, 'gpt-a'), ['low', 'high'], 'a model offers the efforts it takes');
 assert.deepEqual(tools.effortLevels(codex, null), ['low', 'high', 'medium', 'xhigh'], 'the default model offers every effort the models take');
@@ -216,4 +218,12 @@ const reasked = {...debated, waiting_on:['codex', 'grok'], asked_at:'2026-10-09T
 assert.notEqual(tools.statusModel(reasked, true, noon)?.text, 'Codex is checking this comment', 'a second reviewer that already answered is not shown checking again');
 const rereading = tools.opinionsHTML(reasked, {now: noon});
 ['Codex', 'Grok'].forEach(name => assert.match(rereading, new RegExp(`is-waiting"><span[^>]*>.*?</span><span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">is reading the code`), `asked again, ${name} shows as reading until its new answer`));
+// Real choices instead of "default": what the CLI says it runs, else the first it lists; medium effort when it does not say.
+const grokAgent = {slug:'grok', efforts:['low', 'medium', 'high'], models:[{id:'grok-4.6'}, {id:'grok-4.7', default:true}], default_model:'grok-4.7'};
+assert.deepEqual(tools.settle(grokAgent, {agent:'grok', model:null, effort:null}), {agent:'grok', model:'grok-4.7', effort:'medium'});
+assert.match(tools.modelOptionsHTML(grokAgent, 'grok-4.7'), /grok-4\.7 · default/, 'the CLI default is marked');
+const codexAgent = {slug:'codex', efforts:[], default_model:'gpt-b', default_effort:'xhigh', models:[{id:'gpt-a', efforts:['low', 'high']}, {id:'gpt-b', efforts:['medium', 'xhigh']}]};
+assert.deepEqual(tools.settle(codexAgent, {agent:'codex', model:null, effort:null}), {agent:'codex', model:'gpt-b', effort:'xhigh'}, "Codex's own config decides");
+assert.deepEqual(tools.settle(codexAgent, {agent:'codex', model:'gpt-a', effort:'xhigh'}), {agent:'codex', model:'gpt-a', effort:'low'}, 'an effort the model does not take becomes one it does');
+assert.deepEqual(tools.settle({slug:'antigravity', efforts:['low', 'medium'], models:[{id:'m1'}, {id:'m2'}]}, {agent:'antigravity'}), {agent:'antigravity', model:'m1', effort:'medium'}, 'with no default said, the first model it lists');
 console.log('PASS adversaries: who is asked, their marks, their status, models and efforts from the CLIs, and the card that sets them');

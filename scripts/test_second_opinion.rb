@@ -159,6 +159,8 @@ assert(DCR::AgentCatalog.grok_models("You are logged in with grok.com.\n\nAvaila
 assert(DCR::AgentCatalog.signed_in("You are logged in with grok.com.", true) == true && DCR::AgentCatalog.signed_in('Error: not logged in', false) == false && DCR::AgentCatalog.signed_in('models', true).nil?, 'Signed in is read only where the CLI says it')
 assert(DCR::AgentCatalog.agy_models("Fetching available models...\ngemini-x-high\tGemini X (High)\n") == [{'id' => 'gemini-x-high', 'label' => 'Gemini X (High)'}], 'Antigravity lists its models by id and name')
 assert(DCR::AgentCatalog.opencode_models("opencode/big-pickle\nopencode/exo-free\nopenai/gpt-5.5\nnoise line\n") == [{'id' => 'opencode/big-pickle', 'free' => true}, {'id' => 'opencode/exo-free', 'free' => true}, {'id' => 'openai/gpt-5.5'}], 'opencode lists its models, the free ones marked')
+assert(DCR::AgentCatalog.codex_defaults(%(model = "gpt-b"\nmodel_reasoning_effort = "xhigh"\n[profiles.fast]\nmodel = "gpt-a"\n)) == %w[gpt-b xhigh], "Codex's default model and effort come from the top of its config, not a profile")
+assert(DCR::AgentCatalog.codex_defaults('') == [nil, nil], 'No config, no default')
 puts 'PASS each CLI lists its own models and efforts, so nothing is kept by hand'
 
 Dir.mktmpdir('dcr-settings') do |dir|

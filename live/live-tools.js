@@ -246,29 +246,51 @@ globalThis.LiveTools = (() => {
 
   const optionHTML = (value, label, current) => `<option value="${escape(value)}"${value === (current || '') ? ' selected' : ''}>${escape(label)}</option>`;
 
-  // The models an agent lists, free ones first; its CLI's own default comes first of all.
-  function modelOptionsHTML(agent, current) {
-    const models = [...(agent.models || [])];
-    for (const id of [agent.suggested, current]) if (id && !models.some(model => model.id === id)) models.unshift({id});
-    const label = model => `${model.label || model.id}${model.default ? ' (its default)' : ''}`;
-    const free = models.filter(model => model.free);
-    const rest = models.filter(model => !model.free);
-    const list = items => items.map(model => optionHTML(model.id, label(model), current)).join('');
-    return optionHTML('', 'Default model', current) + (free.length ? `<optgroup label="Free">${list(free)}</optgroup><optgroup label="Other models">${list(rest)}</optgroup>` : list(rest));
-  }
+  // A real choice rather than "default": the model the CLI runs when given none, when it says;
+  // else the one suggested for it; else the first it lists. null only when it lists none.
+  const chosenModel = agent => agent.default_model || (agent.models || []).find(model => model.default)?.id || agent.suggested || agent.models?.[0]?.id || null;
 
   // The efforts the chosen model takes (Codex says per model), else the agent's, else every effort its
-  // models take (for its default model); '' when it has none.
+  // models take; [] when it has none.
   function effortLevels(agent, model) {
     const listed = (agent.models || []).find(entry => entry.id === model)?.efforts;
     if (listed?.length) return listed;
     if (agent.efforts?.length) return agent.efforts;
     return [...new Set((agent.models || []).flatMap(entry => entry.efforts || []))];
   }
+  // The effort the CLI would use with that model, when it says; else medium; else the first.
+  function chosenEffort(agent, model) {
+    const levels = effortLevels(agent, model);
+    const said = [agent.default_effort, (agent.models || []).find(entry => entry.id === model)?.default_effort].find(level => levels.includes(level));
+    return said || (levels.includes('medium') ? 'medium' : levels[0] || null);
+  }
+  // An adversary with every choice made: what was saved, or what the CLI would pick.
+  function settle(agent, entry) {
+    const model = entry.model || chosenModel(agent);
+    const levels = effortLevels(agent, model);
+    return {...entry, model, effort: levels.includes(entry.effort) ? entry.effort : chosenEffort(agent, model)};
+  }
+
+
+  // The models an agent lists, free ones first, the CLI's own default marked.
+  function modelOptionsHTML(agent, current) {
+    const models = [...(agent.models || [])];
+    for (const id of [agent.suggested, current]) if (id && !models.some(model => model.id === id)) models.unshift({id});
+    if (!models.length) return optionHTML('', 'Its default model', current);
+    const pick = current ? '' : optionHTML('', 'Pick a model', '');
+    const fallback = agent.default_model || models.find(model => model.default)?.id;
+    const label = model => `${model.label || model.id}${model.id === fallback ? ' · default' : ''}`;
+    const free = models.filter(model => model.free);
+    const rest = models.filter(model => !model.free);
+    const list = items => items.map(model => optionHTML(model.id, label(model), current)).join('');
+    return pick + (free.length ? `<optgroup label="Free">${list(free)}</optgroup><optgroup label="Other models">${list(rest)}</optgroup>` : list(rest));
+  }
+
+  // The efforts the chosen model takes; '' when it has none.
   function effortOptionsHTML(agent, model, current) {
     const levels = effortLevels(agent, model);
     if (!levels.length) return '';
-    return optionHTML('', 'Default effort', current) + levels.map(level => optionHTML(level, level.charAt(0).toUpperCase() + level.slice(1), current)).join('');
+    return levels.map(level => optionHTML(level, level.charAt(0).toUpperCase() + level.slice(1), current)).join('');
   }
 
   // The Adversaries section of the agent card. catalog: the agent CLIs the server found (null while it looks).
@@ -284,9 +306,11 @@ globalThis.LiveTools = (() => {
     const on = slug => adversaries.find(entry => entry.agent === slug);
     // Rows keep their place when switched, so nothing moves under the pointer; the line below says the order.
     const rows = installed.map(agent => {
-      const entry = on(agent.slug);
-      const status = agentStatus(agent, now);
+      const saved = on(agent.slug);
       const self = agent.slug === author;
+      // The agent running the review keeps "no model" until the reviewer picks one: it is what skips it.
+      const entry = saved && (self && !saved.model ? saved : settle(agent, saved));
+      const status = agentStatus(agent, now);
       const effort = entry ? effortOptionsHTML(agent, entry.model, entry.effort) : '';
       const note = self ? (entry && !entry.model ? '<p class="dcr-adv-note is-warn">Runs this review, so it is skipped until you pick a model.</p>' : '<p class="dcr-adv-note">Runs this review: it checks itself only on a model you pick.</p>') : '';
       const tune = entry ? `<div class="dcr-adv-tune"><select class="select select-xs" data-dcr-adv-model aria-label="${escape(agent.name)} model">${modelOptionsHTML(agent, entry.model)}</select>${effort ? `<select class="select select-xs" data-dcr-adv-effort aria-label="${escape(agent.name)} effort">${effort}</select>` : ''}</div>` : '';
@@ -305,5 +329,5 @@ globalThis.LiveTools = (() => {
 
   return {escape, progressKey, allComments, sendText, drafts, statusText, statusModel, actionLabel, markdown, snippet, relativeTime, messagesHTML, unseen, agentModel, summary,
     agentInfo, avatarHTML, verdictHTML, verdicts, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
-    activeAdversaries, facesHTML, agentStatus, modelOptionsHTML, effortLevels, effortOptionsHTML, adversaryPanelHTML};
+    activeAdversaries, facesHTML, agentStatus, modelOptionsHTML, effortLevels, effortOptionsHTML, chosenModel, chosenEffort, settle, adversaryPanelHTML};
 })();
