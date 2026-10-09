@@ -18,8 +18,9 @@ from its original snapshot and analysis when refreshing presentation only.
   text or an accessible label. Do not replace them with Unicode approximations or
   hand-drawn symbols. Add any new icons from the pinned upstream CDN release to
   `assets/vendor/lucide/`; normal reviews never download assets.
-- Reuse `assets/icon.svg` for the skill identity. The renderer embeds this same
-  code-and-checkmark mark in the header; keep it crisp at 28px, without a second
+- Reuse `assets/icon.svg` for the skill identity: white brackets around one purple dot
+  (a spot in the code under review) on a near-black tile. The renderer embeds this same
+  mark in the header and as the favicon; keep it crisp at 16 and 28px, without a second
   background tile or a repeated product name. The review title owns the header. Do not substitute emoji or regenerate the logo per review.
 - Desktop sidebar: 320px, increasing to 340px on wide screens. Each step occupies
   the available sidebar width and wraps its title. Keep viewed-file counts and comment
