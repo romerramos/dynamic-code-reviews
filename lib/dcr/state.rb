@@ -224,14 +224,16 @@ module DCR
     def add_opinion(key, id, agent, body, verdict: nil, adversary: false)
       agent = Agents.check(agent)
       update do |state|
-        thread = thread(state, key, id)
-        thread['waiting_on'] = Array(thread['waiting_on']) - [agent]
-        # Asked again, an agent's newer answer replaces its earlier one.
-        thread['opinions']&.delete(agent)
-        if adversary
-          thread['messages'].reject! { |message| message['role'] == 'adversary' && message['agent'] == agent }
-          add_message(state, key, id, 'agent', body, agent: agent, role: 'adversary', verdict: verdict)
-        else (thread['opinions'] ||= {})[agent] = {'id' => SecureRandom.hex(6), 'body' => text(body), 'verdict' => verdict, 'at' => Time.now.utc.iso8601}.compact
+        awaiting(state, key, id, agent).each do |copy|
+          thread = thread(state, copy, id)
+          thread['waiting_on'] = Array(thread['waiting_on']) - [agent]
+          # Asked again, an agent's newer answer replaces its earlier one.
+          thread['opinions']&.delete(agent)
+          if adversary
+            thread['messages'].reject! { |message| message['role'] == 'adversary' && message['agent'] == agent }
+            add_message(state, copy, id, 'agent', body, agent: agent, role: 'adversary', verdict: verdict)
+          else (thread['opinions'] ||= {})[agent] = {'id' => SecureRandom.hex(6), 'body' => text(body), 'verdict' => verdict, 'at' => Time.now.utc.iso8601}.compact
+          end
         end
       end
     end
@@ -239,12 +241,21 @@ module DCR
     def opinion_failed(key, id, agent, reason, adversary: false)
       agent = Agents.check(agent)
       update do |state|
-        thread = thread(state, key, id)
-        thread['waiting_on'] = Array(thread['waiting_on']) - [agent]
-        # A failed retry keeps the earlier answer; only a first failure is shown.
-        next if thread['messages'].any? { |message| message['role'] == 'adversary' && message['agent'] == agent } || thread.dig('opinions', agent, 'body')
-        (thread['opinions'] ||= {})[agent] = {'error' => reason.to_s.strip[0, 300], 'role' => (adversary ? 'adversary' : nil), 'at' => Time.now.utc.iso8601}.compact
+        awaiting(state, key, id, agent).each do |copy|
+          thread = thread(state, copy, id)
+          thread['waiting_on'] = Array(thread['waiting_on']) - [agent]
+          # A failed retry keeps the earlier answer; only a first failure is shown.
+          next if thread['messages'].any? { |message| message['role'] == 'adversary' && message['agent'] == agent } || thread.dig('opinions', agent, 'body')
+          (thread['opinions'] ||= {})[agent] = {'error' => reason.to_s.strip[0, 300], 'role' => (adversary ? 'adversary' : nil), 'at' => Time.now.utc.iso8601}.compact
+        end
       end
+    end
+
+    # The key the agent was asked under, plus the same-code revisions that carried the thread
+    # forward while the answer was on its way: each copy still waits on the agent.
+    def awaiting(state, key, id, agent)
+      series = key.sub(/:\d+\z/, ':')
+      [key] | state['threads'].select { |name, threads| name.start_with?(series) && Array(threads.dig(id, 'waiting_on')).include?(agent) }.keys
     end
 
     def finish(key)

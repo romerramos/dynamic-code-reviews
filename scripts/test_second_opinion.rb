@@ -129,3 +129,18 @@ Dir.mktmpdir('dcr-opinions') do |series|
   assert(again.dig('opinions', 'grok', 'body') == 'Fine.', 'A failed retry keeps the answer already given')
 end
 puts 'PASS a posted comment gets the second reviewer in its conversation and the others beside it, failures included'
+
+Dir.mktmpdir('dcr-carried') do |series|
+  state = DCR::State.new(series)
+  first, second = [1, 2].map { |number| DCR::State.review_key('f00d', 'job', number) }
+  state.post_comments(first, [comment.merge('agent' => 'claude')])
+  state.await_opinions(first, 'c1', 'codex', ['grok'])
+  state.carry_forward('job', [{'number' => 1, 'fingerprint' => 'f00d'}, {'number' => 2, 'fingerprint' => 'f00d'}])
+  state.add_opinion(first, 'c1', 'codex', "Agree\nIt is bounded.", verdict: 'agree', adversary: true)
+  state.opinion_failed(first, 'c1', 'grok', 'Grok is not signed in.')
+  [first, second].each do |key|
+    thread = state.read.dig('threads', key, 'c1')
+    assert(thread['waiting_on'] == [] && thread['messages'].map { |message| message['agent'] } == ['codex'] && thread.dig('opinions', 'grok', 'error'), "Revision #{key[-1]} still waits or misses the answer: #{thread}")
+  end
+end
+puts 'PASS an answer that arrives after the thread was carried to a new revision reaches every copy'
