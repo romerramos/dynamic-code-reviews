@@ -394,6 +394,9 @@ html[data-theme="dark"]{--dcr-agree:#4cc38a;--dcr-partly:#e0a94a;--dcr-disagree:
 .dcr-compose .dcr-adv-toggle{height:30px;align-self:flex-end}
 .dcr-reply .dcr-actions .dcr-adv-toggle{margin-left:auto;align-self:center}
 [data-dcr-act]+.dcr-adv-toggle{align-self:center}
+/* In the code's composer it sits before Ask agent, and only when the comment is for your agent. */
+#inline-composer .dcr-adv-toggle{align-self:center;height:30px}
+#inline-composer:not([data-mode="agent"]) .dcr-adv-toggle{display:none}
 @media(prefers-reduced-motion:reduce){.dcr-adv-toggle,.dcr-adv-toggle .dcr-face{transition:none}}
 
 /* The Adversaries section of the agent card. */

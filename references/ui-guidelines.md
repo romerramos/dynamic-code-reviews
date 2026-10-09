@@ -98,8 +98,8 @@ from its original snapshot and analysis when refreshing presentation only.
   them says who answers in the conversation and who beside it. The chip shows the adversaries
   on as small marks after a plus, and nothing when none is on.
 - A question asks them only through its **+**: their overlapping marks, grey and dashed until
-  ticked, solid accent once ticked. It sits beside Ask agent before the first send and in the
-  reply field after it, appears only when an adversary can answer, and starts unticked on
+  ticked, solid accent once ticked. It sits before Ask agent in the code's composer (Ask agent
+  mode only), beside Ask agent on a comment before its first send, and in the reply field after it, appears only when an adversary can answer, and starts unticked on
   every message, so nothing spends the reviewer's accounts by accident.
 
 ## The running app (App view)

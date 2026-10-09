@@ -37,6 +37,7 @@
   let catalogError = '';
   const withAdversaries = new Set(); // thread ids whose next message asks the adversaries too
   const askable = () => tools.activeAdversaries(adversaries, listener, catalog);
+  const COMPOSER = 'composer'; // the + in the code's composer, before its comment has an id
   // Everything here lives inside the observed #content, so write only real changes or the
   // observer would re-trigger itself.
   const set = (node, property, value) => { if (node[property] !== value) node[property] = value; };
@@ -287,7 +288,8 @@
     if (advToggle) {
       const id = advToggle.dataset.dcrAdvFor;
       if (!withAdversaries.delete(id)) withAdversaries.add(id);
-      document.querySelectorAll(`.dcr-thread[data-dcr="${CSS.escape(id)}"]`).forEach(refreshBlock);
+      if (id === COMPOSER) syncComposerAdv();
+      else document.querySelectorAll(`.dcr-thread[data-dcr="${CSS.escape(id)}"]`).forEach(refreshBlock);
       return;
     }
     const button = event.target.closest('[data-dcr-act]');
@@ -805,10 +807,16 @@
   }
 
   // The composer in the code gets its Ask agent mode: save, then hand the comment to your agent.
-  window.ReviewComposer?.setSender(async id => {
+  // Its + belongs to the comment it is about to make, so a tick moves to that comment when it is sent.
+  const composerForm = window.ReviewComposer?.setSender(async id => {
+    if (withAdversaries.delete(COMPOSER)) withAdversaries.add(id);
+    syncComposerAdv();
     try { const asked = await sendComment(id); flash(sentWith(tools.statusModel(threads[id], listening)?.text || 'Saved and sent to your agent.', asked)); }
     catch (error) { flash(`Saved, but not sent: ${error.message}`); }
   });
+  const composerSend = composerForm?.querySelector?.('[data-composer-send]');
+  composerSend?.insertAdjacentHTML('beforebegin', advToggleHTML);
+  const syncComposerAdv = () => { if (composerSend) syncAdvToggles([composerSend.previousElementSibling], COMPOSER, true); };
 
   // 2. A quiet reminder wherever you are, until the comment is sent. Your review shows the same
   //    action itself, so the reminder steps aside while that panel is open.
@@ -1022,6 +1030,7 @@
     presence.setAttribute('aria-label', `${text.textContent}. ${model.hint}${checkedBy}`);
     renderPresenceCard(model);
     renderAdversaries();
+    syncComposerAdv();
   };
   const placePresenceCard = () => {
     const box = presence.getBoundingClientRect();

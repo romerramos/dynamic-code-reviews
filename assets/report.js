@@ -407,7 +407,8 @@
     if (!stored) toast('Browser storage is unavailable. Copy or export your review before closing.');
     else if (message !== false) toast(message || 'Your comment is saved in this browser.');
   }
-  window.ReviewComposer = {setSender(fn) { composer.sender = fn; composerNode(); syncComposerMode(); }};
+  // The served review asks the agent through this; it gets the composer back to add its own controls.
+  window.ReviewComposer = {setSender(fn) { composer.sender = fn; const form = composerNode(); syncComposerMode(); return form; }};
 
   // Dragging over line numbers selects a range; the composer opens when the pointer is released.
   document.addEventListener('pointerdown', event => {
