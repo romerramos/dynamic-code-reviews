@@ -59,6 +59,10 @@
   addEventListener('popstate', route);
   addEventListener('hashchange', route);
   document.addEventListener('turbo:load', route);
+  // The review's Back and Forward act on this frame's own entries; the Navigation API in a frame
+  // sees only those, so they can never take the review page itself back.
+  const ownHistory = () => ({back: !!window.navigation?.canGoBack, forward: !!window.navigation?.canGoForward});
+  window.navigation?.addEventListener('currententrychange', () => post('history', ownHistory()));
 
   // --- the agent's pointer, while the agent records ---------------------------------------------
   // An agent driving the app through the DevTools protocol sends real input events but never moves
@@ -200,11 +204,13 @@
     if (message.type === 'mode') setMode(message.mode === 'comment' ? 'comment' : 'browse');
     else if (message.type === 'highlight') highlight(message.selector, message.scroll !== false);
     else if (message.type === 'pointer') pointerOn(!!message.on);
-    else if (message.type === 'hello') post('ready', {path: here(), title: document.title, left: document.querySelector('meta[name="dcr-left"]')?.content || null});
+    else if (message.type === 'hello') post('ready', {path: here(), title: document.title, left: document.querySelector('meta[name="dcr-left"]')?.content || null, ...ownHistory()});
+    else if (message.type === 'back' && window.navigation?.canGoBack) window.navigation.back();
+    else if (message.type === 'forward' && window.navigation?.canGoForward) window.navigation.forward();
   });
   addEventListener('scroll', () => { if (mode === 'comment' && hovered) outline(hovered); }, true);
 
-  const ready = () => { lastRoute = here(); post('ready', {path: lastRoute, title: document.title, left: document.querySelector('meta[name="dcr-left"]')?.content || null}); };
+  const ready = () => { lastRoute = here(); post('ready', {path: lastRoute, title: document.title, left: document.querySelector('meta[name="dcr-left"]')?.content || null, ...ownHistory()}); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready, {once: true});
   else ready();
 })();

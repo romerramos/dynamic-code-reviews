@@ -271,7 +271,7 @@ globalThis.LiveTools = (() => {
     return optionHTML('', 'Default effort', current) + levels.map(level => optionHTML(level, level.charAt(0).toUpperCase() + level.slice(1), current)).join('');
   }
 
-  // The Adversaries section of the agent card. catalog: what /api/agents found (null while it looks).
+  // The Adversaries section of the agent card. catalog: the agent CLIs the server found (null while it looks).
   function adversaryPanelHTML({catalog, adversaries = [], author = null, error = '', now = Date.now()}) {
     const refresh = `<button type="button" class="icon-button dcr-adv-recheck" data-dcr-adv-recheck aria-label="Look for agents again" title="Look again"${catalog ? '' : ' disabled'}>${globalThis.ReviewIcons?.['refresh-cw']?.replace('<svg', '<svg aria-hidden="true" focusable="false"') || '↻'}</button>`;
     const active = activeAdversaries(adversaries, author, catalog);

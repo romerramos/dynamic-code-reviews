@@ -112,7 +112,8 @@ thing: recording now (a red dot on **Record**, a red pill reading **Stop m:ss** 
 
 - **Header**: with an app, the header actions start with the **Code | App | Previews**
   switch (Previews with its template count); the old header Previews button and the
-  reading-bar App button are not shown. The App view's bar starts with the same switch.
+  reading-bar App button are not shown. The App view covers the page and has no switch of
+  its own: its close (or Escape) is the way back to the code.
   The agent's state is a dot on Your review, its words in that button's tooltip.
 - **Try the change** (Overview, right after What changed): a 300px live miniature of the
   app (real page, inert, loaded when on screen, green dot once it answers) beside one
@@ -137,8 +138,9 @@ thing: recording now (a red dot on **Record**, a red pill reading **Stop m:ss** 
   modal names what was recorded, the revision that holds it (replacing the previous QA
   review's recordings) and the agent's report, says the tab is free again, and offers
   **See the clips in revision N** (reloads to the latest revision) or Close.
-- **Bar**: title, an address field (host muted, page editable, recent pages, reload and
-  open-in-a-tab inside the field), Browse/Comment, device widths (hidden below 900px;
+- **Bar**: title, an address field (Back and Forward first, which move the app's own history
+  only, never the review's; host muted, page editable, recent pages, reload and open-in-a-tab
+  inside the field; one focus ring, the field's), Browse/Comment, device widths (hidden below 900px;
   Browse/Comment never are), Record, Still (only while this tab is shared), **On this app**
   with a count, close. Opening focuses the dialog, not the address field.
 - **Comment where you see it**: in Comment mode a click picks the control under the

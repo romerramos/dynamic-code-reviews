@@ -46,7 +46,7 @@ module DCR
 
     QA_RULE = <<~TEXT.strip
       QA REQUEST. Record visual evidence in the review tab the reviewer shared, then attach it.
-      You may operate the running app in that tab, run `dcr record` and `dcr evidence attach`, read files and run read-only commands. Do not edit, create or delete anything in the project, and do not run formatters, generators, migrations, installs or git commands that change anything. Use only development data; never record credentials or unrelated screens.
+      You may operate the running app in that tab, run `dcr record` and `dcr evidence attach`, read files and run read-only commands. You may also add the records the flows need to the development database (through the app, or the project's seeds, factories or console run against development) and update the QA notes file the request names. Do not edit, create or delete files in the project, and do not run formatters, generators, migrations, installs or git commands that change anything. Use only development data; never record credentials or unrelated screens.
     TEXT
 
     USAGE = {
@@ -168,7 +168,7 @@ module DCR
       out << 'Then run `dcr wait` again for the next round.' unless finish
       out << 'Finish received: send any outstanding replies, then stop waiting unless the reviewer asks for another round.' if finish
       out << if conversation then 'Reminder: reply only. No file changes, no commits, no pushes.'
-             elsif qas.any? then 'Reminder: record and attach only. No changes to the project, no commits, no pushes.'
+             elsif qas.any? then 'Reminder: record and attach only, with development data you add as needed. No changes to the project\'s files, no commits, no pushes.'
              else 'Reminder: submit HTML only, change nothing in the project.'
              end
       out.join("\n\n")

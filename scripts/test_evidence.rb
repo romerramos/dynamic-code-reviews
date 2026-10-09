@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 # Run with ruby scripts/test_evidence.rb. Uses a disposable git repository and series.
 ENV['DCR_FOCUS'] = '0' # never raise the reader's browser from a test
+require 'tmpdir'
+ENV['DCR_CONFIG_DIR'] = Dir.mktmpdir('dcr-config') # never touch the real user settings or QA notes
 require 'base64'
 require 'open3'
 require 'timeout'
@@ -158,6 +160,10 @@ ReviewChecks.fixture do |root, _commit|
     assert(qa_id&.start_with?('app-qa-') && queued['kind'] == 'qa' && queued['thread_ids'] == [qa_id], "A QA request must be queued as its own kind: #{answer[0, 200]}")
     assert(queued['text'].include?('app-old1: on /inbox') && queued['text'].include?('The Filters button looks off'), 'Comments on the app must be listed, also ones made before anchors had a kind')
     assert(queued['text'].include?("record --out #{captures}") && queued['text'].include?('value-note') && queued['text'].include?("reply --repo") && queued['text'].include?(qa_id), 'The QA request must name the recorder folder, the comments and its thread')
+    notes = queued['text'][/QA notes: (\S+)/, 1]
+    assert(notes&.start_with?(File.join(ENV['DCR_CONFIG_DIR'], 'qa-notes')) && notes == DCR::QARequest.notes_path(ReviewSeries.manifest(series_dir)['repo']), "QA notes live outside the project, one file per repository: #{notes}")
+    assert(queued['text'].include?('Sign in as the right person, without guessing') && queued['text'].include?('Make the data each flow needs') && queued['text'].include?('An issue the review only inferred is worth recording most'), 'The QA request must prepare the sign-in and the data, and record inferred issues')
+    assert(queued['text'].include?("arrows at the left of the App view's address field"), 'The QA request must say how to go Back without leaving the review')
     printed = DCR::LiveCLI.render([queued], '--repo r --name s')
     assert(printed.start_with?('QA REQUEST.') && !printed.include?('REPLY ONLY') && printed.include?('record and attach only'), 'dcr wait must hand a QA request over as a task')
     server.close

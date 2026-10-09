@@ -25,6 +25,8 @@
     desktop: svg('<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/>'),
     panel: svg('<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/>'),
     camera: svg('<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>'),
+    back: svg('<path d="m15 18-6-6 6-6"/>'),
+    forward: svg('<path d="m9 18 6-6-6-6"/>'),
     send: svg('<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>')
   };
 
@@ -46,8 +48,9 @@
       </div>
       <div class="dcr-app-lead">
         <h2 id="dcr-app-title" class="dcr-visually-hidden">The running app</h2>
-        <nav class="dcr-views" aria-label="Look at the change" data-views></nav>
         <form class="dcr-app-address" autocomplete="off">
+          <button type="button" class="dcr-app-icon" data-app-back disabled aria-label="Back in the app" title="Back, in the app only">${icons.back}</button>
+          <button type="button" class="dcr-app-icon" data-app-forward disabled aria-label="Forward in the app" title="Forward, in the app only">${icons.forward}</button>
           <span class="dcr-app-host" title="${esc(app.upstream)}">${esc(app.upstream.replace(/^https?:\/\//, ''))}</span>
           <input name="path" list="dcr-app-recent" spellcheck="false" aria-label="Page in the app" value="${esc(app.start)}">
           <datalist id="dcr-app-recent"></datalist>
@@ -101,11 +104,10 @@
   const compose = $('[data-app-compose]');
   const rail = $('.dcr-app-rail');
   const list = $('.dcr-app-list');
-  $('[data-views]').innerHTML = '';
 
   // --- Code | App | Previews: three ways to look at the change, side by side in the header -----
-  // The reading bar below stays about reading code. The same switch heads the App view, so the
-  // reader can move between the three without hunting for buttons.
+  // The reading bar below stays about reading code. The App view covers the page, so it has no
+  // switch of its own: closing it (or Esc) is the way back to the code.
   const previewButton = document.getElementById('preview-list-toggle');
   const templateCount = new Set((() => { try { return JSON.parse(document.getElementById('data').textContent).snapshot.files; } catch { return []; } })()
     .filter(file => window.ReviewTools?.previewEligible(file)).map(file => file.path.split('/').pop().replace(/\.html\.erb$|\.rb$/, ''))).size;
@@ -167,6 +169,12 @@
     placeCompose();
   };
 
+  // Back and Forward move the app's own history only (the frame's, through the Navigation API),
+  // never the review's: a flow that needs the browser's Back can be shown, and recorded, here.
+  const appHistory = ({back = false, forward = false}) => {
+    $('[data-app-back]').disabled = !back;
+    $('[data-app-forward]').disabled = !forward;
+  };
   window.addEventListener('message', event => {
     if (event.origin !== app.origin || event.source !== frame.contentWindow || event.data?.source !== 'dcr-app') return;
     const message = event.data;
@@ -177,6 +185,7 @@
       left = message.left;
       $('[data-app-mode="comment"]').disabled = !!left;
       setRoute(message.path);
+      appHistory(message);
       if (left) status('work', `The app went to ${left}, outside ${app.upstream}. Open it in a new tab, or go back.`);
       setMode(pendingMode || mode);
       pendingMode = null;
@@ -185,6 +194,8 @@
     } else if (message.type === 'route') {
       setRoute(message.path);
       if (mode === 'browse') status('ok', connected());
+    } else if (message.type === 'history') {
+      appHistory(message);
     } else if (message.type === 'pick') {
       openCompose(message);
     } else if (message.type === 'rect' && picked) {
@@ -196,6 +207,7 @@
   });
   frame.addEventListener('load', () => {
     ready = false;
+    appHistory({});
     clearTimeout(readyTimer);
     post({type: 'hello'});
     // The agent answers within a moment on any page the proxy could inject into.
@@ -708,6 +720,8 @@
   input.addEventListener('blur', () => { delete input.dataset.edited; input.value = route; });
   address.addEventListener('submit', event => { event.preventDefault(); delete input.dataset.edited; navigate(input.value.trim() || '/'); });
   $('[data-app-reload]').addEventListener('click', () => navigate(route));
+  $('[data-app-back]').addEventListener('click', () => post({type: 'back'}));
+  $('[data-app-forward]').addEventListener('click', () => post({type: 'forward'}));
   $('[data-app-close]').addEventListener('click', () => dialog.close());
   dialog.querySelectorAll('[data-app-mode]').forEach(button => button.addEventListener('click', () => setMode(button.dataset.appMode)));
   dialog.querySelectorAll('[data-app-width]').forEach(button => button.addEventListener('click', () => setWidth(button.dataset.appWidth)));
@@ -732,8 +746,6 @@
     openRail(read(railKey, false));
     refresh();
   };
-  $('[data-views]').innerHTML = viewsHTML('app');
-  $('[data-views]').addEventListener('click', event => { const button = event.target.closest('[data-view]'); if (button) showView(button.dataset.view); });
   // For the Overview band: open the app, optionally straight into Comment or recording. Record must
   // run inside the reader's click, which still counts as their gesture for the share prompt.
   window.DCRApp = {

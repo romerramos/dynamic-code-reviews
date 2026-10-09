@@ -27,17 +27,22 @@ body.dcr-has-views #preview-list-toggle{display:none!important}
 dialog.dcr-app{grid-template-rows:auto minmax(0,1fr) auto}
 .dcr-app .stage-bar{gap:12px;padding:10px 12px 10px 16px}
 .dcr-app-lead{display:flex;align-items:center;gap:10px;flex:1 1 auto;min-width:0}
-.dcr-app-lead .dcr-views{flex:none}
 .dcr-app-address{display:flex;align-items:center;flex:1 1 auto;min-width:0;max-width:620px;height:34px;padding:0 3px 0 12px;border:1px solid var(--line);border-radius:9px;background:var(--canvas);font:13px/1 var(--mono)}
 .dcr-app-address:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 .dcr-app-host{flex:none;max-width:42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
-.dcr-app-address input,.dcr-app-address input:focus,.dcr-app-address input:focus-visible{outline:0;border:0;box-shadow:none}
+/* The field's own ring is the address bar's; the dialog's focus outline would draw a second box inside it. */
+.dcr-app .dcr-app-address input,.dcr-app .dcr-app-address input:focus,.dcr-app .dcr-app-address input:focus-visible{outline:0;border:0;box-shadow:none}
 dialog.dcr-app:focus{outline:0}
 .dcr-app-address input::-webkit-calendar-picker-indicator{display:none!important}
 .dcr-app-address input{flex:1 1 auto;min-width:0;height:100%;padding:0 6px 0 1px;border:0;outline:0;background:transparent;color:var(--ink);font:inherit}
 .dcr-app-icon{display:inline-grid;place-items:center;flex:none;width:30px;height:30px;padding:0;border:0;border-radius:7px;background:transparent;color:var(--muted);cursor:pointer}
 .dcr-app-icon:hover{background:color-mix(in oklab,var(--ink) 7%,transparent);color:var(--ink)}
 .dcr-app-icon:disabled{opacity:.45;cursor:not-allowed}
+/* Back and Forward lead the address bar, like a browser's, a hairline apart from the address. */
+.dcr-app-address:has([data-app-back]){padding-left:3px}
+.dcr-app-address [data-app-back],.dcr-app-address [data-app-forward]{width:26px;height:28px}
+.dcr-app-address [data-app-forward]{margin-right:6px}
+.dcr-app-address .dcr-app-icon:disabled{opacity:.3;cursor:default;background:none}
 .dcr-app .stage-sizes button:disabled{opacity:.45;cursor:not-allowed}
 .dcr-app :is(button,a,input,textarea,select):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
