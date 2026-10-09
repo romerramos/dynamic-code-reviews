@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 ENV['DCR_FOCUS'] = '0' # never raise the reader's browser from a test
 require 'tmpdir'
+ENV['DCR_CONFIG_DIR'] ||= Dir.mktmpdir('dcr-config') # never read or write the reviewer's own settings, adversaries or notes
 require_relative '../lib/dcr/server'
 require_relative '../lib/dcr/page'
 

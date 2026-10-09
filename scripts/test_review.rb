@@ -3,6 +3,7 @@
 
 # Run with ruby scripts/test_review.rb. No gems or application database needed.
 require 'tmpdir'
+ENV['DCR_CONFIG_DIR'] ||= Dir.mktmpdir('dcr-config') # never read or write the reviewer's own settings, adversaries or notes
 require_relative 'review'
 
 module ReviewChecks

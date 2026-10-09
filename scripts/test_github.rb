@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 # Run with ruby scripts/test_github.rb. Stdlib only; a stand-in `gh` records every call, so nothing
 # reaches GitHub.
+require 'tmpdir'
+ENV['DCR_CONFIG_DIR'] ||= Dir.mktmpdir('dcr-config') # never read or write the reviewer's own settings, adversaries or notes
 require 'json'
 require 'tmpdir'
 require 'fileutils'
