@@ -181,14 +181,15 @@ rescue ArgumentError
   nil
 end
 # `dcr serve --app`: the review frames only the proxy, and loads the App view.
-require_relative 'qa_capture'
+require_relative '../lib/dcr/server'
+require_relative '../lib/dcr/page'
 port = app_server
 Dir.mktmpdir('dcr-serve-app') do |directory|
   ENV['DCR_CONFIG_DIR'] = File.join(directory, 'config')
   report = File.join(directory, 'series', 'current.html')
   FileUtils.mkdir_p(File.dirname(report))
-  File.write(report, %(<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'"><title>Review</title></head><body></body></html>))
-  server = QACapture::Server.new(directory: File.join(directory, 'captures'), report: report, app: "http://localhost:#{port}/page")
+  File.write(report, DCR::Page.review({'snapshot' => {}, 'review' => {}}))
+  server = DCR::Server.new(directory: File.join(directory, 'captures'), report: report, app: "http://localhost:#{port}/page")
   Thread.new { server.run }
   review = Struct.new(:port).new(server.port)
   head, html = fetch(review, 'GET', '/?app')
@@ -202,11 +203,11 @@ Dir.mktmpdir('dcr-serve-app') do |directory|
   server.close
 
   # A restart comes back at the same address and token, so an open page keeps working.
-  again = QACapture::Server.new(directory: File.join(directory, 'captures'), report: report, app: "http://localhost:#{port}/page")
+  again = DCR::Server.new(directory: File.join(directory, 'captures'), report: report, app: "http://localhost:#{port}/page")
   assert([again.port, again.token, again.app_url] == [server.port, server.token, server.app_url], 'A restarted review must keep its port, token and app address')
   assert(File.stat(File.join(directory, 'series', '.serve.json')).mode & 0o777 == 0o600, 'The saved token must be private')
   # While that address is taken, a second server still starts, on another port.
-  other = QACapture::Server.new(directory: File.join(directory, 'captures2'), report: report, app: "http://localhost:#{port}/page")
+  other = DCR::Server.new(directory: File.join(directory, 'captures2'), report: report, app: "http://localhost:#{port}/page")
   assert(other.port != again.port && other.app_url != again.app_url, 'A taken port must fall back to a free one')
   [again, other].each(&:close)
 end

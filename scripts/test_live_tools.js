@@ -131,3 +131,44 @@ assert.deepEqual(tools.unseen({t:threadWith}, new Set(['m1'])), [{thread:'t', id
 assert.deepEqual(tools.unseen({t:threadWith}, new Set(['m2'])), []);
 assert.equal(tools.messagesHTML(undefined), '');
 console.log('PASS the conversation renders as an escaped thread with New on unseen agent messages only');
+
+// --- who wrote it, and what the other agents think ---------------------------------------------------
+globalThis.ReviewBrands = {codex:'<svg data-mark="codex"></svg>'};
+assert.equal(tools.agentInfo('codex').name, 'Codex');
+assert.equal(tools.agentInfo('codex').company, 'OpenAI');
+assert.equal(tools.agentInfo('my-bot').name, 'My-bot', 'an unknown agent keeps its own name');
+assert.equal(tools.agentInfo(null).name, 'Agent', 'older messages stay "Agent"');
+assert.match(tools.avatarHTML('codex'), /data-mark="codex"/, 'a known agent shows its mark');
+assert.match(tools.avatarHTML('my-bot'), /<b>M<\/b>/, 'an agent with no bundled mark shows its letter');
+assert.equal(tools.agentInfo('antigravity').company, 'Google');
+
+const debated = {delivery:'draft', live:false, adversary:'codex', waiting_on:['gemini'],
+  messages:[{id:'m1', author:'agent', agent:'codex', role:'adversary', verdict:'disagree', body:'The cap is already enforced in `limit`.', at:'2026-10-09T10:00:00Z'}],
+  opinions:{grok:{id:'o1', body:'Looks right to me.', verdict:'agree', at:'2026-10-09T10:01:00Z'}, claude:{error:'Claude took longer than 5 minutes'}}};
+const thread = tools.messagesHTML(debated, {seen:new Set(['m1'])});
+assert.match(thread, /<strong>Codex<\/strong><span class="dcr-verdict dcr-v-disagree">.*Disagrees<\/span><span class="dcr-role">second reviewer<\/span>/s, 'the second reviewer is named, shows its verdict, then its role in plain text');
+assert.match(thread, /dcr-adversary dcr-v-disagree/);
+assert.match(tools.messagesHTML({messages:[{id:'r1', author:'agent', body:'ok'}]}, {agent:'claude'}), /<strong>Claude<\/strong>/, 'an unnamed reply takes the listening agent');
+assert.deepEqual(tools.tally(debated), {total:2, agree:1, partly:0, disagree:1});
+assert.equal(tools.tallyText(tools.tally(debated)), '1 agrees · 1 disagrees');
+const side = tools.opinionsHTML(debated);
+assert.match(side, /Other opinions/);
+assert.match(side, /data-dcr-opinion="grok" aria-expanded="false">.*<strong>Grok<\/strong><span class="dcr-op-verdict dcr-v-agree">.*Agree<\/span>.*dcr-op-snippet">Looks right to me\.</s, 'a side opinion is one row: its mark, name, verdict and the start of its answer');
+assert.match(side, /is-waiting[^>]*>.*Gemini.*is reading the code/s, 'an agent still reading shows as waiting');
+assert.match(side, /is-failed[^>]*>.*Claude.*did not answer/s, 'a failed agent says so, quietly');
+assert.doesNotMatch(side, /data-dcr-opinion="codex"/, 'the second reviewer is in the conversation, not among the rows');
+assert.match(side, /dcr-consensus dcr-v-partly">1 agrees · 1 disagrees</, 'the heading says how the whole panel came out');
+const opened = tools.opinionsHTML(debated, {open:['grok']});
+assert.match(opened, /aria-expanded="true">.*<\/button><div class="dcr-op-body dcr-body"><p>Looks right to me\.<\/p>/s, 'an open row shows the full answer under it');
+assert.equal((opened.match(/data-agent="grok"/g) || []).length, 1, 'an open opinion shows its mark once');
+assert.equal((opened.match(/<strong>Grok<\/strong>/g) || []).length, 1, 'and its name once');
+assert.equal(tools.consensus({total:2, agree:2, partly:0, disagree:0}), 'Everyone agrees');
+assert.equal(tools.opinionsHTML({messages:[]}), '', 'no opinions, no section');
+const checking = tools.statusModel({...debated, messages:[], waiting_on:['codex', 'gemini']}, true);
+assert.deepEqual([checking.text, checking.agent, checking.typing], ['Codex is checking this comment', 'codex', true]);
+assert.equal(tools.agentModel({}, true, Date.now(), {}, 'claude').text, 'Claude listening');
+const asked = tools.sendText(snapshot, review, comments[0], '', debated);
+assert.match(asked, /Second opinions from other agents:\n- Codex \(second reviewer, disagrees\): The cap is already enforced/);
+assert.match(asked, /- Grok \(agrees\): Looks right to me\./);
+assert.doesNotMatch(asked, /took longer/, 'failures are not sent as opinions');
+console.log('PASS agents are named with their marks; the second reviewer joins the conversation and the others are rows under it, each named once, sent along when you ask your agent');

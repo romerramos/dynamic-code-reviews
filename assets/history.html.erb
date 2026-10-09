@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+  <title><%= h name %> · Review history</title>
+  <link rel="icon" type="image/svg+xml" href="<%= favicon %>">
+  <style><%= styles %></style>
+</head>
+<body>
+  <main style="max-width:960px;margin:40px auto;padding:24px">
+    <div class="brand"><span class="brand-icon" aria-hidden="true"><%= icon %></span><strong>Dynamic Code Reviews</strong></div>
+    <h1 style="margin-top:30px"><%= h name %></h1>
+    <p class="lead"><%= revisions.length %> saved revisions · <%= h @history['branch'] %></p>
+    <p class="muted">Each revision preserves its original review and test results. Continue from the latest review to inspect the next increment.</p>
+<%- revisions.reverse_each do |entry| -%>
+    <article class="section-card card">
+      <span class="badge neutral">Revision <%= entry['number'] %></span>
+      <h2><%= h entry['title'] %></h2>
+      <p><%= h entry['summary'] %></p>
+      <p class="muted">Saved <%= h entry['created'] %> · code <%= h entry['head'].to_s[0, 8] %></p>
+      <a class="btn btn-sm btn-primary" href="<%= target(entry) %>"><%= latest?(entry) ? 'Latest review' : 'Open revision' %></a> <a class="btn btn-sm btn-ghost" href="<%= snapshot(entry) %>">Saved snapshot</a>
+    </article>
+<%- end -%>
+  </main>
+</body>
+</html>

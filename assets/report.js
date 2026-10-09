@@ -1137,10 +1137,18 @@
     ];
     return `${forAgent ? '' : ghSlot(comment, size)}${moreMenu(items, size)}`;
   }
+  // Who wrote a comment: its agent's mark and name. The served page credits replies the same way.
+  const AGENT_NAMES = {claude:'Claude', codex:'Codex', gemini:'Gemini', grok:'Grok', antigravity:'Antigravity', cursor:'Cursor', opencode:'opencode'};
+  function agentBadge(slug) {
+    if (!slug) return '';
+    const name = AGENT_NAMES[slug] || slug.charAt(0).toUpperCase() + slug.slice(1);
+    const mark = window.ReviewBrands?.[slug] || `<b>${escape(name.charAt(0))}</b>`;
+    return `<span class="thread-by" title="Written by ${escape(name)}">by<span class="agent-face" data-agent="${escape(slug)}" aria-hidden="true">${mark}</span>${escape(name)}</span>`;
+  }
   function threadBadges(comment) {
     if (comment.audience === 'agent') return `<span class="thread-type type-purple" title="A question for your agent. It stays in this review."><span class="thread-type-icon">${icon('sparkles')}</span>For your agent</span>${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}`;
     const [symbol, title, hint, tone] = commentTypes[comment.label] || commentTypes.note;
-    return `<span class="thread-type type-${tone}" title="${hint}"><span class="thread-type-icon">${icon(symbol)}</span>${title}</span><span class="thread-priority ${comment.decoration === 'blocking' ? 'is-blocking' : 'is-optional'}">${comment.decoration === 'blocking' ? `${icon('circle-alert')} Blocking` : 'Non-blocking'}</span>${comment.severity ? `<span class="thread-severity">${escape(comment.severity)}</span>` : ''}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${comment.personal ? '<span class="thread-author">Your comment</span>' : ''}${ghBadgeSlot(comment)}`;
+    return `<span class="thread-type type-${tone}" title="${hint}"><span class="thread-type-icon">${icon(symbol)}</span>${title}</span><span class="thread-priority ${comment.decoration === 'blocking' ? 'is-blocking' : 'is-optional'}">${comment.decoration === 'blocking' ? `${icon('circle-alert')} Blocking` : 'Non-blocking'}</span>${comment.severity ? `<span class="thread-severity">${escape(comment.severity)}</span>` : ''}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${comment.personal ? '<span class="thread-author">Your comment</span>' : agentBadge(comment.agent)}${ghBadgeSlot(comment)}`;
   }
   function commentCard(comment) {
     const found = ReviewTools.anchor(snapshot, comment);
@@ -1581,6 +1589,58 @@
   };
 
   function setLedger(open) { state.ledgerOpen = open; persist(); renderLedger(); }
+  // Your review is as wide as you drag it: its left edge is a handle (arrow keys work too, and a
+  // double click goes back to the default). The width is this browser's, for every review.
+  const LEDGER_WIDTH = 'dynamic-review:ledger-width';
+  const ledgerResize = $('ledger-resize');
+  const ledgerLimits = () => {
+    const wide = ledgerWide() && !document.body.classList.contains('zen');
+    return [280, Math.max(280, Math.min(760, wide ? window.innerWidth - 640 : window.innerWidth * 0.92))];
+  };
+  function setLedgerWidth(width, save = true) {
+    if (width == null) { document.body.style.removeProperty('--ledger-w'); ledgerResize?.removeAttribute('aria-valuenow'); }
+    else {
+      const [least, most] = ledgerLimits();
+      width = Math.round(Math.min(most, Math.max(least, width)));
+      document.body.style.setProperty('--ledger-w', `${width}px`);
+      ledgerResize?.setAttribute('aria-valuenow', width);
+    }
+    if (save) try { width == null ? localStorage.removeItem(LEDGER_WIDTH) : localStorage.setItem(LEDGER_WIDTH, String(width)); } catch { /* this visit only */ }
+  }
+  try { const width = Number(localStorage.getItem(LEDGER_WIDTH)); if (width) setLedgerWidth(width, false); } catch { /* default width */ }
+  if (ledgerResize) {
+    const [least, most] = ledgerLimits();
+    ledgerResize.setAttribute('aria-valuemin', least);
+    ledgerResize.setAttribute('aria-valuemax', Math.round(most));
+    ledgerResize.addEventListener('pointerdown', event => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      ledgerResize.setPointerCapture(event.pointerId);
+      document.body.classList.add('ledger-resizing');
+      const move = moved => setLedgerWidth(window.innerWidth - moved.clientX, false);
+      const done = () => {
+        document.body.classList.remove('ledger-resizing');
+        ledgerResize.removeEventListener('pointermove', move);
+        setLedgerWidth($('ledger').getBoundingClientRect().width);
+      };
+      ledgerResize.addEventListener('pointermove', move);
+      ledgerResize.addEventListener('pointerup', done, {once: true});
+      ledgerResize.addEventListener('pointercancel', done, {once: true});
+    });
+    // The hint follows the pointer up and down the edge.
+    ledgerResize.addEventListener('pointermove', event => { if (!document.body.classList.contains('ledger-resizing')) ledgerResize.style.setProperty('--tip-y', `${event.clientY - ledgerResize.getBoundingClientRect().top}px`); });
+    ledgerResize.addEventListener('dblclick', () => setLedgerWidth(null));
+    ledgerResize.addEventListener('keydown', event => {
+      const step = event.shiftKey ? 64 : 24;
+      const now = $('ledger').getBoundingClientRect().width;
+      if (event.key === 'ArrowLeft') setLedgerWidth(now + step);
+      else if (event.key === 'ArrowRight') setLedgerWidth(now - step);
+      else if (event.key === 'Home' || event.key === 'Escape') setLedgerWidth(null);
+      else return;
+      event.preventDefault();
+    });
+    window.addEventListener('resize', () => { const width = parseFloat(document.body.style.getPropertyValue('--ledger-w')); if (width) setLedgerWidth(width, false); });
+  }
   $('ledger-toggle').onclick = () => setLedger(!ledgerOpen());
   $('ledger-close').onclick = () => setLedger(false);
   function ledgerClick(event) {

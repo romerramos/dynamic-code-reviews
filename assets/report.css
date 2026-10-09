@@ -628,6 +628,23 @@ html[data-syntax="dracula"][data-theme="light"]{--tok-comment:#6b7399;--tok-punc
 html[data-syntax="dracula"][data-theme="dark"]{--tok-comment:#6272a4;--tok-punct:#f8f8f2;--tok-keyword:#ff79c6;--tok-number:#bd93f9;--tok-string:#f1fa8c;--tok-prop:#8be9fd;--tok-func:#50fa7b;--tok-op:#ff79c6;--tok-regex:#ffb86c;--tok-tag:#ff79c6;--tok-builtin:#8be9fd;--tok-interp:#bd93f9;--tok-erb:#ffb86c}
 
 /* Dark surfaces. The derived dark rules at the end of the stylesheet cover fixed colours. */
+/* Agent marks in their company colours. Variables, so the derived dark theme leaves them as set. */
+:root{--agent-claude:#d97757;--agent-claude-bg:#f8e7df;--agent-codex:#0d0d0d;--agent-codex-bg:#ececec;--agent-gemini:#7b61c0;--agent-gemini-bg:#ece9f7;--agent-grok:#ffffff;--agent-grok-bg:#111111;--agent-antigravity-bg:#eef1f6;--agent-other:var(--accent);--agent-other-bg:var(--accent-soft)}
+:is(.agent-face,.dcr-face){display:inline-grid;place-items:center;flex:none;border-radius:50%;background:var(--agent-other-bg);color:var(--agent-other)}
+:is(.agent-face,.dcr-face) svg{width:58%;height:58%;fill:currentColor}
+:is(.agent-face,.dcr-face) b{font-weight:700;line-height:1}
+:is(.agent-face,.dcr-face)[data-agent="claude"]{background:var(--agent-claude-bg);color:var(--agent-claude)}
+:is(.agent-face,.dcr-face)[data-agent="codex"]{background:var(--agent-codex-bg);color:var(--agent-codex)}
+:is(.agent-face,.dcr-face)[data-agent="gemini"]{background:var(--agent-gemini-bg);color:var(--agent-gemini)}
+:is(.agent-face,.dcr-face)[data-agent="grok"]{background:var(--agent-grok-bg);color:var(--agent-grok)}
+:is(.agent-face,.dcr-face)[data-agent="antigravity"]{background:var(--agent-antigravity-bg)}
+:is(.agent-face,.dcr-face)[data-agent="antigravity"] svg{width:66%;height:66%}
+/* Who wrote a comment, quietly at the end of its badge row: "by (mark) Claude". */
+.thread-by{display:inline-flex;align-items:center;gap:5px;margin-left:auto;color:var(--muted);font-size:12.5px;white-space:nowrap}
+.thread-by .agent-face{margin-left:1px}
+.agent-face{width:18px;height:18px}
+.agent-face b{font-size:9.5px}
+html[data-theme="dark"]{--agent-claude:#ec9a7c;--agent-claude-bg:#3b2620;--agent-codex:#f2f2f2;--agent-codex-bg:#2d2f33;--agent-gemini:#b5a2ec;--agent-gemini-bg:#2c2742;--agent-grok:#111111;--agent-grok-bg:#f2f2f2;--agent-antigravity-bg:#262a33}
 html[data-theme="dark"]{color-scheme:dark;--ink:#e4e7ee;--muted:#9aa3b2;--line:#2c313c;--surface:#171a21;--canvas:#0f1115;--accent:#a3a0ff;--accent-soft:#252548;--added:#12301d;--removed:#3b1a1d;--note:#e0b25a;--note-bg:#2a2210;--yours:#e0a94a;--yours-soft:#2a2210}
 
 html[data-theme="dark"] .view-select{color:inherit}
@@ -671,13 +688,29 @@ body.ledger-open .ledger{display:flex}
 @media(max-width:900px){.ledger-label{display:none}}
 .ledger-count[hidden]{display:none}
 @media(min-width:1500px){
-  body.ledger-open .workspace{grid-template-columns:320px minmax(0,1fr) 310px}
-  body.ledger-open.sidebar-collapsed .workspace{grid-template-columns:minmax(0,1fr) 310px}
+  body.ledger-open .workspace{grid-template-columns:320px minmax(0,1fr) var(--ledger-w,380px)}
+  body.ledger-open.sidebar-collapsed .workspace{grid-template-columns:minmax(0,1fr) var(--ledger-w,380px)}
 }
-@media(min-width:1650px){body.ledger-open .workspace{grid-template-columns:340px minmax(0,1fr) 330px}body.ledger-open.sidebar-collapsed .workspace{grid-template-columns:minmax(0,1fr) 330px}}
+@media(min-width:1650px){body.ledger-open .workspace{grid-template-columns:340px minmax(0,1fr) var(--ledger-w,420px)}body.ledger-open.sidebar-collapsed .workspace{grid-template-columns:minmax(0,1fr) var(--ledger-w,420px)}}
 @media(max-width:1499px){
-  body.ledger-open .ledger{position:fixed;z-index:18;top:0;right:0;bottom:0;width:340px;max-width:92vw;box-shadow:-8px 0 28px #23334d26;animation:ledger-in .16s ease-out}
+  body.ledger-open .ledger{position:fixed;z-index:18;top:0;right:0;bottom:0;width:var(--ledger-w,420px);max-width:92vw;box-shadow:-8px 0 28px #23334d26;animation:ledger-in .16s ease-out}
 }
+/* Your review's left edge: drag it to make the panel wider or narrower. The hint sits inside the
+   panel, which clips anything outside it. */
+.ledger{position:relative}
+.ledger-resize{position:absolute;z-index:6;top:0;bottom:0;left:-5px;width:10px;cursor:col-resize;touch-action:none}
+.ledger-resize::before{content:"";position:absolute;top:0;bottom:0;left:4px;width:2px;background:transparent;transition:background-color .12s .1s}
+.ledger-resize:hover::before,.ledger-resize:focus-visible::before,body.ledger-resizing .ledger-resize::before{background:var(--accent)}
+.ledger-resize:focus-visible{outline:0}
+.ledger-resize-tip{position:absolute;top:var(--tip-y,50%);left:14px;display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:8px;background:var(--ink);color:var(--surface);font-size:12.5px;font-weight:550;white-space:nowrap;box-shadow:0 6px 18px #1b213333;opacity:0;pointer-events:none;transform:translate(-4px,-50%);transition:opacity .12s,transform .12s}
+.ledger-resize-tip b{font-weight:600}
+.ledger-resize:hover .ledger-resize-tip,.ledger-resize:focus-visible .ledger-resize-tip{opacity:1;transform:translate(0,-50%);transition-delay:.25s}
+body.ledger-resizing .ledger-resize-tip{opacity:0}
+body.ledger-resizing{cursor:col-resize;user-select:none}
+body.ledger-resizing .ledger,body.ledger-resizing .workspace{transition:none;animation:none}
+body.ledger-resizing iframe{pointer-events:none}
+@media(max-width:740px){.ledger-resize{display:none}}
+@media(prefers-reduced-motion:reduce){.ledger-resize-tip,.ledger-resize::before{transition:none}}
 @keyframes ledger-in{from{transform:translateX(14px);opacity:0}}
 @media(prefers-reduced-motion:reduce){body.ledger-open .ledger{animation:none}}
 
@@ -688,7 +721,7 @@ body.zen .app-header,body.zen .sidebar,body.zen .toolbar-options,body.zen #nav-t
 body.zen .workspace{height:100dvh;grid-template-columns:minmax(0,1fr)}
 body.zen .review-toolbar{min-height:48px;padding:8px 24px;justify-content:flex-start}
 body.zen main#content{max-width:1280px;width:100%;margin:0 auto}
-body.zen.ledger-open .ledger{position:fixed;z-index:18;top:0;right:0;bottom:0;width:340px;max-width:92vw;box-shadow:-8px 0 28px #23334d26}
+body.zen.ledger-open .ledger{position:fixed;z-index:18;top:0;right:0;bottom:0;width:var(--ledger-w,420px);max-width:92vw;box-shadow:-8px 0 28px #23334d26}
 body.zen.ledger-open .workspace,body.zen.ledger-open.sidebar-collapsed .workspace{grid-template-columns:minmax(0,1fr)}
 @media print{.ledger,.zen-exit{display:none!important}}
 

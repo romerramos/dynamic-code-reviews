@@ -5,7 +5,7 @@ require 'base64'
 require 'open3'
 require 'timeout'
 require 'rbconfig'
-require_relative 'qa_capture'
+require_relative '../lib/dcr/server'
 require_relative 'test_series'
 require_relative '../lib/dcr/evidence'
 require_relative '../lib/dcr/state'
@@ -100,7 +100,7 @@ ReviewChecks.fixture do |root, _commit|
     # Serving by name refreshes a page saved by an older UI, and leaves a current one alone.
     current = File.join(series_dir, 'current.html')
     stamp = ->(html) { html[/<meta name="dcr-ui" content="([0-9a-f]+)">/, 1] }
-    assert(stamp.call(File.read(current)) == DynamicReviews.ui_version, 'A rendered report must carry the current UI version')
+    assert(stamp.call(File.read(current)) == DCR::Page.ui_version, 'A rendered report must carry the current UI version')
     serve = lambda do
       stdin, stdout, stderr, thread = Open3.popen3(RbConfig.ruby, File.expand_path('../bin/dcr', __dir__), 'serve', '--repo', root, '--name', 'evidence')
       stdin.close
@@ -115,11 +115,11 @@ ReviewChecks.fixture do |root, _commit|
     File.write(current, File.read(current).sub(/(<meta name="dcr-ui" content=")[0-9a-f]+/, '\\1old'))
     url, warning = serve.call
     assert(url.include?('http://127.0.0.1:') && warning.include?('Refreshed the saved report'), "A stale report must be refreshed before serving: #{warning}")
-    assert(stamp.call(File.read(current)) == DynamicReviews.ui_version, 'The refreshed report does not carry the current UI version')
+    assert(stamp.call(File.read(current)) == DCR::Page.ui_version, 'The refreshed report does not carry the current UI version')
     assert(Dir[File.join(series_dir, 'revisions', '*.html')].sort.map { |path| [path, File.read(path)] } == revisions_before, 'Refreshing changed a saved revision')
     puts 'PASS serving by name refreshes a report from an older UI first and never touches saved revisions'
 
-    server = QACapture::Server.new(directory: captures, report: File.join(series_dir, 'current.html'))
+    server = DCR::Server.new(directory: captures, report: File.join(series_dir, 'current.html'))
     Thread.new { server.run }
     fetch = lambda do |extra = {}|
       socket = TCPSocket.new('127.0.0.1', server.port)

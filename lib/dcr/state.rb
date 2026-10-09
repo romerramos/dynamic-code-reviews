@@ -4,6 +4,7 @@ require 'fileutils'
 require 'json'
 require 'securerandom'
 require 'time'
+require_relative 'agents'
 require_relative 'previews'
 
 module DCR
@@ -73,9 +74,10 @@ module DCR
     LISTENING = '.listening'
     LISTENING_SECONDS = 4
 
-    def heartbeat
+    # agent: who is listening (claude, codex, ...), so the page can say so by name.
+    def heartbeat(agent = nil)
       FileUtils.mkdir_p(@directory)
-      File.write(File.join(@directory, LISTENING), Time.now.to_f.to_s, perm: 0o600)
+      File.write(File.join(@directory, LISTENING), "#{Time.now.to_f} #{agent}".strip, perm: 0o600)
     end
 
     def clear_heartbeat
@@ -87,6 +89,14 @@ module DCR
     def listening?
       path = File.join(@directory, LISTENING)
       File.file?(path) && Time.now - File.mtime(path) < LISTENING_SECONDS
+    end
+
+    # The agent listening right now, when it said who it is.
+    def listener
+      return nil unless listening?
+      File.read(File.join(@directory, LISTENING)).split[1]
+    rescue Errno::ENOENT
+      nil
     end
 
     # --- browser progress -------------------------------------------------------------
@@ -123,16 +133,26 @@ module DCR
       state['threads'][key][id] ||= {'delivery' => 'draft', 'live' => false, 'messages' => []}
     end
 
-    def add_message(state, key, id, author, body)
+    # agent: which agent wrote an agent message (claude, codex, ...). role 'adversary' marks the
+    # second opinion that challenges a comment; it is not an answer to the reviewer.
+    def add_message(state, key, id, author, body, agent: nil, role: nil, verdict: nil)
       raise ArgumentError, 'Invalid author' unless AUTHORS.include?(author)
+      body = text(body)
+      thread = thread(state, key, id)
+      message = {'id' => SecureRandom.hex(6), 'author' => author, 'body' => body, 'at' => Time.now.utc.iso8601}
+      message['agent'] = Agents.check(agent) if agent && author == 'agent'
+      message['role'] = role if role
+      message['verdict'] = verdict if verdict
+      thread['messages'] << message
+      thread['delivery'] = 'answered' if author == 'agent' && role.nil?
+      message
+    end
+
+    def text(body)
       body = body.to_s.strip
       raise ArgumentError, 'A message cannot be empty' if body.empty?
       raise ArgumentError, 'A message is limited to 20,000 characters' if body.length > 20_000
-      thread = thread(state, key, id)
-      message = {'id' => SecureRandom.hex(6), 'author' => author, 'body' => body, 'at' => Time.now.utc.iso8601}
-      thread['messages'] << message
-      thread['delivery'] = 'answered' if author == 'agent'
-      message
+      body
     end
 
     # Queues the browser-built text for the agent and makes the thread live, so later user
@@ -178,12 +198,52 @@ module DCR
       end
     end
 
-    def agent_reply(id, body, key: nil)
+    def agent_reply(id, body, key: nil, agent: nil)
       update do |state|
         # A thread carried across revisions exists under several keys; the reviewer reads the newest.
         key ||= state['threads'].select { |_, threads| threads.key?(id) }.keys.max_by { |name| name.split(':').last.to_i }
         raise ArgumentError, "No thread #{id}. Reply to an id printed by `dcr wait`." unless key
-        add_message(state, key, id, 'agent', body)
+        add_message(state, key, id, 'agent', body, agent: agent)
+      end
+    end
+
+    # --- second opinions on a comment -----------------------------------------------------
+    # Other agents weigh in on a comment the review's agent left. The adversary's answer joins the
+    # conversation; the rest are kept beside it as opinions, so the conversation stays short.
+
+    # adversary: the agent that answers in the conversation; others: those that weigh in beside it.
+    def await_opinions(key, id, adversary, others = [])
+      update do |state|
+        thread = thread(state, key, id)
+        thread['adversary'] = Agents.check(adversary)
+        thread['waiting_on'] = Array(thread['waiting_on']) | ([adversary] + others).map { |agent| Agents.check(agent) }
+      end
+    end
+
+    # verdict: agree, partly or disagree, when the answer said so.
+    def add_opinion(key, id, agent, body, verdict: nil, adversary: false)
+      agent = Agents.check(agent)
+      update do |state|
+        thread = thread(state, key, id)
+        thread['waiting_on'] = Array(thread['waiting_on']) - [agent]
+        # Asked again, an agent's newer answer replaces its earlier one.
+        thread['opinions']&.delete(agent)
+        if adversary
+          thread['messages'].reject! { |message| message['role'] == 'adversary' && message['agent'] == agent }
+          add_message(state, key, id, 'agent', body, agent: agent, role: 'adversary', verdict: verdict)
+        else (thread['opinions'] ||= {})[agent] = {'id' => SecureRandom.hex(6), 'body' => text(body), 'verdict' => verdict, 'at' => Time.now.utc.iso8601}.compact
+        end
+      end
+    end
+
+    def opinion_failed(key, id, agent, reason, adversary: false)
+      agent = Agents.check(agent)
+      update do |state|
+        thread = thread(state, key, id)
+        thread['waiting_on'] = Array(thread['waiting_on']) - [agent]
+        # A failed retry keeps the earlier answer; only a first failure is shown.
+        next if thread['messages'].any? { |message| message['role'] == 'adversary' && message['agent'] == agent } || thread.dig('opinions', agent, 'body')
+        (thread['opinions'] ||= {})[agent] = {'error' => reason.to_s.strip[0, 300], 'role' => (adversary ? 'adversary' : nil), 'at' => Time.now.utc.iso8601}.compact
       end
     end
 

@@ -3,9 +3,11 @@
 require 'json'
 require 'open3'
 require 'optparse'
+require 'rbconfig'
 require 'shellwords'
 require 'uri'
 require_relative 'export'
+require_relative 'agents'
 require_relative 'previews'
 require_relative 'state'
 
@@ -17,6 +19,7 @@ module DCR
     module_function
 
     SLUG = /\A[a-z0-9]+(?:-[a-z0-9]+)*\z/
+    DCR_BIN = File.expand_path('../../bin/dcr', __dir__)
 
     # Printed at the top of everything the reviewer sends. A review conversation is for
     # understanding code, so the agent answers; it does not act on the workspace.
@@ -47,15 +50,16 @@ module DCR
     TEXT
 
     USAGE = {
-      'wait' => 'dcr wait (--repo ROOT --name SERIES | --dir DIR) [--timeout SECONDS] [--json]',
+      'wait' => 'dcr wait (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--timeout SECONDS] [--json]',
       'comments' => 'dcr comments (--repo ROOT --name SERIES | --dir DIR) [--thread ID] [--json]   (--thread prints that one conversation in full: the comment as sent, then every message)',
       'preview' => 'dcr preview submit (--repo ROOT --name SERIES | --dir DIR) --path <template path> [--file FILE] [--title TITLE] [--css STYLESHEET]... [--page-class CLASSES] [--image-map JSON] | dcr preview fail ... --path <template path> --reason TEXT',
       'export' => 'dcr export (--repo ROOT --name SERIES | --dir DIR) [--out FILE]',
-      'comment' => 'dcr comment (--repo ROOT --name SERIES | --dir DIR) [--file COMMENTS.json]   (one review comment or an array, as in the review JSON: id, label, decoration, subject, discussion, hunk, side, start, end; stdin when --file is omitted)',
+      'comment' => 'dcr comment (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--no-second-opinion] [--file COMMENTS.json]   (one review comment or an array, as in the review JSON: id, label, decoration, subject, discussion, hunk, side, start, end, plus an optional context: one or two plain sentences on what the change tries to do, for the second opinion; stdin when --file is omitted)',
       'stop' => 'dcr stop (--repo ROOT --name SERIES | --dir DIR | --all)   (stops the served review and its `dcr wait`; --all stops every review served on this computer)',
       'link' => 'dcr link (--repo ROOT --name SERIES | --dir DIR)   (the served review\'s addresses: on this computer, and on your tailnet when shared)',
       'focus' => 'dcr focus (--repo ROOT --name SERIES | --dir DIR)   (brings the browser tab showing the served review to the front)',
-      'reply' => 'dcr reply (--repo ROOT --name SERIES | --dir DIR) [--key KEY] [--json] <thread-id> <text>',
+      'reply' => 'dcr reply (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--key KEY] [--json] <thread-id> <text>',
+      'second-opinion' => 'dcr second-opinion (--repo ROOT --name SERIES | --dir DIR) --comment ID [--comment ID]... [--agent AUTHOR] [--context TEXT]   (asks another installed agent to check a posted comment; `dcr comment` does this by itself)',
       'evidence' => 'dcr evidence attach (--repo ROOT --name SERIES | --dir DIR) --file ITEMS.json [--replace previous-qa|all]   (ITEMS: [{"path", "title", "result": "passed|failed", "observed", "comment_id"?, "page"?}]; previous-qa, the default, replaces the last QA review; all replaces every recording, only when the reviewer asks to start over)'
     }.freeze
 
@@ -80,6 +84,10 @@ module DCR
         p.on('--json') { options[:json] = true }
         p.on('--all') { options[:all] = true }
         p.on('--replace MODE', %w[previous-qa all]) { |v| options[:replace] = v.tr('-', '_').to_sym }
+        p.on('--agent NAME', 'Who you are: claude, codex, gemini, grok... (detected when omitted)') { |v| options[:agent] = Agents.check(v) }
+        p.on('--comment ID') { |v| (options[:comments] ||= []) << v }
+        p.on('--context TEXT') { |v| options[:context] = v }
+        p.on('--no-second-opinion') { options[:second_opinion] = false }
       end
       parser.parse!(argv)
       return stop(options, parser) if command == 'stop'
@@ -94,6 +102,7 @@ module DCR
       when 'export' then export(options, directory(options, parser))
       when 'preview' then preview(state, options, argv, parser)
       when 'evidence' then evidence(options, directory(options, parser), argv, parser)
+      when 'second-opinion' then second_opinion(options, directory(options, parser), parser)
       end
     rescue ArgumentError, KeyError, SystemCallError, JSON::ParserError => error
       abort error.message
@@ -118,7 +127,7 @@ module DCR
     def wait_for(state, options)
       deadline = options[:timeout] && Time.now + options[:timeout]
       loop do
-        state.heartbeat # tells the open page that something is listening
+        state.heartbeat(agent(options)) # tells the open page that something, and who, is listening
         pending = state.pending
         unless pending.empty?
           puts options[:json] ? JSON.pretty_generate('instructions' => REPLY_ONLY, 'entries' => pending) : render(pending, flags(options))
@@ -210,7 +219,8 @@ module DCR
         threads.each do |key, by_id|
           by_id.each do |id, thread|
             puts "#{id} [#{thread['delivery']}#{thread['live'] ? ', live' : ''}] #{key}"
-            thread['messages'].each { |message| puts "  #{message['author']}: #{message['body'].lines.first.to_s.strip}" }
+            thread['messages'].each { |message| puts "  #{speaker(message)}: #{message['body'].lines.first.to_s.strip}" }
+            (thread['opinions'] || {}).each { |agent, opinion| puts "  #{Agents.name(agent)} (opinion#{opinion['verdict'] ? ", #{opinion['verdict']}" : ''}): #{(opinion['body'] || opinion['error']).to_s.lines.first.to_s.strip}" }
           end
         end
         puts "#{state.pending.length} message(s) waiting for the agent."
@@ -229,10 +239,19 @@ module DCR
       return puts(JSON.pretty_generate({'id' => id, 'key' => key, 'comment' => sent&.fetch('text')}.merge(found))) if options[:json]
       out = ["Thread: #{id} [#{found['delivery']}#{found['live'] ? ', live' : ''}]"]
       out << "The comment as sent:\n\n#{sent['text']}" if sent
-      found['messages'].each { |message| out << "#{message['author'] == 'agent' ? 'Agent' : 'Reviewer'} · #{message['at']}\n#{message['body']}" }
+      found['messages'].each { |message| out << "#{speaker(message)} · #{message['at']}\n#{message['body']}" }
       out << 'No messages yet.' if found['messages'].empty?
+      opinions = (found['opinions'] || {}).select { |_, opinion| opinion['body'] }
+      out << "Other opinions:\n\n#{opinions.map { |agent, opinion| "#{Agents.name(agent)}#{opinion['verdict'] ? " (#{opinion['verdict']})" : ''}: #{opinion['body']}" }.join("\n\n")}" unless opinions.empty?
       out << "Answer with: dcr reply #{flags(options)} #{id} '<your answer>'" if found['live']
       puts out.join("\n\n---\n\n")
+    end
+
+    # Who wrote a message, as the page names them.
+    def speaker(message)
+      return 'Reviewer' unless message['author'] == 'agent'
+      name = message['agent'] ? Agents.name(message['agent']) : 'Agent'
+      message['role'] == 'adversary' ? "#{name} (second reviewer#{message['verdict'] ? ", #{message['verdict']}" : ''})" : name
     end
 
     def export(options, directory)
@@ -280,7 +299,7 @@ module DCR
       [parsed, inline ? Dir.pwd : File.dirname(File.expand_path(value))]
     end
 
-    COMMENT_FIELDS = %w[id label decoration subject discussion hunk side start end].freeze
+    COMMENT_FIELDS = %w[id label decoration subject discussion hunk side start end context].freeze
 
     # While a review is in progress the agent posts each comment as soon as it is sure of it; the
     # open page shows it beside the code and announces it. `dcr series finish` keeps them.
@@ -302,13 +321,45 @@ module DCR
         raise ArgumentError, 'A comment discussion must be text' if entry.key?('discussion') && !entry['discussion'].is_a?(String)
         DynamicReviews.validate_comment(entry, hunks)
         raise ArgumentError, "Comment id #{entry['id']} is used twice" if ids.include?(entry['id'])
+        raise ArgumentError, 'A comment context must be short text' if entry.key?('context') && !(entry['context'].is_a?(String) && entry['context'].length <= 1000)
         ids << entry['id']
         entry
       end
+      author = agent(options, state)
+      contexts = comments.to_h { |entry| [entry['id'], entry['context']] }
+      comments = comments.map { |entry| entry.except('context').merge(author ? {'agent' => author} : {}) }
       entry = history['revisions'].last
       state.post_comments(State.review_key(entry['fingerprint'], history['name'], entry['number']), comments)
       puts "Posted #{comments.length == 1 ? "comment #{comments.first['id']}" : "#{comments.length} comments"} to the open review."
+      ask_others(directory, comments, author, contexts) unless options[:second_opinion] == false
     end
+
+    # Each comment is checked by another installed agent in the background; the answers appear in
+    # the open page as they arrive. The log next to the review says what went wrong, if anything.
+    def ask_others(directory, comments, author, contexts)
+      adversary, others = Agents.panel(author)
+      return puts('No other agent is installed to give a second opinion.') unless adversary
+      log = File.open(File.join(directory, '.second-opinions.log'), 'a', 0o600)
+      comments.each do |comment|
+        command = [RbConfig.ruby, DCR_BIN, 'second-opinion', '--dir', directory, '--comment', comment['id']]
+        command += ['--agent', author] if author
+        command += ['--context', contexts[comment['id']]] if contexts[comment['id']]
+        Process.detach(Process.spawn(*command, in: File::NULL, out: log, err: log, pgroup: true))
+      end
+      log.close
+      puts "Asked #{Agents.name(adversary)} to check #{comments.length == 1 ? 'it' : 'them'}#{others.empty? ? '' : " (#{others.map { |slug| Agents.name(slug) }.join(' and ')} weigh in on the side)"}; their answers appear in the page."
+    end
+
+    def second_opinion(options, directory, parser)
+      raise ArgumentError, parser.to_s unless options[:comments]
+      require_relative 'second_opinion'
+      results = SecondOpinion.run(series_dir: directory, comment_ids: options[:comments], author: agent(options) || 'agent', context: options[:context])
+      return puts('No other agent is installed to give a second opinion.') if results.empty?
+      results.each { |id, answers| puts "#{id}: #{answers.map { |slug, outcome| "#{Agents.name(slug)} #{outcome}" }.join(', ')}" }
+    end
+
+    # Who is running this command: --agent, what its CLI left in the environment, or the listener.
+    def agent(options, state = nil) = options[:agent] || Agents.detect || state&.listener
 
     # Served reviews keep running in the background until stopped. This stops the review server of one
     # series (or every one with --all) and the `dcr wait` listening for it. A server removes its tailnet
@@ -324,7 +375,7 @@ module DCR
       found.each_key { |pid| Process.kill('TERM', pid) rescue nil }
       deadline = Time.now + 5
       sleep 0.2 while Time.now < deadline && found.keys.any? { |pid| (Process.kill(0, pid) rescue false) }
-      servers = found.count { |_, command| command.include?('qa_capture.rb') }
+      servers = found.count { |_, command| serving?(command) }
       puts "Stopped #{servers} review server(s) and #{found.length - servers} wait(s)#{options[:all] ? ' on this computer' : " for #{File.basename(directory)}"}."
     end
 
@@ -334,11 +385,12 @@ module DCR
       out.lines.filter_map do |line|
         pid, command = line.strip.split(' ', 2)
         next unless command && pid.to_i != Process.pid
-        serving = command.include?('scripts/qa_capture.rb') && !command.match?(/qa_capture\.rb\s+control\b/)
-        waiting = command.match?(%r{bin/dcr\s+wait\b})
-        [pid.to_i, command] if serving || waiting
+        [pid.to_i, command] if serving?(command) || command.match?(%r{bin/dcr\s+wait\b})
       end.to_h
     end
+
+    # `dcr serve`, including one started by an older copy, which ran it as qa_capture.rb.
+    def serving?(command) = command.match?(%r{bin/dcr\s+serve\b}) || command.include?('scripts/qa_capture.rb') && !command.match?(/qa_capture\.rb\s+control\b/)
 
     # What the agent quotes to the reviewer, who may be on another device: the addresses of the served review.
     def link(directory)
@@ -359,7 +411,7 @@ module DCR
     def reply(state, options, argv, parser)
       id, *words = argv
       raise ArgumentError, parser.to_s unless id && !words.empty?
-      message = state.agent_reply(id, words.join(' '), key: options[:key])
+      message = state.agent_reply(id, words.join(' '), key: options[:key], agent: agent(options, state))
       puts options[:json] ? JSON.generate(message) : "Replied to #{id}."
     end
   end

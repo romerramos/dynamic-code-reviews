@@ -3,17 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; media-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
-  <meta name="dcr-ui" content="__UI_VERSION__">
+  <meta http-equiv="Content-Security-Policy" content="<%= csp %>">
+  <meta name="dcr-ui" content="<%= ui_version %>">
+<%- if served -%>
+  <script>(function(){try{var b=<%= script_json(served.progress) %>;Object.keys(b).forEach(function(k){localStorage.setItem(k,JSON.stringify(b[k]))})}catch(e){}})()</script>
+<%- end -%>
+<%- if export -%>
+  <script>(function(){try{var d=<%= script_json(export) %>;if(d.progress&&!localStorage.getItem(d.key))localStorage.setItem(d.key,JSON.stringify(d.progress));window.__DCR_EXPORT=d}catch(e){}})()</script>
+<%- end -%>
   <title>Dynamic Code Review</title>
-  <link rel="icon" type="image/svg+xml" href="__FAVICON__">
+  <link rel="icon" type="image/svg+xml" href="<%= favicon %>">
   <script>try{var s=JSON.parse(localStorage.getItem('dynamic-review:settings')||'{}'),d=document.documentElement,m=s.colorMode||'system';d.dataset.theme=m==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):m;d.dataset.syntax=s.syntaxTheme||'classic'}catch(e){}</script>
-  <style>__STYLES__</style>
+  <style><%= styles %></style>
 </head>
 <body>
   <a class="skip-link" href="#content">Skip to review</a>
   <header class="app-header">
-    <div class="brand" title="Dynamic Code Reviews"><span class="brand-icon" aria-hidden="true">__ICON__</span></div>
+    <div class="brand" title="Dynamic Code Reviews"><span class="brand-icon" aria-hidden="true"><%= icon %></span></div>
     <div class="header-title"><strong id="title"></strong><span class="header-meta"><span id="repo-label"></span><span id="scope"></span></span></div>
     <div class="header-actions"><button class="header-button" id="preview-list-toggle" data-open-previews hidden>Previews</button><div id="revision-navigation"></div><button class="header-button" id="context-toggle">Details</button></div>
   </header>
@@ -36,6 +42,7 @@
       <main id="content" tabindex="-1"></main>
     </div>
     <aside id="ledger" class="ledger" aria-label="Your review" hidden>
+      <div id="ledger-resize" class="ledger-resize" role="separator" aria-orientation="vertical" aria-label="Resize your review" title="" tabindex="0"><span class="ledger-resize-tip" aria-hidden="true">Drag to resize <b>↔</b></span></div>
       <header class="ledger-head"><h2>Your review</h2><button id="ledger-close" class="icon-button" aria-label="Close your review" title="Close"></button></header>
       <div id="ledger-body" class="ledger-body"></div>
       <footer id="ledger-footer" class="ledger-footer"></footer>
@@ -76,7 +83,18 @@
   <dialog id="previews-dialog" class="modal" aria-labelledby="previews-title"><div class="modal-box preview-hub-box"><header><div><h2 id="previews-title">Template previews</h2><p class="muted">Rendered from the reviewed code with example data. Pick templates while reading, then ask your agent for all of them at once.</p></div><button type="button" id="close-previews" class="btn btn-sm btn-circle btn-ghost" aria-label="Close template previews">✕</button></header><div id="preview-hub"></div></div></dialog>
   <button id="zen-exit" class="zen-exit" hidden></button>
   <div id="toast" role="status" hidden></div>
-  <script type="application/json" id="data">__REVIEW_DATA__</script>
-  <script>__SCRIPTS__</script>
+  <script type="application/json" id="data"><%= data %></script>
+  <script><%= scripts %></script>
+<%- if served -%>
+  <meta name="qa-token" content="<%= h served.token %>"><link rel="stylesheet" href="/style.css"><script src="/qa-panel.js"></script><script src="/recorder.js"></script>
+  <link rel="stylesheet" href="/live.css"><script src="/live-tools.js"></script><script src="/live.js"></script>
+<%- if served.app -%>
+  <meta name="dcr-app" content="<%= h JSON.generate(served.app) %>"><link rel="stylesheet" href="/app-view.css"><script src="/app-view.js"></script>
+<%- end -%>
+  <script src="/try-band.js"></script>
+<%- end -%>
+<%- if export -%>
+  <script><%= inline_script(live('live-tools.js')) %></script><script><%= inline_script(live('export-view.js')) %></script><style><%= live('live.css') %></style>
+<%- end -%>
 </body>
 </html>

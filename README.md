@@ -202,6 +202,28 @@ References: [review JSON](references/report-schema.md), [incremental reviews](re
 - It is used on macOS. The helpers use portable Ruby and Git, but Linux and Windows (WSL) have not
   been verified.
 
+## How the code is laid out
+
+- **Pages** come from one place, `lib/dcr/page.rb`, rendered from ERB templates in `assets/`
+  (`report.html.erb`, `history.html.erb`). A review page is rendered from its data (the review and
+  snapshot it embeds) and the place it opens in: the saved offline file, the served page (seeded
+  with saved progress, plus the live panel and the app view) or an export (the conversation baked in).
+  That mode decides what the page carries; nothing edits a rendered page afterwards.
+- **The server** behind `dcr serve` is `lib/dcr/server.rb`: the socket, the addresses a request may
+  arrive on and the token. `lib/dcr/http.rb` is the small HTTP/1.1 it speaks (Ruby ships no server).
+  Requests go to two handlers: `ReviewSite` (the review pages, the live API, export and QA requests)
+  and `Recorder` (the recorder page, its command queue and uploads). A handler maps a request to a
+  response and never touches sockets; `LiveAPI` maps the JSON routes to changes in the series state.
+- **Agents** are named on everything they write (`lib/dcr/agents.rb`): who posted a comment and who
+  replied. A comment the agent posts with `dcr comment` is checked in the background by another
+  installed agent (`lib/dcr/second_opinion.rb`): one second reviewer answers in the conversation,
+  the others are kept as opinions beside it. Claude, Codex, Grok, Antigravity (`agy`) and Gemini CLIs are asked headless
+  and read-only; `DCR_ADVERSARY` and `DCR_SECOND_OPINIONS` choose who, or turn it off.
+- **State** lives in the series folder: `manifest.json` and the saved pages for revisions, and
+  `state.json` for the reviewer's progress and threads (`lib/dcr/state.rb`).
+- `scripts/` holds the command-line entry points that `bin/dcr` dispatches to, and the review and
+  series logic.
+
 ## Maintainer checks
 
 Run focused checks for what you change, from this folder:
@@ -210,6 +232,8 @@ Run focused checks for what you change, from this folder:
 ruby scripts/test_review.rb        # collection, rendering, validation
 ruby scripts/test_series.rb        # series, in-progress reviews, increments
 ruby scripts/test_live.rb          # live server state, threads, focus, tailnet sharing
+ruby scripts/test_server.rb        # the served page, the recorder's command queue and uploads
+ruby scripts/test_second_opinion.rb # second opinions: the agent panel, the question, headless runs (stand-in CLIs)
 ruby scripts/test_github.rb        # posting to the pull request through gh (a stand-in gh, nothing reaches GitHub)
 ruby scripts/test_live_previews.rb # preview requests, stylesheets, stand-ins
 ruby scripts/test_app_proxy.rb     # the running app inside the review

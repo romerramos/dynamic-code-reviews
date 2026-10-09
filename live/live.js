@@ -14,6 +14,8 @@
   let online = true;
   let latest = null;
   let listening; // is an agent waiting for messages? undefined: an older server that cannot say
+  let listener = null; // which agent is listening (claude, codex, ...), when it said
+  const openOpinions = new Map(); // comment id -> the agents whose opinions are open
   const baseTitle = document.title;
   // Agent messages the reader has been shown. First visit to a review marks the history as seen,
   // so only what arrives after that is announced.
@@ -83,7 +85,7 @@
     const comment = comments().find(entry => entry.id === id);
     if (!comment) throw new Error('This comment is not part of the review.');
     if (note) await api('/api/message', {key, id, body: note});
-    await api('/api/send', {key, items: [{id, text: tools.sendText(snapshot, review, comment, note)}]});
+    await api('/api/send', {key, items: [{id, text: tools.sendText(snapshot, review, comment, note, threads[id])}]});
     await refresh();
   };
 
@@ -93,9 +95,17 @@
   // sits in the card's footer beside Copy and Resolve; in the diff popover it ends the thread.
   // In Your review the thread is narrow and always ready to answer: the comment it started from,
   // then the messages, then a reply field that grows as you type (⌘/Ctrl Enter sends).
+  // The comment a conversation is about, as its first message: who wrote it, what kind it is, and
+  // the whole comment (long ones start folded). The title and place are already in the bar above.
   const quoteHTML = comment => {
-    const text = comment ? plain(comment.discussion) || comment.subject : '';
-    return text ? `<blockquote class="dcr-quote"><span>${comment.personal ? 'Your comment' : 'The finding'}</span><p>${tools.escape(text)}</p></blockquote>` : '';
+    if (!comment) return '';
+    const text = (comment.discussion || '').trim();
+    const avatar = comment.personal ? '<span class="dcr-avatar" aria-hidden="true">Y</span>' : tools.avatarHTML(comment.agent || null);
+    const who = comment.personal ? 'You' : comment.agent ? tools.escape(tools.agentInfo(comment.agent).name) : 'Review';
+    const kind = (comment.audience === 'agent' ? 'question for your agent' : [comment.label, comment.decoration].filter(Boolean).join(' · ')).replace(/^./, letter => letter.toUpperCase());
+    const long = text.length > 320 || text.split(/\n\s*\n/).length > 2;
+    const body = text ? `<div class="dcr-body${long ? ' is-clamped' : ''}">${tools.markdown(text)}</div>${long ? '<button type="button" class="dcr-more">Show more</button>' : ''}` : '';
+    return `<article class="dcr-msg dcr-origin${comment.personal ? ' dcr-you' : ' dcr-agent'}">${avatar}<div class="dcr-msg-main"><header class="dcr-msg-head"><strong>${who}</strong><span class="dcr-role">${tools.escape(kind)}</span></header>${body}</div></article>`;
   };
   const composeHTML = () => `<form class="dcr-reply dcr-compose" hidden><textarea rows="1" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea><button type="submit" class="dcr-send" aria-label="Send reply" title="Send reply (⌘ Enter)">${ico('send')}</button></form>`;
   const cardBlock = (id, variant, comment) => {
@@ -103,14 +113,14 @@
     block.className = `dcr-thread dcr-${variant}`;
     block.dataset.dcr = id;
     block.innerHTML = variant === 'ledger'
-      ? `<div class="dcr-scroll">${quoteHTML(comment)}<div class="dcr-convo"></div><div class="dcr-state" role="status" aria-live="polite"></div></div>${composeHTML()}`
-      : `<div class="dcr-state" role="status" aria-live="polite"></div><div class="dcr-convo"></div><form class="dcr-reply" hidden><textarea rows="3" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea><div class="dcr-actions"><button type="submit" class="btn btn-sm btn-primary">Send reply</button><button type="button" class="btn btn-sm btn-ghost" data-dcr-cancel>Cancel</button></div></form>${variant === 'popover' ? `<div class="dcr-actions"><button type="button" class="btn btn-sm btn-primary" data-dcr-act data-dcr-for="${tools.escape(id)}"></button></div>` : ''}`;
+      ? `<div class="dcr-scroll">${quoteHTML(comment)}<div class="dcr-convo"></div><div class="dcr-state" role="status" aria-live="polite"></div><div class="dcr-opinions-slot"></div></div>${composeHTML()}`
+      : `<div class="dcr-state" role="status" aria-live="polite"></div><div class="dcr-convo"></div><div class="dcr-opinions-slot"></div><form class="dcr-reply" hidden><textarea rows="3" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea><div class="dcr-actions"><button type="submit" class="btn btn-sm btn-primary">Send reply</button><button type="button" class="btn btn-sm btn-ghost" data-dcr-cancel>Cancel</button></div></form>${variant === 'popover' ? `<div class="dcr-actions"><button type="button" class="btn btn-sm btn-primary" data-dcr-act data-dcr-for="${tools.escape(id)}"></button></div>` : ''}`;
     block.querySelector('textarea').value = drafts.get(id) || '';
     return block;
   };
   const actionButtons = id => document.querySelectorAll(`[data-dcr-act][data-dcr-for="${CSS.escape(id)}"]`);
   const stateHTML = (model, at) => model
-    ? `<span class="dcr-dot dcr-tone-${model.tone}" aria-hidden="true"></span><span>${tools.escape(model.text)}</span>${model.typing ? '<span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span>' : ''}${at ? `<time data-at="${tools.escape(at)}">${tools.escape(tools.relativeTime(at))}</time>` : ''}`
+    ? `${model.agent ? tools.avatarHTML(model.agent, 'dcr-face-sm dcr-thinking') : `<span class="dcr-dot dcr-tone-${model.tone}" aria-hidden="true"></span>`}<span>${tools.escape(model.text)}</span>${model.typing ? '<span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span>' : ''}${at ? `<time data-at="${tools.escape(at)}">${tools.escape(tools.relativeTime(at))}</time>` : ''}`
     : '';
   // Long answers start clamped; the button appears only when something is actually hidden.
   const clampLong = root => root.closest('.dcr-ledger') || root.querySelectorAll('.dcr-body').forEach(body => {
@@ -130,10 +140,11 @@
     // The DOM re-serialises markup (an escaped quote comes back as a quote), so compare the
     // string that was set, not innerHTML, or the observer would re-trigger itself forever.
     const convo = block.querySelector('.dcr-convo');
-    const html = tools.messagesHTML(thread, {seen});
+    const html = tools.messagesHTML(thread, {seen, agent: listener});
+    const opinions = tools.opinionsHTML(thread, {open: [...(openOpinions.get(id) || [])], seen});
     // Keyed on the messages, not their text: "2 min ago" changes by itself and must not redraw.
     const signature = (thread?.messages || []).map(message => message.id + (message.author === 'agent' && !seen.has(message.id) ? '!' : '')).join('|');
-    const model = online ? tools.statusModel(thread, listening) : {tone: 'off', text: 'The review server stopped. Restart `dcr serve` to send or receive.'};
+    const model = online ? tools.statusModel(thread, listening, Date.now(), listener) : {tone: 'off', text: 'The review server stopped. Restart `dcr serve` to send or receive.'};
     // The reply carries its own time; the status line only says that it came.
     // In Your review the row already says it replied; under the thread only work in progress shows.
     const status = ledger && model?.tone === 'done' ? '' : stateHTML(model, '');
@@ -146,7 +157,9 @@
       set(field, 'placeholder', online ? 'Reply to your agent' : 'The review server stopped');
       set(form.querySelector('.dcr-send'), 'disabled', !online);
     } else if (!sent && !form.hidden) form.hidden = true;
-    block.classList.toggle('has-content', !!(html || status || !form.hidden));
+    block.classList.toggle('has-content', !!(html || status || opinions || !form.hidden));
+    const slot = block.querySelector('.dcr-opinions-slot');
+    if (slot.dataset.html !== opinions) { slot.innerHTML = opinions; slot.dataset.html = opinions; }
     if (convo.dataset.sig !== signature) {
       // A chat follows new messages, unless you have scrolled up to read.
       const scroller = ledger && block.querySelector('.dcr-scroll');
@@ -209,6 +222,21 @@
   // The block that shows a comment's conversation: in its card, or in the popover.
   const blockFor = button => button.closest('.dcr-thread') || button.closest('article, .popover-comment')?.querySelector('.dcr-thread');
   document.addEventListener('click', async event => {
+    const chip = event.target.closest('[data-dcr-opinion]');
+    if (chip) {
+      const id = chip.closest('.dcr-thread').dataset.dcr;
+      const agent = chip.dataset.dcrOpinion;
+      const open = openOpinions.get(id) || new Set();
+      if (open.has(agent)) open.delete(agent);
+      else {
+        open.add(agent);
+        const opinion = threads[id]?.opinions?.[agent];
+        if (opinion?.id && !seen.has(opinion.id)) { seen.add(opinion.id); saveSeen(); }
+      }
+      openOpinions.set(id, open);
+      document.querySelectorAll(`.dcr-thread[data-dcr="${CSS.escape(id)}"]`).forEach(refreshBlock);
+      return;
+    }
     const more = event.target.closest('.dcr-more');
     if (more) {
       const body = more.previousElementSibling;
@@ -328,7 +356,7 @@
   const sendDrafts = async () => {
     const pending = tools.drafts(comments(), threads, resolved());
     if (!pending.length) return;
-    await api('/api/send', {key, items: pending.map(comment => ({id: comment.id, text: tools.sendText(snapshot, review, comment)}))});
+    await api('/api/send', {key, items: pending.map(comment => ({id: comment.id, text: tools.sendText(snapshot, review, comment, '', threads[comment.id])}))});
   };
   panel.addEventListener('click', async event => {
     try {
@@ -547,18 +575,31 @@
   const STATE = {sent: 'sent', delivered: 'sent', answered: 'answered'};
   const plain = tools.snippet;
   const unseenIn = thread => (thread?.messages || []).some(message => message.author === 'agent' && !seen.has(message.id));
-  const hasConversation = thread => !!thread && (thread.live || thread.delivery !== 'draft' || thread.messages?.length > 0);
+  const weighedIn = thread => !!thread && ((thread.waiting_on || []).length > 0 || Object.keys(thread.opinions || {}).length > 0);
+  const hasConversation = thread => !!thread && (thread.live || thread.delivery !== 'draft' || thread.messages?.length > 0 || weighedIn(thread));
   const whereOf = comment => {
     const found = globalThis.ReviewTools.anchor(snapshot, comment);
     const lines = comment.general ? 'General comment' : `${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}`;
     return `${found?.file.path || 'General'} · ${lines}`;
   };
   const rowFor = comment => `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-conversation="1"><button type="button" class="ledger-jump" data-ledger-jump="${tools.escape(comment.id)}"><span class="ledger-where">${tools.escape(whereOf(comment))}</span><span class="ledger-subject">${tools.escape(comment.subject)}</span></button><div class="ledger-meta"></div></li>`;
+  // The faces of every agent that weighed in, each ringed with what it thinks.
+  // The other agents that weighed in, beside the one already named: small marks, the tally on hover.
+  const facesHTML = (thread, named) => {
+    const others = tools.verdicts(thread).filter(entry => entry.agent !== named);
+    if (!others.length) return '';
+    const counts = tools.tally(thread);
+    return `<span class="dcr-faces" title="${tools.escape(`${tools.consensus(counts)}: ${tools.verdicts(thread).map(entry => `${tools.agentInfo(entry.agent).name} ${tools.VERDICTS[entry.verdict].label.toLowerCase()}`).join(', ')}`)}"><span class="dcr-faces-plus">+</span>${others.map(entry => tools.avatarHTML(entry.agent, 'dcr-face-xs')).join('')}</span>`;
+  };
+  const chevron = '<svg class="dcr-peek-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
+  // The latest answer, flat under the row: who said it (and what they think), then its first lines.
+  // The faces of the others who weighed in show only when there is more than one voice.
   const peekHTML = thread => {
-    const count = (thread.messages || []).length;
     const last = [...(thread.messages || [])].reverse().find(message => message.author === 'agent');
-    const label = count ? `Open conversation · ${count} message${count === 1 ? '' : 's'}` : 'Open conversation';
-    return `${last ? `<span class="dcr-peek-who"><b>Agent</b><time data-at="${tools.escape(last.at || '')}">${tools.escape(tools.relativeTime(last.at))}</time></span><span class="dcr-peek-text">${tools.escape(plain(last.body))}</span>` : ''}<span class="dcr-peek-more"><span>${label}</span>${ico('chevron-right')}</span>`;
+    const faces = facesHTML(thread, last?.agent || listener);
+    if (!last) return `<span class="dcr-peek-who"><span class="dcr-peek-note">Open conversation</span><span class="dcr-peek-end">${faces}${chevron}</span></span>`;
+    const who = tools.escape(tools.agentInfo(last.agent || listener).name);
+    return `<span class="dcr-peek-who">${tools.avatarHTML(last.agent || listener, 'dcr-face-xs')}<b>${who}</b>${last.role === 'adversary' ? tools.verdictHTML(last.verdict) : ''}<time data-at="${tools.escape(last.at || '')}">${tools.escape(tools.relativeTime(last.at))}</time><span class="dcr-peek-end">${faces}${chevron}</span></span><span class="dcr-peek-text">${tools.escape(plain(last.body))}</span>`;
   };
   const decoratePeek = (item, comment, thread) => {
     let peek = item.querySelector(':scope > .dcr-peek');
@@ -635,7 +676,7 @@
     if (!body) return;
     // Conversations about the agent's own findings that you have joined, above your own comments.
     const mine = new Set(comments().filter(comment => comment.personal).map(comment => comment.id));
-    const joined = comments().filter(comment => !mine.has(comment.id) && hasConversation(threads[comment.id]) && (threads[comment.id].delivery !== 'draft' || threads[comment.id].messages?.length));
+    const joined = comments().filter(comment => !mine.has(comment.id) && hasConversation(threads[comment.id]) && (threads[comment.id].delivery !== 'draft' || threads[comment.id].messages?.length || weighedIn(threads[comment.id])));
     let section = body.querySelector(':scope > .dcr-convos');
     if (!joined.length) section?.remove();
     else {
@@ -672,7 +713,8 @@
       if (!status) { status = document.createElement('span'); status.className = 'ledger-status'; meta.prepend(status); }
       // An unsent comment shows its Send button instead of saying it is unsent.
       const model = online ? tools.statusModel(thread, listening) : null;
-      const text = state === 'resolved' || forPR || (state === 'draft' && online) ? '' : model?.text || 'Not sent';
+      // An answer shows itself in the preview below, so the row does not also say "Replied".
+      const text = state === 'resolved' || forPR || (state === 'draft' && online) || (model?.tone === 'done' && hasConversation(thread)) ? '' : model?.text || 'Not sent';
       const tone = model?.tone || 'off';
       // A narrow row says it in a few words; the whole sentence is its tooltip.
       const short = !model ? text : {done: 'Replied', work: 'Agent is answering', wait: 'Sent', idle: thread?.delivery === 'delivered' ? 'No answer yet' : 'Sent · no agent listening'}[tone] || text;
@@ -776,7 +818,7 @@
       if (!ids.length) return;
       sendAll.disabled = true;
       try {
-        const items = ids.map(id => ({id, text: tools.sendText(snapshot, review, comments().find(comment => comment.id === id))}));
+        const items = ids.map(id => ({id, text: tools.sendText(snapshot, review, comments().find(comment => comment.id === id), '', threads[id])}));
         await api('/api/send', {key, items});
         sendDialog.close();
         await refresh();
@@ -824,38 +866,82 @@
     }
   };
 
-  // The agent as a whole, in the reading bar: listening, working or not connected.
-  const agentPill = document.createElement('span');
-  agentPill.id = 'dcr-agent';
-  agentPill.setAttribute('role', 'status');
-  agentPill.hidden = true;
-  agentPill.innerHTML = '<span class="dcr-dot" aria-hidden="true"></span><span class="dcr-agent-text"></span>';
-  const optionsBar = document.querySelector('.toolbar-options');
-  if (optionsBar) optionsBar.prepend(agentPill);
-  // The agent's state lives on Your review, where its answers arrive: a dot on the button and the
-  // words in its tooltip, so the reading bar keeps one control per job.
+  // Who is here: a chip before Your review with the agent's mark (a presence dot on its corner, as
+  // chat apps show someone online) and what it is doing in words. On a narrow screen only the mark
+  // and its dot remain. A click opens a small card: who, what, and how to connect one when none is.
   const ledgerButton = document.getElementById('ledger-toggle');
-  const agentDot = document.createElement('span');
-  agentDot.className = 'dcr-dot dcr-agent-dot';
-  agentDot.setAttribute('aria-hidden', 'true');
-  if (ledgerButton) ledgerButton.prepend(agentDot);
-  const renderAgent = () => {
-    const model = online ? tools.agentModel(threads, listening, Date.now(), previews) : {tone: 'off', text: 'Server stopped', hint: 'Restart `dcr serve` to send or receive.'};
-    if (ledgerButton) {
-      agentPill.hidden = true;
-      agentDot.hidden = !model;
-      if (!model) return;
-      agentDot.dataset.tone = model.tone;
-      ledgerButton.title = `Your review (L). ${model.text}: ${model.hint}`;
-      if (!ledgerButton.contains(agentDot)) ledgerButton.prepend(agentDot);
-      return;
-    }
-    agentPill.hidden = !model;
-    if (!model) return;
-    agentPill.dataset.tone = model.tone;
-    set(agentPill.querySelector('.dcr-agent-text'), 'textContent', model.text);
-    agentPill.title = model.hint;
+  const presence = document.createElement('button');
+  presence.type = 'button';
+  presence.id = 'dcr-presence';
+  presence.hidden = true;
+  presence.setAttribute('aria-haspopup', 'dialog');
+  presence.setAttribute('aria-expanded', 'false');
+  presence.innerHTML = '<span class="dcr-presence-face"></span><span class="dcr-presence-text" role="status"></span>';
+  const optionsBar = document.querySelector('.toolbar-options');
+  if (ledgerButton) ledgerButton.before(presence);
+  else optionsBar?.prepend(presence);
+  const presenceCard = document.createElement('div');
+  presenceCard.id = 'dcr-presence-card';
+  presenceCard.hidden = true;
+  presenceCard.setAttribute('role', 'dialog');
+  presenceCard.setAttribute('aria-label', 'Your agent');
+  document.body.append(presenceCard);
+  const typing = '<span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span>';
+  const connectCommand = () => `dcr wait --repo ${snapshot.repo || '<repo>'} --name ${review.history?.series || '<series>'} --agent <you>`;
+  // What the chip and its card say, from the agent model.
+  const presenceModel = () => {
+    if (!online) return {tone: 'off', label: 'Review server stopped', hint: 'Restart `dcr serve` to send or receive.', face: null};
+    const model = tools.agentModel(threads, listening, Date.now(), previews, listener);
+    if (!model) return null;
+    const name = tools.escape(listener ? tools.agentInfo(listener).name : 'Your agent');
+    if (model.tone === 'ok') return {tone: 'ok', label: `${name} <span class="dcr-presence-state">listening</span>`, hint: model.hint, face: listener};
+    if (model.tone === 'work') return {tone: 'work', label: `${name} is answering${typing}`, hint: model.hint, face: listener};
+    return {tone: 'off', label: 'No agent connected', hint: 'Nothing is listening, so comments you send wait until an agent picks them up.', face: null};
   };
+  const renderPresenceCard = model => {
+    const agent = model.face ? tools.agentInfo(model.face) : null;
+    const who = agent ? `<strong>${tools.escape(agent.name)}</strong>${agent.company ? `<span>${tools.escape(agent.company)}</span>` : ''}` : `<strong>${model.tone === 'off' ? 'No agent connected' : 'Your agent'}</strong>`;
+    const connect = model.tone === 'off' && online ? `<p class="dcr-presence-help">Ask your agent to continue this review, or run this where it works:</p><div class="dcr-presence-cmd"><code>${tools.escape(connectCommand())}</code><button type="button" class="icon-button" data-dcr-copy-wait aria-label="Copy the command" title="Copy">${ico('copy')}</button></div>` : '';
+    const html = `<header>${tools.avatarHTML(model.face, '')}<div class="dcr-presence-who">${who}</div></header><p class="dcr-presence-line dcr-presence-${model.tone}"><span class="dcr-presence-dot" aria-hidden="true"></span>${tools.escape(model.hint)}</p>${connect}`;
+    if (presenceCard.dataset.html !== html) { presenceCard.innerHTML = html; presenceCard.dataset.html = html; }
+  };
+  const renderAgent = () => {
+    const model = presenceModel();
+    presence.hidden = !model;
+    if (!model) { presenceCard.hidden = true; return; }
+    presence.dataset.tone = model.tone;
+    const face = `${tools.avatarHTML(model.face, 'dcr-face-sm')}<span class="dcr-presence-dot" aria-hidden="true"></span>`;
+    const faceSlot = presence.querySelector('.dcr-presence-face');
+    if (faceSlot.dataset.html !== face) { faceSlot.innerHTML = face; faceSlot.dataset.html = face; }
+    const text = presence.querySelector('.dcr-presence-text');
+    if (text.dataset.html !== model.label) { text.innerHTML = model.label; text.dataset.html = model.label; }
+    presence.title = model.hint;
+    presence.setAttribute('aria-label', `${text.textContent}. ${model.hint}`);
+    renderPresenceCard(model);
+  };
+  const placePresenceCard = () => {
+    const box = presence.getBoundingClientRect();
+    const width = Math.min(320, window.innerWidth - 24);
+    presenceCard.style.width = `${width}px`;
+    presenceCard.style.top = `${Math.round(box.bottom + 8)}px`;
+    presenceCard.style.left = `${Math.round(Math.max(12, Math.min(box.left, window.innerWidth - width - 12)))}px`;
+  };
+  const togglePresenceCard = open => {
+    presenceCard.hidden = !open;
+    presence.setAttribute('aria-expanded', String(open));
+    if (open) placePresenceCard();
+  };
+  presence.addEventListener('click', () => togglePresenceCard(presenceCard.hidden));
+  document.addEventListener('click', event => {
+    if (!presenceCard.hidden && !presenceCard.contains(event.target) && !presence.contains(event.target)) togglePresenceCard(false);
+  });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape' && !presenceCard.hidden) { togglePresenceCard(false); presence.focus(); } });
+  window.addEventListener('resize', () => { if (!presenceCard.hidden) placePresenceCard(); });
+  presenceCard.addEventListener('click', async event => {
+    if (!event.target.closest('[data-dcr-copy-wait]')) return;
+    try { await navigator.clipboard.writeText(connectCommand()); flash('Copied. Run it where your agent works.'); }
+    catch { getSelection().selectAllChildren(presenceCard.querySelector('code')); flash('Select and copy the command.'); }
+  });
 
   // Unread answers: a count in the tab title and a dot on Your review, until they have been seen.
   const refreshUnread = () => {
@@ -880,7 +966,15 @@
     if (!items.length) return;
     const first = comments().find(comment => comment.id === items[0].thread);
     const many = new Set(items.map(item => item.thread)).size > 1;
-    arrival.innerHTML = `<span class="dcr-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span><div><strong>${many ? 'Your agent replied to several comments' : 'Your agent replied'}</strong>${!many && first ? `<span>${tools.escape(first.subject)}</span>` : ''}</div>${first ? `<button type="button" class="btn btn-sm btn-primary" data-dcr-show-convo="${tools.escape(first.id)}">View</button>` : ''}<button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
+    const message = (threads[items[0].thread]?.messages || []).find(entry => entry.id === items[0].id);
+    const name = tools.agentInfo(message?.agent || listener).name;
+    const author = first?.agent ? tools.agentInfo(first.agent).name : null;
+    const verdict = message?.role === 'adversary' && tools.VERDICTS[message.verdict];
+    const repliers = [...new Set(items.map(item => (threads[item.thread]?.messages || []).find(entry => entry.id === item.id)?.agent || listener).map(slug => tools.agentInfo(slug).name))];
+    const headline = many ? `${tools.names(repliers)} replied on ${new Set(items.map(item => item.thread)).size} comments`
+      : verdict ? `${name} ${verdict.label.toLowerCase()} with ${author ? `${author}'s comment` : 'a comment'}`
+      : message?.role === 'adversary' ? `${name} checked ${author ? `${author}'s comment` : 'a comment'}` : `${name} replied`;
+    arrival.innerHTML = `${tools.avatarHTML(message?.agent || listener)}<div><strong>${tools.escape(headline)}</strong>${!many && first ? `<span>${tools.escape(first.subject)}</span>` : ''}</div>${first ? `<button type="button" class="btn btn-sm btn-primary" data-dcr-show-convo="${tools.escape(first.id)}">View</button>` : ''}<button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
     arrival.hidden = false;
     clearTimeout(arrivalTimer);
     arrivalTimer = setTimeout(() => { arrival.hidden = true; }, 12000);
@@ -957,7 +1051,8 @@
   };
   const announceComments = list => {
     const first = list[0];
-    arrival.innerHTML = `<span class="dcr-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span><div><strong>${list.length === 1 ? 'Your agent left a comment' : `Your agent left ${list.length} comments`}</strong><span>${tools.escape(first.subject)}</span></div><button type="button" class="btn btn-sm btn-primary" data-ledger-jump="${tools.escape(first.id)}">View</button><button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
+    const name = first.agent ? tools.agentInfo(first.agent).name : 'Your agent';
+    arrival.innerHTML = `${tools.avatarHTML(first.agent || null)}<div><strong>${list.length === 1 ? `${tools.escape(name)} left a comment` : `${tools.escape(name)} left ${list.length} comments`}</strong><span>${tools.escape(first.subject)}</span></div><button type="button" class="btn btn-sm btn-primary" data-ledger-jump="${tools.escape(first.id)}">View</button><button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
     arrival.hidden = false;
     clearTimeout(arrivalTimer);
     arrivalTimer = setTimeout(() => { arrival.hidden = true; }, 12000);
@@ -978,7 +1073,7 @@
 
   // --- sync ----------------------------------------------------------------------------------
   const apply = data => {
-    threads = data.threads; rev = data.rev; latest = data.latest_revision; listening = data.listening; online = true; previews = data.previews || {};
+    threads = data.threads; rev = data.rev; latest = data.latest_revision; listening = data.listening; listener = data.agent || listener; online = true; previews = data.previews || {};
     const ghNext = {pending: data.github?.pending || {}, posted: data.github?.posted || {}};
     if (JSON.stringify(ghNext) !== JSON.stringify({pending: ghData.pending, posted: ghData.posted})) ghData = ghNext;
     receiveComments(data.comments || []);

@@ -27,6 +27,15 @@ Keep their licenses with this skill when sharing it.
   - CSS and JavaScript are embedded inline. The shared viewer opens only embedded image data
     or a rendered code hunk; video remains in its native inline player.
     No CDN, image files, fonts or additional player libraries load at runtime.
+- Simple Icons 15.13.0: https://cdn.jsdelivr.net/npm/simple-icons@15.13.0/icons/
+  - License: `brands/LICENSE` (CC0 1.0). The marks remain their owners' trademarks; they only say
+    which agent wrote a message.
+  - Saved in `brands/` under the agent they stand for: `claude.svg` (Claude), `codex.svg` (OpenAI,
+    for Codex) and `gemini.svg` (Google Gemini).
+- LobeHub Icons 1.95.1 (`@lobehub/icons-static-svg`): https://cdn.jsdelivr.net/npm/@lobehub/icons-static-svg@1.95.1/icons/
+  - License: `brands/LOBEHUB-LICENSE` (MIT). The marks remain their owners' trademarks.
+  - `grok.svg` (Grok, from `grok.svg`) and `antigravity.svg` (Google Antigravity, from
+    `antigravity-color.svg`). Simple Icons has neither. Any other agent shows its initial.
 
 Update only when needed, pin versions, retain license text, and verify the
 synthetic diff fixture plus actual token colors/layout after a library change.

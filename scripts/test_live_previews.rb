@@ -6,7 +6,7 @@ require 'base64'
 ENV['DCR_CONFIG_DIR'] = Dir.mktmpdir('dcr-config')
 require 'open3'
 require 'rbconfig'
-require_relative 'qa_capture'
+require_relative '../lib/dcr/server'
 require_relative '../lib/dcr/state'
 require_relative '../lib/dcr/previews'
 
@@ -136,7 +136,7 @@ Dir.mktmpdir('dcr-previews-test') do |directory|
   # --- the page's side ----------------------------------------------------------------------------
   FileUtils.mkdir_p(series)
   File.write(File.join(series, 'current.html'), %(<html><body><script type="application/json" id="data">{}</script></body></html>))
-  server = QACapture::Server.new(directory: File.join(directory, 'capture'), report: File.join(series, 'current.html'))
+  server = DCR::Server.new(directory: File.join(directory, 'capture'), report: File.join(series, 'current.html'))
   Thread.new { server.run }
   request = lambda do |method, path, body = '', extra = {}|
     socket = TCPSocket.new('127.0.0.1', server.port)

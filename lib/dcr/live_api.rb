@@ -23,14 +23,14 @@ module DCR
 
     attr_reader :state
 
-    # Saved browser progress, written into the page before the review script runs so the
-    # server's copy wins over a stale browser one.
-    def bootstrap_script
+    # Saved browser progress and display settings by storage key, for the served page to seed
+    # before the review script runs, so the server's copy wins over a stale browser one.
+    def progress
       carry_forward
       blobs = @state.read['blobs'].dup
       saved = @settings.read
       blobs[Settings::KEY] = saved unless saved.empty?
-      %(<script>(function(){try{var b=#{JSON.generate(blobs, script_safe: true)};Object.keys(b).forEach(function(k){localStorage.setItem(k,JSON.stringify(b[k]))})}catch(e){}})()</script>)
+      blobs
     end
 
     # Returns [status, body_hash]. body is a callable returning the raw request body.
@@ -123,7 +123,7 @@ module DCR
     def snapshot(key)
       raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
       state = @state.read
-      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'github' => state['github'][key] || {}, 'comments' => state['comments'][key] || [], 'previews' => preview_status(state['previews'][key]), 'latest_revision' => latest_revision, 'listening' => @state.listening?,
+      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'github' => state['github'][key] || {}, 'comments' => state['comments'][key] || [], 'previews' => preview_status(state['previews'][key]), 'latest_revision' => latest_revision, 'listening' => @state.listening?, 'agent' => @state.listener,
        'pending' => state['outbox'].count { |entry| entry['seq'] > state['acked'] && entry['key'] == key }}
     end
 
@@ -135,10 +135,10 @@ module DCR
     def poll(key, since)
       deadline = Time.now + POLL_SECONDS
       last_latest = latest_revision
-      last_listening = @state.listening?
+      last_listening = [@state.listening?, @state.listener]
       loop do
         current = snapshot(key)
-        return current if current['rev'] != since || current['latest_revision'] != last_latest || current['listening'] != last_listening || Time.now >= deadline
+        return current if current['rev'] != since || current['latest_revision'] != last_latest || current.values_at('listening', 'agent') != last_listening || Time.now >= deadline
         sleep 0.4
       end
     end

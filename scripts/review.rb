@@ -16,12 +16,10 @@ require 'pathname'
 require 'time'
 require_relative 'qa_assets'
 require_relative 'previews'
-require_relative 'dark_theme'
+require_relative '../lib/dcr/page'
 
 module DynamicReviews
-  ASSETS = File.expand_path('../assets', __dir__)
   LABELS = %w[issue suggestion question note praise nitpick todo thought chore typo polish quibble].freeze
-  LANGUAGES = %w[core markup clike javascript css ruby sql json yaml bash typescript].freeze
 
   def self.git(root, *args, allowed: [0])
     literal = %w[diff ls-files ls-tree].include?(args.first) ? ['--literal-pathspecs'] : []
@@ -296,12 +294,7 @@ module DynamicReviews
     end
   end
 
-  def self.extract(report)
-    html = File.read(report)
-    json = html[/<script\b(?=[^>]*\bid=["']data["'])[^>]*>(.*?)<\/script>/m, 1]
-    raise ArgumentError, 'Report has no embedded review data' unless json
-    JSON.parse(json)
-  end
+  def self.extract(report) = DCR::Page.payload(File.read(report))
 
   def self.render(snapshot:, review:, name:, replace: false, **_unused)
     snapshot = JSON.parse(File.read(snapshot)) if snapshot.is_a?(String)
@@ -326,7 +319,10 @@ module DynamicReviews
     output
   end
 
-  def self.review_html(snapshot, review)
+  def self.review_html(snapshot, review) = DCR::Page.review(payload(snapshot, review))
+
+  # The data a review page embeds: the validated review and its snapshot with the render rows derived.
+  def self.payload(snapshot, review)
     validate(snapshot, review)
     # Reviewer calibration is an instruction, not report content. Remove legacy
     # calibration sections from both the visible HTML and its embedded payload.
@@ -336,23 +332,7 @@ module DynamicReviews
     snapshot = Marshal.load(Marshal.dump(snapshot))
     add_sources(snapshot) unless snapshot['mode'] == 'uncommitted' || snapshot['working_tree']
     snapshot['files'].each { |file| file['hunks'].each { |hunk| hunk['rows'] = diff_rows(hunk) } }
-    payload = JSON.generate({'snapshot' => snapshot, 'review' => review}).gsub('<', '\\u003c').gsub('>', '\\u003e').gsub('&', '\\u0026')
-    licenses = %w[DAISYUI-LICENSE PRISM-LICENSE lucide/LICENSE glightbox/LICENSE].map { |name| File.read(File.join(ASSETS, 'vendor', name)) }.join("\n")
-    styles = "/* Third-party licenses\n#{licenses}\n*/\n" + File.read(File.join(ASSETS, 'vendor/daisyui.css')) + "\n" + File.read(File.join(ASSETS, 'vendor/glightbox/glightbox.min.css')) + "\n" + File.read(File.join(ASSETS, 'report.css')) + ReviewDarkTheme.css(File.read(File.join(ASSETS, 'report.css')))
-    prism = LANGUAGES.map { |lang| File.read(File.join(ASSETS, "vendor/prism-#{lang}.min.js")) }.join("\n")
-    icons = Dir[File.join(ASSETS, 'vendor/lucide/*.svg')].sort.to_h { |path| [File.basename(path, '.svg'), File.read(path)] }
-    scripts = "window.Prism = {manual: true};\nwindow.ReviewIcons = #{JSON.generate(icons)};\n#{prism}\n#{File.read(File.join(ASSETS, 'vendor/glightbox/glightbox.min.js'))}\n#{File.read(File.join(ASSETS, 'review-tools.js'))}\n#{File.read(File.join(ASSETS, 'report.js'))}"
-    icon = File.read(File.join(ASSETS, 'icon.svg'))
-    replacements = {'__UI_VERSION__' => ui_version, '__STYLES__' => styles, '__SCRIPTS__' => scripts.gsub(%r{</script}i, '<\\/script'), '__REVIEW_DATA__' => payload, '__ICON__' => icon, '__FAVICON__' => "data:image/svg+xml;base64,#{[icon].pack('m0')}"}
-    html = File.read(File.join(ASSETS, 'report.html')).gsub(/__UI_VERSION__|__STYLES__|__SCRIPTS__|__REVIEW_DATA__|__ICON__|__FAVICON__/) { |token| replacements.fetch(token) }
-    html
-  end
-
-  # Identifies the report UI a page was rendered with, so an older saved page can be refreshed
-  # before it is served. Covers the files that make up the page, not the vendored libraries.
-  def self.ui_version
-    files = %w[report.html report.css report.js review-tools.js icon.svg].map { |name| File.join(ASSETS, name) } + [File.join(__dir__, 'dark_theme.rb')]
-    Digest::SHA256.hexdigest(files.map { |path| File.read(path) }.join("\0"))[0, 16]
+    {'snapshot' => snapshot, 'review' => review}
   end
 
   def self.run(argv)

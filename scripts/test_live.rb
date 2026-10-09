@@ -5,7 +5,7 @@ require 'tmpdir'
 ENV['DCR_CONFIG_DIR'] = Dir.mktmpdir('dcr-config') # never touch the real user settings
 require 'open3'
 require 'rbconfig'
-require_relative 'qa_capture'
+require_relative '../lib/dcr/server'
 require_relative '../lib/dcr/state'
 
 def assert(condition, message)
@@ -99,14 +99,14 @@ Dir.mktmpdir('dcr-live-test') do |directory|
   agent_state.send_items(KEY, [{'id' => 'c10', 'text' => 'please fix this'}])
   json_out, = run.call('wait', '--dir', agent_dir, '--timeout', '5', '--json')
   assert(JSON.parse(json_out)['instructions'].start_with?('REVIEW CONVERSATION. REPLY ONLY.'), 'The JSON form must carry the rule too')
-  out, _err, status = run.call('reply', '--dir', agent_dir, 'c9', 'Because', 'it', 'is', 'capped')
-  assert(status.success? && agent_state.read.dig('threads', KEY, 'c9', 'messages').last['body'] == 'Because it is capped', 'Reply was not stored')
+  out, _err, status = run.call('reply', '--dir', agent_dir, '--agent', 'codex', 'c9', 'Because', 'it', 'is', 'capped')
+  assert(status.success? && agent_state.read.dig('threads', KEY, 'c9', 'messages').last.values_at('body', 'agent') == ['Because it is capped', 'codex'], 'Reply was not stored with its agent')
   out, = run.call('comments', '--dir', agent_dir)
-  assert(out.include?('c9 [answered, live]') && out.include?('agent: Because it is capped'), 'Comments listing is wrong')
+  assert(out.include?('c9 [answered, live]') && out.include?('Codex: Because it is capped'), 'Comments listing is wrong')
   agent_state.user_message(KEY, 'c9', "And the caller?\nIt passes nil.")
   out, _err, status = run.call('comments', '--dir', agent_dir, '--thread', 'c9')
   assert(status.success? && out.start_with?('Thread: c9 [sent, live]') && out.include?("The comment as sent:\n\nFile: app/a.rb\n\nWhy is this bounded?"), 'A thread did not print with the comment as first sent')
-  assert(out.include?("Agent · ") && out.include?('Because it is capped') && out.include?("Reviewer · ") && out.include?("And the caller?\nIt passes nil."), 'A thread did not print every message in full')
+  assert(out.include?("Codex · ") && out.include?('Because it is capped') && out.include?("Reviewer · ") && out.include?("And the caller?\nIt passes nil."), 'A thread did not print every message in full')
   assert(!out.include?('Follow-up in thread c9') && out.include?("dcr reply --dir #{agent_dir} c9"), 'A thread printed a follow-up as the comment, or no reply command')
   json = JSON.parse(run.call('comments', '--dir', agent_dir, '--thread', 'c9', '--json').first)
   assert(json['id'] == 'c9' && json['comment'].include?('Why is this bounded?') && json['messages'].length == 2, 'The JSON thread is wrong')
@@ -121,7 +121,7 @@ Dir.mktmpdir('dcr-live-test') do |directory|
   puts 'PASS dcr wait blocks until the reviewer sends, prints thread and reply command, acknowledges, and dcr reply/comments (and --thread) round-trip'
 
   FileUtils.rm_f(state.path)
-  server = QACapture::Server.new(directory: File.join(directory, 'capture'), report: File.join(series, 'current.html'))
+  server = DCR::Server.new(directory: File.join(directory, 'capture'), report: File.join(series, 'current.html'))
   Thread.new { server.run }
   request = lambda do |method, path, body = '', extra = {}|
     socket = TCPSocket.new('127.0.0.1', server.port)

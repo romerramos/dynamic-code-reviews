@@ -4,7 +4,6 @@
 # Incremental review storage and reuse. Ruby standard library + Git only.
 require_relative 'review'
 require_relative '../lib/dcr/state'
-require 'cgi'
 require 'securerandom'
 
 module ReviewSeries
@@ -529,6 +528,9 @@ module ReviewSeries
       posted = DCR::State.new(path).read.dig('comments', DCR::State.review_key(entry['fingerprint'], name, entry['number'])) || []
       own = Array(review['comments']).map { |comment| comment['id'] }
       review['comments'] = Array(review['comments']) + posted.reject { |comment| own.include?(comment['id']) }
+      # Comments written straight into the review are the finishing agent's, like the posted ones.
+      author = DCR::Agents.detect
+      review['comments'].each { |comment| comment['agent'] ||= author } if author
       review['context'] = contexts(snapshot, review.delete('context_paths')) if review['context_paths']
       states = Array(review['findings']).map { |f| {'id' => f['id'], 'status' => 'open', 'change' => 'new', 'title' => f['title'], 'reason' => 'Recorded in the full review.'} }
       append(path, history, snapshot, review, {'summary' => 'Full review ready: walkthrough explanations, findings and validation.', 'groups' => {}, 'files' => [], 'finding_states' => states})
@@ -568,19 +570,7 @@ module ReviewSeries
       atomic_write(File.join(path, format('revision-%03d.html', entry['number'])), html)
       atomic_write(File.join(path, 'current.html'), html) if entry == history['revisions'].last
     end
-    atomic_write(File.join(path, 'index.html'), index_html(history))
-  end
-
-  def index_html(history)
-    esc = ->(s) { CGI.escapeHTML(s.to_s) }
-    styles = File.read(File.join(DynamicReviews::ASSETS, 'vendor/daisyui.css')) + File.read(File.join(DynamicReviews::ASSETS, 'report.css'))
-    icon = File.read(File.join(DynamicReviews::ASSETS, 'icon.svg'))
-    entries = history['revisions'].reverse.map do |entry|
-      label = entry == history['revisions'].last ? 'Latest review' : 'Open revision'
-      target = entry == history['revisions'].last ? 'current.html' : "revision-#{format('%03d', entry['number'])}.html"
-      "<article class='section-card card'><span class='badge neutral'>Revision #{entry['number']}</span><h2>#{esc.call(entry['title'])}</h2><p>#{esc.call(entry['summary'])}</p><p class='muted'>Saved #{esc.call(entry['created'])} · code #{esc.call(entry['head'][0, 8])}</p><a class='btn btn-sm btn-primary' href='#{target}'>#{label}</a> <a class='btn btn-sm btn-ghost' href='revisions/#{format('%03d', entry['number'])}.html'>Saved snapshot</a></article>"
-    end.join
-    "<!doctype html><html lang='en' data-theme='light'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><meta http-equiv='Content-Security-Policy' content=\"default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'\"><title>#{esc.call(history['name'])} · Review history</title><link rel='icon' type='image/svg+xml' href='data:image/svg+xml;base64,#{[icon].pack('m0')}'><style>#{styles}</style></head><body><main style='max-width:960px;margin:40px auto;padding:24px'><div class='brand'><span class='brand-icon' aria-hidden='true'>#{icon}</span><strong>Dynamic Code Reviews</strong></div><h1 style='margin-top:30px'>#{esc.call(history['name'])}</h1><p class='lead'>#{history['revisions'].length} saved revisions · #{esc.call(history['branch'])}</p><p class='muted'>Each revision preserves its original review and test results. Continue from the latest review to inspect the next increment.</p>#{entries}</main></body></html>"
+    atomic_write(File.join(path, 'index.html'), DCR::Page.history(history))
   end
 
   def list(repo:, **_unused)
