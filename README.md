@@ -224,7 +224,10 @@ References: [review JSON](references/report-schema.md), [incremental reviews](re
   Gemini and opencode CLIs are asked headless and read-only; an agent checks the review it runs only
   on a model the reviewer named.
 - **State** lives in the series folder: `manifest.json` and the saved pages for revisions, and
-  `state.json` for the reviewer's progress and threads (`lib/dcr/state.rb`).
+  `state.json` for the reviewer's progress and threads (`lib/dcr/state.rb`). The progress (viewed
+  files, resolved comments, notes, the reviewer's own comments) is also kept outside the worktree, in
+  `~/.config/dcr/progress/` (`lib/dcr/progress_archive.rb`), so a deleted series folder or a torn-down
+  worktree does not lose it; a new revision keeps the viewed files whose diff did not change.
 - `scripts/` holds the command-line entry points that `bin/dcr` dispatches to, and the review and
   series logic.
 

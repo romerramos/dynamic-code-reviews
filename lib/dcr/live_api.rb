@@ -4,6 +4,8 @@ require 'json'
 require 'uri'
 require_relative 'agent_catalog'
 require_relative 'github'
+require_relative 'page'
+require_relative 'progress_archive'
 require_relative 'second_opinion'
 require_relative 'settings'
 require_relative 'state'
@@ -50,6 +52,7 @@ module DCR
       when ['POST', '/api/state']
         input = json(body)
         @state.save_blob(input['key'], input['blob'])
+        archive&.save(input['key'], input['blob'])
         [200, {'ok' => true}]
       when ['GET', '/api/settings'] then [200, @settings.read]
       when ['POST', '/api/settings'] then [200, @settings.write(json(body))]
@@ -130,9 +133,42 @@ module DCR
       {}
     end
 
+    # Progress the served page starts from, for every revision that has none yet: a same-code
+    # revision takes its predecessor's; then what the archive kept (the series folder may have
+    # been made again); then a revision of changed code keeps the viewed files whose diff is the same.
     def carry_forward
       data = manifest
-      @state.carry_forward(data['name'], data['revisions']) if data['name'] && data['revisions']
+      return unless data['name'] && data['revisions']
+      @state.carry_forward(data['name'], data['revisions'])
+      revisions = data['revisions'].sort_by { |revision| revision['number'] }
+      key = ->(revision) { State.review_key(revision['fingerprint'], data['name'], revision['number']) }
+      blobs = @state.read['blobs']
+      revisions.each { |revision| @state.seed_blob(key.call(revision), archive.find(key.call(revision))) unless blobs[key.call(revision)] } if archive
+      revisions.each_cons(2) do |old, new|
+        blobs = @state.read['blobs']
+        next if blobs[key.call(new)] || old['fingerprint'] == new['fingerprint'] || Array(blobs.dig(key.call(old), 'viewedFiles')).empty?
+        kept = unchanged_files(old['number'], new['number']) & blobs.dig(key.call(old), 'viewedFiles')
+        @state.seed_blob(key.call(new), {'viewedFiles' => kept}) # even none: checked once, not on every load
+      end
+    end
+
+    # Paths whose diff is the same in both revisions, from the snapshots their pages embed.
+    def unchanged_files(old_number, new_number)
+      diffs = [old_number, new_number].map do |number|
+        page = File.join(File.dirname(@state.path), 'revisions', format('%03d.html', number))
+        return [] unless File.file?(page)
+        Array(Page.payload(File.read(page)).dig('snapshot', 'files')).to_h { |file| [file['path'], Array(file['hunks']).map { |hunk| hunk['patch'] }] }
+      end
+      diffs[0].select { |path, patches| diffs[1][path] == patches }.keys
+    rescue StandardError
+      []
+    end
+
+    # The reviewer's progress for this series, kept outside the worktree too.
+    def archive
+      return @archive if defined?(@archive)
+      data = manifest
+      @archive = data['repo'] && data['name'] ? ProgressArchive.new(data['repo'], data['name']) : nil
     end
 
     # Statuses only: the markup of a ready preview is fetched once, on its own.

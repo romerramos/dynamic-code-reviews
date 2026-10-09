@@ -69,7 +69,7 @@
     </header>
     <div class="dcr-app-body">
       <div class="dcr-app-canvas">
-        <div class="dcr-app-pane"><iframe title="The app under review" name="dcr-app-frame"></iframe></div>
+        <div class="dcr-app-pane"><iframe title="The app under review" name="dcr-app-frame"></iframe><div class="dcr-app-prep" role="status" aria-live="polite" hidden><span class="dcr-app-prep-spin" aria-hidden="true"></span><span class="dcr-app-prep-text"><strong data-prep-title></strong><span data-prep-detail></span></span></div></div>
         <form class="dcr-app-compose" data-app-compose hidden aria-label="Comment on this element">
           <p class="dcr-app-target"></p>
           <textarea name="body" rows="3" placeholder="What should change here?" aria-label="Your comment"></textarea>
@@ -171,9 +171,22 @@
 
   // Back and Forward move the app's own history only (the frame's, through the Navigation API),
   // never the review's: a flow that needs the browser's Back can be shown, and recorded, here.
-  const appHistory = ({back = false, forward = false}) => {
+  // Each says where it leads, and after one is used the status line says where the app went, also
+  // when that is the same address (an entry that repeats it), which is easy to miss by eye.
+  let stepping = null, stepped = 0, stepNote = '';
+  const appHistory = ({back = false, forward = false, backTo = null, forwardTo = null, path = null}) => {
     $('[data-app-back]').disabled = !back;
     $('[data-app-forward]').disabled = !forward;
+    $('[data-app-back]').title = back && backTo ? `Back to ${backTo}, in the app only` : 'Back, in the app only';
+    $('[data-app-forward]').title = forward && forwardTo ? `Forward to ${forwardTo}, in the app only` : 'Forward, in the app only';
+    if (stepping && path) {
+      const same = path === stepping.from ? `: the same address, one history entry ${stepping.direction === 'back' ? 'earlier' : 'later'}` : '';
+      stepNote = `Went ${stepping.direction} to ${path}${same}.`;
+      stepped = Date.now();
+      stepping = null;
+    }
+    // A step can land on a reloaded page, whose own "Connected to…" would hide where it went.
+    if (Date.now() - stepped < 1500) status('ok', stepNote);
   };
   window.addEventListener('message', event => {
     if (event.origin !== app.origin || event.source !== frame.contentWindow || event.data?.source !== 'dcr-app') return;
@@ -185,15 +198,15 @@
       left = message.left;
       $('[data-app-mode="comment"]').disabled = !!left;
       setRoute(message.path);
-      appHistory(message);
       if (left) status('work', `The app went to ${left}, outside ${app.upstream}. Open it in a new tab, or go back.`);
       setMode(pendingMode || mode);
       pendingMode = null;
       if (pendingHighlight) { post({type: 'highlight', selector: pendingHighlight}); pendingHighlight = null; }
       if (agentPointer) post({type: 'pointer', on: true});
+      appHistory(message);
     } else if (message.type === 'route') {
       setRoute(message.path);
-      if (mode === 'browse') status('ok', connected());
+      if (mode === 'browse' && Date.now() - stepped > 1500) status('ok', connected()); // keep "Went back to…" readable
     } else if (message.type === 'history') {
       appHistory(message);
     } else if (message.type === 'pick') {
@@ -229,7 +242,7 @@
     if (!response.ok) throw new Error(result.error || 'Request failed');
     return result;
   };
-  let threads = {}, listening;
+  let threads = {}, listening, listener = null;
   const newId = () => Math.random().toString(16).slice(2, 10);
   // Agent messages already read, shared with the conversation layer so the tab title count agrees.
   const seenKey = key ? `dcr-seen:${key}` : null;
@@ -536,10 +549,10 @@
     try {
       const state = await api(`/api/state?key=${encodeURIComponent(key)}`);
       latestRevision = state.latest_revision || latestRevision;
-      const signature = JSON.stringify([state.threads, state.listening]);
+      const signature = JSON.stringify([state.threads, state.listening, state.agent]);
       if (signature !== refresh.last) {
         refresh.last = signature;
-        threads = state.threads; listening = state.listening;
+        threads = state.threads; listening = state.listening; listener = state.agent || null;
         renderList();
       }
       evaluateQA();
@@ -562,8 +575,26 @@
   const currentRevision = data?.review?.history?.revision || null;
   const qaRequests = () => Object.entries(threads).filter(([, thread]) => thread.anchor?.kind === 'request');
   const clipsSince = at => recs.filter(item => item.at >= at && item.driver === 'agent').length;
+  // Between recordings the agent signs in, makes data and finds its way: a band across the top of
+  // the app says so, so the wait does not look like a slow recording. Clicks pass through it, and it
+  // is gone before a recording's first frame (the recorder waits for it to paint away).
+  const prep = $('.dcr-app-prep');
+  let qaEntry = null;
+  const syncPrep = (state = recorder()?.status()) => {
+    const thread = qaEntry?.[1];
+    const show = !!thread && thread.delivery !== 'sent' && !!state?.ready && !state.recording && !state.busy;
+    prep.hidden = !show;
+    if (!show) return;
+    const who = listener && tools ? tools.agentInfo(listener).name : 'Your agent';
+    const clips = clipsSince(thread.messages[0]?.at || '');
+    $('[data-prep-title]').textContent = clips ? `${who} is preparing the next recording` : `${who} is getting the app ready to record`;
+    $('[data-prep-detail]').textContent = clips ? `${clips} ${clips === 1 ? 'recording' : 'recordings'} so far. This part is not recorded.` : 'Signing in and setting up the data the flows need. This part is not recorded.';
+  };
+  window.addEventListener('qa-recorder-state', event => syncPrep(event.detail));
   const setDriving = entry => {
     qaActive = entry ? entry[0] : null;
+    qaEntry = entry;
+    syncPrep();
     dialog.classList.toggle('is-agent-driving', !!entry);
     banner.hidden = !entry;
     if (!entry) return;
@@ -720,8 +751,8 @@
   input.addEventListener('blur', () => { delete input.dataset.edited; input.value = route; });
   address.addEventListener('submit', event => { event.preventDefault(); delete input.dataset.edited; navigate(input.value.trim() || '/'); });
   $('[data-app-reload]').addEventListener('click', () => navigate(route));
-  $('[data-app-back]').addEventListener('click', () => post({type: 'back'}));
-  $('[data-app-forward]').addEventListener('click', () => post({type: 'forward'}));
+  $('[data-app-back]').addEventListener('click', () => { stepping = {direction: 'back', from: route}; post({type: 'back'}); });
+  $('[data-app-forward]').addEventListener('click', () => { stepping = {direction: 'forward', from: route}; post({type: 'forward'}); });
   $('[data-app-close]').addEventListener('click', () => dialog.close());
   dialog.querySelectorAll('[data-app-mode]').forEach(button => button.addEventListener('click', () => setMode(button.dataset.appMode)));
   dialog.querySelectorAll('[data-app-width]').forEach(button => button.addEventListener('click', () => setWidth(button.dataset.appWidth)));

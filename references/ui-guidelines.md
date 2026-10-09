@@ -124,7 +124,9 @@ thing: recording now (a red dot on **Record**, a red pill reading **Stop m:ss** 
   an accent banner takes the first line of the App view's bar: what is happening (waiting
   for the agent, running, or sharing stopped with **Share this tab**), a count of
   recordings so far and **Stop QA review**. The view's own controls and Esc are locked;
-  the app pane stays live because the agent's input lands there.
+  the app pane stays live because the agent's input lands there. Between recordings a frosted
+  band across the top of the app says the agent is preparing (named when known); it never takes
+  a click and is gone before a recording's first frame.
 - **QA reviews in On this app**: the latest QA review is one row (time, number of
   recordings, the report's first line); opened, it shows its clips side by side and the
   agent's report, never a reply field. Earlier QA reviews fold into one row, since each

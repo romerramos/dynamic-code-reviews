@@ -107,6 +107,14 @@ module DCR
       update { |state| state['blobs'][key] = blob }
     end
 
+    # Progress found elsewhere (the archive, an earlier revision), for a key that has none yet:
+    # what the reviewer saved here always wins.
+    def seed_blob(key, blob)
+      check_key(key)
+      return unless blob.is_a?(Hash)
+      update { |state| state['blobs'][key] ||= blob }
+    end
+
     # A new revision of the same captured code (evidence or analysis added, nothing moved)
     # keeps the reviewer's progress and conversations. A different snapshot does not: its
     # comments are anchored to other ranges, so it starts fresh as it always has.

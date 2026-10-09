@@ -156,8 +156,11 @@ function run(action) {
   task.catch(error => { $('notice').textContent = error.message; });
   return task;
 }
+// The review hides what it draws between recordings once the recorder is busy; two frames let that
+// paint away before the first frame is captured (capped, since a hidden tab paints no frames).
+const painted = () => new Promise(resolve => { setTimeout(resolve, 150); requestAnimationFrame(() => requestAnimationFrame(resolve)); });
 const commands = {
-  start: name => { if (name) $('name').value = name; return start(); },
+  start: async name => { if (name) $('name').value = name; await painted(); return start(); },
   still: name => { if (name) $('name').value = name; return snapshot(); },
   stop: async () => (await stop()) || {stopped: false},
   end: async () => { await end(); return {ended: true}; },

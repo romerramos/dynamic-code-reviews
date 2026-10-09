@@ -468,6 +468,12 @@ body.reading-focus main#content{padding-top:12px}
 .revision-control{gap:0}.revision-control>span{display:none}
 .revision-control .select{width:auto;min-width:0;height:32px;min-height:32px;padding-inline:10px 30px;border-color:transparent;background-color:transparent;font-size:13px;font-weight:550;color:#3f4656}
 .revision-control .select:hover{background-color:#f0f1f4}
+/* daisyUI's open list inherits the select's background, which is transparent here and tinted elsewhere:
+   it would show the page through it. Every list gets a solid surface; the focus ring is the page's own. */
+.select::picker(select),select.select::picker(select){background-color:var(--surface,#fff);border-color:var(--line,#e3e5ea)}
+.select:is(:focus,:focus-within,:open){--input-color:var(--accent)}
+.revision-control .select:is(:focus,:open):not(:focus-visible){outline:0;background-color:#f0f1f4}
+html[data-theme="dark"] .revision-control .select:is(:focus,:open):not(:focus-visible){background-color:color-mix(in oklab,var(--ink) 9%,transparent)}
 .workspace{height:calc(100dvh - var(--chrome-h))}
 /* Sidebar: the walkthrough as a table of contents. */
 .sidebar{padding:18px 14px 14px;background:#fbfbfc}

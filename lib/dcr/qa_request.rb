@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
-require 'digest'
 require 'fileutils'
 require 'json'
-require 'open3'
 require 'securerandom'
 require 'shellwords'
 require_relative 'settings'
@@ -48,7 +46,8 @@ module DCR
         - Start, stop and snapshot only with the `dcr record` commands below. While they drive the recorder, the review draws your pointer and a ring on each click inside the app, at the coordinates of the input you send, so a tool that never moves the system pointer (DevTools protocol, Playwright, Claude in Chrome) still records a clip a viewer can follow. A computer-use tool that moves the real pointer is shown as it is. Never add a cursor to a recording afterwards.
         - Move to an element before clicking it (hover, then click), at a human pace, so the pointer travels the way a person's would.
         - The app is the large pane in the middle of the App view; act inside it. Change the page with the address field at the top of the App view. Do not close the App view, reload the review or open another tab.
-        - For a step that needs the browser's Back or Forward, use the arrows at the left of the App view's address field. They move the app's own history only, never the review's, so such a step can be recorded. Never use the browser's own Back.
+        - For a step that needs the browser's Back or Forward, use the arrows at the left of the App view's address field. They move the app's own history only, never the review's, so such a step can be recorded. Never use the browser's own Back. Each arrow's tooltip names where it leads, and after one is used the status line under the app says where it went, including "the same address" when an entry repeats the one before, which a glance at the page cannot show.
+        - Between recordings the App view draws a band across the top of the app saying you are preparing, so the reviewer knows nothing is being recorded yet. Clicks pass through it, and it is gone before a recording starts; ignore it.
 
         Prepare first (not recorded); this is what makes the clips worth watching:
         - QA notes: #{notes} — #{known}
@@ -84,11 +83,9 @@ module DCR
     # What QA reviews learned for the next one (who signs in where, how to make data). One file per
     # repository, shared by all its worktrees and kept outside them, so it is never committed.
     def notes_path(repo)
-      common, status = Open3.capture2('git', '-C', repo, 'rev-parse', '--path-format=absolute', '--git-common-dir', err: File::NULL)
-      root = status.success? && !common.strip.empty? ? File.dirname(common.strip) : File.expand_path(repo)
       directory = File.join(File.expand_path(Settings.default_directory), 'qa-notes')
       FileUtils.mkdir_p(directory, mode: 0o700)
-      File.join(directory, "#{File.basename(root)}-#{Digest::SHA256.hexdigest(root)[0, 8]}.md")
+      File.join(directory, "#{Settings.repo_key(repo)}.md")
     end
   end
 end

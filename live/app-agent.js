@@ -61,8 +61,13 @@
   document.addEventListener('turbo:load', route);
   // The review's Back and Forward act on this frame's own entries; the Navigation API in a frame
   // sees only those, so they can never take the review page itself back.
-  const ownHistory = () => ({back: !!window.navigation?.canGoBack, forward: !!window.navigation?.canGoForward});
-  window.navigation?.addEventListener('currententrychange', () => post('history', ownHistory()));
+  // Where each would lead too, since an entry can repeat the address it came from.
+  const ownHistory = () => {
+    const nav = window.navigation;
+    const at = offset => { const entry = nav?.currentEntry && nav.entries()[nav.currentEntry.index + offset]; if (!entry?.url) return null; const url = new URL(entry.url); return url.pathname + url.search + url.hash; };
+    return {back: !!nav?.canGoBack, forward: !!nav?.canGoForward, backTo: at(-1), forwardTo: at(1)};
+  };
+  window.navigation?.addEventListener('currententrychange', () => post('history', {path: here(), ...ownHistory()}));
 
   // --- the agent's pointer, while the agent records ---------------------------------------------
   // An agent driving the app through the DevTools protocol sends real input events but never moves

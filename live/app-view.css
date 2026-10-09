@@ -64,7 +64,7 @@ dialog.dcr-app:focus{outline:0}
 .dcr-app-canvas{position:relative;display:flex;justify-content:center;min-width:0;min-height:0;overflow:auto;padding:16px;background-color:color-mix(in oklab,var(--ink) 4%,var(--canvas));background-image:radial-gradient(color-mix(in oklab,var(--ink) 13%,transparent) 1px,transparent 1px);background-size:20px 20px}
 .dcr-app.is-fit .dcr-app-canvas{padding:0}
 /* Element Capture needs the recorded element to be its own stacking context. */
-.dcr-app-pane{isolation:isolate;transform-style:flat;flex:none;width:100%;max-width:100%;height:100%;overflow:hidden;border-radius:10px;background:#fff;box-shadow:0 1px 2px #1b213322,0 14px 44px #1b213324}
+.dcr-app-pane{position:relative;isolation:isolate;transform-style:flat;flex:none;width:100%;max-width:100%;height:100%;overflow:hidden;border-radius:10px;background:#fff;box-shadow:0 1px 2px #1b213322,0 14px 44px #1b213324}
 .dcr-app.is-fit .dcr-app-pane{border-radius:0;box-shadow:none}
 .dcr-app-pane iframe{display:block;width:100%;height:100%;border:0;background:#fff}
 .dcr-app.is-commenting .dcr-app-pane{outline:2px solid var(--accent);outline-offset:-2px}
@@ -224,3 +224,19 @@ dialog.dcr-qa-done footer{display:flex;justify-content:flex-end;gap:8px}
 .dcr-qa-older{display:grid;gap:8px;margin:0;padding:0 16px 14px 19px;list-style:none;font-size:12.5px}
 .dcr-qa-older li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;color:var(--muted)}
 .dcr-qa-older span{overflow:hidden;color:var(--ink);text-overflow:ellipsis;white-space:nowrap}
+
+/* While the agent prepares between recordings: a frosted band across the top of the app, fading
+   into it, that says so. It never takes a click, and it is hidden before a recording starts. */
+.dcr-app-prep{position:absolute;inset:0 0 auto;z-index:3;display:flex;align-items:center;justify-content:center;gap:14px;height:112px;padding:0 24px 22px;pointer-events:none;
+  background:linear-gradient(to bottom,color-mix(in oklab,var(--surface) 82%,transparent) 0%,color-mix(in oklab,var(--surface) 70%,transparent) 62%,transparent 100%);
+  -webkit-backdrop-filter:blur(10px) saturate(1.1);backdrop-filter:blur(10px) saturate(1.1);
+  -webkit-mask-image:linear-gradient(to bottom,#000 60%,transparent);mask-image:linear-gradient(to bottom,#000 60%,transparent)}
+.dcr-app-prep[hidden]{display:none}
+.dcr-app-prep-spin{flex:none;width:26px;height:26px;border-radius:50%;border:2.5px solid color-mix(in oklab,var(--accent) 22%,transparent);border-top-color:var(--accent);animation:dcr-prep-spin .9s linear infinite}
+.dcr-app-prep-text{display:grid;gap:2px;min-width:0}
+.dcr-app-prep-text strong{color:var(--ink);font-size:15px;font-weight:650;letter-spacing:-.01em}
+.dcr-app-prep-text span{color:var(--muted);font-size:13px}
+@keyframes dcr-prep-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:no-preference){.dcr-app-prep:not([hidden]){animation:dcr-prep-in .25s ease-out}}
+@keyframes dcr-prep-in{from{opacity:0;transform:translateY(-8px)}}
+@media(prefers-reduced-motion:reduce){.dcr-app-prep-spin{animation-duration:2.4s}}

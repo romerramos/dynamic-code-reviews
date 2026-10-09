@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
+require 'digest'
 require 'fileutils'
 require 'json'
+require 'open3'
 
 module DCR
   # The reviewer's display preferences, shared by every review they serve. Stored once per
@@ -15,6 +17,14 @@ module DCR
     }.freeze
 
     def self.default_directory = ENV['DCR_CONFIG_DIR'] || File.join(Dir.home, '.config', 'dcr')
+
+    # One name per repository, the same in all its worktrees, for what is kept outside them
+    # (QA notes, the reviewer's progress): the main checkout's folder name and a short hash of its path.
+    def self.repo_key(repo)
+      common, status = Open3.capture2('git', '-C', repo.to_s, 'rev-parse', '--path-format=absolute', '--git-common-dir', err: File::NULL)
+      root = status.success? && !common.strip.empty? ? File.dirname(common.strip) : File.expand_path(repo.to_s)
+      "#{File.basename(root)}-#{Digest::SHA256.hexdigest(root)[0, 8]}"
+    end
 
     def initialize(directory = self.class.default_directory)
       @path = File.join(File.expand_path(directory), 'settings.json')

@@ -293,3 +293,29 @@ calls = []
 url = DCR::Share.expose(4400, 'laptop.tail0.ts.net', run: ->(*args) { calls << args; ['', true] })
 assert(url == 'https://laptop.tail0.ts.net:4400' && calls == [['serve', '--bg', '--https=4400', 'http://127.0.0.1:4400']], "Exposing uses Tailscale Serve on the same port: #{calls}")
 puts 'share: ok'
+
+# Progress outlives its series folder and follows unchanged files into a new revision.
+require_relative '../lib/dcr/live_api'
+Dir.mktmpdir('dcr-progress') do |repo|
+  system('git', '-C', repo, 'init', '-q')
+  series = File.join(repo, '.reviews', 'feat')
+  file = ->(path, patch) { {'id' => path, 'path' => path, 'hunks' => [{'id' => "#{path}h1", 'patch' => patch, 'old_start' => 1, 'old_count' => 1, 'new_start' => 1, 'new_count' => 1}]} }
+  write = lambda do |revisions, snapshots|
+    FileUtils.mkdir_p(File.join(series, 'revisions'))
+    File.write(File.join(series, 'manifest.json'), JSON.generate('version' => 1, 'name' => 'feat', 'repo' => repo, 'revisions' => revisions))
+    snapshots.each_with_index { |files, index| File.write(File.join(series, 'revisions', format('%03d.html', index + 1)), DCR::Page.review({'snapshot' => {'fingerprint' => revisions[index]['fingerprint'], 'files' => files}, 'review' => {'title' => 'Feat', 'comments' => []}})) }
+  end
+  fp_a, fp_b = 'a' * 64, 'b' * 64
+  key = ->(fp, number) { DCR::State.review_key(fp, 'feat', number) }
+  write.call([{'number' => 1, 'fingerprint' => fp_a}], [[file.call('a.rb', '@@ a'), file.call('b.rb', '@@ b')]])
+  api = DCR::LiveAPI.new(series)
+  progress = {'viewedFiles' => %w[a.rb b.rb], 'resolvedComments' => ['c1']}
+  api.call('POST', '/api/state', -> { JSON.generate('key' => key.call(fp_a, 1), 'blob' => progress) })
+  FileUtils.rm_rf(series) # the folder goes; the same review is started again, as revision 1
+  write.call([{'number' => 1, 'fingerprint' => fp_a}], [[file.call('a.rb', '@@ a'), file.call('b.rb', '@@ b')]])
+  assert(DCR::LiveAPI.new(series).progress[key.call(fp_a, 1)] == progress, 'Progress must come back from the archive when the series folder was made again')
+  write.call([{'number' => 1, 'fingerprint' => fp_a}, {'number' => 2, 'fingerprint' => fp_b}], [[file.call('a.rb', '@@ a'), file.call('b.rb', '@@ b')], [file.call('a.rb', '@@ a'), file.call('b.rb', '@@ b changed')]])
+  assert(DCR::LiveAPI.new(series).progress[key.call(fp_b, 2)] == {'viewedFiles' => ['a.rb']}, 'A new revision must keep the viewed files whose diff is the same, and only those')
+  assert(DCR::ProgressArchive.new(repo, 'feat').path.start_with?(ENV['DCR_CONFIG_DIR']), 'The archive lives outside the project')
+end
+puts 'progress: kept outside the series folder, and viewed files carry to a revision where they did not change'
