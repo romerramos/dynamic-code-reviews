@@ -217,6 +217,8 @@ module DCR
         thread = thread(state, key, id)
         thread['adversary'] = Agents.check(adversary)
         thread['waiting_on'] = Array(thread['waiting_on']) | ([adversary] + others).map { |agent| Agents.check(agent) }
+        # The page shows a wait that outlives the agents' timeout as lost, not as still typing.
+        thread['asked_at'] = Time.now.utc.iso8601
       end
     end
 

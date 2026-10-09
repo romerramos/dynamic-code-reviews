@@ -100,11 +100,14 @@ globalThis.LiveTools = (() => {
   // agent is waiting for messages right now; undefined means the server cannot say.
   const STALE_MS = 10 * 60 * 1000; // a handed-over message with no answer after this is probably dropped
   const stale = (thread, now) => thread?.delivery === 'delivered' && thread.delivered_at && now - Date.parse(thread.delivered_at) > STALE_MS;
+  // Agents asked for a second opinion time out long before this, so a wait this old lost its asker.
+  const lostOpinion = (thread, now) => !!thread?.asked_at && now - Date.parse(thread.asked_at) > STALE_MS;
   function statusModel(thread, listening, now = Date.now(), listener = null) {
     if (!thread) return null;
     const last = [...(thread.messages || [])].reverse().find(message => message.author === 'agent' && message.role !== 'adversary');
     // A second reviewer checking the comment shows in the conversation, like someone typing.
     if (thread.adversary && (thread.waiting_on || []).includes(thread.adversary) && thread.delivery !== 'sent' && thread.delivery !== 'delivered') {
+      if (lostOpinion(thread, now)) return {tone: 'idle', text: `${agentInfo(thread.adversary).name} was asked to check this comment ${relativeTime(thread.asked_at, now)} and has not answered. The check may have been interrupted; ask your agent to run it again.`};
       return {tone: 'work', text: `${agentInfo(thread.adversary).name} is checking this comment`, typing: true, agent: thread.adversary};
     }
     if (thread.delivery === 'sent') {
@@ -163,7 +166,7 @@ globalThis.LiveTools = (() => {
   // The other agents' opinions, under the conversation rather than in it: one row per agent with
   // its mark, name and verdict once, then the start of its answer. A row opens in place to the full
   // answer. `open`: the agents whose answers are open.
-  function opinionsHTML(thread, {open = [], seen = new Set()} = {}) {
+  function opinionsHTML(thread, {open = [], seen = new Set(), now = Date.now()} = {}) {
     const opinions = thread?.opinions || {};
     const adversary = thread?.adversary;
     const opened = new Set(typeof open === 'string' ? [open] : open || []);
@@ -177,6 +180,7 @@ globalThis.LiveTools = (() => {
     const rows = agents.map(agent => {
       const opinion = opinions[agent];
       const name = escape(agentInfo(agent).name);
+      if (!opinion && lostOpinion(thread, now)) return `<li class="dcr-op is-failed" title="Asked ${escape(relativeTime(thread.asked_at, now))}; the check may have been interrupted">${avatarHTML(agent, 'dcr-face-sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">did not answer</span></span></li>`;
       if (!opinion) return `<li class="dcr-op is-waiting">${avatarHTML(agent, 'dcr-face-sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">is reading the code</span><span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span></span></li>`;
       if (opinion.error) return `<li class="dcr-op is-failed" title="${escape(opinion.error)}">${avatarHTML(agent, 'dcr-face-sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">did not answer</span></span></li>`;
       const isOpen = opened.has(agent);

@@ -135,6 +135,7 @@ Dir.mktmpdir('dcr-carried') do |series|
   first, second = [1, 2].map { |number| DCR::State.review_key('f00d', 'job', number) }
   state.post_comments(first, [comment.merge('agent' => 'claude')])
   state.await_opinions(first, 'c1', 'codex', ['grok'])
+  assert(Time.now - Time.parse(state.read.dig('threads', first, 'c1', 'asked_at')) < 60, 'The page is told when the agents were asked, to show a wait that outlived them')
   state.carry_forward('job', [{'number' => 1, 'fingerprint' => 'f00d'}, {'number' => 2, 'fingerprint' => 'f00d'}])
   state.add_opinion(first, 'c1', 'codex', "Agree\nIt is bounded.", verdict: 'agree', adversary: true)
   state.opinion_failed(first, 'c1', 'grok', 'Grok is not signed in.')

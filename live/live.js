@@ -985,8 +985,11 @@
     if (event.target.closest('[data-ledger-jump], .dcr-dismiss')) arrival.hidden = true;
   });
 
-  // "5 min ago" stays true while the page is open.
-  setInterval(() => document.querySelectorAll('time[data-at]').forEach(node => set(node, 'textContent', tools.relativeTime(node.dataset.at))), 30000);
+  // "5 min ago" stays true while the page is open, and so does a wait that has since gone quiet.
+  setInterval(() => {
+    document.querySelectorAll('time[data-at]').forEach(node => set(node, 'textContent', tools.relativeTime(node.dataset.at)));
+    document.querySelectorAll('.dcr-thread').forEach(refreshBlock);
+  }, 30000);
 
   // --- template previews built by your agent --------------------------------------------------------
   // The report asks; this asks your agent, then shows how it is going and puts the result in the

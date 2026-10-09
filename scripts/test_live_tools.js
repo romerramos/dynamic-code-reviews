@@ -166,6 +166,14 @@ assert.equal(tools.consensus({total:2, agree:2, partly:0, disagree:0}), 'Everyon
 assert.equal(tools.opinionsHTML({messages:[]}), '', 'no opinions, no section');
 const checking = tools.statusModel({...debated, messages:[], waiting_on:['codex', 'gemini']}, true);
 assert.deepEqual([checking.text, checking.agent, checking.typing], ['Codex is checking this comment', 'codex', true]);
+const quiet = {...debated, messages:[], waiting_on:['codex', 'gemini'], asked_at:'2026-10-07T11:40:00Z'};
+assert.equal(tools.statusModel(quiet, true, Date.parse('2026-10-07T11:45:00Z')).typing, true, 'a second reviewer asked minutes ago is still checking');
+const lost = tools.statusModel(quiet, true, Date.parse('2026-10-07T12:00:00Z'));
+assert.equal(lost.tone, 'idle', 'a second reviewer silent past every timeout is not shown as typing');
+assert.match(lost.text, /Codex was asked to check this comment 20 min ago and has not answered.*run it again/);
+const lostRows = tools.opinionsHTML(quiet, {now: Date.parse('2026-10-07T12:00:00Z')});
+assert.match(lostRows, /is-failed[^>]*>.*Gemini.*did not answer/s, 'a side opinion that never came reads as not answered');
+assert.doesNotMatch(lostRows, /is reading the code/);
 assert.equal(tools.agentModel({}, true, Date.now(), {}, 'claude').text, 'Claude listening');
 const asked = tools.sendText(snapshot, review, comments[0], '', debated);
 assert.match(asked, /Second opinions from other agents:\n- Codex \(second reviewer, disagrees\): The cap is already enforced/);
