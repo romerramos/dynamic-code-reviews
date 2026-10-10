@@ -122,7 +122,7 @@
         const slash = file.path.lastIndexOf('/');
         const filename = file.path.slice(slash + 1);
         const directory = slash < 0 ? '' : file.path.slice(0, slash);
-        return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" aria-current="${state.navFile === id && state.view === layer.id ? 'location' : 'false'}" title="${escape(file.path)}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}"><span class="file-status" aria-hidden="true">${fileViewed(file) ? icon('check') : ''}</span><span class="nav-file-label"><span class="nav-file-name">${escape(filename)}</span>${directory ? `<small class="nav-file-directory">${escape(directory)}</small>` : ''}</span>${riskMark(file)}${navPreviewMark(file)}</button></li>`;
+        return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" aria-current="${state.navFile === id && state.view === layer.id ? 'location' : 'false'}" title="${escape(file.path)}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}"><span class="file-status" aria-hidden="true" title="${fileViewed(file) ? 'Viewed. Click to unmark' : 'Mark as viewed'}">${fileViewed(file) ? icon('check') : ''}</span><span class="nav-file-label"><span class="nav-file-name">${escape(filename)}</span>${directory ? `<small class="nav-file-directory">${escape(directory)}</small>` : ''}</span>${riskMark(file)}${navPreviewMark(file)}</button></li>`;
       };
       matching.forEach(layer => {
         const count = layerComments(layer).length;
@@ -137,7 +137,7 @@
           const viewed = progress(component.items);
           return `<li class="nav-component ${current ? 'is-current' : ''}"><button class="nav-component-title" data-component-link="${escape(component.key)}" data-file-layer="${layer.id}" aria-current="${current ? 'location' : 'false'}" title="${escape(component.directory)}" aria-label="${escape(`Open ${component.namespace}::${component.name}, ${component.directory}`)}"><span class="nav-file-label"><strong>${escape(component.name)}</strong>${component.namespace ? `<small class="nav-file-directory">${escape(component.namespace)}</small>` : ''}</span><small class="nav-component-count" aria-label="${progressText(viewed)}">${viewed.viewed}/${viewed.total}</small></button><div class="nav-component-files" role="group" aria-label="${escape(component.name)} files">${component.items.map(item => {
             const file = files.get(item.file);
-            return `<button data-file-link="${item.file}" data-file-layer="${layer.id}" title="${escape(file.path)}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}" aria-current="${current && activeComponentFile(layer, component) === item.file ? 'location' : 'false'}"><span class="file-status ${fileViewed(file) ? 'is-viewed' : ''}" aria-hidden="true">${fileViewed(file) ? icon('check') : ''}</span>${file.path.endsWith('.rb') ? 'Ruby' : 'Template'}</button>`;
+            return `<button data-file-link="${item.file}" data-file-layer="${layer.id}" title="${escape(file.path)}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}" aria-current="${current && activeComponentFile(layer, component) === item.file ? 'location' : 'false'}"><span class="file-status ${fileViewed(file) ? 'is-viewed' : ''}" aria-hidden="true" title="${fileViewed(file) ? 'Viewed. Click to unmark' : 'Mark as viewed'}">${fileViewed(file) ? icon('check') : ''}</span>${file.path.endsWith('.rb') ? 'Ruby' : 'Template'}</button>`;
           }).join('')}</div></li>`;
         }).join('');
         const tests = ordered.tests.length ? `<li class="nav-tests-label" role="presentation">Tests</li>${ordered.tests.map(id => fileLink(id, layer)).join('')}` : '';
@@ -1876,20 +1876,20 @@
     $('details-dialog').showModal();
   }
 
-  $('content').addEventListener('change', event => {
-    const control = event.target.closest('[data-file-viewed]');
-    if (!control) return;
-    const file = files.get(control.dataset.fileViewed);
+  // Marks a file viewed or not, wherever it was asked from: its own checkbox, or its box in the sidebar.
+  function markViewed(file, viewed) {
     state.viewedFiles = state.viewedFiles.filter(path => path !== file.path);
-    if (control.checked) state.viewedFiles.push(file.path);
-    state.fileOpen[file.path] = !control.checked;
-    if (fileReadingActive()) control.parentElement.querySelector('span').textContent = control.checked ? 'Viewed' : 'Mark viewed';
+    if (viewed) state.viewedFiles.push(file.path);
+    state.fileOpen[file.path] = !viewed;
     closeComments(); clearSelection();
+    document.querySelectorAll(`[data-file-viewed="${file.id}"]`).forEach(control => {
+      control.checked = viewed;
+      if (control.closest('.focus-reader')) control.parentElement.querySelector('span').textContent = viewed ? 'Viewed' : 'Mark viewed';
+    });
     document.querySelectorAll('.file-card').forEach(card => {
       if (card.dataset.file !== file.id) return;
-      card.open = !control.checked;
-      card.classList.toggle('is-viewed', control.checked);
-      card.querySelector('[data-file-viewed]').checked = control.checked;
+      card.open = !viewed;
+      card.classList.toggle('is-viewed', viewed);
     });
     const layer = layers.find(layer => layer.id === state.view);
     const count = document.querySelector('.step-progress');
@@ -1902,6 +1902,10 @@
     const scroll = $('navigation').parentElement.scrollTop;
     renderNavigation();
     $('navigation').parentElement.scrollTop = scroll;
+  }
+  $('content').addEventListener('change', event => {
+    const control = event.target.closest('[data-file-viewed]');
+    if (control) markViewed(files.get(control.dataset.fileViewed), control.checked);
   });
   $('content').addEventListener('toggle', event => {
     const panel = event.target;
@@ -2060,6 +2064,12 @@
       return;
     }
     const fileLink = event.target.closest('[data-file-link]');
+    // The box beside a file marks it viewed, without leaving where you are; the rest of the row opens it.
+    if (fileLink && event.target.closest('.file-status')) {
+      const file = files.get(fileLink.dataset.fileLink);
+      markViewed(file, !fileViewed(file));
+      return;
+    }
     if (fileLink) {
       navigateFile(layers.find(layer => layer.id === fileLink.dataset.fileLayer), fileLink.dataset.fileLink);
       return;

@@ -253,7 +253,10 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 .nav-file-name, .sidebar nav .nav-file-directory { display: block; white-space: normal; overflow-wrap: anywhere; }
 .nav-file-name { font-size: 12px; font-weight: 500; }
 .sidebar nav .nav-file-directory { margin-top: 1px; font-size: 10px; line-height: 1.5; color: var(--muted); }
-.file-status { flex: 0 0 14px; width: 14px; height: 14px; margin-top: 2px; border: 1px solid var(--line-neutral-4); border-radius:calc(3px * var(--round)); }
+.file-status { position: relative; cursor: pointer; flex: 0 0 14px; width: 14px; height: 14px; margin-top: 2px; border: 1px solid var(--line-neutral-4); border-radius:calc(3px * var(--round)); }
+/* The box is small; what answers the pointer is a little larger. */
+.file-status::after { content: ""; position: absolute; inset: -7px; }
+.file-status:hover { border-color: var(--accent); }
 .nav-file.is-viewed .file-status { color: var(--ink-green-1); border-color: var(--line-green-3); background: var(--bg-green-1); }
 .file-status .review-icon { width: 12px; height: 12px; vertical-align: top; }
 @media(max-width: 767px) { .file-card > summary { padding: 11px; gap: 8px; } .file-card > summary .filename { flex-basis: calc(100% - 45px); } }
