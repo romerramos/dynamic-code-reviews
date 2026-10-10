@@ -232,8 +232,13 @@ References: [review JSON](references/report-schema.md), [incremental reviews](re
   `data-mode="light"`. `assets/themes/base.css` is the contract: every colour the app's stylesheets
   read is a token there, derived from daisyUI's variables, so a theme that sets only those already
   covers the whole app, and may pin any token or add rules of its own. The stylesheets hold no
-  colours and key on `data-mode`, never on a theme's name. AIda (`aida.css`) is the first theme. A
-  new file in that folder appears in the View menu's Theme list.
+  colours and key on `data-mode`, never on a theme's name. Beyond colour, a theme has `--round`
+  (every corner radius is multiplied by it), `--shade` (the colour of drop shadows), the two font
+  tokens and `--status-h` (room for a status line); its own fonts are vendored under
+  `assets/vendor/fonts/` and embedded in the page. AIda (`aida.css`) is the look the app was drawn
+  with; Terminal (`terminal.css`) draws it as a terminal app in JetBrains Mono and Catppuccin's
+  colours, and asks for the Catppuccin syntax theme when picked (`@syntax` in its opening comment). A new file in that
+  folder appears in the View menu's Theme list.
 - **State** lives in the series folder: `manifest.json` and the saved pages for revisions, and
   `state.json` for the reviewer's progress and threads (`lib/dcr/state.rb`). The progress (viewed
   files, resolved comments, notes, the reviewer's own comments) is also kept outside the worktree, in

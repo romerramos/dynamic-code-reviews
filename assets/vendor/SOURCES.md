@@ -41,3 +41,9 @@ Keep their licenses with this skill when sharing it.
 Update only when needed, pin versions, retain license text, and verify the
 synthetic diff fixture plus actual token colors/layout after a library change.
 The full daisyUI stylesheet is bundled intentionally to avoid a build pipeline.
+- JetBrains Mono (variable) 5.2.8, from Fontsource: https://cdn.jsdelivr.net/npm/@fontsource-variable/jetbrains-mono@5.2.8/files/
+  - Files: the Latin and Latin Extended upright and the Latin italic variable fonts, in `fonts/jetbrains-mono/`.
+  - License: `fonts/jetbrains-mono/LICENSE` (SIL Open Font License 1.1).
+  - Used by the Terminal theme, which names them with `url(vendor/fonts/...)`; the renderer embeds
+    them in the page as data, so no font is fetched at runtime.
+

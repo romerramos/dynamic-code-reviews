@@ -17,10 +17,10 @@ module DCR
     ASSETS = File.expand_path('../../assets', __dir__)
     LIVE = File.expand_path('../../live', __dir__)
     LANGUAGES = %w[core markup clike javascript css ruby sql json yaml bash typescript].freeze
-    OFFLINE_CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; media-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'"
+    OFFLINE_CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; media-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'"
     # The served review keeps its own inline scripts and embedded media, and may also load
     # the QA panel and talk to the server. The saved HTML file keeps its stricter offline policy.
-    SERVED_CSP = "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src data: blob:; media-src data: blob:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    SERVED_CSP = "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 
     # What a served page needs from the server: its token, the browser progress to seed (the server's
     # copy wins over a stale browser one), and the running app it may frame, if any.
@@ -50,8 +50,18 @@ module DCR
     # A theme is a pair of daisyUI themes, NAME-light and NAME-dark, in assets/themes/NAME.css.
     # base.css comes first: the tokens every theme may set, each derived from daisyUI's variables.
     def themes = Dir[File.join(ASSETS, 'themes', '*.css')].map { |path| File.basename(path, '.css') }.sort - ['base']
+    # What a theme asks for when it is picked, written in its opening comment: `@syntax NAME`, the
+    # syntax theme that suits it, and `@mode light` or `@mode dark`, the mode it looks best in.
+    def theme_hint(name, key) = File.read(File.join(ASSETS, 'themes', "#{name}.css"))[%r{\A/\*.*?@#{key} ([a-z]+).*?\*/}m, 1]
+    def theme_syntax(name) = theme_hint(name, 'syntax')
+    def theme_mode(name) = theme_hint(name, 'mode')&.then { |mode| mode if %w[light dark].include?(mode) }
     def theme_files = (['base'] + themes).map { |name| File.join(ASSETS, 'themes', "#{name}.css") }
-    def theme_styles = theme_files.map { |path| File.read(path) }.join("\n")
+    # A theme's own fonts are embedded, so the saved page still needs nothing from the network.
+    def theme_styles
+      theme_files.map { |path| File.read(path) }.join("\n").gsub(%r{url\(vendor/fonts/([\w/.-]+\.woff2)\)}) do
+        "url(data:font/woff2;base64,#{[File.binread(File.join(ASSETS, 'vendor/fonts', Regexp.last_match(1)))].pack('m0')})"
+      end
+    end
 
     # The review data embedded in a rendered page, as `render` received it.
     def payload(html)
@@ -69,6 +79,9 @@ module DCR
       def asset(name) = File.read(File.join(ASSETS, name))
       def h(value) = ERB::Util.html_escape(value.to_s)
       def themes = Page.themes
+      def theme_syntax(name) = Page.theme_syntax(name)
+      def theme_mode(name) = Page.theme_mode(name)
+      def theme_modes = themes.to_h { |name| [name, theme_mode(name)] }.compact
       def icon = @icon ||= asset('icon.svg')
       def favicon = "data:image/svg+xml;base64,#{[icon].pack('m0')}"
       # Text placed inside an inline <script> must not close it early.

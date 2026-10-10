@@ -58,13 +58,16 @@
   // Display preferences are global to the reviewer, not to one review, so they live under
   // their own key. A served review mirrors the key to the server (see live/live.js).
   const settingsKey = 'dynamic-review:settings';
-  const settings = {colorMode:'system', theme:'aida', syntaxTheme:'classic', ignoreWhitespace:false};
+  const settings = {colorMode:null, theme:'aida', syntaxTheme:'classic', ignoreWhitespace:false};
   try { Object.assign(settings, JSON.parse(localStorage.getItem(settingsKey) || '{}')); } catch { /* defaults apply */ }
-  if (!['system', 'light', 'dark'].includes(settings.colorMode)) settings.colorMode = 'system';
   // The themes this page was rendered with are the options of its Theme menu.
   const themes = [...($('theme')?.options || [])].map(option => option.value);
   if (!themes.includes(settings.theme)) settings.theme = themes[0] || 'aida';
-  if (!['classic', 'github', 'one', 'solarized', 'dracula'].includes(settings.syntaxTheme)) settings.syntaxTheme = 'classic';
+  // What the chosen theme asks for: the mode it looks best in, the syntax colours that suit it.
+  const themeHint = key => [...($('theme')?.options || [])].find(option => option.value === settings.theme)?.dataset[key];
+  // Until the reviewer picks a colour mode, the theme's own; with none, the system's.
+  if (!['system', 'light', 'dark'].includes(settings.colorMode)) settings.colorMode = themeHint('mode') || 'system';
+  if (![...($('syntax-theme')?.options || [])].some(option => option.value === settings.syntaxTheme)) settings.syntaxTheme = 'classic';
   settings.ignoreWhitespace = settings.ignoreWhitespace === true;
   const darkQuery = matchMedia('(prefers-color-scheme: dark)');
   const shownRows = (hunk, mode) => ReviewTools.displayRows(hunk.rows[mode], mode, settings.ignoreWhitespace);
@@ -88,6 +91,7 @@
     let stored = true;
     try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch { stored = false; }
     $('progress').textContent = progressText({viewed:state.viewedFiles.length, total:files.size});
+    document.body.dataset.progress = $('progress').textContent; // for a theme that draws a status line
     $('progress-bar').max = Math.max(1, files.size);
     $('progress-bar').value = state.viewedFiles.length;
     return stored;
@@ -1583,6 +1587,32 @@
     if (next) next.disabled = current >= headings.length - 1;
   }
   $('content').addEventListener('scroll', updateChangeNavigation, {passive:true});
+  // In a walkthrough step the files scroll past together, so the sidebar follows: it marks the file
+  // whose diff has reached the upper part of the reading area, and keeps that entry in sight.
+  let followFrame = 0;
+  function followReading() {
+    if (followFrame || fileReadingActive() || !layers.some(layer => layer.id === state.view)) return;
+    followFrame = setTimeout(() => {
+      followFrame = 0;
+      const content = $('content');
+      const box = content.getBoundingClientRect();
+      const line = box.top + box.height * 0.3;
+      // A file folded away inside a closed group has no box; it is not being read.
+      const reached = [...content.querySelectorAll('.file-card[data-file]')].filter(card => (card.checkVisibility ? card.checkVisibility() : card.getClientRects().length) && card.getBoundingClientRect().top <= line);
+      const id = reached.length ? reached[reached.length - 1].dataset.file : null;
+      if (id === (state.navFile || null)) return;
+      state.navFile = id;
+      const here = button => button.dataset.fileLink === id && button.dataset.fileLayer === state.view;
+      document.querySelectorAll('#navigation [data-file-link]').forEach(button => button.setAttribute('aria-current', here(button) ? 'location' : 'false'));
+      document.querySelectorAll('#navigation .nav-component').forEach(item => {
+        const current = [...item.querySelectorAll('[data-file-link]')].some(here);
+        item.classList.toggle('is-current', current);
+        item.querySelector('.nav-component-title')?.setAttribute('aria-current', current ? 'location' : 'false');
+      });
+      [...document.querySelectorAll('#navigation [data-file-link]')].find(here)?.scrollIntoView({block:'nearest'});
+    }, 80);
+  }
+  $('content').addEventListener('scroll', followReading, {passive:true});
   window.addEventListener('scroll', updateChangeNavigation, {passive:true});
   function setFontSize(size) {
     state.codeFontSize = Math.max(10, Math.min(20, Number(size) || 13));
@@ -1748,11 +1778,13 @@
     $('focus').textContent = 'File by file';
     $('walkthrough').setAttribute('aria-pressed', !focusMode);
     $('focus').setAttribute('aria-pressed', focusMode);
+    document.body.dataset.reading = focusMode ? 'file' : 'walkthrough'; // for a theme that draws a status line
     if (fileReadingActive() && focusOrder[focusIndex]) { state.navFile = focusOrder[focusIndex].file; state.view = focusOrder[focusIndex].layer.id; }
     renderNavigation();
     persist();
     const layer = layers.find(layer => layer.id === state.view);
     $('position').textContent = layer ? `Step ${layers.indexOf(layer) + 1} of ${layers.length}` : state.view === 'files' ? 'All changes' : 'Overview';
+    document.body.dataset.position = $('position').textContent; // for a theme that draws a status line
     $('prev').disabled = !layer;
     $('next').disabled = !!layer && layers.indexOf(layer) === layers.length - 1;
     ['unified','split'].forEach(mode => { $(mode).setAttribute('aria-pressed', layoutChoice === mode); });
@@ -1761,6 +1793,7 @@
     $('reading-hint').textContent = focusMode ? 'One file at a time, in walkthrough order. J and K move between files.' : 'Each step shows its files together under its explanation. J and K move between steps.';
     if (fileReadingActive()) {
       $('position').textContent = `File ${focusIndex + 1} of ${focusOrder.length}`;
+      document.body.dataset.position = $('position').textContent;
       $('prev').disabled = focusIndex === 0; $('next').disabled = focusIndex === focusOrder.length - 1;
     }
     $('prev').setAttribute('aria-label', fileReadingActive() ? 'Previous file' : 'Previous step');
@@ -2174,7 +2207,14 @@
     if (toggle) openStage(toggle.dataset.previewPath);
   });
   document.querySelectorAll('[data-color-mode]').forEach(button => button.onclick = () => { settings.colorMode = button.dataset.colorMode; applySettings(); saveSettings(); });
-  $('theme').onchange = event => { settings.theme = event.target.value; applySettings(); saveSettings(); };
+  $('theme').onchange = event => {
+    settings.theme = event.target.value;
+    // A theme comes in the mode it looks best in, with the syntax colours that suit it; the
+    // reviewer can still pick others after.
+    if (themeHint('mode')) settings.colorMode = themeHint('mode');
+    if (themeHint('syntax')) settings.syntaxTheme = themeHint('syntax');
+    applySettings(); saveSettings();
+  };
   $('syntax-theme').onchange = event => { settings.syntaxTheme = event.target.value; applySettings(); saveSettings(); };
   darkQuery.addEventListener('change', () => { if (settings.colorMode === 'system') applySettings(); });
   $('whitespace-toggle').onchange = event => { const scroll = $('content').scrollTop; settings.ignoreWhitespace = event.target.checked; saveSettings(); render(); $('content').scrollTop = scroll; };
@@ -2189,6 +2229,7 @@
     $('focus').textContent = 'File by file';
     $('walkthrough').setAttribute('aria-pressed', !focusMode);
     $('focus').setAttribute('aria-pressed', focusMode);
+    document.body.dataset.reading = focusMode ? 'file' : 'walkthrough'; // for a theme that draws a status line
     clearSelection(); render(); $('content').scrollTop = 0;
   };
   $('focus').onclick = () => chooseReadingMode(true);

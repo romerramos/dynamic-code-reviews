@@ -20,14 +20,14 @@ DAISY = %w[--color-base-100 --color-base-200 --color-base-300 --color-base-conte
 
 # Colour tokens the stylesheets read must exist in the contract, or a theme could not set them.
 SHEETS.each do |path, css|
-  used = css.scan(/var\((--(?:bg|ink|line|ring)-[\w-]+|--shade|--dcr-[\w-]+|--rec|--surface|--canvas|--line|--ink|--muted|--accent(?:-soft)?|--added|--removed|--note(?:-bg)?|--yours(?:-soft)?)\b/).flatten.uniq
+  used = css.scan(/var\((--(?:bg|ink|line|ring)-[\w-]+|--shade|--type-[\w-]+|--dcr-[\w-]+|--rec|--surface|--canvas|--line|--ink|--muted|--accent(?:-soft)?|--added|--removed|--note(?:-bg)?|--yours(?:-soft)?)\b/).flatten.uniq
   missing = used - defined
   assert(missing.empty?, "#{path} reads tokens base.css does not define: #{missing.first(8).join(', ')}")
 end
 puts 'PASS every colour token the stylesheets read is defined in the theme contract'
 
 # The page's colours come from tokens: a hard-coded colour in a rule would ignore the theme.
-ALLOWED = /\A(?:--tok-|--agent-|--thread-|(?:-webkit-)?mask)/ # syntax themes, agent marks and comment types carry their own palettes; a mask's colour is never seen
+ALLOWED = /\A(?:--tok-|--agent-|(?:-webkit-)?mask)/ # syntax themes and agent marks carry their own palettes; a mask's colour is never seen
 SHEETS.each do |path, css|
   stray = css.gsub(%r{/\*.*?\*/}m, '').scan(/([\w-]+)\s*:\s*([^;{}]*#\h{3,8}\b[^;{}]*)/).reject { |property, value| property.match?(ALLOWED) || value.match?(/\A\s*url\(/) }
   assert(stray.empty?, "#{path} has #{stray.length} hard-coded colours: #{stray.first(5).map { |property, value| "#{property}:#{value.strip[0, 40]}" }.join(' | ')}")
@@ -45,11 +45,24 @@ themes.each do |name|
     assert(block.match?(/color-scheme:\s*#{mode}/), "#{name}-#{mode} must set color-scheme, so the browser's own controls follow")
     missing = DAISY.reject { |variable| block.match?(/#{Regexp.escape(variable)}:/) }
     assert(missing.empty?, "#{name}-#{mode} must set daisyUI's variables; missing #{missing.join(', ')}")
-    unknown = block.scan(/(--[\w-]+):/).flatten.uniq - DAISY - defined
+    # A theme's own variables carry its name; anything else must be a token the app reads.
+    unknown = block.scan(/(--[\w-]+):/).flatten.uniq.reject { |token| token.start_with?("--#{name}-") } - DAISY - defined
     assert(unknown.empty?, "#{name}-#{mode} sets tokens nothing reads: #{unknown.first(8).join(', ')}")
   end
 end
 puts 'PASS each theme is a light and a dark daisyUI theme that sets only tokens the app knows'
+
+themes.each do |name|
+  File.read(File.join(ROOT, 'assets/themes', "#{name}.css")).scan(%r{url\(([^)]*)\)}).flatten.each do |source|
+    assert(source.start_with?('vendor/fonts/') && File.file?(File.join(ROOT, 'assets', source)), "#{name} loads #{source}: a theme's files must be vendored under assets/vendor/fonts, so the page can embed them")
+  end
+end
+assert(!DCR::Page.theme_styles.match?(/url\((?!data:|\))/) && DCR::Page::OFFLINE_CSP.include?('font-src data:'), 'Every font a theme names is embedded in the page, which may load fonts from nowhere else')
+puts 'PASS a theme\'s fonts are vendored and embedded, so the saved page still opens offline'
+
+assert(DCR::Page.theme_syntax('terminal') == 'catppuccin' && DCR::Page.theme_syntax('aida') == 'classic', 'A theme may name the syntax colours that suit it')
+assert(DCR::Page.theme_mode('aida') == 'light' && DCR::Page.theme_mode('terminal') == 'dark', 'A theme may name the mode it looks best in')
+assert(DCR::Settings::ALLOWED['syntaxTheme'].include?('catppuccin') && File.read(File.join(ROOT, 'assets/report.css')).include?('html[data-syntax="catppuccin"][data-mode="dark"]'), 'The syntax theme a theme names must exist, in both modes')
 
 styles = DCR::Page.theme_styles
 assert(styles.index('Theme contract') < styles.index('[data-theme="aida-light"]'), 'The contract comes before the themes, so a theme\'s values win')

@@ -1,0 +1,214 @@
+/* Terminal: the review as a terminal app. One monospace face and one size, square corners, no
+   shadows; one line around each box and none inside it, the selection is a solid bar, buttons
+   wear brackets and a status line at the bottom keeps your place and the keys in sight.
+   Colours are Catppuccin (https://catppuccin.com/palette): Mocha in the dark, Latte in the light,
+   peach for what is selected, lavender for the cursor. In the light, orange text is a darker
+   orange (peach mixed with crust), which the palette's own peach is too pale for. See base.css for what each token is for.
+   @syntax catppuccin @mode dark */
+@font-face{font-family:"JetBrains Mono Variable";font-style:normal;font-weight:100 800;font-display:swap;src:url(vendor/fonts/jetbrains-mono/jetbrains-mono-latin-wght-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"JetBrains Mono Variable";font-style:normal;font-weight:100 800;font-display:swap;src:url(vendor/fonts/jetbrains-mono/jetbrains-mono-latin-ext-wght-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"JetBrains Mono Variable";font-style:italic;font-weight:100 800;font-display:swap;src:url(vendor/fonts/jetbrains-mono/jetbrains-mono-latin-wght-italic.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+
+:root:has(input.theme-controller[value=terminal-dark]:checked),[data-theme="terminal-dark"]{
+  color-scheme:dark;
+  /* Catppuccin Mocha */
+  --terminal-rosewater:#f5e0dc;--terminal-flamingo:#f2cdcd;--terminal-pink:#f5c2e7;--terminal-mauve:#cba6f7;--terminal-red:#f38ba8;--terminal-maroon:#eba0ac;--terminal-peach:#fab387;--terminal-yellow:#f9e2af;--terminal-green:#a6e3a1;--terminal-teal:#94e2d5;--terminal-sky:#89dceb;--terminal-sapphire:#74c7ec;--terminal-blue:#89b4fa;--terminal-lavender:#b4befe;--terminal-text:#cdd6f4;--terminal-subtext1:#bac2de;--terminal-subtext0:#a6adc8;--terminal-overlay2:#9399b2;--terminal-overlay1:#7f849c;--terminal-overlay0:#6c7086;--terminal-surface2:#585b70;--terminal-surface1:#45475a;--terminal-surface0:#313244;--terminal-base:#1e1e2e;--terminal-mantle:#181825;--terminal-crust:#11111b;
+  /* daisyUI's variables */
+  --color-base-100:#1e1e2e;--color-base-200:#181825;--color-base-300:#313244;--color-base-content:#cdd6f4;
+  --color-primary:#fab387;--color-primary-content:#11111b;--color-secondary:#b4befe;--color-secondary-content:#11111b;
+  --color-accent:#94e2d5;--color-accent-content:#11111b;--color-neutral:#313244;--color-neutral-content:#cdd6f4;
+  --color-info:#89dceb;--color-info-content:#11111b;--color-success:#a6e3a1;--color-success-content:#11111b;
+  --color-warning:#f9e2af;--color-warning-content:#11111b;--color-error:#f38ba8;--color-error-content:#11111b;
+  --radius-selector:0rem;--radius-field:0rem;--radius-box:0rem;--size-selector:.25rem;--size-field:.25rem;--border:1px;--depth:0;--noise:0;
+  /* The page: base for what you read, mantle for what frames it */
+  --surface:#1e1e2e;--canvas:#181825;--line:#313244;--ink:#cdd6f4;--muted:#9399b2;--accent:#fab387;--accent-soft:#41363c;
+  --added:#394545;--removed:#493446;--note:#f9e2af;--note-bg:#38363d;--yours:#f9e2af;--yours-soft:#38363d;
+  --dcr-ok:#a6e3a1;--dcr-work:#f9e2af;--dcr-off:#7f849c;--dcr-agree:#a6e3a1;--dcr-partly:#f9e2af;--dcr-disagree:#f38ba8;
+  --dcr-agree-soft:#313a3e;--dcr-partly-soft:#38363d;--dcr-disagree-soft:#3c2d3f;--rec:#f38ba8;
+  /* Greys straight from the palette, so nothing is an in-between shade */
+  --bg-neutral-1:#1e1e2e;--bg-neutral-2:#181825;--bg-neutral-3:#313244;--bg-neutral-4:#313244;--bg-neutral-5:#45475a;--bg-neutral-6:#6c7086;
+  --bg-neutral-7:#cdd6f4;--bg-neutral-8:#cdd6f4;--bg-neutral-9:#11111b;
+  --line-neutral-1:#1e1e2e;--line-neutral-2:#313244;--line-neutral-3:#45475a;--line-neutral-4:#585b70;--line-neutral-5:#6c7086;--line-neutral-6:#7f849c;
+  --ink-neutral-1:#cdd6f4;--ink-neutral-2:#cdd6f4;--ink-neutral-3:#bac2de;--ink-neutral-4:#a6adc8;--ink-neutral-5:#9399b2;--ink-neutral-6:#9399b2;
+  --ink-neutral-7:#7f849c;--ink-neutral-8:#6c7086;--ink-neutral-9:#11111b;
+  /* Fills take the palette's own colours; what is written on them is the darkest or lightest tone */
+  --bg-accent-5:#fab387;--line-accent-8:#fab387;--bg-green-4:#a6e3a1;--bg-green-5:#a6e3a1;--bg-red-2:#f38ba8;--bg-red-3:#f38ba8;--bg-amber-6:#f9e2af;--bg-amber-7:#fab387;
+  --terminal-hot:#b4befe;--terminal-fill:#fab387;--terminal-on-fill:#11111b;--terminal-hover:#313244;
+}
+:root:has(input.theme-controller[value=terminal-light]:checked),[data-theme="terminal-light"]{
+  color-scheme:light;
+  /* Catppuccin Latte */
+  --terminal-rosewater:#dc8a78;--terminal-flamingo:#dd7878;--terminal-pink:#ea76cb;--terminal-mauve:#8839ef;--terminal-red:#d20f39;--terminal-maroon:#e64553;--terminal-peach:#fe640b;--terminal-yellow:#df8e1d;--terminal-green:#40a02b;--terminal-teal:#179299;--terminal-sky:#04a5e5;--terminal-sapphire:#209fb5;--terminal-blue:#1e66f5;--terminal-lavender:#7287fd;--terminal-text:#4c4f69;--terminal-subtext1:#5c5f77;--terminal-subtext0:#6c6f85;--terminal-overlay2:#7c7f93;--terminal-overlay1:#8c8fa1;--terminal-overlay0:#9ca0b0;--terminal-surface2:#acb0be;--terminal-surface1:#bcc0cc;--terminal-surface0:#ccd0da;--terminal-base:#eff1f5;--terminal-mantle:#e6e9ef;--terminal-crust:#dce0e8;
+  /* daisyUI's variables */
+  --color-base-100:#eff1f5;--color-base-200:#e6e9ef;--color-base-300:#ccd0da;--color-base-content:#4c4f69;
+  --color-primary:#fe640b;--color-primary-content:#11111b;--color-secondary:#7287fd;--color-secondary-content:#eff1f5;
+  --color-accent:#179299;--color-accent-content:#eff1f5;--color-neutral:#ccd0da;--color-neutral-content:#4c4f69;
+  --color-info:#04a5e5;--color-info-content:#eff1f5;--color-success:#40a02b;--color-success-content:#eff1f5;
+  --color-warning:#df8e1d;--color-warning-content:#eff1f5;--color-error:#d20f39;--color-error-content:#eff1f5;
+  --radius-selector:0rem;--radius-field:0rem;--radius-box:0rem;--size-selector:.25rem;--size-field:.25rem;--border:1px;--depth:0;--noise:0;
+  /* The page: base for what you read, mantle for what frames it */
+  --surface:#eff1f5;--canvas:#e6e9ef;--line:#ccd0da;--ink:#4c4f69;--muted:#6c6f85;--accent:#b74b10;--accent-soft:#f1ddd4;
+  --added:#cce1cd;--removed:#e9c4cf;--note:#df8e1d;--note-bg:#ede5db;--yours:#df8e1d;--yours-soft:#ede5db;
+  --dcr-ok:#40a02b;--dcr-work:#df8e1d;--dcr-off:#8c8fa1;--dcr-agree:#40a02b;--dcr-partly:#df8e1d;--dcr-disagree:#d20f39;
+  --dcr-agree-soft:#d6e6d9;--dcr-partly-soft:#ede5db;--dcr-disagree-soft:#ebd1db;--rec:#d20f39;
+  /* Greys straight from the palette, so nothing is an in-between shade */
+  --bg-neutral-1:#eff1f5;--bg-neutral-2:#e6e9ef;--bg-neutral-3:#ccd0da;--bg-neutral-4:#ccd0da;--bg-neutral-5:#bcc0cc;--bg-neutral-6:#9ca0b0;
+  --bg-neutral-7:#4c4f69;--bg-neutral-8:#4c4f69;--bg-neutral-9:#dce0e8;
+  --line-neutral-1:#eff1f5;--line-neutral-2:#ccd0da;--line-neutral-3:#bcc0cc;--line-neutral-4:#acb0be;--line-neutral-5:#9ca0b0;--line-neutral-6:#8c8fa1;
+  --ink-neutral-1:#4c4f69;--ink-neutral-2:#4c4f69;--ink-neutral-3:#5c5f77;--ink-neutral-4:#6c6f85;--ink-neutral-5:#6c6f85;--ink-neutral-6:#7c7f93;
+  --ink-neutral-7:#8c8fa1;--ink-neutral-8:#9ca0b0;--ink-neutral-9:#eff1f5;
+  /* Fills take the palette's own colours; what is written on them is the darkest or lightest tone */
+  --bg-accent-5:#b74b10;--line-accent-8:#fe640b;--bg-green-4:#40a02b;--bg-green-5:#40a02b;--bg-red-2:#d20f39;--bg-red-3:#d20f39;--bg-amber-6:#df8e1d;--bg-amber-7:#fe640b;
+  --terminal-hot:#7287fd;--terminal-fill:#fe640b;--terminal-on-fill:#11111b;--terminal-hover:#ccd0da;
+}
+
+/* --- the terminal itself: one face, one size, no curves, no depth --------------------------- */
+[data-theme^="terminal-"]{
+  --review-font-family:"JetBrains Mono Variable","JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --mono:"JetBrains Mono Variable","JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --round:0;--shade:transparent;--status-h:26px;--chrome-h:44px;--toolbar-h:44px;
+  font-variant-ligatures:none;scrollbar-color:var(--terminal-surface1) transparent;scrollbar-width:thin;
+}
+[data-theme^="terminal-"] *{letter-spacing:0!important;scrollbar-color:var(--terminal-surface1) transparent;scrollbar-width:thin}
+/* Everything is the size of the code, so the Code size control zooms the whole terminal. */
+[data-theme^="terminal-"] body *:not(svg,svg *,.dcr-app *){font-size:var(--code-font-size,13px)!important}
+[data-theme^="terminal-"] ::selection{background:var(--terminal-fill);color:var(--terminal-on-fill)}
+[data-theme^="terminal-"] :focus-visible:not([tabindex="-1"]){outline:1px solid var(--terminal-hot)!important;outline-offset:0!important}
+@media(prefers-reduced-motion:no-preference){[data-theme^="terminal-"] *{transition-duration:0s!important}}
+[data-theme^="terminal-"] a{text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
+
+/* --- the status line, as in a modal editor: the mode you are in, where you are and how far, then
+   the keys, each named for what it would switch to ----------------------------------------------- */
+[data-theme^="terminal-"]{--terminal-mode:"FILE";--terminal-mode-len:4;--terminal-focus:"";--terminal-focus-len:0;--terminal-z:"walkthrough";--terminal-f:"focus"}
+[data-theme^="terminal-"]:has(body[data-reading="walkthrough"]){--terminal-mode:"WALKTHROUGH";--terminal-mode-len:11;--terminal-z:"file by file"}
+[data-theme^="terminal-"]:has(body.zen){--terminal-focus:" · FOCUS";--terminal-focus-len:8;--terminal-f:"leave focus"}
+[data-theme^="terminal-"] body::before{content:var(--terminal-mode) var(--terminal-focus);position:fixed;z-index:20;left:0;bottom:0;height:var(--status-h);padding:0 1.5ch;display:flex;align-items:center;background:var(--terminal-fill);color:var(--terminal-on-fill);font:700 12px/1 var(--mono);white-space:pre}
+[data-theme^="terminal-"] body.zen::before{background:var(--terminal-hot)}
+[data-theme^="terminal-"] body::after{content:attr(data-position) "  ·  " attr(data-progress);position:fixed;z-index:19;left:0;right:0;bottom:0;height:var(--status-h);padding:0 2ch 0 calc((var(--terminal-mode-len) + var(--terminal-focus-len) + 5) * 1ch);display:flex;align-items:center;border-top:1px solid var(--line);background:var(--canvas);color:var(--ink);font:12px/1 var(--mono);white-space:pre;overflow:hidden}
+[data-theme^="terminal-"]::after{content:"j/k next  ·  z " var(--terminal-z) "  ·  f " var(--terminal-f) "  ·  esc close";position:fixed;z-index:20;right:0;bottom:0;height:var(--status-h);padding:0 2ch;display:flex;align-items:center;border-top:1px solid var(--line);background:var(--canvas);color:var(--muted);font:12px/1 var(--mono);white-space:pre}
+@media(max-width:900px){[data-theme^="terminal-"]::after{display:none}}
+@media(max-width:740px){[data-theme^="terminal-"]{--status-h:0px}[data-theme^="terminal-"] body::before,T body::after{display:none}}
+
+/* --- the header: a title bar with a cursor --------------------------------------------------- */
+[data-theme^="terminal-"] .app-header{background:var(--canvas);padding:0 2ch}
+[data-theme^="terminal-"] .brand-icon,[data-theme^="terminal-"] .brand-icon svg{width:26px;height:26px;flex-basis:26px}
+[data-theme^="terminal-"] #title{font-weight:700}
+[data-theme^="terminal-"] #title::after{content:"█";margin-left:.5ch;color:var(--terminal-hot)}
+@media(prefers-reduced-motion:no-preference){[data-theme^="terminal-"] #title::after{animation:terminal-blink 1.1s steps(1) infinite}}
+@keyframes terminal-blink{50%{opacity:0}}
+
+/* --- controls: brackets instead of boxes --------------------------------------------------------
+   A control is its label between brackets; nothing in a toolbar or inside a box has a border of
+   its own. Under the pointer it gets the palette's surface colour and its brackets light up. */
+[data-theme^="terminal-"] :is(.btn,.act,.header-button,.icon-button,.view-toggle,.ledger-toggle,#dcr-presence,.file-viewed){border:0;border-radius:0;box-shadow:none;background:transparent}
+[data-theme^="terminal-"] :is(.btn:not(.btn-square,.btn-circle,.focus-file-actions .btn),.act:not(.act-icon),.header-button,.view-toggle,.ledger-toggle,#dcr-presence,.file-viewed){gap:.6ch;font-weight:500;height:auto;min-height:26px;padding:2px .5ch;color:var(--ink)}
+[data-theme^="terminal-"] :is(.btn:not(.btn-square,.btn-circle,.focus-file-actions .btn),.act:not(.act-icon),.header-button,.view-toggle,.ledger-toggle,#dcr-presence,.file-viewed)::before{content:"[";color:var(--terminal-overlay0);font-weight:400}
+[data-theme^="terminal-"] :is(.btn:not(.btn-square,.btn-circle,.focus-file-actions .btn),.act:not(.act-icon),.header-button,.view-toggle,.ledger-toggle,#dcr-presence,.file-viewed)::after{content:"]";position:static;width:auto;height:auto;background:none;box-shadow:none;color:var(--terminal-overlay0);font-weight:400}
+[data-theme^="terminal-"] :is(.btn,.act,.header-button,.icon-button,.view-toggle,.ledger-toggle,#dcr-presence,.file-viewed):hover:not(:disabled){background:var(--terminal-hover);color:var(--ink);border-color:transparent}
+[data-theme^="terminal-"] :is(.btn,.act,.header-button,.view-toggle,.ledger-toggle,#dcr-presence,.file-viewed):hover:not(:disabled)::before,[data-theme^="terminal-"] :is(.btn,.act,.header-button,.view-toggle,.ledger-toggle,#dcr-presence,.file-viewed):hover:not(:disabled)::after{color:var(--terminal-fill)}
+[data-theme^="terminal-"] .view-toggle[aria-expanded="true"],[data-theme^="terminal-"] #dcr-presence[aria-expanded="true"],[data-theme^="terminal-"] .ledger-toggle[aria-expanded="true"]{background:var(--terminal-hover)}
+[data-theme^="terminal-"] .icon-button{padding:0;color:var(--muted)}
+[data-theme^="terminal-"] .file-viewed{display:inline-flex;align-items:center;cursor:pointer}
+/* The one action that matters is a solid block, as a focused button is in a terminal. */
+[data-theme^="terminal-"] :is(.btn-primary,.act-primary,.act-gh,.dcr-send:not(:disabled)){background:var(--terminal-fill);color:var(--terminal-on-fill);font-weight:700}
+[data-theme^="terminal-"] :is(.btn-primary,.act-primary,.act-gh)::before,[data-theme^="terminal-"] :is(.btn-primary,.act-primary,.act-gh)::after{content:none}
+[data-theme^="terminal-"] :is(.btn-primary,.act-primary,.act-gh):not(:disabled){padding:2px 1.5ch}
+[data-theme^="terminal-"] :is(.btn-primary,.act-primary,.act-gh,.dcr-send):hover:not(:disabled){background:color-mix(in srgb,var(--terminal-fill) 82%,var(--ink));color:var(--terminal-on-fill)}
+[data-theme^="terminal-"] :is(.btn,.act):disabled{color:var(--terminal-overlay0);background:transparent;opacity:1}
+[data-theme^="terminal-"] .ledger-count{background:var(--terminal-hot);color:var(--terminal-on-fill);font-weight:700}
+[data-theme^="terminal-"] .pager,[data-theme^="terminal-"] .focus-file-actions{border:0!important;background:transparent;box-shadow:none;padding:0}
+[data-theme^="terminal-"] .pager .icon-button,[data-theme^="terminal-"] .focus-file-actions :is(.icon-button,.btn){background:transparent}
+[data-theme^="terminal-"] :is(.pager,.focus-file-actions) :is(.icon-button,.btn):hover:not(:disabled){background:var(--terminal-hover)}
+[data-theme^="terminal-"] .icon-button:disabled{opacity:.35}
+
+/* Tabs and either/or switches: a filled track, the choice a solid block. */
+[data-theme^="terminal-"] :is(.segmented,.dcr-views){padding:0;gap:0;border:0;background:var(--terminal-hover)}
+[data-theme^="terminal-"] :is(.segmented,.dcr-views) button{height:26px;color:var(--muted);background:transparent;box-shadow:none;font-weight:500}
+[data-theme^="terminal-"] :is(.segmented,.dcr-views) button:hover:not([aria-pressed="true"]){background:var(--terminal-surface1);color:var(--ink)}
+[data-theme^="terminal-"] :is(.segmented,.dcr-views) button[aria-pressed="true"]{background:var(--terminal-fill);color:var(--terminal-on-fill);box-shadow:none;font-weight:700}
+[data-theme^="terminal-"] .dcr-views b{background:transparent;color:inherit}
+/* Fields are filled, not outlined, so a field inside a box never draws a second box. */
+[data-theme^="terminal-"] :is(.select,.input,.textarea,textarea,#search){border:0;background:var(--terminal-hover);box-shadow:none;outline-offset:0;color:var(--ink);caret-color:var(--terminal-hot)}
+[data-theme^="terminal-"] :is(.select,.input,.textarea,textarea,#search)::placeholder{color:var(--terminal-overlay1)}
+[data-theme^="terminal-"] .toggle{border-color:var(--terminal-overlay0);color:var(--terminal-overlay1)}
+[data-theme^="terminal-"] .toggle:checked{background:var(--terminal-fill);border-color:var(--terminal-fill);color:var(--terminal-on-fill)}
+[data-theme^="terminal-"] .checkbox{border-color:var(--terminal-overlay0)}
+[data-theme^="terminal-"] kbd{background:var(--terminal-hover);color:var(--ink);border:0;box-shadow:none}
+
+/* --- the walkthrough: a list with a solid cursor bar ------------------------------------------- */
+[data-theme^="terminal-"] .sidebar{background:var(--canvas)}
+[data-theme^="terminal-"] .sidebar-heading strong{text-transform:uppercase;font-weight:700;color:var(--accent)}
+[data-theme^="terminal-"] .sidebar-heading strong::before{content:"▌";color:var(--terminal-hot);margin-right:.5ch}
+[data-theme^="terminal-"] .sidebar nav button{margin:0;padding:6px 1ch;border:0}
+[data-theme^="terminal-"] .step-number{border:0;background:transparent;color:var(--muted);width:3ch;flex-basis:3ch;justify-content:start}
+[data-theme^="terminal-"] .sidebar nav button:hover{background:var(--terminal-hover);color:var(--ink)}
+[data-theme^="terminal-"] .sidebar nav .menu>li>button[data-view][aria-current="page"],[data-theme^="terminal-"] .sidebar nav .menu>li>button[data-view][aria-current="page"]:hover{background:var(--terminal-fill);color:var(--terminal-on-fill)}
+[data-theme^="terminal-"] .sidebar nav .menu>li>button[data-view][aria-current="page"] *{color:inherit!important}
+[data-theme^="terminal-"] .sidebar nav .menu>li>button[data-view][aria-current="page"] .step-number{background:transparent;box-shadow:none;border:0;font-weight:700}
+[data-theme^="terminal-"] .sidebar nav button.nav-file[aria-current="location"],[data-theme^="terminal-"] .sidebar nav button.nav-file[aria-current="location"]:hover{background:var(--terminal-hover);box-shadow:inset 2px 0 0 var(--terminal-hot)}
+[data-theme^="terminal-"] .sidebar nav button.nav-file[aria-current="location"] .nav-file-name{color:var(--ink)}
+
+/* The two views of the whole change, then a rule, then the guided steps as one tight list. */
+[data-theme^="terminal-"] .sidebar nav .nav-section{margin:0}
+[data-theme^="terminal-"] #navigation>.menu:first-child{padding-bottom:10px}
+[data-theme^="terminal-"] #navigation>.nav-section:first-of-type::before{content:"Steps";display:flex;align-items:center;gap:1ch;margin:4px 0 6px;padding:0 1ch;text-transform:uppercase;font-weight:700;color:var(--accent)}
+[data-theme^="terminal-"] #navigation>.nav-section:first-of-type{border-top:1px solid var(--line);padding-top:10px}
+[data-theme^="terminal-"] .sidebar nav .nav-group-title{margin:10px 1ch 4px;text-transform:uppercase;color:var(--muted)}
+[data-theme^="terminal-"] .sidebar nav .menu>li>button[data-view]:not([aria-current="page"]) .step-body small{color:var(--terminal-overlay1)}
+
+/* Progress, drawn in blocks. */
+[data-theme^="terminal-"] progress.progress{height:10px;border-radius:0;background:repeating-linear-gradient(90deg,var(--terminal-surface0) 0 6px,transparent 6px 8px);color:var(--dcr-ok)}
+[data-theme^="terminal-"] progress.progress::-webkit-progress-bar{background:transparent}
+[data-theme^="terminal-"] progress.progress::-webkit-progress-value{background:repeating-linear-gradient(90deg,var(--dcr-ok) 0 6px,transparent 6px 8px)}
+[data-theme^="terminal-"] progress.progress::-moz-progress-bar{background:repeating-linear-gradient(90deg,var(--dcr-ok) 0 6px,transparent 6px 8px)}
+
+/* --- headings: a rule that carries its label --------------------------------------------------- */
+[data-theme^="terminal-"] :is(.eyebrow,.view-menu h2,.dcr-opinions-title,.dcr-adv-title){display:flex;align-items:center;gap:1ch;text-transform:uppercase;font-weight:700;color:var(--accent)}
+[data-theme^="terminal-"] :is(.eyebrow,.view-menu h2,.dcr-opinions-title,.dcr-adv-title)::before{content:"──";color:var(--terminal-surface1);font-weight:400}
+[data-theme^="terminal-"] :is(.eyebrow,.view-menu h2)::after{content:"";flex:1;border-top:1px solid var(--line)}
+[data-theme^="terminal-"] :is(h1,h2,h3){font-weight:700}
+[data-theme^="terminal-"] main h1::before{content:"# ";color:var(--terminal-hot)}
+[data-theme^="terminal-"] main h2::before{content:"## ";color:var(--terminal-overlay0)}
+
+/* --- boxes: one line around what sits in the page, a double line around what floats over it,
+   and never a second box inside either ------------------------------------------------------------- */
+[data-theme^="terminal-"] :is(.risk-rank,.review-thread,.file-card){box-shadow:none}
+[data-theme^="terminal-"] :is(.comment-popover[popover],.view-menu,.modal-box,#dcr-presence-card,#dcr-arrival,.dropdown-content){border:3px double var(--terminal-overlay0);box-shadow:none;background:var(--surface)}
+[data-theme^="terminal-"] body.ledger-open .ledger{border-left:3px double var(--terminal-overlay0)}
+[data-theme^="terminal-"] .review-note-popover[popover]{border-color:var(--accent)}
+[data-theme^="terminal-"] .comment-popover:not(.review-note-popover)[popover]{border-color:var(--yours)}
+[data-theme^="terminal-"] .popover-heading{text-transform:uppercase;font-weight:700;background:transparent}
+[data-theme^="terminal-"] :is(.risk-rank,.review-thread,.file-card,.comment-popover,.view-menu,.modal-box,#dcr-presence-card) :is(.risk-tag,.badge,.dcr-intro-ico,.dcr-adv-row){border:0}
+[data-theme^="terminal-"] .risk-tag{background:var(--terminal-hover);color:var(--ink-neutral-4);padding:0 1ch}
+[data-theme^="terminal-"] .badge{text-transform:uppercase;padding:0 1ch;font-weight:500;border:0}
+[data-theme^="terminal-"] .diff-table,[data-theme^="terminal-"] .diff-table td.gutter{background:var(--surface)}
+[data-theme^="terminal-"] .diff-table td.gutter.add{background:var(--added)}[data-theme^="terminal-"] .diff-table td.gutter.del{background:var(--removed)}
+[data-theme^="terminal-"] .file-card>summary{background:var(--canvas)}
+[data-theme^="terminal-"] .focus-meta .file-viewed:has(input:checked){background:transparent;color:var(--dcr-ok)}
+/* A group of files that folds: a marker and a heading you can click, then its files indented
+   along a guide line that ends in a corner, as a folded block does in an editor. The indent says
+   "inside"; no second box is needed. */
+[data-theme^="terminal-"] .related-tests{border:0;margin:28px 0 24px;background:transparent}
+[data-theme^="terminal-"] .related-tests[open]{background:linear-gradient(var(--terminal-surface1),var(--terminal-surface1)) calc(1.5ch - .5px) 34px/1px calc(100% - 34px - 1.6em) no-repeat}
+[data-theme^="terminal-"] .related-tests>summary{display:flex;flex-wrap:wrap;align-items:center;gap:0 1ch;padding:6px 1ch;list-style:none;cursor:pointer}
+[data-theme^="terminal-"] .related-tests>summary::-webkit-details-marker{display:none}
+[data-theme^="terminal-"] .related-tests>summary::before{content:"▸";color:var(--terminal-fill)}
+[data-theme^="terminal-"] .related-tests[open]>summary::before{content:"▾"}
+[data-theme^="terminal-"] .related-tests>summary::after{content:"";order:1;flex:1;min-width:4ch;border-top:1px solid var(--line)}
+[data-theme^="terminal-"] .related-tests>summary:hover{background:var(--terminal-hover)}
+[data-theme^="terminal-"] .related-tests-heading{display:inline-flex;align-items:center;gap:1ch;text-transform:uppercase;color:var(--accent)}
+[data-theme^="terminal-"] .related-tests-heading .badge{margin:0}
+[data-theme^="terminal-"] .related-tests-summary{order:2;flex-basis:100%;margin:6px 0 2px 3ch}
+[data-theme^="terminal-"] .related-tests:not([open]) .related-tests-summary{display:none}
+[data-theme^="terminal-"] .related-tests-content{padding:4px 0 0 4ch}
+[data-theme^="terminal-"] .related-tests-content>.file-card:first-child{margin-top:10px}
+[data-theme^="terminal-"] .related-tests[open]::after{content:"╰─ end of related tests";display:block;margin-left:1ch;color:var(--terminal-overlay0);line-height:1.6em;white-space:pre}
+[data-theme^="terminal-"] :is(.file-icon,.thread-priority,.comment-trigger,.preview-toggle){border:0}
+[data-theme^="terminal-"] .file-icon{color:var(--terminal-overlay1);padding:0}
+[data-theme^="terminal-"] .thread-priority{background:var(--terminal-hover);padding:0 1ch}
+[data-theme^="terminal-"] .preview-toggle{background:transparent;gap:.6ch;padding:2px .5ch}
+[data-theme^="terminal-"] .preview-toggle::before{content:"[";color:var(--terminal-overlay0)}[data-theme^="terminal-"] .preview-toggle::after{content:"]";color:var(--terminal-overlay0)}
+[data-theme^="terminal-"] .preview-toggle:hover{background:var(--terminal-hover)}[data-theme^="terminal-"] .preview-toggle:hover::before,[data-theme^="terminal-"] .preview-toggle:hover::after{color:var(--terminal-fill)}
+[data-theme^="terminal-"] .more-list{border:3px double var(--terminal-overlay0);background:var(--surface);box-shadow:none}
+[data-theme^="terminal-"] .thread-source{width:auto;justify-content:flex-start;margin-left:-.5ch}
+[data-theme^="terminal-"] .thread-type-icon{background:transparent;width:auto;height:auto}

@@ -8,24 +8,24 @@
 /* --- Code | App | Previews: the three ways to look at the change, in the header and the App view */
 .dcr-visually-hidden{position:absolute!important;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 body.dcr-has-views #preview-list-toggle{display:none!important}
-.dcr-views{display:inline-flex;align-items:center;gap:2px;padding:3px;border-radius:10px;background:color-mix(in oklab,var(--ink) 7%,transparent)}
-.dcr-views button{display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.dcr-views{display:inline-flex;align-items:center;gap:2px;padding:3px;border-radius:calc(10px * var(--round));background:color-mix(in oklab,var(--ink) 7%,transparent)}
+.dcr-views button{display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 12px;border:0;border-radius:calc(8px * var(--round));background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
 .dcr-views button:hover{color:var(--ink)}
 .dcr-views button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px color-mix(in srgb,var(--shade) 14.9%,transparent)}
-.dcr-views b{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:color-mix(in oklab,var(--ink) 10%,transparent);color:inherit;font-size:11px;line-height:18px;text-align:center}
+.dcr-views b{min-width:18px;height:18px;padding:0 5px;border-radius:calc(9px * var(--round));background:color-mix(in oklab,var(--ink) 10%,transparent);color:inherit;font-size:11px;line-height:18px;text-align:center}
 .header-actions .dcr-views{margin-right:6px}
 
 /* --- entry points ------------------------------------------------------------------------------ */
 /* The App entry reads as a control, not a label: outlined, with a green dot once the app has
    answered in this page. */
-.dcr-app-live{display:none;flex:none;width:7px;height:7px;border-radius:50%;background:var(--dcr-ok)}
+.dcr-app-live{display:none;flex:none;width:7px;height:7px;border-radius:calc(50% * var(--round));background:var(--dcr-ok)}
 .dcr-views .is-live .dcr-app-live{display:inline-block}
 
 /* --- bar ----------------------------------------------------------------------------------------- */
 dialog.dcr-app{grid-template-rows:auto minmax(0,1fr) auto}
 .dcr-app .stage-bar{gap:12px;padding:10px 12px 10px 16px}
 .dcr-app-lead{display:flex;align-items:center;gap:10px;flex:1 1 auto;min-width:0}
-.dcr-app-address{display:flex;align-items:center;flex:1 1 auto;min-width:0;max-width:620px;height:34px;padding:0 3px 0 12px;border:1px solid var(--line);border-radius:9px;background:var(--canvas);font:13px/1 var(--mono)}
+.dcr-app-address{display:flex;align-items:center;flex:1 1 auto;min-width:0;max-width:620px;height:34px;padding:0 3px 0 12px;border:1px solid var(--line);border-radius:calc(9px * var(--round));background:var(--canvas);font:13px/1 var(--mono)}
 .dcr-app-address:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 .dcr-app-host{flex:none;max-width:42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
 /* The field's own ring is the address bar's; the dialog's focus outline would draw a second box inside it. */
@@ -33,7 +33,7 @@ dialog.dcr-app{grid-template-rows:auto minmax(0,1fr) auto}
 dialog.dcr-app:focus{outline:0}
 .dcr-app-address input::-webkit-calendar-picker-indicator{display:none!important}
 .dcr-app-address input{flex:1 1 auto;min-width:0;height:100%;padding:0 6px 0 1px;border:0;outline:0;background:transparent;color:var(--ink);font:inherit}
-.dcr-app-icon{display:inline-grid;place-items:center;flex:none;width:30px;height:30px;padding:0;border:0;border-radius:7px;background:transparent;color:var(--muted);cursor:pointer}
+.dcr-app-icon{display:inline-grid;place-items:center;flex:none;width:30px;height:30px;padding:0;border:0;border-radius:calc(7px * var(--round));background:transparent;color:var(--muted);cursor:pointer}
 .dcr-app-icon:hover{background:color-mix(in oklab,var(--ink) 7%,transparent);color:var(--ink)}
 .dcr-app-icon:disabled{opacity:.45;cursor:not-allowed}
 /* Back and Forward lead the address bar, like a browser's, a hairline apart from the address. */
@@ -45,15 +45,15 @@ dialog.dcr-app:focus{outline:0}
 .dcr-app :is(button,a,input,textarea,select):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* Record is the one control with a colour of its own: a red dot at rest, a red pill while live. */
-.dcr-app-record{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 13px 0 11px;border:1px solid color-mix(in oklab,var(--ink) 18%,transparent);border-radius:999px;background:var(--surface);color:var(--ink);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer}
+.dcr-app-record{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 13px 0 11px;border:1px solid color-mix(in oklab,var(--ink) 18%,transparent);border-radius:calc(999px * var(--round));background:var(--surface);color:var(--ink);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer}
 .dcr-app-record:hover{background:color-mix(in oklab,var(--ink) 5%,var(--surface))}
-.dcr-app-rec-dot{display:inline-block;flex:none;width:9px;height:9px;border-radius:50%;background:var(--rec)}
+.dcr-app-rec-dot{display:inline-block;flex:none;width:9px;height:9px;border-radius:calc(50% * var(--round));background:var(--rec)}
 .dcr-app-record.is-recording{border-color:var(--rec);background:var(--rec);color:var(--ink-neutral-9)}
-.dcr-app-record.is-recording .dcr-app-rec-dot{border-radius:2px;background:var(--bg-neutral-1)}
-.dcr-app-rail-toggle{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 10px;border:0;border-radius:8px;background:transparent;color:var(--ink);font-size:13px;font-weight:550;cursor:pointer}
+.dcr-app-record.is-recording .dcr-app-rec-dot{border-radius:calc(2px * var(--round));background:var(--bg-neutral-1)}
+.dcr-app-rail-toggle{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 10px;border:0;border-radius:calc(8px * var(--round));background:transparent;color:var(--ink);font-size:13px;font-weight:550;cursor:pointer}
 .dcr-app-rail-toggle:hover{background:color-mix(in oklab,var(--ink) 6%,transparent)}
 .dcr-app-rail-toggle[aria-expanded="true"]{background:var(--accent-soft);color:var(--accent)}
-.dcr-app-count{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:var(--ink-neutral-9);font-size:11px;font-weight:600;line-height:18px;text-align:center}
+.dcr-app-count{min-width:18px;height:18px;padding:0 5px;border-radius:calc(9px * var(--round));background:var(--accent);color:var(--ink-neutral-9);font-size:11px;font-weight:600;line-height:18px;text-align:center}
 .dcr-app-count[hidden]{display:none}
 
 /* --- the app ------------------------------------------------------------------------------------- */
@@ -62,13 +62,13 @@ dialog.dcr-app:focus{outline:0}
 .dcr-app-canvas{position:relative;display:flex;justify-content:center;min-width:0;min-height:0;overflow:auto;padding:16px;background-color:color-mix(in oklab,var(--ink) 4%,var(--canvas));background-image:radial-gradient(color-mix(in oklab,var(--ink) 13%,transparent) 1px,transparent 1px);background-size:20px 20px}
 .dcr-app.is-fit .dcr-app-canvas{padding:0}
 /* Element Capture needs the recorded element to be its own stacking context. */
-.dcr-app-pane{position:relative;isolation:isolate;transform-style:flat;flex:none;width:100%;max-width:100%;height:100%;overflow:hidden;border-radius:10px;background:var(--bg-neutral-1);box-shadow:0 1px 2px color-mix(in srgb,var(--shade) 13.3%,transparent),0 14px 44px color-mix(in srgb,var(--shade) 14.1%,transparent)}
+.dcr-app-pane{position:relative;isolation:isolate;transform-style:flat;flex:none;width:100%;max-width:100%;height:100%;overflow:hidden;border-radius:calc(10px * var(--round));background:var(--bg-neutral-1);box-shadow:0 1px 2px color-mix(in srgb,var(--shade) 13.3%,transparent),0 14px 44px color-mix(in srgb,var(--shade) 14.1%,transparent)}
 .dcr-app.is-fit .dcr-app-pane{border-radius:0;box-shadow:none}
 .dcr-app-pane iframe{display:block;width:100%;height:100%;border:0;background:var(--bg-neutral-1)}
 .dcr-app.is-commenting .dcr-app-pane{outline:2px solid var(--accent);outline-offset:-2px}
 
 /* The comment box opens next to the element it is about, inside the app's area. */
-.dcr-app-compose{position:absolute;top:0;left:0;z-index:3;display:grid;gap:10px;box-sizing:border-box;width:min(380px,calc(100% - 16px));padding:12px 12px 10px;border:1px solid color-mix(in oklab,var(--accent) 40%,var(--line));border-radius:12px;background:var(--surface);color:var(--ink);box-shadow:0 10px 32px color-mix(in srgb,var(--shade) 22.7%,transparent),0 0 0 4px color-mix(in oklab,var(--accent) 10%,transparent);font:14px/1.5 var(--review-font-family);transition:transform .08s ease-out}
+.dcr-app-compose{position:absolute;top:0;left:0;z-index:3;display:grid;gap:10px;box-sizing:border-box;width:min(380px,calc(100% - 16px));padding:12px 12px 10px;border:1px solid color-mix(in oklab,var(--accent) 40%,var(--line));border-radius:calc(12px * var(--round));background:var(--surface);color:var(--ink);box-shadow:0 10px 32px color-mix(in srgb,var(--shade) 22.7%,transparent),0 0 0 4px color-mix(in oklab,var(--accent) 10%,transparent);font:14px/1.5 var(--review-font-family);transition:transform .08s ease-out}
 .dcr-app-compose[hidden]{display:none}
 .dcr-app-compose.is-detached{opacity:.92}
 .dcr-app-target{display:flex;align-items:baseline;gap:8px;min-width:0;margin:0;font-size:13px}
@@ -76,7 +76,7 @@ dialog.dcr-app:focus{outline:0}
 .dcr-app-target span{flex:none;color:var(--muted)}
 /* The selector is a detail for the agent: it gives way to the name. */
 .dcr-app-target code{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;color:var(--muted);font:11.5px var(--mono);opacity:.75}
-.dcr-app-compose textarea{box-sizing:border-box;width:100%;min-height:72px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;resize:vertical}
+.dcr-app-compose textarea{box-sizing:border-box;width:100%;min-height:72px;padding:9px 11px;border:1px solid var(--line);border-radius:calc(8px * var(--round));background:var(--surface);color:var(--ink);font:inherit;resize:vertical}
 .dcr-app-compose textarea:focus{border-color:var(--accent);outline:0}
 .dcr-app-compose-actions{display:flex;align-items:center;gap:6px}
 .dcr-app-compose-actions > span{flex:1}
@@ -105,12 +105,12 @@ dialog.dcr-app:focus{outline:0}
 .dcr-app-row-where span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dcr-app-row-where time{flex:none}
 .dcr-app-row-text{grid-column:1;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;margin-top:3px;font-size:13px;line-height:1.45;overflow-wrap:anywhere}
-.dcr-app-thumb{grid-column:2;grid-row:1/span 3;align-self:start;width:64px;height:40px;overflow:hidden;border-radius:6px;background:var(--bg-neutral-9)}
+.dcr-app-thumb{grid-column:2;grid-row:1/span 3;align-self:start;width:64px;height:40px;overflow:hidden;border-radius:calc(6px * var(--round));background:var(--bg-neutral-9)}
 .dcr-app-thumb :is(video,img){display:block;width:100%;height:100%;object-fit:cover}
 .dcr-app-row-state{display:flex;align-items:center;gap:8px;margin:0;padding:2px 16px 12px 19px;color:var(--muted);font-size:12px}
-.dcr-app-new,.dcr-app-row-title .dcr-app-new{flex:none;padding:0 6px;border-radius:999px;background:var(--accent);color:var(--ink-neutral-9);font-size:10.5px;font-weight:600;line-height:17px}
+.dcr-app-new,.dcr-app-row-title .dcr-app-new{flex:none;padding:0 6px;border-radius:calc(999px * var(--round));background:var(--accent);color:var(--ink-neutral-9);font-size:10.5px;font-weight:600;line-height:17px}
 .dcr-app-media{padding:0 16px 10px 19px}
-.dcr-app-media :is(video,img){display:block;width:100%;max-height:220px;object-fit:contain;border-radius:8px;background:var(--bg-neutral-9)}
+.dcr-app-media :is(video,img){display:block;width:100%;max-height:220px;object-fit:contain;border-radius:calc(8px * var(--round));background:var(--bg-neutral-9)}
 .dcr-app-row-tools{display:flex;align-items:center;gap:10px;min-width:0;margin:0;padding:0 16px 10px 19px;font-size:12px}
 .dcr-app-row-tools button{flex:none;padding:0;border:0;background:none;color:var(--accent);font:inherit;font-weight:550;cursor:pointer}
 .dcr-app-row-tools button:hover{text-decoration:underline}
@@ -127,12 +127,12 @@ dialog.dcr-app:focus{outline:0}
 .dcr-app-msg-body > :last-child{margin-bottom:0}
 .dcr-app-msg-body :is(p,ul,ol){margin:0 0 8px}
 .dcr-app-msg-body :is(ul,ol){padding-left:18px}
-.dcr-app-msg-body code{padding:1px 4px;border-radius:4px;background:color-mix(in oklab,var(--ink) 7%,transparent);font:12px var(--mono);overflow-wrap:anywhere}
-.dcr-app-msg-body pre{margin:0 0 8px;padding:9px 11px;overflow-x:auto;border-radius:8px;background:color-mix(in oklab,var(--ink) 6%,var(--surface));font:12px/1.5 var(--mono)}
+.dcr-app-msg-body code{padding:1px 4px;border-radius:calc(4px * var(--round));background:color-mix(in oklab,var(--ink) 7%,transparent);font:12px var(--mono);overflow-wrap:anywhere}
+.dcr-app-msg-body pre{margin:0 0 8px;padding:9px 11px;overflow-x:auto;border-radius:calc(8px * var(--round));background:color-mix(in oklab,var(--ink) 6%,var(--surface));font:12px/1.5 var(--mono)}
 .dcr-app-msg-body pre code{padding:0;background:none;white-space:pre;overflow-wrap:normal}
 .dcr-app-msg-body a{color:var(--accent)}
 
-.dcr-app-reply{display:flex;align-items:flex-end;gap:6px;margin:0 16px 14px 19px;padding:5px 5px 5px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.dcr-app-reply{display:flex;align-items:flex-end;gap:6px;margin:0 16px 14px 19px;padding:5px 5px 5px 11px;border:1px solid var(--line);border-radius:calc(10px * var(--round));background:var(--surface)}
 .dcr-app-reply:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 /* One ring, the reply field's: the dialog's focus outline would draw a second, smaller box inside it. */
 .dcr-app .dcr-app-reply textarea:focus,.dcr-app .dcr-app-reply textarea:focus-visible{outline:0}
@@ -143,7 +143,7 @@ dialog.dcr-app:focus{outline:0}
 .dcr-app-rec-form{display:grid;gap:10px;padding:0 16px 14px 19px;font-size:12.5px;color:var(--muted)}
 .dcr-app-rec-form .dcr-app-row-actions{padding:0}
 .dcr-app-rec-form label{display:grid;gap:4px}
-.dcr-app-rec-form :is(input[name="title"],select,textarea){box-sizing:border-box;width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:13.5px/1.45 var(--review-font-family)}
+.dcr-app-rec-form :is(input[name="title"],select,textarea){box-sizing:border-box;width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:calc(8px * var(--round));background:var(--surface);color:var(--ink);font:13.5px/1.45 var(--review-font-family)}
 .dcr-app-rec-form :is(input,select,textarea):focus{border-color:var(--accent);outline:0}
 .dcr-app-result{display:flex;align-items:center;gap:16px;margin:0;padding:0;border:0}
 .dcr-app-result legend{float:left;margin-right:6px;padding:0}
@@ -184,16 +184,16 @@ dialog.dcr-app:focus{outline:0}
    app pane stays live, because the agent's input lands there too. */
 .dcr-app.is-agent-driving .stage-bar{flex-wrap:wrap;row-gap:10px}
 /* The deep indigo in both themes: dark mode's light accent cannot carry white text. */
-.dcr-qa-banner{order:-1;display:flex;align-items:center;gap:14px;flex:1 0 100%;box-sizing:border-box;padding:12px 14px;border-radius:12px;background:var(--bg-accent-5);color:var(--ink-neutral-9)}
+.dcr-qa-banner{order:-1;display:flex;align-items:center;gap:14px;flex:1 0 100%;box-sizing:border-box;padding:12px 14px;border-radius:calc(12px * var(--round));background:var(--bg-accent-5);color:var(--ink-neutral-9)}
 .dcr-qa-banner .act-secondary{color:var(--ink-accent-3)}
-.dcr-qa-pulse{flex:none;position:relative;width:12px;height:12px;border-radius:50%;background:var(--bg-neutral-1)}
-.dcr-qa-pulse::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid var(--line-neutral-1);opacity:.6;animation:dcr-qa-ring 1.6s ease-out infinite}
+.dcr-qa-pulse{flex:none;position:relative;width:12px;height:12px;border-radius:calc(50% * var(--round));background:var(--bg-neutral-1)}
+.dcr-qa-pulse::after{content:"";position:absolute;inset:-6px;border-radius:calc(50% * var(--round));border:2px solid var(--line-neutral-1);opacity:.6;animation:dcr-qa-ring 1.6s ease-out infinite}
 @keyframes dcr-qa-ring{from{transform:scale(.5);opacity:.7}to{transform:scale(1.4);opacity:0}}
 @media(prefers-reduced-motion:reduce){.dcr-qa-pulse::after{animation:none;opacity:.4}}
 .dcr-qa-text{display:grid;gap:2px;min-width:0;flex:1}
 .dcr-qa-text strong{font-size:14.5px;font-weight:650}
 .dcr-qa-text span{font-size:13px;opacity:.92}
-.dcr-qa-progress{flex:none;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.18);font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.dcr-qa-progress{flex:none;padding:3px 10px;border-radius:calc(999px * var(--round));background:rgba(255,255,255,.18);font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums}
 .dcr-qa-progress:empty{display:none}
 .dcr-qa-banner .act-quiet{color:var(--ink-neutral-9);border-color:rgba(255,255,255,.45)}
 .dcr-qa-banner .act-quiet:hover{background:rgba(255,255,255,.14)}
@@ -206,19 +206,19 @@ dialog.dcr-qa-done .modal-box{display:grid;gap:14px;max-width:560px;padding:22px
 dialog.dcr-qa-done header{display:flex;align-items:flex-start;gap:14px}
 dialog.dcr-qa-done h2{margin:0 0 4px;font-size:18px}
 dialog.dcr-qa-done header p{margin:0;color:var(--muted);font-size:14px;line-height:1.5}
-.dcr-qa-check{flex:none;display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:color-mix(in oklab,var(--dcr-ok) 16%,var(--surface));color:var(--dcr-ok)}
-.dcr-qa-report{max-height:min(46vh,420px);overflow-y:auto;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--canvas);font-size:13.5px;line-height:1.55}
+.dcr-qa-check{flex:none;display:grid;place-items:center;width:34px;height:34px;border-radius:calc(50% * var(--round));background:color-mix(in oklab,var(--dcr-ok) 16%,var(--surface));color:var(--dcr-ok)}
+.dcr-qa-report{max-height:min(46vh,420px);overflow-y:auto;padding:12px 14px;border:1px solid var(--line);border-radius:calc(10px * var(--round));background:var(--canvas);font-size:13.5px;line-height:1.55}
 .dcr-qa-report:empty{display:none}
 .dcr-qa-report > :first-child{margin-top:0}
 .dcr-qa-report > :last-child{margin-bottom:0}
-.dcr-qa-report code{padding:1px 4px;border-radius:4px;background:color-mix(in oklab,var(--ink) 7%,transparent);font:12px var(--mono)}
+.dcr-qa-report code{padding:1px 4px;border-radius:calc(4px * var(--round));background:color-mix(in oklab,var(--ink) 7%,transparent);font:12px var(--mono)}
 .dcr-qa-free{margin:0;color:var(--muted);font-size:13px}
 dialog.dcr-qa-done footer{display:flex;justify-content:flex-end;gap:8px}
 
 /* A QA review row: its clips side by side, then the agent's report; earlier runs folded. */
 .dcr-qa-clips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:0 16px 10px 19px}
 .dcr-qa-clips figure{margin:0;display:grid;gap:4px}
-.dcr-qa-clips :is(video,img){display:block;width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:7px;background:var(--bg-neutral-9)}
+.dcr-qa-clips :is(video,img){display:block;width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:calc(7px * var(--round));background:var(--bg-neutral-9)}
 .dcr-qa-clips figcaption{overflow:hidden;color:var(--muted);font-size:11.5px;text-overflow:ellipsis;white-space:nowrap}
 .dcr-qa-report-inline{padding:0 16px 14px 19px}
 .dcr-qa-older{display:grid;gap:8px;margin:0;padding:0 16px 14px 19px;list-style:none;font-size:12.5px}
@@ -232,8 +232,8 @@ dialog.dcr-qa-done footer{display:flex;justify-content:flex-end;gap:8px}
 .dcr-app-prep{position:absolute;inset:0;z-index:3;display:flex;justify-content:center;align-items:flex-start;padding:28px 24px;pointer-events:none;
   background:color-mix(in oklab,var(--surface) 52%,transparent);-webkit-backdrop-filter:blur(1.5px) saturate(.85);backdrop-filter:blur(1.5px) saturate(.85)}
 .dcr-app-prep[hidden]{display:none}
-.dcr-app-prep-card{display:flex;align-items:center;gap:14px;max-width:min(520px,100%);padding:14px 20px 14px 16px;border:1px solid color-mix(in oklab,var(--accent) 28%,var(--line));border-radius:14px;background:var(--surface);box-shadow:0 10px 30px color-mix(in srgb,var(--shade) 16.9%,transparent)}
-.dcr-app-prep-spin{flex:none;width:26px;height:26px;border-radius:50%;border:2.5px solid color-mix(in oklab,var(--accent) 22%,transparent);border-top-color:var(--accent);animation:dcr-prep-spin .9s linear infinite}
+.dcr-app-prep-card{display:flex;align-items:center;gap:14px;max-width:min(520px,100%);padding:14px 20px 14px 16px;border:1px solid color-mix(in oklab,var(--accent) 28%,var(--line));border-radius:calc(14px * var(--round));background:var(--surface);box-shadow:0 10px 30px color-mix(in srgb,var(--shade) 16.9%,transparent)}
+.dcr-app-prep-spin{flex:none;width:26px;height:26px;border-radius:calc(50% * var(--round));border:2.5px solid color-mix(in oklab,var(--accent) 22%,transparent);border-top-color:var(--accent);animation:dcr-prep-spin .9s linear infinite}
 .dcr-app-prep-text{display:grid;gap:2px;min-width:0}
 .dcr-app-prep-text strong{color:var(--ink);font-size:15px;font-weight:650;letter-spacing:-.01em}
 .dcr-app-prep-text span{color:var(--muted);font-size:13px}

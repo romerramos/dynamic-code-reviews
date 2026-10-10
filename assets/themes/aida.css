@@ -1,5 +1,6 @@
 /* AIda: the look the app was first drawn with. Every token is pinned to an exact value, so
-   nothing here is derived; see base.css for what each token is for. */
+   nothing here is derived; see base.css for what each token is for.
+   @syntax classic @mode light */
 :root:has(input.theme-controller[value=aida-light]:checked),[data-theme="aida-light"]{
   /* daisyUI's variables: its stock light theme, with this app's primary colour and shape */
   color-scheme:light;--color-base-100:oklch(100% 0 0);--color-base-200:oklch(98% 0 0);--color-base-300:oklch(95% 0 0);
@@ -18,6 +19,8 @@
   --yours-soft:#fff6e6;--dcr-ok:#1f8a5b;--dcr-work:#a15c07;--dcr-off:#8a8f9c;
   --dcr-agree:#1f8a5b;--dcr-partly:#b06a00;--dcr-disagree:#c2410c;--dcr-agree-soft:#e3f5ec;
   --dcr-partly-soft:#fdf1dc;--dcr-disagree-soft:#fde8df;--rec:#c2410c;
+  /* Kinds of comment */
+  --type-blue-ink:#2458a1;--type-blue-tint:#e9f1ff;--type-green-ink:#187348;--type-green-tint:#def5e7;--type-purple-ink:#7541a7;--type-purple-tint:#f1e7fb;--type-amber-ink:#855818;--type-amber-tint:#fff1d4;--type-red-ink:#b52635;--type-red-tint:#ffe7e9;--type-teal-ink:#08746f;--type-teal-tint:#dcf5f2;--type-slate-ink:#475569;--type-slate-tint:#edf1f5;
   /* Surfaces */
   --bg-neutral-1:#ffffff;--bg-neutral-2:#f7f8fa;--bg-neutral-3:#f0f1f4;--bg-neutral-4:#e2e8f0;--bg-neutral-5:#d8dbe5;--bg-neutral-6:#8a8f9c;--bg-neutral-7:#303b50;--bg-neutral-8:#162037;--bg-neutral-9:#0b0d12;
   --bg-green-1:#e9f5ed;--bg-green-2:#dafbe1;--bg-green-3:#c8f5d2;--bg-green-4:#2f9e5b;--bg-green-5:#1f883d;
@@ -60,6 +63,8 @@
   --yours-soft:#2a2210;--dcr-ok:#4cc38a;--dcr-work:#e0a94a;--dcr-off:#8a93a6;
   --dcr-agree:#4cc38a;--dcr-partly:#e0a94a;--dcr-disagree:#f08a6c;--dcr-agree-soft:#173528;
   --dcr-partly-soft:#3a2c12;--dcr-disagree-soft:#3d2018;--rec:#f0774a;
+  /* Kinds of comment */
+  --type-blue-ink:#92acd0;--type-blue-tint:#1a2940;--type-green-ink:#8cb9a4;--type-green-tint:#172f2a;--type-purple-ink:#baa0d3;--type-purple-tint:#2e2341;--type-amber-ink:#c2ac8c;--type-amber-tint:#31291f;--type-red-ink:#da929a;--type-red-tint:#3d1d26;--type-teal-ink:#84bab7;--type-teal-tint:#133034;--type-slate-ink:#a3aab4;--type-slate-tint:#232832;
   /* Surfaces */
   --bg-neutral-1:#1a1a1a;--bg-neutral-2:#16191f;--bg-neutral-3:#181a1e;--bg-neutral-4:#161c23;--bg-neutral-5:#1a1c22;--bg-neutral-6:#26282b;--bg-neutral-7:#303b50;--bg-neutral-8:#162037;--bg-neutral-9:#0b0d12;
   --bg-green-1:#142319;--bg-green-2:#0c2c13;--bg-green-3:#0f2d16;--bg-green-4:#2f9e5b;--bg-green-5:#1f883d;
