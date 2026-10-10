@@ -109,7 +109,39 @@
     const label = {fresh:'New preview ready', ready:'Preview ready', requested:'Preview requested', working:'Building preview', selected:'Selected for preview'}[status];
     return label ? `<span class="nav-preview is-${status}" title="${label}" aria-label="${label}">${icon(status === 'requested' ? 'clock' : 'scan-text')}</span>` : '';
   }
+  // The keyboard is in one of two panes, the sidebar ('nav') or what is being read ('main'); the
+  // page shows which with a ring. Tab and a click move it; the arrows walk the sidebar's rows.
+  let pane = 'nav';
+  const currentNavRow = () => $('navigation').querySelector('[aria-current="location"]') || $('navigation').querySelector('[aria-current="page"]') || $('navigation').querySelector('button');
+  function setPane(name, focus = true) {
+    if (name === 'nav' && !$('navigation').getClientRects().length) name = 'main'; // focus mode hides the sidebar
+    pane = name;
+    document.body.dataset.pane = name;
+    if (focus) (name === 'main' ? $('content') : currentNavRow())?.focus({preventScroll:true});
+  }
+  // The file being read: the one shown in file-by-file mode, the one scrolled to in a walkthrough step.
+  const readingFile = () => files.get(fileReadingActive() ? focusOrder[focusIndex]?.file : state.navFile);
+  // The next or previous file in reading order, across steps, opened where it is read.
+  function stepFile(delta) {
+    if (fileReadingActive()) { focusFile(focusIndex + delta); return; }
+    const at = focusOrder.findIndex(entry => entry.layer.id === state.view && entry.file === state.navFile);
+    const first = focusOrder.findIndex(entry => entry.layer.id === state.view);
+    // On a step with no file reached yet, J opens its first; on the overview, the first of all.
+    const from = at >= 0 ? at : first >= 0 ? first - (delta > 0 ? 1 : 0) : -1;
+    const target = focusOrder[Math.max(0, Math.min(focusOrder.length - 1, from + delta))];
+    if (target && !(at >= 0 && focusOrder[at] === target)) navigateFile(target.layer, target.file);
+  }
+  // A tap moves a little over half a screen, smoothly; holding the key scrolls steadily. A tap at the
+  // very end goes on to the next file or step, and one at the very top back to the previous.
+  function scrollReading(direction, held) {
+    const content = $('content');
+    const atEdge = direction > 0 ? content.scrollTop + content.clientHeight >= content.scrollHeight - 4 : content.scrollTop <= 0;
+    if (atEdge) { if (!held) { step(direction); $('content').focus({preventScroll:true}); } return; }
+    content.scrollBy({top: direction * (held ? 56 : Math.round(content.clientHeight * 0.55)), behavior: held ? 'instant' : 'smooth'});
+  }
   function renderNavigation() {
+    const keyboardHere = $('navigation').contains?.(document.activeElement); // absent only outside a browser
+    const keyboardRow = keyboardHere && document.activeElement.dataset.fileLink;
     const query = $('search').value.trim().toLowerCase();
     let html = `<ul class="menu"><li><button data-view="overview" aria-current="${state.view === 'overview' ? 'page' : 'false'}"><span class="step-number">☷</span><span class="step-body"><strong>Overview</strong><small>Comments & evidence</small></span></button></li><li><button data-view="files" aria-current="${state.view === 'files' ? 'page' : 'false'}"><span class="step-number">⌘</span><span class="step-body"><strong>All changes</strong><small>Diffs by responsibility · ${files.size} files</small></span></button></li></ul>`;
     review.groups.forEach(group => {
@@ -147,6 +179,9 @@
       html += '</ul></section>';
     });
     $('navigation').innerHTML = html;
+    // The row that had the keyboard was redrawn: give it back, or to the current row when it is gone.
+    const again = keyboardRow && $('navigation').querySelector(`[data-file-link="${keyboardRow}"]`);
+    if (again) again.focus({preventScroll:true}); else if (keyboardHere) setPane('nav');
   }
 
   function language(path) {
@@ -1555,6 +1590,18 @@
     const {headings, current} = changedSectionPosition();
     selectChangedSection(headings[current + delta]);
   }
+  // { and }: the previous and next changed section. File by file has its own pager and header to
+  // clear; in a walkthrough step the sections of all its files follow one another down the page.
+  function jumpSection(delta) {
+    if (fileReadingActive()) { jumpChangedSection(delta); return; }
+    const content = $('content');
+    const line = content.getBoundingClientRect().top + 72;
+    const anchors = [...content.querySelectorAll('.change-anchor, .range-heading')].filter(node => !node.checkVisibility || node.checkVisibility());
+    let current = -1;
+    anchors.forEach((node, index) => { if (node.getBoundingClientRect().top <= line + 4) current = index; });
+    const target = anchors[current + delta];
+    if (target) content.scrollTo({top: content.scrollTop + target.getBoundingClientRect().top - line, behavior:'smooth'});
+  }
   function reviewScrollTop() {
     return getComputedStyle($('content')).overflowY === 'visible' ? window.scrollY : $('content').scrollTop;
   }
@@ -1613,6 +1660,11 @@
     }, 80);
   }
   $('content').addEventListener('scroll', followReading, {passive:true});
+  document.body.dataset.pane = pane;
+  document.addEventListener('pointerdown', event => {
+    if (event.target.closest?.('.sidebar')) setPane('nav', false);
+    else if (event.target.closest?.('.review-area')) setPane('main', false);
+  });
   window.addEventListener('scroll', updateChangeNavigation, {passive:true});
   function setFontSize(size) {
     state.codeFontSize = Math.max(10, Math.min(20, Number(size) || 13));
@@ -2320,7 +2372,37 @@
     }
     if (/INPUT|TEXTAREA|SELECT/.test(event.target.tagName) || event.metaKey || event.ctrlKey || event.altKey || $('details-dialog').open || $('comment-editor').open || $('copy-dialog').open || $('previews-dialog').open || $('send-dialog').open || $('comment-popover').matches(':popover-open')) return;
     const key = event.key.toLowerCase();
-    if (key === 'j' || key === 'k') { event.preventDefault(); step(key === 'j' ? 1 : -1); }
+    // 1 to 9 open that step of the walkthrough, with the keyboard in the sidebar.
+    if (/^[1-9]$/.test(event.key) && layers[Number(event.key) - 1]) { event.preventDefault(); select(layers[Number(event.key) - 1].id); setPane('nav'); return; }
+    // Tab moves the keyboard between the sidebar and what is being read. Inside a menu or a dialog,
+    // and with Shift, it walks the controls as it always does.
+    if (event.key === 'Tab' && !event.shiftKey && !document.querySelector('dialog[open], :popover-open')) { event.preventDefault(); setPane(pane === 'nav' ? 'main' : 'nav'); return; }
+    if (pane === 'nav' && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+      const rows = [...$('navigation').querySelectorAll('button')].filter(button => button.getClientRects().length);
+      const at = rows.indexOf(document.activeElement) >= 0 ? rows.indexOf(document.activeElement) : rows.indexOf(currentNavRow());
+      event.preventDefault();
+      rows[Math.max(0, Math.min(rows.length - 1, at + (event.key === 'ArrowDown' ? 1 : -1)))]?.focus();
+      return;
+    }
+    // Space marks the file the keyboard is on as viewed, or not: the sidebar row that has the
+    // keyboard, else the file being read. On any other control it does what Space does there.
+    if (event.key === ' ') {
+      const active = document.activeElement;
+      const inNav = $('navigation').contains(active);
+      if (!inNav && active !== document.body && active !== $('content')) return;
+      const row = inNav && active.closest('[data-file-link]');
+      if (inNav && !row) return; // a step's row: Space opens it, as it does any button
+      const file = row ? files.get(row.dataset.fileLink) : readingFile();
+      if (file) { event.preventDefault(); markViewed(file, !fileViewed(file)); }
+      return;
+    }
+    if (event.key === '{' || event.key === '}') { event.preventDefault(); jumpSection(event.key === '}' ? 1 : -1); return; }
+    // J and K: in the sidebar they go to the next and previous file; in what is being read they scroll it.
+    if (key === 'j' || key === 'k') {
+      event.preventDefault();
+      if (pane === 'main') scrollReading(key === 'j' ? 1 : -1, event.repeat);
+      else { stepFile(key === 'j' ? 1 : -1); setPane('nav'); currentNavRow()?.scrollIntoView({block:'nearest'}); }
+    }
     if (key === 'z') chooseReadingMode(!focusMode);
     if (key === 'f') setZen(!document.body.classList.contains('zen'));
     if (key === 'l') setLedger(!ledgerOpen());

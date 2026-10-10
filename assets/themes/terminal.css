@@ -66,7 +66,7 @@
 [data-theme^="terminal-"]{
   --review-font-family:"JetBrains Mono Variable","JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
   --mono:"JetBrains Mono Variable","JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
-  --round:0;--shade:transparent;--status-h:26px;--chrome-h:44px;--toolbar-h:44px;
+  --round:0;--shade:transparent;--status-h:26px;--pane-ring:var(--terminal-fill);--chrome-h:44px;--toolbar-h:44px;
   font-variant-ligatures:none;scrollbar-color:var(--terminal-surface1) transparent;scrollbar-width:thin;
 }
 [data-theme^="terminal-"] *{letter-spacing:0!important;scrollbar-color:var(--terminal-surface1) transparent;scrollbar-width:thin}
@@ -79,14 +79,15 @@
 
 /* --- the status line, as in a modal editor: the mode you are in, where you are and how far, then
    the keys, each named for what it would switch to ----------------------------------------------- */
-[data-theme^="terminal-"]{--terminal-mode:"FILE";--terminal-mode-len:4;--terminal-focus:"";--terminal-focus-len:0;--terminal-z:"walkthrough";--terminal-f:"focus"}
+[data-theme^="terminal-"]{--terminal-mode:"FILE";--terminal-mode-len:4;--terminal-focus:"";--terminal-focus-len:0;--terminal-z:"walkthrough";--terminal-f:"focus";--terminal-jk:"file"}
+[data-theme^="terminal-"]:has(body[data-pane="main"]){--terminal-jk:"scroll"}
 [data-theme^="terminal-"]:has(body[data-reading="walkthrough"]){--terminal-mode:"WALKTHROUGH";--terminal-mode-len:11;--terminal-z:"file by file"}
 [data-theme^="terminal-"]:has(body.zen){--terminal-focus:" · FOCUS";--terminal-focus-len:8;--terminal-f:"leave focus"}
 [data-theme^="terminal-"] body::before{content:var(--terminal-mode) var(--terminal-focus);position:fixed;z-index:20;left:0;bottom:0;height:var(--status-h);padding:0 1.5ch;display:flex;align-items:center;background:var(--terminal-fill);color:var(--terminal-on-fill);font:700 12px/1 var(--mono);white-space:pre}
 [data-theme^="terminal-"] body.zen::before{background:var(--terminal-hot)}
 [data-theme^="terminal-"] body::after{content:attr(data-position) "  ·  " attr(data-progress);position:fixed;z-index:19;left:0;right:0;bottom:0;height:var(--status-h);padding:0 2ch 0 calc((var(--terminal-mode-len) + var(--terminal-focus-len) + 5) * 1ch);display:flex;align-items:center;border-top:1px solid var(--line);background:var(--canvas);color:var(--ink);font:12px/1 var(--mono);white-space:pre;overflow:hidden}
-[data-theme^="terminal-"]::after{content:"j/k next  ·  z " var(--terminal-z) "  ·  f " var(--terminal-f) "  ·  esc close";position:fixed;z-index:20;right:0;bottom:0;height:var(--status-h);padding:0 2ch;display:flex;align-items:center;border-top:1px solid var(--line);background:var(--canvas);color:var(--muted);font:12px/1 var(--mono);white-space:pre}
-@media(max-width:900px){[data-theme^="terminal-"]::after{display:none}}
+[data-theme^="terminal-"]::after{content:"1-9 step  ·  tab pane  ·  j/k " var(--terminal-jk) "  ·  {/} section  ·  space viewed  ·  z " var(--terminal-z) "  ·  f " var(--terminal-f) "  ·  esc close";position:fixed;z-index:20;right:0;bottom:0;height:var(--status-h);padding:0 2ch;display:flex;align-items:center;border-top:1px solid var(--line);background:var(--canvas);color:var(--muted);font:12px/1 var(--mono);white-space:pre}
+@media(max-width:1250px){[data-theme^="terminal-"]::after{display:none}}
 @media(max-width:740px){[data-theme^="terminal-"]{--status-h:0px}[data-theme^="terminal-"] body::before,T body::after{display:none}}
 
 /* --- the header: a title bar with a cursor --------------------------------------------------- */
