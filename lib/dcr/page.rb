@@ -49,7 +49,12 @@ module DCR
 
     # A theme is a pair of daisyUI themes, NAME-light and NAME-dark, in assets/themes/NAME.css.
     # base.css comes first: the tokens every theme may set, each derived from daisyUI's variables.
-    def themes = Dir[File.join(ASSETS, 'themes', '*.css')].map { |path| File.basename(path, '.css') }.sort - ['base']
+    # The theme whose opening comment says `@default` comes first: it is what a reviewer who has
+    # never chosen one sees.
+    def themes
+      names = Dir[File.join(ASSETS, 'themes', '*.css')].map { |path| File.basename(path, '.css') }.sort - ['base']
+      names.sort_by { |name| File.read(File.join(ASSETS, 'themes', "#{name}.css"))[%r{\A/\*.*?\*/}m].to_s.include?('@default') ? 0 : 1 }
+    end
     # What a theme asks for when it is picked, written in its opening comment: `@syntax NAME`, the
     # syntax theme that suits it, and `@mode light` or `@mode dark`, the mode it looks best in.
     def theme_hint(name, key) = File.read(File.join(ASSETS, 'themes', "#{name}.css"))[%r{\A/\*.*?@#{key} ([a-z]+).*?\*/}m, 1]
@@ -82,6 +87,7 @@ module DCR
       def theme_syntax(name) = Page.theme_syntax(name)
       def theme_mode(name) = Page.theme_mode(name)
       def theme_modes = themes.to_h { |name| [name, theme_mode(name)] }.compact
+      def theme_syntaxes = themes.to_h { |name| [name, theme_syntax(name)] }.compact
       def icon = @icon ||= asset('icon.svg')
       def favicon = "data:image/svg+xml;base64,#{[icon].pack('m0')}"
       # Text placed inside an inline <script> must not close it early.

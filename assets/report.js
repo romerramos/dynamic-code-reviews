@@ -58,7 +58,7 @@
   // Display preferences are global to the reviewer, not to one review, so they live under
   // their own key. A served review mirrors the key to the server (see live/live.js).
   const settingsKey = 'dynamic-review:settings';
-  const settings = {colorMode:null, theme:'aida', syntaxTheme:'classic', ignoreWhitespace:false};
+  const settings = {colorMode:null, theme:null, syntaxTheme:null, ignoreWhitespace:false};
   try { Object.assign(settings, JSON.parse(localStorage.getItem(settingsKey) || '{}')); } catch { /* defaults apply */ }
   // The themes this page was rendered with are the options of its Theme menu.
   const themes = [...($('theme')?.options || [])].map(option => option.value);
@@ -67,7 +67,7 @@
   const themeHint = key => [...($('theme')?.options || [])].find(option => option.value === settings.theme)?.dataset[key];
   // Until the reviewer picks a colour mode, the theme's own; with none, the system's.
   if (!['system', 'light', 'dark'].includes(settings.colorMode)) settings.colorMode = themeHint('mode') || 'system';
-  if (![...($('syntax-theme')?.options || [])].some(option => option.value === settings.syntaxTheme)) settings.syntaxTheme = 'classic';
+  if (![...($('syntax-theme')?.options || [])].some(option => option.value === settings.syntaxTheme)) settings.syntaxTheme = themeHint('syntax') || 'classic';
   settings.ignoreWhitespace = settings.ignoreWhitespace === true;
   const darkQuery = matchMedia('(prefers-color-scheme: dark)');
   const shownRows = (hunk, mode) => ReviewTools.displayRows(hunk.rows[mode], mode, settings.ignoreWhitespace);
@@ -118,6 +118,52 @@
     pane = name;
     document.body.dataset.pane = name;
     if (focus) (name === 'main' ? $('content') : currentNavRow())?.focus({preventScroll:true});
+  }
+  // Space opens a menu of commands, each one more key away (the leader key of a modal editor, with
+  // its menu shown). The menu lists only what this page can do now; Space again marks the file.
+  let leader = null; // the commands on offer while the menu is open
+  const leaderMenu = document.createElement('div');
+  leaderMenu.id = 'leader-menu';
+  leaderMenu.className = 'leader-menu';
+  leaderMenu.hidden = true;
+  leaderMenu.setAttribute('role', 'menu');
+  leaderMenu.setAttribute('aria-label', 'Commands');
+  document.body.append?.(leaderMenu);
+  function leaderCommands(markFile) {
+    const view = name => document.querySelector(`.dcr-views button[data-view="${name}"]`);
+    const inApp = view('app')?.getAttribute('aria-pressed') === 'true';
+    const previews = view('previews') || document.querySelector('#preview-list-toggle:not([hidden])');
+    const collapsed = document.body.classList.contains('sidebar-collapsed');
+    return [
+      {key:'e', label: collapsed ? 'Show the sidebar' : 'Hide the sidebar', run: () => { $('nav-toggle').click(); setPane(document.body.classList.contains('sidebar-collapsed') ? 'main' : 'nav'); }},
+      view('app') && {key:'a', label: inApp ? 'Back to the code' : 'Open the app', run: () => (inApp ? view('code') : view('app')).click()},
+      previews && {key:'p', label:'Template previews', run: () => previews.click()},
+      {key:'l', label: ledgerOpen() ? 'Hide your review' : 'Show your review', run: () => setLedger(!ledgerOpen())},
+      {key:'d', label:'Review details', run: () => $('context-toggle').click()},
+      {key:'/', label:'Find a file or step', run: () => { if (collapsed) $('nav-toggle').click(); $('search').focus(); }},
+      {key:' ', label:'Mark the file viewed, or not', run: markFile}
+    ].filter(Boolean);
+  }
+  function openLeader(markFile) {
+    leader = leaderCommands(markFile);
+    leaderMenu.innerHTML = `<h2>Menu</h2><ul>${leader.map(command => `<li><button type="button" role="menuitem" data-leader="${escape(command.key)}"><kbd>${command.key === ' ' ? 'Space' : escape(command.key.toUpperCase())}</kbd><span>${escape(command.label)}</span></button></li>`).join('')}</ul><p><kbd>Esc</kbd> close</p>`;
+    leaderMenu.hidden = false;
+    document.body.dataset.leader = ''; // for a theme that shows the mode
+  }
+  function endLeader() { leader = null; leaderMenu.hidden = true; delete document.body.dataset.leader; }
+  function runLeader(key) {
+    const command = leader?.find(entry => entry.key === key);
+    endLeader();
+    command?.run();
+    return !!command;
+  }
+  leaderMenu.addEventListener?.('click', event => { const item = event.target.closest('[data-leader]'); if (item) runLeader(item.dataset.leader); });
+  // Marks viewed, or not, the file the keyboard is on: the sidebar row that has it, else the file being read.
+  function markKeyboardFile() {
+    const active = document.activeElement;
+    const row = $('navigation').contains?.(active) && active.closest('[data-file-link]');
+    const file = row ? files.get(row.dataset.fileLink) : readingFile();
+    if (file) markViewed(file, !fileViewed(file));
   }
   // The file being read: the one shown in file-by-file mode, the one scrolled to in a walkthrough step.
   const readingFile = () => files.get(fileReadingActive() ? focusOrder[focusIndex]?.file : state.navFile);
@@ -1662,6 +1708,7 @@
   $('content').addEventListener('scroll', followReading, {passive:true});
   document.body.dataset.pane = pane;
   document.addEventListener('pointerdown', event => {
+    if (leader && !event.target.closest?.('#leader-menu')) endLeader();
     if (event.target.closest?.('.sidebar')) setPane('nav', false);
     else if (event.target.closest?.('.review-area')) setPane('main', false);
   });
@@ -2384,18 +2431,20 @@
       rows[Math.max(0, Math.min(rows.length - 1, at + (event.key === 'ArrowDown' ? 1 : -1)))]?.focus();
       return;
     }
-    // Space marks the file the keyboard is on as viewed, or not: the sidebar row that has the
-    // keyboard, else the file being read. On any other control it does what Space does there.
+    // With the menu open, the next key picks from it. Esc closes it; a key that is not on it
+    // closes it and does what it always does.
+    if (leader) {
+      if (event.key === 'Escape') { event.preventDefault(); endLeader(); return; }
+      if (runLeader(key)) { event.preventDefault(); return; }
+    }
     if (event.key === ' ') {
       const active = document.activeElement;
-      const inNav = $('navigation').contains(active);
-      if (!inNav && active !== document.body && active !== $('content')) return;
-      const row = inNav && active.closest('[data-file-link]');
-      if (inNav && !row) return; // a step's row: Space opens it, as it does any button
-      const file = row ? files.get(row.dataset.fileLink) : readingFile();
-      if (file) { event.preventDefault(); markViewed(file, !fileViewed(file)); }
+      if (!$('navigation').contains(active) && active !== document.body && active !== $('content')) return; // on another control, Space is that control's
+      event.preventDefault();
+      if (!event.repeat) openLeader(markKeyboardFile);
       return;
     }
+    if (key === 'v') { event.preventDefault(); markKeyboardFile(); return; }
     if (event.key === '{' || event.key === '}') { event.preventDefault(); jumpSection(event.key === '}' ? 1 : -1); return; }
     // J and K: in the sidebar they go to the next and previous file; in what is being read they scroll it.
     if (key === 'j' || key === 'k') {
@@ -2406,7 +2455,6 @@
     if (key === 'z') chooseReadingMode(!focusMode);
     if (key === 'f') setZen(!document.body.classList.contains('zen'));
     if (key === 'l') setLedger(!ledgerOpen());
-    if (key === 'v' && document.body.classList.contains('zen')) document.querySelector('.focus-reader [data-file-viewed]')?.click();
     if (event.key === 'Escape' && document.body.classList.contains('zen')) setZen(false);
   });
   $('title').textContent = review.title;

@@ -37,6 +37,7 @@ puts 'PASS the stylesheets hold no colours of their own and never name a theme'
 
 themes = DCR::Page.themes
 assert(themes.include?('aida') && !themes.include?('base'), "The themes are the files beside base.css: #{themes}")
+assert(themes.first == 'terminal', "The theme marked @default comes first: #{themes}")
 themes.each do |name|
   css = File.read(File.join(ROOT, 'assets/themes', "#{name}.css"))
   %w[light dark].each do |mode|

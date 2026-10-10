@@ -4,7 +4,7 @@
    Colours are Catppuccin (https://catppuccin.com/palette): Mocha in the dark, Latte in the light,
    peach for what is selected, lavender for the cursor. In the light, orange text is a darker
    orange (peach mixed with crust), which the palette's own peach is too pale for. See base.css for what each token is for.
-   @syntax catppuccin @mode dark */
+   @default @syntax catppuccin @mode dark */
 @font-face{font-family:"JetBrains Mono Variable";font-style:normal;font-weight:100 800;font-display:swap;src:url(vendor/fonts/jetbrains-mono/jetbrains-mono-latin-wght-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 @font-face{font-family:"JetBrains Mono Variable";font-style:normal;font-weight:100 800;font-display:swap;src:url(vendor/fonts/jetbrains-mono/jetbrains-mono-latin-ext-wght-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
 @font-face{font-family:"JetBrains Mono Variable";font-style:italic;font-weight:100 800;font-display:swap;src:url(vendor/fonts/jetbrains-mono/jetbrains-mono-latin-wght-italic.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
@@ -85,8 +85,13 @@
 [data-theme^="terminal-"]:has(body.zen){--terminal-focus:" · FOCUS";--terminal-focus-len:8;--terminal-f:"leave focus"}
 [data-theme^="terminal-"] body::before{content:var(--terminal-mode) var(--terminal-focus);position:fixed;z-index:20;left:0;bottom:0;height:var(--status-h);padding:0 1.5ch;display:flex;align-items:center;background:var(--terminal-fill);color:var(--terminal-on-fill);font:700 12px/1 var(--mono);white-space:pre}
 [data-theme^="terminal-"] body.zen::before{background:var(--terminal-hot)}
+/* Space opens the menu: while it is open, the line says so. */
+[data-theme^="terminal-"]:has(body[data-leader]){--terminal-mode:"LEADER";--terminal-mode-len:6;--terminal-focus:"";--terminal-focus-len:0}
+[data-theme^="terminal-"] body[data-leader]::before{background:var(--terminal-hot)}
+
 [data-theme^="terminal-"] body::after{content:attr(data-position) "  ·  " attr(data-progress);position:fixed;z-index:19;left:0;right:0;bottom:0;height:var(--status-h);padding:0 2ch 0 calc((var(--terminal-mode-len) + var(--terminal-focus-len) + 5) * 1ch);display:flex;align-items:center;border-top:1px solid var(--line);background:var(--canvas);color:var(--ink);font:12px/1 var(--mono);white-space:pre;overflow:hidden}
-[data-theme^="terminal-"]::after{content:"1-9 step  ·  tab pane  ·  j/k " var(--terminal-jk) "  ·  {/} section  ·  space viewed  ·  z " var(--terminal-z) "  ·  f " var(--terminal-f) "  ·  esc close";position:fixed;z-index:20;right:0;bottom:0;height:var(--status-h);padding:0 2ch;display:flex;align-items:center;border-top:1px solid var(--line);background:var(--canvas);color:var(--muted);font:12px/1 var(--mono);white-space:pre}
+[data-theme^="terminal-"]::after{content:"1-9 step  ·  tab pane  ·  j/k " var(--terminal-jk) "  ·  {/} section  ·  v viewed  ·  space menu  ·  z " var(--terminal-z) "  ·  f " var(--terminal-f) "  ·  esc close";position:fixed;z-index:20;right:0;bottom:0;height:var(--status-h);padding:0 2ch;display:flex;align-items:center;border-top:1px solid var(--line);background:var(--canvas);color:var(--muted);font:12px/1 var(--mono);white-space:pre}
+[data-theme^="terminal-"]:has(body[data-leader])::after{content:"pick a key  ·  esc close";color:var(--ink)}
 @media(max-width:1250px){[data-theme^="terminal-"]::after{display:none}}
 @media(max-width:740px){[data-theme^="terminal-"]{--status-h:0px}[data-theme^="terminal-"] body::before,T body::after{display:none}}
 
@@ -164,9 +169,9 @@
 [data-theme^="terminal-"] progress.progress::-moz-progress-bar{background:repeating-linear-gradient(90deg,var(--dcr-ok) 0 6px,transparent 6px 8px)}
 
 /* --- headings: a rule that carries its label --------------------------------------------------- */
-[data-theme^="terminal-"] :is(.eyebrow,.view-menu h2,.dcr-opinions-title,.dcr-adv-title){display:flex;align-items:center;gap:1ch;text-transform:uppercase;font-weight:700;color:var(--accent)}
-[data-theme^="terminal-"] :is(.eyebrow,.view-menu h2,.dcr-opinions-title,.dcr-adv-title)::before{content:"──";color:var(--terminal-surface1);font-weight:400}
-[data-theme^="terminal-"] :is(.eyebrow,.view-menu h2)::after{content:"";flex:1;border-top:1px solid var(--line)}
+[data-theme^="terminal-"] :is(.eyebrow,.view-menu h2,.leader-menu h2,.dcr-opinions-title,.dcr-adv-title){display:flex;align-items:center;gap:1ch;text-transform:uppercase;font-weight:700;color:var(--accent)}
+[data-theme^="terminal-"] :is(.eyebrow,.view-menu h2,.leader-menu h2,.dcr-opinions-title,.dcr-adv-title)::before{content:"──";color:var(--terminal-surface1);font-weight:400}
+[data-theme^="terminal-"] :is(.eyebrow,.view-menu h2,.leader-menu h2)::after{content:"";flex:1;border-top:1px solid var(--line)}
 [data-theme^="terminal-"] :is(h1,h2,h3){font-weight:700}
 [data-theme^="terminal-"] main h1::before{content:"# ";color:var(--terminal-hot)}
 [data-theme^="terminal-"] main h2::before{content:"## ";color:var(--terminal-overlay0)}
@@ -174,7 +179,7 @@
 /* --- boxes: one line around what sits in the page, a double line around what floats over it,
    and never a second box inside either ------------------------------------------------------------- */
 [data-theme^="terminal-"] :is(.risk-rank,.review-thread,.file-card){box-shadow:none}
-[data-theme^="terminal-"] :is(.comment-popover[popover],.view-menu,.modal-box,#dcr-presence-card,#dcr-arrival,.dropdown-content){border:3px double var(--terminal-overlay0);box-shadow:none;background:var(--surface)}
+[data-theme^="terminal-"] :is(.comment-popover[popover],.view-menu,.modal-box,#dcr-presence-card,#dcr-arrival,.dropdown-content,.leader-menu){border:3px double var(--terminal-overlay0);box-shadow:none;background:var(--surface)}
 [data-theme^="terminal-"] body.ledger-open .ledger{border-left:3px double var(--terminal-overlay0)}
 [data-theme^="terminal-"] .review-note-popover[popover]{border-color:var(--accent)}
 [data-theme^="terminal-"] .comment-popover:not(.review-note-popover)[popover]{border-color:var(--yours)}
@@ -213,3 +218,5 @@
 [data-theme^="terminal-"] .more-list{border:3px double var(--terminal-overlay0);background:var(--surface);box-shadow:none}
 [data-theme^="terminal-"] .thread-source{width:auto;justify-content:flex-start;margin-left:-.5ch}
 [data-theme^="terminal-"] .thread-type-icon{background:transparent;width:auto;height:auto}
+[data-theme^="terminal-"] .leader-menu button:hover{background:var(--terminal-hover)}
+[data-theme^="terminal-"] .leader-menu kbd{color:var(--terminal-fill);background:transparent;font-weight:700}

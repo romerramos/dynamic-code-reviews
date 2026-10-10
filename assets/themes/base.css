@@ -6,6 +6,7 @@
 
    A theme's opening comment may say `@mode light` or `@mode dark`, the mode it looks best in,
    and `@syntax NAME`, the syntax theme that suits it; both apply when the theme is picked.
+   `@default` marks the theme a reviewer sees before choosing one.
 
    Tokens the app's stylesheets read:
    - --surface, --canvas, --line, --ink, --muted, --accent, --accent-soft: the page itself.
