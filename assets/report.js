@@ -58,18 +58,24 @@
   // Display preferences are global to the reviewer, not to one review, so they live under
   // their own key. A served review mirrors the key to the server (see live/live.js).
   const settingsKey = 'dynamic-review:settings';
-  const settings = {colorMode:'system', syntaxTheme:'classic', ignoreWhitespace:false};
+  const settings = {colorMode:'system', theme:'aida', syntaxTheme:'classic', ignoreWhitespace:false};
   try { Object.assign(settings, JSON.parse(localStorage.getItem(settingsKey) || '{}')); } catch { /* defaults apply */ }
   if (!['system', 'light', 'dark'].includes(settings.colorMode)) settings.colorMode = 'system';
+  // The themes this page was rendered with are the options of its Theme menu.
+  const themes = [...($('theme')?.options || [])].map(option => option.value);
+  if (!themes.includes(settings.theme)) settings.theme = themes[0] || 'aida';
   if (!['classic', 'github', 'one', 'solarized', 'dracula'].includes(settings.syntaxTheme)) settings.syntaxTheme = 'classic';
   settings.ignoreWhitespace = settings.ignoreWhitespace === true;
   const darkQuery = matchMedia('(prefers-color-scheme: dark)');
   const shownRows = (hunk, mode) => ReviewTools.displayRows(hunk.rows[mode], mode, settings.ignoreWhitespace);
   function applySettings() {
     const root = document.documentElement;
-    root.dataset.theme = settings.colorMode === 'system' ? (darkQuery.matches ? 'dark' : 'light') : settings.colorMode;
+    // A theme is a pair of daisyUI themes, NAME-light and NAME-dark; data-mode says which is on.
+    root.dataset.mode = settings.colorMode === 'system' ? (darkQuery.matches ? 'dark' : 'light') : settings.colorMode;
+    root.dataset.theme = `${settings.theme}-${root.dataset.mode}`;
     root.dataset.syntax = settings.syntaxTheme;
     document.querySelectorAll('[data-color-mode]').forEach(button => button.setAttribute('aria-pressed', button.dataset.colorMode === settings.colorMode));
+    $('theme').value = settings.theme;
     $('syntax-theme').value = settings.syntaxTheme;
     $('whitespace-toggle').checked = settings.ignoreWhitespace;
   }
@@ -2168,6 +2174,7 @@
     if (toggle) openStage(toggle.dataset.previewPath);
   });
   document.querySelectorAll('[data-color-mode]').forEach(button => button.onclick = () => { settings.colorMode = button.dataset.colorMode; applySettings(); saveSettings(); });
+  $('theme').onchange = event => { settings.theme = event.target.value; applySettings(); saveSettings(); };
   $('syntax-theme').onchange = event => { settings.syntaxTheme = event.target.value; applySettings(); saveSettings(); };
   darkQuery.addEventListener('change', () => { if (settings.colorMode === 'system') applySettings(); });
   $('whitespace-toggle').onchange = event => { const scroll = $('content').scrollTop; settings.ignoreWhitespace = event.target.checked; saveSettings(); render(); $('content').scrollTop = scroll; };

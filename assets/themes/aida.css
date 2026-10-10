@@ -1,0 +1,86 @@
+/* AIda: the look the app was first drawn with. Every token is pinned to an exact value, so
+   nothing here is derived; see base.css for what each token is for. */
+:root:has(input.theme-controller[value=aida-light]:checked),[data-theme="aida-light"]{
+  /* daisyUI's variables: its stock light theme, with this app's primary colour and shape */
+  color-scheme:light;--color-base-100:oklch(100% 0 0);--color-base-200:oklch(98% 0 0);--color-base-300:oklch(95% 0 0);
+  --color-base-content:oklch(21% .006 285.885);--color-primary:#6561e8;--color-primary-content:#fff;--color-secondary:oklch(65% .241 354.308);
+  --color-secondary-content:oklch(94% .028 342.258);--color-accent:oklch(77% .152 181.912);--color-accent-content:oklch(38% .063 188.416);--color-neutral:oklch(14% .005 285.823);
+  --color-neutral-content:oklch(92% .004 286.32);--color-info:oklch(74% .16 232.661);--color-info-content:oklch(29% .066 243.157);--color-success:oklch(76% .177 163.223);
+  --color-success-content:oklch(37% .077 168.94);--color-warning:oklch(82% .189 84.429);--color-warning-content:oklch(41% .112 45.904);--color-error:oklch(71% .194 13.428);
+  --color-error-content:oklch(27% .105 12.094);--radius-selector:.5rem;--radius-field:.5rem;--radius-box:.75rem;
+  --size-selector:.25rem;--size-field:.25rem;--border:1px;--depth:1;
+  --noise:0;
+  --shade:#1b2133;
+  /* The page, review marks, agent states */
+  --ink:#1f2430;--muted:#6b7280;--line:#e3e5ea;--surface:#ffffff;
+  --canvas:#f6f7f9;--accent:#4f4bc4;--accent-soft:#efeefc;--added:#edf9ef;
+  --removed:#fff0ef;--note:#976818;--note-bg:#fffaf0;--yours:#a15c07;
+  --yours-soft:#fff6e6;--dcr-ok:#1f8a5b;--dcr-work:#a15c07;--dcr-off:#8a8f9c;
+  --dcr-agree:#1f8a5b;--dcr-partly:#b06a00;--dcr-disagree:#c2410c;--dcr-agree-soft:#e3f5ec;
+  --dcr-partly-soft:#fdf1dc;--dcr-disagree-soft:#fde8df;--rec:#c2410c;
+  /* Surfaces */
+  --bg-neutral-1:#ffffff;--bg-neutral-2:#f7f8fa;--bg-neutral-3:#f0f1f4;--bg-neutral-4:#e2e8f0;--bg-neutral-5:#d8dbe5;--bg-neutral-6:#8a8f9c;--bg-neutral-7:#303b50;--bg-neutral-8:#162037;--bg-neutral-9:#0b0d12;
+  --bg-green-1:#e9f5ed;--bg-green-2:#dafbe1;--bg-green-3:#c8f5d2;--bg-green-4:#2f9e5b;--bg-green-5:#1f883d;
+  --bg-amber-1:#fbf7ee;--bg-amber-2:#fff3db;--bg-amber-3:#fff1c8;--bg-amber-4:#f5efe3;--bg-amber-5:#f1e5c5;--bg-amber-6:#d4a72c;--bg-amber-7:#a15c07;
+  --bg-red-1:#fdecea;--bg-red-2:#c2410c;--bg-red-3:#b42332;
+  --bg-accent-1:#f6f6fe;--bg-accent-2:#f0efff;--bg-accent-3:#e9e5ff;--bg-accent-4:#e5dcff;--bg-accent-5:#5548c8;
+  /* Text */
+  --ink-neutral-1:#11161f;--ink-neutral-2:#1e293b;--ink-neutral-3:#3f4656;--ink-neutral-4:#4f5869;--ink-neutral-5:#667080;--ink-neutral-6:#6c8270;--ink-neutral-7:#9b9cad;--ink-neutral-8:#b1b6c1;--ink-neutral-9:#ffffff;
+  --ink-accent-1:#35308f;--ink-accent-2:#554d65;--ink-accent-3:#514ba6;--ink-accent-4:#71528c;--ink-accent-5:#817393;
+  --ink-green-1:#28713e;--ink-green-2:#1f883d;--ink-green-3:#5f9b6b;
+  --ink-amber-1:#665537;--ink-amber-2:#865b16;--ink-amber-3:#706957;--ink-amber-4:#a06a12;--ink-amber-5:#8a7855;--ink-amber-6:#aa8b66;
+  --ink-red-1:#912018;--ink-red-2:#b42318;--ink-red-3:#c77b76;
+  /* Borders */
+  --line-accent-1:#d8d6f3;--line-accent-2:#c5c3e9;--line-accent-3:#b9a3d8;--line-accent-4:#9b8ee5;--line-accent-5:#8283e4;--line-accent-6:#7864d9;--line-accent-7:#7851b0;--line-accent-8:#5548c8;
+  --line-neutral-1:#ffffff;--line-neutral-2:#e0e5ed;--line-neutral-3:#cfd5df;--line-neutral-4:#b9bdc8;--line-neutral-5:#94a3b8;--line-neutral-6:#64748b;
+  --line-green-1:#d7e8da;--line-green-2:#a8cdb4;--line-green-3:#92b49c;--line-green-4:#4ac26b;--line-green-5:#1f883d;
+  --line-amber-1:#eee5d5;--line-amber-2:#ecdbaf;--line-amber-3:#dcc9a3;--line-amber-4:#dcbb73;--line-amber-5:#d4a72c;--line-amber-6:#b18a3d;--line-amber-7:#a15c07;
+  --line-red-1:#f2b8b5;--line-red-2:#c2410c;--line-red-3:#b42332;
+  /* Rings and halos drawn with a shadow */
+  --ring-amber-1:#c49438;
+  --ring-accent-1:#b9a3d8;--ring-accent-2:#8778e1;--ring-accent-3:#5548c8;
+  --ring-neutral-1:#fbfbfc;--ring-neutral-2:#64748b;
+}
+
+:root:has(input.theme-controller[value=aida-dark]:checked),[data-theme="aida-dark"]{
+  /* daisyUI's variables: its stock dark theme, with this app's primary colour and shape */
+  color-scheme:dark;--color-base-100:oklch(25.33% .016 252.42);--color-base-200:oklch(23.26% .014 253.1);--color-base-300:oklch(21.15% .012 254.09);
+  --color-base-content:oklch(97.807% .029 256.847);--color-primary:#6561e8;--color-primary-content:#fff;--color-secondary:oklch(65% .241 354.308);
+  --color-secondary-content:oklch(94% .028 342.258);--color-accent:oklch(77% .152 181.912);--color-accent-content:oklch(38% .063 188.416);--color-neutral:oklch(14% .005 285.823);
+  --color-neutral-content:oklch(92% .004 286.32);--color-info:oklch(74% .16 232.661);--color-info-content:oklch(29% .066 243.157);--color-success:oklch(76% .177 163.223);
+  --color-success-content:oklch(37% .077 168.94);--color-warning:oklch(82% .189 84.429);--color-warning-content:oklch(41% .112 45.904);--color-error:oklch(71% .194 13.428);
+  --color-error-content:oklch(27% .105 12.094);--radius-selector:.5rem;--radius-field:.5rem;--radius-box:.75rem;
+  --size-selector:.25rem;--size-field:.25rem;--border:1px;--depth:1;
+  --noise:0;
+  --shade:#1b2133;
+  /* The page, review marks, agent states */
+  --ink:#e4e7ee;--muted:#9aa3b2;--line:#2c313c;--surface:#171a21;
+  --canvas:#0f1115;--accent:#a3a0ff;--accent-soft:#252548;--added:#12301d;
+  --removed:#3b1a1d;--note:#e0b25a;--note-bg:#2a2210;--yours:#e0a94a;
+  --yours-soft:#2a2210;--dcr-ok:#4cc38a;--dcr-work:#e0a94a;--dcr-off:#8a93a6;
+  --dcr-agree:#4cc38a;--dcr-partly:#e0a94a;--dcr-disagree:#f08a6c;--dcr-agree-soft:#173528;
+  --dcr-partly-soft:#3a2c12;--dcr-disagree-soft:#3d2018;--rec:#f0774a;
+  /* Surfaces */
+  --bg-neutral-1:#1a1a1a;--bg-neutral-2:#16191f;--bg-neutral-3:#181a1e;--bg-neutral-4:#161c23;--bg-neutral-5:#1a1c22;--bg-neutral-6:#26282b;--bg-neutral-7:#303b50;--bg-neutral-8:#162037;--bg-neutral-9:#0b0d12;
+  --bg-green-1:#142319;--bg-green-2:#0c2c13;--bg-green-3:#0f2d16;--bg-green-4:#2f9e5b;--bg-green-5:#1f883d;
+  --bg-amber-1:#271f0f;--bg-amber-2:#302308;--bg-amber-3:#322709;--bg-amber-4:#251f13;--bg-amber-5:#2c2411;--bg-amber-6:#d4a72c;--bg-amber-7:#a15c07;
+  --bg-red-1:#2b0f0b;--bg-red-2:#c2410c;--bg-red-3:#b42332;
+  --bg-accent-1:#0c0c29;--bg-accent-2:#0a082d;--bg-accent-3:#0e082e;--bg-accent-4:#120830;--bg-accent-5:#5548c8;
+  /* Text */
+  --ink-neutral-1:#e0e5ee;--ink-neutral-2:#c4cfe1;--ink-neutral-3:#a9b0c0;--ink-neutral-4:#969fb0;--ink-neutral-5:#8891a0;--ink-neutral-6:#8a9e8e;--ink-neutral-7:#898a9e;--ink-neutral-8:#888fa0;--ink-neutral-9:#ffffff;
+  --ink-accent-1:#7570cf;--ink-accent-2:#a29ab2;--ink-accent-3:#716bbc;--ink-accent-4:#9678b0;--ink-accent-5:#9286a2;
+  --ink-green-1:#8ed7a4;--ink-green-2:#77e095;--ink-green-3:#7aae84;
+  --ink-amber-1:#c8b799;--ink-amber-2:#e9be79;--ink-amber-3:#a8a18f;--ink-amber-4:#edb75f;--ink-amber-5:#ad9c7a;--ink-amber-6:#b39775;
+  --ink-red-1:#e7766e;--ink-red-2:#e7564b;--ink-red-3:#c16d67;
+  /* Borders */
+  --line-accent-1:#242243;--line-accent-2:#292846;--line-accent-3:#3b2f4d;--line-accent-4:#2e2756;--line-accent-5:#28285a;--line-accent-6:#362d60;--line-accent-7:#4c3d61;--line-accent-8:#393465;
+  --line-neutral-1:#2b2b2b;--line-neutral-2:#2a303a;--line-neutral-3:#30353d;--line-neutral-4:#383b41;--line-neutral-5:#3c434d;--line-neutral-6:#495059;
+  --line-green-1:#2c3d2f;--line-green-2:#34493b;--line-green-3:#3d4d42;--line-green-4:#366443;--line-green-5:#397e4d;
+  --line-amber-1:#413726;--line-amber-2:#4e4324;--line-amber-3:#4e432d;--line-amber-4:#5c4d2b;--line-amber-5:#6e5d30;--line-amber-6:#69593a;--line-amber-7:#8d6029;
+  --line-red-1:#4f2220;--line-red-2:#834328;--line-red-3:#773239;
+  /* Rings and halos drawn with a shadow */
+  --ring-amber-1:#c49438;
+  --ring-accent-1:#b9a3d8;--ring-accent-2:#8778e1;--ring-accent-3:#5548c8;
+  --ring-neutral-1:#fbfbfc;--ring-neutral-2:#64748b;
+}
+

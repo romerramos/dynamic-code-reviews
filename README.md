@@ -227,6 +227,13 @@ References: [review JSON](references/report-schema.md), [incremental reviews](re
   answers by letter, not by name, and says how far each agrees with it. Claude, Codex, Grok, Antigravity (`agy`),
   Gemini and opencode CLIs are asked headless and read-only; an agent checks the review it runs only
   on a model the reviewer named.
+- **Themes** are pairs of [daisyUI themes](https://daisyui.com/docs/themes/), `NAME-light` and
+  `NAME-dark`, in `assets/themes/NAME.css`; the page sets `data-theme="NAME-light"` and
+  `data-mode="light"`. `assets/themes/base.css` is the contract: every colour the app's stylesheets
+  read is a token there, derived from daisyUI's variables, so a theme that sets only those already
+  covers the whole app, and may pin any token or add rules of its own. The stylesheets hold no
+  colours and key on `data-mode`, never on a theme's name. AIda (`aida.css`) is the first theme. A
+  new file in that folder appears in the View menu's Theme list.
 - **State** lives in the series folder: `manifest.json` and the saved pages for revisions, and
   `state.json` for the reviewer's progress and threads (`lib/dcr/state.rb`). The progress (viewed
   files, resolved comments, notes, the reviewer's own comments) is also kept outside the worktree, in
@@ -244,6 +251,7 @@ ruby scripts/test_review.rb        # collection, rendering, validation
 ruby scripts/test_series.rb        # series, in-progress reviews, increments
 ruby scripts/test_live.rb          # live server state, threads, focus, tailnet sharing
 ruby scripts/test_server.rb        # the served page, the recorder's command queue and uploads
+ruby scripts/test_themes.rb       # the theme contract: tokens, light and dark for every theme, no stray colours
 ruby scripts/test_second_opinion.rb # adversaries: the panel, model lists, the questions, headless runs (stand-in CLIs)
 ruby scripts/test_github.rb        # posting to the pull request through gh (a stand-in gh, nothing reaches GitHub)
 ruby scripts/test_live_previews.rb # preview requests, stylesheets, stand-ins

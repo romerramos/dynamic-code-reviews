@@ -3,7 +3,6 @@
 require 'digest'
 require 'erb'
 require 'json'
-require_relative '../../scripts/dark_theme'
 
 module DCR
   # Every HTML page a review is read in comes from here, rendered from a template in assets/.
@@ -44,9 +43,15 @@ module DCR
     # Identifies the report UI a page was rendered with, so an older saved page can be refreshed
     # before it is served. Covers the files that make up the page, not the vendored libraries.
     def ui_version
-      files = %w[report.html.erb report.css report.js review-tools.js icon.svg].map { |name| File.join(ASSETS, name) } + [File.expand_path('../../scripts/dark_theme.rb', __dir__)]
+      files = %w[report.html.erb report.css report.js review-tools.js icon.svg].map { |name| File.join(ASSETS, name) } + theme_files
       Digest::SHA256.hexdigest(files.map { |path| File.read(path) }.join("\0"))[0, 16]
     end
+
+    # A theme is a pair of daisyUI themes, NAME-light and NAME-dark, in assets/themes/NAME.css.
+    # base.css comes first: the tokens every theme may set, each derived from daisyUI's variables.
+    def themes = Dir[File.join(ASSETS, 'themes', '*.css')].map { |path| File.basename(path, '.css') }.sort - ['base']
+    def theme_files = (['base'] + themes).map { |name| File.join(ASSETS, 'themes', "#{name}.css") }
+    def theme_styles = theme_files.map { |path| File.read(path) }.join("\n")
 
     # The review data embedded in a rendered page, as `render` received it.
     def payload(html)
@@ -63,6 +68,7 @@ module DCR
 
       def asset(name) = File.read(File.join(ASSETS, name))
       def h(value) = ERB::Util.html_escape(value.to_s)
+      def themes = Page.themes
       def icon = @icon ||= asset('icon.svg')
       def favicon = "data:image/svg+xml;base64,#{[icon].pack('m0')}"
       # Text placed inside an inline <script> must not close it early.
@@ -90,8 +96,7 @@ module DCR
 
       def styles
         licenses = %w[DAISYUI-LICENSE PRISM-LICENSE lucide/LICENSE glightbox/LICENSE].map { |name| asset(File.join('vendor', name)) }.join("\n")
-        report = asset('report.css')
-        "/* Third-party licenses\n#{licenses}\n*/\n#{asset('vendor/daisyui.css')}\n#{asset('vendor/glightbox/glightbox.min.css')}\n#{report}#{ReviewDarkTheme.css(report)}"
+        "/* Third-party licenses\n#{licenses}\n*/\n#{asset('vendor/daisyui.css')}\n#{asset('vendor/glightbox/glightbox.min.css')}\n#{Page.theme_styles}\n#{asset('report.css')}"
       end
 
       def scripts
@@ -115,7 +120,7 @@ module DCR
 
       private
 
-      def styles = asset('vendor/daisyui.css') + asset('report.css')
+      def styles = asset('vendor/daisyui.css') + Page.theme_styles + asset('report.css')
       def name = @history['name']
       def revisions = @history['revisions']
       def latest?(entry) = entry == revisions.last
