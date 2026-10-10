@@ -217,10 +217,14 @@ References: [review JSON](references/report-schema.md), [incremental reviews](re
 - **Agents** are named on everything they write (`lib/dcr/agents.rb`): who posted a comment and who
   replied. **Adversaries** are other agent CLIs the reviewer chooses in the review page's agent card,
   each on a model and effort the CLI lists (`lib/dcr/agent_catalog.rb`); none is on until chosen, and
-  the choice is kept in `~/.config/dcr/settings.json` for every review on that computer. A comment the
+  the choice is kept in `~/.config/dcr/settings.json` for every review on that computer. Until the
+  reviewer has chosen some or chosen none, the page opens with an introduction that explains them
+  and offers both. A comment the
   agent posts with `dcr comment` is checked by them in the background (`lib/dcr/second_opinion.rb`):
   the first answers in the conversation, the others are kept as opinions beside it. The reviewer's
-  own question asks them too only when its **+** is ticked. Claude, Codex, Grok, Antigravity (`agy`),
+  own question asks them too only when its **+** is ticked: each answers on its own, a short answer
+  and then details, and once the review's agent has answered, the first adversary compares the
+  answers by letter, not by name, and says how far each agrees with it. Claude, Codex, Grok, Antigravity (`agy`),
   Gemini and opencode CLIs are asked headless and read-only; an agent checks the review it runs only
   on a model the reviewer named.
 - **State** lives in the series folder: `manifest.json` and the saved pages for revisions, and

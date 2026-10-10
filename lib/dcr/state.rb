@@ -236,13 +236,15 @@ module DCR
         thread = thread(state, key, id)
         thread['adversary'] = Agents.check(adversary) if adversary
         thread['waiting_on'] = Array(thread['waiting_on']) | ([adversary].compact + others).map { |agent| Agents.check(agent) }
+        thread.delete('differ') # said of the answers to the last question
         # The page shows a wait that outlives the agents' timeout as lost, not as still typing.
         thread['asked_at'] = Time.now.utc.iso8601
       end
     end
 
-    # verdict: agree, partly or disagree, when the answer said so.
-    def add_opinion(key, id, agent, body, verdict: nil, adversary: false, model: nil, effort: nil)
+    # verdict: agree, partly or disagree, when the answer said so. short: the answer in a sentence
+    # or two, when the agent marked one; body then carries it and the details under it.
+    def add_opinion(key, id, agent, body, verdict: nil, short: nil, adversary: false, model: nil, effort: nil)
       agent = Agents.check(agent)
       update do |state|
         awaiting(state, key, id, agent).each do |copy|
@@ -253,7 +255,7 @@ module DCR
           if adversary
             thread['messages'].reject! { |message| message['role'] == 'adversary' && message['agent'] == agent }
             add_message(state, copy, id, 'agent', body, agent: agent, role: 'adversary', verdict: verdict, model: model, effort: effort)
-          else (thread['opinions'] ||= {})[agent] = {'id' => SecureRandom.hex(6), 'body' => text(body), 'verdict' => verdict, 'model' => model, 'effort' => effort, 'at' => Time.now.utc.iso8601}.compact
+          else (thread['opinions'] ||= {})[agent] = {'id' => SecureRandom.hex(6), 'body' => text(body), 'short' => short, 'verdict' => verdict, 'model' => model, 'effort' => effort, 'at' => Time.now.utc.iso8601}.compact
           end
         end
       end
@@ -268,6 +270,30 @@ module DCR
           # A failed retry keeps the earlier answer; only a first failure is shown.
           next if thread['messages'].any? { |message| message['role'] == 'adversary' && message['agent'] == agent } || thread.dig('opinions', agent, 'body')
           (thread['opinions'] ||= {})[agent] = {'error' => reason.to_s.strip[0, 300], 'role' => (adversary ? 'adversary' : nil), 'at' => Time.now.utc.iso8601}.compact
+        end
+      end
+    end
+
+    # What the review's agent said in a thread, oldest first, across the revisions that carried it.
+    def answers(key, id)
+      series = key.sub(/:\d+\z/, ':')
+      read['threads'].select { |name, _| name.start_with?(series) }.values.flat_map { |threads| threads.dig(id, 'messages') || [] }
+                     .select { |message| message['author'] == 'agent' && message['role'].nil? }.uniq { |message| message['id'] }.sort_by { |message| message['at'].to_s }
+    end
+
+    # How far each opinion agrees with the review's agent, as a judge compared them.
+    # verdicts: {agent => {'body' => the answer judged (each revision's copy has its own id), 'verdict' => agree, partly, disagree or nil}}.
+    # differ: where the answers differ, in a sentence. An opinion replaced since is left alone.
+    # 'of' => 'answer' tells such a verdict from one given on a comment.
+    def judge_opinions(key, id, verdicts, differ = nil)
+      series = key.sub(/:\d+\z/, ':')
+      update do |state|
+        state['threads'].each do |name, threads|
+          thread = threads[id] if name.start_with?(series)
+          judged = verdicts.select { |agent, entry| entry['verdict'] && thread&.dig('opinions', agent, 'body') == entry['body'] }
+          next if judged.empty?
+          judged.each { |agent, entry| thread['opinions'][agent].merge!('verdict' => entry['verdict'], 'of' => 'answer') }
+          differ ? thread['differ'] = differ.to_s.strip[0, 300] : thread.delete('differ')
         end
       end
     end

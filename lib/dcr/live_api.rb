@@ -83,7 +83,8 @@ module DCR
     private
 
     # The reviewer's adversaries, and the agent running this review, which checks itself only on a model they named.
-    def adversaries = {'adversaries' => @settings.adversaries, 'author' => @state.listener}
+    # decided: false until the reviewer has chosen them or chosen none; the page introduces them until then.
+    def adversaries = {'adversaries' => @settings.adversaries, 'author' => @state.listener, 'decided' => @settings.adversaries_decided?}
 
     # With adversaries ticked, they answer what the review's agent was sent, beside it.
     def send_items(input)

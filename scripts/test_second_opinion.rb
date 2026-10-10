@@ -169,6 +169,7 @@ puts 'PASS each CLI lists its own models and efforts, so nothing is kept by hand
 Dir.mktmpdir('dcr-settings') do |dir|
   settings = DCR::Settings.new(dir)
   settings.write('colorMode' => 'dark')
+  assert(!settings.adversaries_decided?, 'Until the reviewer chooses, nothing is decided')
   assert(settings.save_adversaries([{'agent' => 'opencode', 'model' => 'opencode/big-pickle'}, {'agent' => 'codex', 'effort' => 'high'}]) == [{'agent' => 'opencode', 'model' => 'opencode/big-pickle', 'effort' => nil}, {'agent' => 'codex', 'model' => nil, 'effort' => 'high'}], 'Adversaries are saved in order')
   settings.write('colorMode' => 'light')
   assert(settings.adversaries.length == 2 && settings.read == {'colorMode' => 'light'}, 'Display settings and adversaries are written apart and keep each other')
@@ -178,7 +179,12 @@ Dir.mktmpdir('dcr-settings') do |dir|
   rescue ArgumentError
     nil
   end
+  assert(settings.adversaries_decided?, 'Choosing adversaries is a decision')
   assert(settings.save_adversaries([]) == [] && settings.read == {'colorMode' => 'light'}, 'Turning every adversary off keeps the display settings')
+  settings.write('colorMode' => 'dark')
+  assert(settings.adversaries_decided? && DCR::Settings.new(dir).adversaries_decided?, 'Choosing none is a decision too, kept across display changes and restarts')
+  none = DCR::Settings.new(File.join(dir, 'fresh'))
+  assert(none.save_adversaries([]) == [] && none.adversaries_decided? && none.read == {}, 'Declining them from the start is remembered')
 end
 puts 'PASS adversaries are kept per reviewer, beside the display settings, and checked'
 
@@ -193,7 +199,7 @@ Dir.mktmpdir('dcr-question') do |series|
   asked = Queue.new
   ask = ->(agent, question, dir:, model:, effort:) { asked << [agent, question]; "Agree\nIt is in the README." }
   with_agents('codex' => 'exit 0', 'opencode' => 'exit 0', 'claude' => 'exit 0') do
-    result = DCR::SecondOpinion.question(state: state, key: key, id: 'mine-1', text: text, author: 'claude', repo: series, ask: ask,
+    result = DCR::SecondOpinion.question(state: state, key: key, id: 'mine-1', text: text, author: 'claude', repo: series, ask: ask, patience: 0,
                                          adversaries: [{'agent' => 'claude'}, {'agent' => 'codex'}, {'agent' => 'opencode', 'model' => 'opencode/big-pickle'}])
     assert(result.keys.sort == %w[codex opencode], "The review's own agent is not asked again: #{result}")
   end
@@ -202,8 +208,56 @@ Dir.mktmpdir('dcr-question') do |series|
   thread = state.read.dig('threads', key, 'mine-1')
   assert(thread['messages'].none? { |message| message['role'] == 'adversary' } && thread['adversary'].nil?, 'On a question nobody takes the second reviewer\'s place in the conversation')
   assert(thread.dig('opinions', 'codex', 'body') == "Agree\nIt is in the README." && thread.dig('opinions', 'codex', 'verdict').nil? && thread['waiting_on'] == [], 'Answers to a question sit beside the conversation, with no verdict')
+  assert(questions.length == 2 && thread.dig('opinions', 'codex', 'short').nil?, "What the review's agent said before the question is not its answer, so nothing is compared; an unmarked answer has no short one")
 end
 puts 'PASS a question asked with adversaries ticked: each answers it beside the review\'s agent, knowing what it was sent'
+
+assert(DCR::SecondOpinion.structured("Answer: Yes, keep it.\n\nDetails:\n- `app/job.rb` line 4 caps it.") == ['Yes, keep it.', "Yes, keep it.\n\n- `app/job.rb` line 4 caps it."], 'An answer is split into the short one and the whole')
+assert(DCR::SecondOpinion.structured("I'll look at the matcher first.**Answer:** Yes.\n**Details:**\n- One.") == ['Yes.', "Yes.\n\n- One."], 'Narration before the answer is dropped, and bold markers are read')
+assert(DCR::SecondOpinion.structured('Answer: Yes.') == ['Yes.', 'Yes.'] && DCR::SecondOpinion.structured('Yes, keep it.') == [nil, 'Yes, keep it.'], 'Details are optional, and an unmarked answer is kept whole')
+assert(DCR::SecondOpinion.judged("A: Agree\n**B:** Partly agree\nC: maybe\nDiffer: B would split the line.", 3) == [['agree', 'partly', nil], 'B would split the line.'], 'The judge is read line by line')
+assert(DCR::SecondOpinion.judged("A: Disagree\nDiffer: nothing.", 1) == [['disagree'], nil], 'Nothing to differ on is no sentence')
+prompt = DCR::SecondOpinion.judge_prompt(question: 'Why ten?', main: 'It is the retry limit.', answers: ['Yes.', 'No.'])
+assert(prompt.include?("Answer A:\nYes.") && prompt.include?("Answer B:\nNo.") && prompt.include?('B: Agree, Partly agree or Disagree') && !prompt.match?(/codex|grok|claude/i), "The judge sees letters, not names:\n#{prompt}")
+puts 'PASS a short answer is told from its details, and the judge\'s lines are read'
+
+Dir.mktmpdir('dcr-judge') do |series|
+  state = DCR::State.new(series)
+  first, second = [1, 2].map { |number| DCR::State.review_key('f00d', 'job', number) }
+  state.send_items(first, [{'id' => 'mine-1', 'text' => 'File: app/job.rb', 'message' => 'Is this the best way?'}])
+  asked = Queue.new
+  ask = lambda do |agent, question, dir:, model:, effort:|
+    asked << [agent, question, model]
+    # The answers are lettered in the order they arrived.
+    next "#{question[/Answer ([AB]):\nYes, keep it\./, 1]}: Agree\n#{question[/Answer ([AB]):\nNo, move/, 1]}: Disagree\nDiffer: Answer #{question[/Answer ([AB]):\nNo, move/, 1]} would move the work into the workers." if question.include?('The main answer:')
+    # The review's agent answers while the adversaries are still reading, in a newer revision's copy.
+    if agent == 'codex'
+      state.carry_forward('job', [{'number' => 1, 'fingerprint' => 'f00d'}, {'number' => 2, 'fingerprint' => 'f00d'}])
+      state.agent_reply('mine-1', 'Yes, keep it on this thread.', agent: 'claude')
+    end
+    agent == 'codex' ? "Answer: Yes, keep it.\n\nDetails:\n- It warms the cache." : 'Answer: No, move it into the workers.'
+  end
+  with_agents('codex' => 'exit 0', 'grok' => 'exit 0') do
+    DCR::SecondOpinion.question(state: state, key: first, id: 'mine-1', text: 'File: app/job.rb', author: 'claude', repo: series, ask: ask, patience: 0,
+                                adversaries: [{'agent' => 'codex', 'model' => 'gpt-x'}, {'agent' => 'grok'}])
+  end
+  calls = Array.new(asked.size) { asked.pop }
+  judging = calls.select { |_, question, _| question.include?('The main answer:') }
+  assert(calls.length == 3 && judging.map { |agent, _, model| [agent, model] } == [%w[codex gpt-x]], "The first adversary compares the answers, once: #{calls.map(&:first)}")
+  assert(judging[0][1].include?("The question:\nIs this the best way?") && judging[0][1].include?("The main answer:\nYes, keep it on this thread.") && judging[0][1].match?(/Answer [AB]:\nYes, keep it\.\n/) && !judging[0][1].include?('warms the cache'), "The judge reads the question, the main answer and the short answers:\n#{judging[0][1]}")
+  [first, second].each do |key|
+    thread = state.read.dig('threads', key, 'mine-1')
+    assert(thread['opinions'].transform_values { |opinion| opinion.values_at('short', 'verdict', 'of') } == {'codex' => ['Yes, keep it.', 'agree', 'answer'], 'grok' => ['No, move it into the workers.', 'disagree', 'answer']}, "Each answer has its short one and how far it agrees: #{thread['opinions']}")
+    assert(thread.dig('opinions', 'codex', 'body') == "Yes, keep it.\n\n- It warms the cache." && thread['differ'] == 'Grok would move the work into the workers.', "The details stay under the short answer, and where they differ names the agent, not its letter: #{thread['differ']}")
+  end
+  stale = state.read.dig('threads', second, 'mine-1', 'opinions', 'grok', 'body')
+  state.await_opinions(second, 'mine-1', nil, ['grok'])
+  state.add_opinion(second, 'mine-1', 'grok', 'Yes after all.', short: 'Yes after all.')
+  state.judge_opinions(second, 'mine-1', {'grok' => {'body' => stale, 'verdict' => 'disagree'}}, 'Late.')
+  again = state.read.dig('threads', second, 'mine-1')
+  assert(again.dig('opinions', 'grok', 'verdict').nil? && again['differ'].nil?, "Asked again, the old comparison is gone and a late one does not land on the new answer: #{again}")
+end
+puts 'PASS once the review\'s agent has answered, one adversary says how far each independent answer agrees with it'
 
 Dir.mktmpdir('dcr-api') do |series|
   settings = DCR::Settings.new(File.join(series, 'config'))
@@ -212,9 +266,9 @@ Dir.mktmpdir('dcr-api') do |series|
   key = DCR::State.review_key('f00d', 'job', 1)
   body = ->(value) { -> { JSON.generate(value) } }
   status, listed = api.call('GET', '/api/agents?fresh=1', nil)
-  assert(status == 200 && listed['agents'] == [{'slug' => 'codex', 'fresh' => true}] && listed['adversaries'] == [], "The page lists the agents and the saved adversaries: #{listed}")
+  assert(status == 200 && listed['agents'] == [{'slug' => 'codex', 'fresh' => true}] && listed['adversaries'] == [] && listed['decided'] == false, "The page lists the agents and the saved adversaries, and knows nothing was chosen yet: #{listed}")
   status, saved = api.call('POST', '/api/agents', body.call('adversaries' => [{'agent' => 'codex', 'effort' => 'high'}]))
-  assert(status == 200 && saved['adversaries'] == [{'agent' => 'codex', 'model' => nil, 'effort' => 'high'}] && api.call('GET', '/api/adversaries', nil)[1]['adversaries'] == saved['adversaries'], 'The page saves the adversaries')
+  assert(status == 200 && saved['adversaries'] == [{'agent' => 'codex', 'model' => nil, 'effort' => 'high'}] && api.call('GET', '/api/adversaries', nil)[1].values_at('adversaries', 'decided') == [saved['adversaries'], true], 'The page saves the adversaries, and that they were chosen')
   assert(api.call('POST', '/api/agents', body.call('adversaries' => [{'agent' => '../x'}]))[0] == 400, 'An invalid adversary is refused')
   api.call('POST', '/api/send', body.call('key' => key, 'items' => [{'id' => 'mine-1', 'text' => 'Why ten?'}]))
   assert(asked.empty?, 'Without the tick, only the review\'s agent is asked')

@@ -979,6 +979,7 @@
   const renderAdversaries = () => {
     const html = tools.adversaryPanelHTML({catalog, adversaries, author: listener, error: catalogError});
     if (advPanel.dataset.html !== html) { advPanel.innerHTML = html; advPanel.dataset.html = html; }
+    renderIntro();
   };
   // Lists the agents when the card opens. The server keeps the list a few minutes, so reopening is
   // quick; "Look again" asks the CLIs afresh, after a sign-in or an install.
@@ -1009,27 +1010,61 @@
     catch (error) { adversaries = before; flash(error.message); }
     renderAdversaries(); decorate(); renderAgent();
   };
-  advPanel.addEventListener('change', event => {
+  // What a switch or a select in the list makes of the chosen adversaries; null when it changed nothing.
+  const changedAdversaries = (list, event) => {
     const slug = event.target.closest('[data-agent]')?.dataset.agent;
     const agent = catalog?.find(entry => entry.slug === slug);
-    if (!agent) return;
+    if (!agent) return null;
     if (event.target.matches('[data-dcr-adv-switch]')) {
-      saveAdversaries(event.target.checked
-        ? [...adversaries.filter(entry => entry.agent !== slug), settleEntry({agent: slug, model: null, effort: null})]
-        : adversaries.filter(entry => entry.agent !== slug));
-      return;
+      return event.target.checked
+        ? [...list.filter(entry => entry.agent !== slug), settleEntry({agent: slug, model: null, effort: null})]
+        : list.filter(entry => entry.agent !== slug);
     }
     const model = event.target.matches('[data-dcr-adv-model]');
-    if (!model && !event.target.matches('[data-dcr-adv-effort]')) return;
+    if (!model && !event.target.matches('[data-dcr-adv-effort]')) return null;
     const value = event.target.value || null;
-    saveAdversaries(adversaries.map(entry => {
+    return list.map(entry => {
       if (entry.agent !== slug) return entry;
       if (!model) return {...entry, effort: value};
       // An effort the new model does not take becomes the one it would use.
       return tools.settle(agent, {...entry, model: value});
-    }));
-  });
+    });
+  };
+  advPanel.addEventListener('change', event => { const next = changedAdversaries(adversaries, event); if (next) saveAdversaries(next); });
   advPanel.addEventListener('click', event => { if (event.target.closest('[data-dcr-adv-recheck]')) loadCatalog(true); });
+  // The introduction: shown when the reviewer has never chosen adversaries, nor chosen none. What
+  // they tick is kept here until they decide; the decision is saved with their settings, so no
+  // review on this computer asks again. Closing it with Esc decides nothing.
+  const intro = document.createElement('dialog');
+  intro.id = 'dcr-adv-intro';
+  intro.className = 'modal';
+  intro.setAttribute('aria-labelledby', 'dcr-intro-title');
+  document.body.append(intro);
+  let introChosen = [];
+  let introShown = false;
+  function renderIntro() {
+    if (!introShown) return;
+    const html = tools.adversaryIntroHTML({catalog, adversaries: introChosen, author: listener, error: catalogError});
+    if (intro.dataset.html !== html) { intro.innerHTML = html; intro.dataset.html = html; }
+  }
+  const openIntro = () => {
+    if (intro.open || document.querySelector('dialog[open]')) return;
+    introChosen = [];
+    introShown = true;
+    renderIntro(); // before it opens, so the title takes the focus and not a button
+    intro.showModal();
+    loadCatalog();
+  };
+  intro.addEventListener('close', () => { introShown = false; });
+  intro.addEventListener('change', event => { const next = changedAdversaries(introChosen, event); if (next) { introChosen = next; renderIntro(); } });
+  intro.addEventListener('click', async event => {
+    if (event.target.closest('[data-dcr-adv-recheck]')) return loadCatalog(true);
+    const use = event.target.closest('[data-dcr-intro-use]');
+    if (!use && !event.target.closest('[data-dcr-intro-skip]')) return;
+    intro.close();
+    await saveAdversaries(use ? introChosen : []);
+    if (use && adversaries.length) flash(`${tools.names(adversaries.map(entry => tools.agentInfo(entry.agent).name))} will check this review.`);
+  });
   const renderAgent = () => {
     const model = presenceModel();
     presence.hidden = !model;
@@ -1236,5 +1271,5 @@
   if (ledger) new MutationObserver(() => { mount(); decorateLedger(); renderPanel(); }).observe(ledger, {childList: true, subtree: true});
   mount();
   poll();
-  api('/api/adversaries').then(data => { adversaries = data.adversaries; decorate(); renderAgent(); }).catch(() => { /* none until the card lists them */ });
+  api('/api/adversaries').then(data => { adversaries = data.adversaries; decorate(); renderAgent(); if (data.decided === false) openIntro(); }).catch(() => { /* none until the card lists them */ });
 })();

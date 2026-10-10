@@ -227,6 +227,19 @@ assert.deepEqual(tools.settle(codexAgent, {agent:'codex', model:null, effort:nul
 assert.deepEqual(tools.settle(codexAgent, {agent:'codex', model:'gpt-a', effort:'xhigh'}), {agent:'codex', model:'gpt-a', effort:'low'}, 'an effort the model does not take becomes one it does');
 assert.deepEqual(tools.settle({slug:'antigravity', efforts:['low', 'medium'], models:[{id:'m1'}, {id:'m2'}]}, {agent:'antigravity'}), {agent:'antigravity', model:'m1', effort:'medium'}, 'with no default said, the first model it lists');
 console.log('PASS adversaries: who is asked, their marks, their status, models and efforts from the CLIs, and the card that sets them');
+// The introduction, until the reviewer decides: what adversaries are, the same list, and both ways out.
+const introCatalog = [{slug:'claude', name:'Claude', installed:true, models:[{id:'m'}]}, grokAgent && {...grokAgent, name:'Grok', installed:true}, {slug:'gemini', name:'Gemini', installed:false}];
+const introNone = tools.adversaryIntroHTML({catalog: introCatalog, adversaries: [], author: 'claude'});
+assert.match(introNone, /<h2 id="dcr-intro-title"[^>]*>Let other agents check this review<\/h2>/);
+assert.match(introNone, /When Claude posts a comment.*Tick the <b>\+<\/b> beside a question.*read-only/s, 'it says how the review uses them');
+assert.match(introNone, /id="dcr-intro-agents">Agents on this computer<.*data-agent="grok".*data-dcr-adv-switch aria-label/s, 'the agent card\'s list is inside, under its own heading');
+assert.doesNotMatch(introNone, /id="dcr-adv-title"|dcr-adv-foot/, 'the card keeps its own heading and footnote');
+assert.match(introNone, /data-dcr-intro-skip>Don't use adversaries<\/button><button[^>]*data-dcr-intro-use disabled>Choose an agent</, 'with none ticked the only way on is to decline');
+const introOne = tools.adversaryIntroHTML({catalog: introCatalog, adversaries: [{agent:'grok', model:'grok-4.7', effort:'medium'}], author: 'claude'});
+assert.match(introOne, /data-dcr-intro-use>Use 1 adversary</, 'ticking one makes the choice');
+assert.match(tools.adversaryIntroHTML({catalog: null}), /Looking for agents on this computer.*data-dcr-intro-skip/s, 'it can be declined while the agents are still being listed');
+console.log('PASS the introduction to adversaries explains them, lists the agents and offers to use them or not');
+
 
 // Whose judgement it is: the model and effort, tiny, beside the agent's name.
 assert.equal(globalThis.ReviewTools.modelText('opencode/big-pickle', null), 'big-pickle', 'a provider path is dropped');
@@ -236,3 +249,17 @@ assert.match(tools.messagesHTML({messages:[{id:'m', author:'agent', agent:'grok'
 assert.doesNotMatch(tools.messagesHTML({messages:[{id:'m', author:'agent', agent:'grok', body:'ok'}]}), /dcr-model/, 'an agent that did not say shows no label');
 assert.match(tools.opinionsHTML({adversary:'codex', opinions:{opencode:{id:'o', body:'Fine.', verdict:'agree', model:'opencode/big-pickle'}}}), /<strong>opencode<\/strong><span class="dcr-model"[^>]*>big-pickle<\/span>/);
 console.log('PASS each agent is labelled with the model and effort it answered on, when known');
+// Answers to a question: the short answer whole under the name, the details one click away, and
+// how far each agrees with the review's agent once a judge compared them.
+const answered = {adversary:'codex', differ:'Grok would move it into the workers.', messages:[{id:'a1', author:'agent', agent:'codex', role:'adversary', verdict:'disagree', body:'No.'}], opinions:{
+  codex:{id:'q1', of:'answer', verdict:'agree', short:'Yes, keep `match_state` here.', body:'Yes, keep `match_state` here.\n\n- It warms the cache.', at:'2026-10-09T11:59:00Z'},
+  grok:{id:'q2', of:'answer', verdict:'agree', short:'Yes.', body:'Yes.', at:'2026-10-09T11:59:00Z'}}};
+const shortRows = tools.opinionsHTML(answered, {now: noon});
+assert.match(shortRows, /data-dcr-opinion="codex" aria-expanded="false">.*?<time[^>]*>1 min ago<\/time><\/span><svg class="dcr-op-chevron".*?<\/button><div class="dcr-op-body dcr-op-short dcr-body"><p>Yes, keep <code>match_state<\/code> here\.<\/p>\n?<\/div><\/li>/s, 'a short answer shows whole under the name, with a chevron when there is more');
+assert.doesNotMatch(shortRows, /warms the cache|dcr-op-snippet/, 'the details stay closed');
+assert.match(shortRows, /data-dcr-opinion="grok"[^>]*>(?:(?!dcr-op-chevron).)*<\/button><div class="dcr-op-body dcr-op-short/s, 'an answer with nothing more has no chevron');
+assert.match(shortRows, /dcr-consensus dcr-v-agree">Everyone agrees<\/span><\/header><p class="dcr-differ">Grok would move it into the workers\.<\/p>/, 'verdicts on the answers are counted apart from the one on the comment, and where they differ is said');
+assert.match(tools.opinionsHTML(answered, {open:['codex'], now: noon}), /<div class="dcr-op-body dcr-body"><p>Yes, keep <code>match_state<\/code> here\.<\/p>.*warms the cache/s, 'opened, the details follow the short answer');
+assert.match(tools.sendText(snapshot, review, comments[0], '', answered), /- Codex \(agrees\): Yes, keep `match_state` here\.\n/, 'the short answer is what is sent along');
+console.log('PASS an answer to a question shows its short answer, opens to its details, and says how far it agrees with the review\'s agent');
+

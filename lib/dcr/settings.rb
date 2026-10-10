@@ -45,11 +45,15 @@ module DCR
     # here so every review on this computer uses them; the page's display settings never carry them.
     def adversaries = adversary_list(saved['adversaries'])
 
+    # Saving them, even as none, is the reviewer's decision: the page stops introducing them.
     def save_adversaries(list)
       raise ArgumentError, 'Adversaries must be a list' unless list.is_a?(Array)
-      store(read, adversary_list(list, strict: true))
+      store(read, adversary_list(list, strict: true), decided: true)
       adversaries
     end
+
+    # Whether the reviewer has chosen their adversaries, or chosen to have none.
+    def adversaries_decided? = saved['adversariesDecided'] == true || !adversaries.empty?
 
     private
 
@@ -65,8 +69,9 @@ module DCR
     end
 
     # The page writes display settings and adversaries separately; each write keeps the other.
-    def store(display, adversaries = self.adversaries)
+    def store(display, adversaries = self.adversaries, decided: adversaries_decided?)
       merged = adversaries.empty? ? display : display.merge('adversaries' => adversaries)
+      merged = merged.merge('adversariesDecided' => true) if decided
       FileUtils.mkdir_p(File.dirname(@path), mode: 0o700)
       temporary = "#{@path}.#{Process.pid}.tmp"
       File.write(temporary, JSON.generate(merged), perm: 0o600)

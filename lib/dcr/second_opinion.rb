@@ -10,12 +10,18 @@ module DCR
   # the first checks it and answers in the comment's conversation, the others give a short opinion
   # beside it; each gets the same compact question: what the change is for, the code, the comment.
   # On a question the reviewer asks with adversaries ticked, every one answers it beside the
-  # review's agent.
+  # review's agent, on its own: a short answer, then details. Once the review's agent has answered
+  # too, one of them (the judge) says how far each answer agrees with it, without knowing whose is whose.
   module SecondOpinion
     module_function
 
     CONTEXT_LINES = 4 # unchanged lines shown around the commented range
     VERDICT = /\A\W*(agree|partly agree|partially agree|mostly agree|disagree)\b\W*/i
+    # `Answer:` opens the short answer, wherever an agent's narration ends ("I'll check the cache.Answer: Yes").
+    ANSWER = /(?:\A|[\n.!?:])[ \t*_#]*answer[*_]*:[*_]*[ \t]*/i
+    DETAILS = /^[ \t*_#]*details[*_]*:[*_]*[ \t]*\n?/i
+    PATIENCE = 600 # seconds the judge waits for the review's agent to answer the question
+    JUDGED = 1500 # characters of an answer the judge reads
 
     def prompt(asked:, author:, context:, code:, comment:, adversary:)
       role = adversary ? 'You are the second reviewer. Check whether this comment is right, and say what it gets wrong or misses. Be fair: agree when it is right.' : 'Give a quick second opinion on this comment.'
@@ -107,11 +113,84 @@ module DCR
     # A question the reviewer asked with adversaries ticked: each answers it on its own, beside the
     # review's agent (author), which answers in the conversation as usual. text: what the review's
     # agent was sent, so they know as much as it does.
-    def question(state:, key:, id:, text:, author:, repo:, ask: Agents.method(:ask), adversaries: Settings.new.adversaries)
+    def question(state:, key:, id:, text:, author:, repo:, ask: Agents.method(:ask), adversaries: Settings.new.adversaries, patience: PATIENCE, pause: 2)
       panel = Agents.panel(author, adversaries)
       return {} if panel.empty?
-      state.await_opinions(key, id, nil, panel.map { |adversary| adversary['agent'] })
-      consult(state, key, id, panel, repo, ask, on_comment: false) { |agent, _| question_prompt(asked: agent, author: author, text: text) }
+      heard = state.answers(key, id).map { |message| message['id'] }
+      asked_at = state.await_opinions(key, id, nil, panel.map { |adversary| adversary['agent'] })
+      results = consult(state, key, id, panel, repo, ask, on_comment: false) { |agent, _| question_prompt(asked: agent, author: author, text: text) }
+      judge(state: state, key: key, id: id, text: text, asked_at: asked_at, heard: heard, judge: panel.first, repo: repo, ask: ask, patience: patience, pause: pause)
+      results
+    end
+
+    # [short answer, the whole answer without its markers]. short is nil when the agent did not mark one.
+    def structured(answer)
+      text = tidy(answer)
+      match = text.match(ANSWER) or return [nil, text]
+      short, details = text[match.end(0)..].split(DETAILS, 2).map { |part| part.to_s.strip }
+      return [nil, text] if short.to_s.empty?
+      [short, [short, details].reject { |part| part.to_s.empty? }.join("\n\n")]
+    end
+
+    # The adversaries answered on their own. When the review's agent has answered too, the judge
+    # compares each answer with it and the verdicts land on the opinions. Nothing happens when the
+    # review's agent does not answer in time, or the reviewer asked again meanwhile. heard: the ids
+    # of what the review's agent had already said when the question was asked.
+    def judge(state:, key:, id:, text:, asked_at:, heard:, judge:, repo:, ask: Agents.method(:ask), patience: PATIENCE, pause: 2)
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + patience
+      loop do
+        thread = state.read.dig('threads', key, id) or return
+        return unless thread['asked_at'] == asked_at
+        opinions = (thread['opinions'] || {}).select { |_, opinion| opinion['body'] && opinion['role'] != 'adversary' }
+        return if opinions.empty?
+        main = state.answers(key, id).reject { |message| heard.include?(message['id']) }.last&.fetch('body')
+        if main
+          answer = ask.call(judge['agent'], judge_prompt(question: thread['messages'].reverse.find { |message| message['author'] == 'user' }&.fetch('body') || text, main: main, answers: opinions.values.map { |opinion| opinion['short'] || opinion['body'] }), dir: repo, model: judge['model'], effort: judge['effort'])
+          verdicts, differ = judged(answer, opinions.length)
+          # The judge knew the answers by letter; the reviewer reads who it was.
+          differ = differ&.gsub(/\banswer ([A-Z])\b/i) { (agent = opinions.keys[Regexp.last_match(1).upcase.ord - 65]) ? Agents.name(agent) : Regexp.last_match(0) }
+          return state.judge_opinions(key, id, opinions.keys.zip(verdicts).to_h { |agent, word| [agent, {'body' => opinions[agent]['body'], 'verdict' => word}] }, differ)
+        end
+        return if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+        sleep pause
+      end
+    rescue ArgumentError, SystemCallError => error
+      warn "The answers to #{id} could not be compared: #{error.message}"
+    end
+
+    # The answers carry letters, not names: the judge must not know whose is whose.
+    def judge_prompt(question:, main:, answers:)
+      letters = ('A'..'Z').first(answers.length)
+      <<~TEXT
+        A reviewer asked a question about a code change. One agent gave the main answer; #{answers.length == 1 ? 'another agent' : 'other agents'} answered on #{answers.length == 1 ? 'its' : 'their'} own, without seeing it. Say how far each other answer agrees with the main answer.
+
+        - Agree: the same conclusion.
+        - Partly agree: the same conclusion with a real caveat, or a different fix.
+        - Disagree: a different conclusion.
+
+        Judge only what is written here. Do not read files. Reply with exactly these lines and nothing else:
+        #{letters.map { |letter| "#{letter}: Agree, Partly agree or Disagree" }.join("\n")}
+        Differ: one short, plain sentence on where the answers differ most, or the word nothing when they all agree. Name an answer as `Answer A`, each time.
+
+        The question:
+        #{question.to_s.strip[0, JUDGED]}
+
+        The main answer:
+        #{main.to_s.strip[0, JUDGED]}
+
+        #{letters.zip(answers).map { |letter, answer| "Answer #{letter}:\n#{answer.to_s.strip[0, JUDGED]}" }.join("\n\n")}
+      TEXT
+    end
+
+    # [[verdict or nil per answer, in order], where they differ or nil].
+    def judged(answer, count)
+      lines = tidy(answer).lines.map(&:strip)
+      verdicts = ('A'..'Z').first(count).map do |letter|
+        word = lines.filter_map { |line| line[/\A\W*#{letter}\W*:\W*(agree|partly agree|partially agree|mostly agree|disagree)\b/i, 1] }.first&.downcase
+        word && (word == 'disagree' ? 'disagree' : (word == 'agree' ? 'agree' : 'partly'))
+      end
+      differ = lines.filter_map { |line| line[/\A\W*differ\w*\W*:\s*(.+)/i, 1] }.first.to_s.strip
+      [verdicts, differ.empty? || differ.match?(/\Anothing\W*\z/i) ? nil : differ[0, 300]]
     end
 
     def question_prompt(asked:, author:, text:)
@@ -119,9 +198,10 @@ module DCR
         You are #{Agents.name(asked)}. A reviewer is going through a code change with #{author ? Agents.name(author) : 'their agent'}, the agent running the review, and asked what follows. Give your own, independent answer; the reviewer reads it beside theirs.
 
         How to answer:
-        - The answer first, in a sentence or two. Then only what supports it.
-        - Plain, simple words. Short paragraphs or a short list; Markdown is fine.
-        - Name the file and line when it helps.
+        - Write `Answer:` and then your answer in one or two plain sentences. The reviewer may read nothing else, so it must stand on its own.
+        - Only if the answer needs backing, add a line `Details:` and under it at most four short bullets, and at most one short code block. Leave it out when the answer is enough.
+        - Write nothing before `Answer:`. Do not say what you are about to do.
+        - Plain, simple words. Name the file and line when it helps.
         - You may read files in this repository to check. Do not change anything.
 
         ---
@@ -141,15 +221,16 @@ module DCR
 
     # Asks every adversary at once and posts each answer as it arrives. On a comment the first
     # answers in the conversation and each says what it thinks of the comment; on a question
-    # (on_comment false) they all answer beside it. Returns {agent => verdict or what failed}.
+    # (on_comment false) they all answer beside it, a short answer first. Returns {agent => verdict or what failed}.
     def consult(state, key, id, panel, repo, ask, on_comment: true)
       panel.each_with_index.map do |adversary, index|
         agent, model, effort = adversary.values_at('agent', 'model', 'effort')
         adversarial = on_comment && index.zero?
         Thread.new do
           answer = ask.call(agent, yield(agent, adversarial), dir: repo, model: model, effort: effort)
-          word, body = on_comment ? verdict(answer) : [nil, tidy(answer)]
-          state.add_opinion(key, id, agent, body, verdict: word, adversary: adversarial, model: model, effort: effort)
+          word, body = on_comment ? verdict(answer) : [nil, nil]
+          short, body = structured(answer) unless on_comment
+          state.add_opinion(key, id, agent, body, verdict: word, short: short, adversary: adversarial, model: model, effort: effort)
           AgentCatalog::Results.record(agent)
           [agent, word || 'answered']
         rescue ArgumentError, SystemCallError => error

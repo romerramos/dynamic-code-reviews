@@ -62,7 +62,7 @@ globalThis.LiveTools = (() => {
     let text = globalThis.ReviewTools.commentText(snapshot, {...comment, resolved: false}, review.qa, {conversation: false});
     const opinions = [
       ...(thread?.messages || []).filter(message => message.role === 'adversary').map(message => [message.agent, 'second reviewer', message.verdict, message.body]),
-      ...Object.entries(thread?.opinions || {}).filter(([, opinion]) => opinion.body).map(([agent, opinion]) => [agent, null, opinion.verdict, opinion.body])
+      ...Object.entries(thread?.opinions || {}).filter(([, opinion]) => opinion.body).map(([agent, opinion]) => [agent, null, opinion.verdict, opinion.short || opinion.body])
     ].map(([agent, role, verdict, body]) => {
       const said = [role, VERDICTS[verdict]?.label.toLowerCase()].filter(Boolean).join(', ');
       const short = body.length > 700 ? `${body.slice(0, 700)}…` : body;
@@ -174,8 +174,8 @@ globalThis.LiveTools = (() => {
   const consensusTone = counts => !counts.total ? '' : counts.agree === counts.total ? 'agree' : counts.disagree === counts.total ? 'disagree' : 'partly';
 
   // The other agents' opinions, under the conversation rather than in it: one row per agent with
-  // its mark, name and verdict once, then the start of its answer. A row opens in place to the full
-  // answer. `open`: the agents whose answers are open.
+  // its mark, name and verdict once, then its short answer, or the start of its answer when it gave
+  // no short one. A row opens in place to the full answer. `open`: the agents whose answers are open.
   function opinionsHTML(thread, {open = [], seen = new Set(), now = Date.now()} = {}) {
     const opinions = thread?.opinions || {};
     const adversary = thread?.adversary;
@@ -185,7 +185,9 @@ globalThis.LiveTools = (() => {
     const waiting = (thread?.waiting_on || []).filter(agent => agent !== adversary || !checkingComment(thread));
     const agents = [...new Set([...answered, ...waiting])];
     if (!agents.length) return '';
-    const counts = tally(thread);
+    // Verdicts a judge gave on answers to a question are counted apart from those on the comment.
+    const onAnswer = Object.entries(opinions).filter(([, opinion]) => opinion.of === 'answer');
+    const counts = tally(onAnswer.length ? {opinions: Object.fromEntries(onAnswer)} : thread);
     const summary = consensus(counts);
     const rows = agents.map(agent => {
       const opinion = opinions[agent];
@@ -199,9 +201,16 @@ globalThis.LiveTools = (() => {
       const fresh = opinion.id && !seen.has(opinion.id);
       const verdict = VERDICTS[opinion.verdict] ? `<span class="dcr-op-verdict dcr-v-${opinion.verdict}">${verdictIcon(opinion.verdict)}${VERDICTS[opinion.verdict].short}</span>` : '';
       const chevron = '<svg class="dcr-op-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
-      return `<li class="dcr-op${isOpen ? ' is-open' : ''}"><button type="button" class="dcr-op-toggle" data-dcr-opinion="${escape(agent)}" aria-expanded="${isOpen}">${avatarHTML(agent, 'dcr-face-sm')}<span class="dcr-op-line"><strong>${name}</strong>${modelHTML(opinion)}${verdict}${fresh ? '<span class="dcr-op-new" aria-label="New"></span>' : ''}${isOpen ? `<time data-at="${escape(opinion.at || '')}">${escape(relativeTime(opinion.at))}</time>` : `<span class="dcr-op-snippet">${escape(snippet(opinion.body))}</span>`}</span>${chevron}</button>${isOpen ? `<div class="dcr-op-body dcr-body">${markdown(opinion.body)}</div>` : ''}</li>`;
+      // An answer that came with a short one shows it whole under the name; the row opens only when there is more.
+      const short = opinion.short && String(opinion.short).trim();
+      const more = !short || String(opinion.body).trim() !== short;
+      const after = isOpen || short ? `<time data-at="${escape(opinion.at || '')}">${escape(relativeTime(opinion.at, now))}</time>` : `<span class="dcr-op-snippet">${escape(snippet(opinion.body))}</span>`;
+      const under = isOpen ? `<div class="dcr-op-body dcr-body">${markdown(opinion.body)}</div>` : short ? `<div class="dcr-op-body dcr-op-short dcr-body">${markdown(short)}</div>` : '';
+      return `<li class="dcr-op${isOpen ? ' is-open' : ''}"><button type="button" class="dcr-op-toggle" data-dcr-opinion="${escape(agent)}" aria-expanded="${isOpen}">${avatarHTML(agent, 'dcr-face-sm')}<span class="dcr-op-line"><strong>${name}</strong>${modelHTML(opinion)}${verdict}${fresh ? '<span class="dcr-op-new" aria-label="New"></span>' : ''}${after}</span>${more ? chevron : ''}</button>${under}</li>`;
     }).join('');
-    return `<section class="dcr-opinions" aria-label="Other opinions"><header class="dcr-opinions-head"><span class="dcr-opinions-title">Other opinions</span>${summary ? `<span class="dcr-consensus dcr-v-${consensusTone(counts)}">${escape(summary)}</span>` : ''}</header><ul class="dcr-ops">${rows}</ul></section>`;
+    // On a question a judge compared the answers with the review's agent's: where they part, in a sentence.
+    const differ = thread.differ && counts.total ? `<p class="dcr-differ">${escape(thread.differ)}</p>` : '';
+    return `<section class="dcr-opinions" aria-label="Other opinions"><header class="dcr-opinions-head"><span class="dcr-opinions-title">Other opinions</span>${summary ? `<span class="dcr-consensus dcr-v-${consensusTone(counts)}">${escape(summary)}</span>` : ''}</header>${differ}<ul class="dcr-ops">${rows}</ul></section>`;
   }
 
   // Agent messages in a thread map that are not in `seen`.
@@ -300,10 +309,11 @@ globalThis.LiveTools = (() => {
   }
 
   // The Adversaries section of the agent card. catalog: the agent CLIs the server found (null while it looks).
-  function adversaryPanelHTML({catalog, adversaries = [], author = null, error = '', now = Date.now()}) {
+  // intro: the same list inside the introduction, which says in its own words how they are used.
+  function adversaryPanelHTML({catalog, adversaries = [], author = null, error = '', now = Date.now(), intro = false}) {
     const refresh = `<button type="button" class="icon-button dcr-adv-recheck" data-dcr-adv-recheck aria-label="Look for agents again" title="Look again"${catalog ? '' : ' disabled'}>${globalThis.ReviewIcons?.['refresh-cw']?.replace('<svg', '<svg aria-hidden="true" focusable="false"') || '↻'}</button>`;
     const active = activeAdversaries(adversaries, author, catalog);
-    const head = `<header class="dcr-adv-head"><span class="dcr-adv-title" id="dcr-adv-title">Adversaries</span><span class="dcr-adv-count">${active.length ? `${active.length} on` : 'Off'}</span>${refresh}</header>`;
+    const head = `<header class="dcr-adv-head"><span class="dcr-adv-title" id="${intro ? 'dcr-intro-agents' : 'dcr-adv-title'}">${intro ? 'Agents on this computer' : 'Adversaries'}</span><span class="dcr-adv-count">${active.length ? `${active.length} on` : 'Off'}</span>${refresh}</header>`;
     if (error) return `${head}<p class="dcr-adv-msg">${escape(error)}</p>`;
     if (!catalog) return `${head}<p class="dcr-adv-msg">Looking for agents on this computer<span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span></p>`;
     const installed = catalog.filter(agent => agent.installed);
@@ -324,7 +334,27 @@ globalThis.LiveTools = (() => {
     }).join('');
     const who = author ? agentInfo(author).name : 'your agent';
     const order = active.length ? `${agentInfo(active[0].agent).name} answers in each comment's conversation${active.length > 1 ? `; ${names(active.slice(1).map(entry => agentInfo(entry.agent).name))} weigh${active.length > 2 ? '' : 's'} in beside it` : ''}. On your own questions, tick ${facesHTML(active.map(entry => entry.agent), 3)} to ask them too.` : `Other agents on this computer can check ${escape(who)}'s comments. They spend your own accounts, so none is on until you choose.`;
-    return `${head}<ul class="dcr-adv-list">${rows}</ul><p class="dcr-adv-foot">${order}</p>${missing.length ? `<p class="dcr-adv-missing">Not found here: ${escape(names(missing))}.</p>` : ''}`;
+    return `${head}<ul class="dcr-adv-list">${rows}</ul>${intro ? '' : `<p class="dcr-adv-foot">${order}</p>`}${missing.length ? `<p class="dcr-adv-missing">Not found here: ${escape(names(missing))}.</p>` : ''}`;
+  }
+
+  // Shown once, until the reviewer chooses adversaries or chooses none: what they are, how the
+  // review uses them, and the same list as the agent card. adversaries: the ones ticked so far.
+  function adversaryIntroHTML({catalog, adversaries = [], author = null, error = '', now = Date.now()}) {
+    const icon = name => (globalThis.ReviewIcons?.[name] || '').replace('<svg', '<svg aria-hidden="true" focusable="false"');
+    const who = escape(author ? agentInfo(author).name : 'your agent');
+    const others = (catalog || []).filter(agent => agent.installed && agent.slug !== author).map(agent => agent.slug);
+    const hero = `<div class="dcr-intro-hero" aria-hidden="true">${author ? avatarHTML(author, '') : ''}${others.length ? `${author ? '<span class="dcr-intro-plus">+</span>' : ''}${facesHTML(others, 5)}` : ''}</div>`;
+    const points = [
+      ['message-square', 'On every comment', `When ${who} posts a comment, the first adversary answers in its conversation and the others say whether they agree.`],
+      ['circle-help', 'On your questions, when you ask', `Tick the <b>+</b> beside a question. Each answers on its own, and you see how far it agrees with ${who}.`],
+      ['sliders-horizontal', 'On your own accounts', 'Each runs its own CLI, read-only, on the model and effort you pick here.']
+    ].map(([name, title, text]) => `<li><span class="dcr-intro-ico">${icon(name)}</span><div><strong>${title}</strong><span>${text}</span></div></li>`).join('');
+    const count = adversaries.length;
+    return `<div class="modal-box dcr-intro">${hero}<h2 id="dcr-intro-title" tabindex="-1" autofocus>Let other agents check this review</h2>
+      <p class="dcr-intro-lead">Adversaries are other coding agents on this computer. They read the same code as ${who} and say where they disagree, so you do not have to take one agent's word for it.</p>
+      <ul class="dcr-intro-points">${points}</ul>
+      <section class="dcr-adv dcr-intro-adv" aria-labelledby="dcr-intro-agents">${adversaryPanelHTML({catalog, adversaries, author, error, now, intro: true})}</section>
+      <footer class="dcr-intro-actions"><p>You can change this any time from the agent button in the toolbar.</p><button type="button" class="btn btn-ghost" data-dcr-intro-skip>Don't use adversaries</button><button type="button" class="btn btn-primary" data-dcr-intro-use${count ? '' : ' disabled'}>${count ? `Use ${count} ${count === 1 ? 'adversary' : 'adversaries'}` : 'Choose an agent'}</button></footer></div>`;
   }
 
   function summary(comments, threads, resolved = []) {
@@ -335,5 +365,5 @@ globalThis.LiveTools = (() => {
 
   return {escape, progressKey, allComments, sendText, drafts, statusText, statusModel, actionLabel, markdown, snippet, relativeTime, messagesHTML, unseen, agentModel, summary,
     agentInfo, avatarHTML, modelHTML, verdictHTML, verdicts, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
-    activeAdversaries, facesHTML, agentStatus, modelOptionsHTML, effortLevels, effortOptionsHTML, chosenModel, chosenEffort, settle, adversaryPanelHTML};
+    activeAdversaries, facesHTML, agentStatus, modelOptionsHTML, effortLevels, effortOptionsHTML, chosenModel, chosenEffort, settle, adversaryPanelHTML, adversaryIntroHTML};
 })();
