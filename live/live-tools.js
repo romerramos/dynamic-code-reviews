@@ -363,7 +363,40 @@ globalThis.LiveTools = (() => {
     return {drafts: drafts(comments, threads, resolved).length, waiting, answered};
   }
 
+  // --- JevMyPR's verdict -------------------------------------------------------------------------
+  // The strip above the review: an offer until the reviewer answers for this repository (it sends
+  // the diff to an outside service), then the verdict, or JevMyPR's own words when it has none.
+  // state: {enabled: true|false|null, host, verdict: {status: asking|ready|error, ...} | null}. '' when off.
+  const JEV_WORDS = {human: 'Human review', llm: 'LLM review', none: 'No review'};
+  function jevBannerHTML({enabled, host, verdict} = {}) {
+    const name = '<span class="dcr-jev-name">JevMyPR</span>';
+    if (enabled === false) return '';
+    if (enabled !== true) {
+      return `${name}<p><strong>Does this need a human review, an LLM review, or none?</strong> JevMyPR can say, for the whole change and for each file. Asking sends this review's title and every changed file's name and patch to ${escape(host || 'JevMyPR')}.</p><span class="dcr-jev-actions"><button type="button" class="btn btn-sm btn-primary" data-dcr-jev="on">Turn on for this repository</button><button type="button" class="btn btn-sm btn-ghost" data-dcr-jev="off">No</button></span>`;
+    }
+    if (verdict?.status === 'ready') {
+      const said = Object.values(verdict.files || {});
+      const count = kind => said.filter(value => value === kind).length;
+      const plural = (number, one, many) => `${number} ${number === 1 ? one : many}`;
+      const unread = said.filter(value => !value).length;
+      const yours = count('human');
+      const facts = [
+        typeof verdict.confidence === 'number' ? `${Math.round(verdict.confidence * 100)}% confidence` : null,
+        said.length ? (yours ? `<button type="button" class="dcr-jev-yours" popovertarget="dcr-jev-list" title="List them">${plural(yours, 'file needs', 'files need')} you</button>` : '<strong>0 files need you</strong>') : null,
+        count('llm') ? `${count('llm')} an LLM can review` : null,
+        count('none') ? `${plural(count('none'), 'needs', 'need')} no review` : null,
+        unread || verdict.truncated ? `${unread || 'some'} not read` : null
+      ].filter(Boolean);
+      const link = /^https?:\/\//.test(verdict.url || '') ? `<a class="dcr-jev-link" href="${escape(verdict.url)}" target="_blank" rel="noopener noreferrer">Verdict page</a>` : '';
+      return `${name}<strong class="dcr-jev-verdict is-${escape(verdict.verdict)}">${JEV_WORDS[verdict.verdict] || escape(verdict.verdict)}</strong><p>${facts.join('<i aria-hidden="true"> · </i>')}</p><span class="dcr-jev-actions">${link}</span>`;
+    }
+    if (verdict?.status === 'error') {
+      return `${name}<p class="is-quiet">${escape(verdict.message || 'No verdict.')}</p><span class="dcr-jev-actions"><button type="button" class="btn btn-sm btn-ghost" data-dcr-jev="again">Try again</button></span>`;
+    }
+    return `${name}<p class="is-quiet" role="status">Asking for a verdict on this diff…</p>`;
+  }
+
   return {escape, progressKey, allComments, sendText, drafts, statusText, statusModel, actionLabel, markdown, snippet, relativeTime, messagesHTML, unseen, agentModel, summary,
     agentInfo, avatarHTML, modelHTML, verdictHTML, verdicts, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
-    activeAdversaries, facesHTML, agentStatus, modelOptionsHTML, effortLevels, effortOptionsHTML, chosenModel, chosenEffort, settle, adversaryPanelHTML, adversaryIntroHTML};
+    activeAdversaries, facesHTML, agentStatus, modelOptionsHTML, effortLevels, effortOptionsHTML, chosenModel, chosenEffort, settle, adversaryPanelHTML, adversaryIntroHTML, jevBannerHTML};
 })();

@@ -496,10 +496,26 @@ globalThis.ReviewTools = (() => {
     const [, key, label] = RISK_LEVELS.find(([min]) => Number(score) >= min) || RISK_LEVELS[3];
     return {key, label};
   }
+  // Two things are known about a file, and its sidebar row shows them apart. The outside verdict
+  // (human, llm, none) is who has to read it: the row stays bright when that is the reviewer and
+  // dims when it is not. The Risk ranking is how bad a mistake in it would be: a word at the end
+  // of the row, MEDIUM or worse. The tip says both in full. Null when neither is known.
+  const NEEDS = {human: 'Needs a human review', llm: 'An LLM review is enough', none: 'Needs no review'};
+  const RISK_WORDS = {critical: 'CRIT', high: 'HIGH', medium: 'MED'};
+  const needLabel = verdict => NEEDS[verdict] || null;
+  function fileNeed(verdict, risk) {
+    const level = risk ? riskLevel(risk.score) : null;
+    const who = NEEDS[verdict] ? verdict : null;
+    const lines = [];
+    if (who) lines.push(`${NEEDS[who]}, says JevMyPR`);
+    if (risk) lines.push(`Risk ${risk.score}% (${level.label})${risk.reason ? `: ${risk.reason}` : ''}`);
+    const word = RISK_WORDS[level?.key] || null;
+    return who || word ? {who, word, tone: word ? level.key : null, lines} : null;
+  }
   const RISK_TAGS = {security: 'Security', 'data-volume': 'Data volume', schema: 'Schema', money: 'Money', background: 'Background work', contract: 'Contract', 'shared-code': 'Shared code', 'user-facing': 'User-facing'};
   const riskTag = tag => RISK_TAGS[tag] || tag;
   // Most risky first; files of equal score keep the agent's order.
   const riskFiles = ranking => [...(ranking?.files || [])].sort((a, b) => b.score - a.score);
 
-  return {modelText, riskLevel, riskTag, riskFiles, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, scopeLabel, sha256, githubLink, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  return {modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, scopeLabel, sha256, githubLink, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();
