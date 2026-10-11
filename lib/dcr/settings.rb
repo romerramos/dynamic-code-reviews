@@ -56,6 +56,17 @@ module DCR
     # Whether the reviewer has chosen their adversaries, or chosen to have none.
     def adversaries_decided? = saved['adversariesDecided'] == true || !adversaries.empty?
 
+    # Whether this repository's diffs may be sent to JevMyPR for a verdict: true, false, or nil
+    # until the reviewer has answered. Per repository (all its worktrees), because it sends code
+    # to an outside service: yes for one project is not yes for another.
+    def jevmypr(repo) = [true, false].include?(choice = jevmypr_choices[self.class.repo_key(repo)]) ? choice : nil
+
+    def save_jevmypr(repo, on)
+      raise ArgumentError, 'Expected true or false' unless [true, false].include?(on)
+      store(read, jevmypr: jevmypr_choices.merge(self.class.repo_key(repo) => on))
+      on
+    end
+
     private
 
     MODEL = %r{\A[\w.:/@#+-]{1,120}\z}
@@ -70,9 +81,10 @@ module DCR
     end
 
     # The page writes display settings and adversaries separately; each write keeps the other.
-    def store(display, adversaries = self.adversaries, decided: adversaries_decided?)
+    def store(display, adversaries = self.adversaries, decided: adversaries_decided?, jevmypr: jevmypr_choices)
       merged = adversaries.empty? ? display : display.merge('adversaries' => adversaries)
       merged = merged.merge('adversariesDecided' => true) if decided
+      merged = merged.merge('jevmypr' => jevmypr) unless jevmypr.empty?
       FileUtils.mkdir_p(File.dirname(@path), mode: 0o700)
       temporary = "#{@path}.#{Process.pid}.tmp"
       File.write(temporary, JSON.generate(merged), perm: 0o600)
@@ -81,6 +93,8 @@ module DCR
     ensure
       File.unlink(temporary) if temporary && File.file?(temporary)
     end
+
+    def jevmypr_choices = saved['jevmypr'].is_a?(Hash) ? saved['jevmypr'] : {}
 
     def adversary_list(list, strict: false)
       return [] unless list.is_a?(Array)

@@ -263,3 +263,27 @@ assert.match(tools.opinionsHTML(answered, {open:['codex'], now: noon}), /<div cl
 assert.match(tools.sendText(snapshot, review, comments[0], '', answered), /- Codex \(agrees\): Yes, keep `match_state` here\.\n/, 'the short answer is what is sent along');
 console.log('PASS an answer to a question shows its short answer, opens to its details, and says how far it agrees with the review\'s agent');
 
+
+// --- JevMyPR's verdict: the strip above the review, and the word a file's row ends with ---
+const jevOffer = tools.jevBannerHTML({enabled: null, host: 'jevmypr.romerramos.me', verdict: null});
+assert.match(jevOffer, /every changed file's name and patch to jevmypr\.romerramos\.me.*data-dcr-jev="on".*data-dcr-jev="off"/s, 'the offer says what leaves this computer and can be declined');
+assert.equal(tools.jevBannerHTML({enabled: false, verdict: {status: 'ready', verdict: 'human'}}), '', 'turned off, there is no strip');
+assert.match(tools.jevBannerHTML({enabled: true, verdict: null}), /role="status">Asking for a verdict/);
+assert.match(tools.jevBannerHTML({enabled: true, verdict: {status: 'asking'}}), /Asking for a verdict/);
+const jevReady = tools.jevBannerHTML({enabled: true, verdict: {status: 'ready', verdict: 'human', confidence: 0.8, url: 'https://jevmypr.romerramos.me/verdicts/t', files: {'a.rb': 'human', 'b.rb': 'llm', 'c.rb': 'none', 'd.rb': 'none', 'e.png': null}}});
+assert.match(jevReady, /is-human">Human review<.*80% confidence.*popovertarget="dcr-jev-list"[^>]*>1 file needs you<\/button>.*1 an LLM can review.*2 need no review.*1 not read.*href="https:\/\/jevmypr\.romerramos\.me\/verdicts\/t" target="_blank" rel="noopener noreferrer">Verdict page/s, 'the verdict, its confidence, the files and the link');
+const jevBare = tools.jevBannerHTML({enabled: true, verdict: {status: 'ready', verdict: 'none', confidence: null, url: 'javascript:alert(1)', files: {}}});
+assert.match(jevBare, /is-none">No review</);
+assert.doesNotMatch(jevBare, /href|confidence|need you|data-dcr-jev/, 'no link, confidence or counts when JevMyPR sent none, and never a link that is not http');
+const jevError = tools.jevBannerHTML({enabled: true, verdict: {status: 'error', code: 'rate_limited', message: 'Wait 2 minutes <b>.'}});
+assert.match(jevError, /is-quiet">Wait 2 minutes &lt;b&gt;\.<.*data-dcr-jev="again">Try again/s, "JevMyPR's message is shown as text, with a way to ask again");
+console.log('PASS the JevMyPR strip offers, waits, shows the verdict and shows a refusal');
+
+const need = globalThis.ReviewTools.fileNeed;
+assert.deepEqual(need('human', null), {who: 'human', word: null, tone: null, lines: ['Needs a human review, says JevMyPR']}, 'who reads it is not a word in the row');
+assert.deepEqual(need('llm', {score: 72, reason: 'Touches money'}), {who: 'llm', word: 'HIGH', tone: 'high', lines: ['An LLM review is enough, says JevMyPR', 'Risk 72% (HIGH): Touches money']}, 'the verdict and the risk are both kept, neither hides the other');
+assert.deepEqual([85, 60, 35].map(score => need(null, {score, reason: 'r'}).word), ['CRIT', 'HIGH', 'MED'], 'the word is the risk level');
+assert.equal(need('none', {score: 20, reason: 'r'}).word, null, 'a LOW file has no word');
+assert.equal(need(null, {score: 20, reason: 'r'}), null);
+assert.equal(need(undefined, null), null);
+console.log('PASS a file row keeps who reads it apart from how risky it is');

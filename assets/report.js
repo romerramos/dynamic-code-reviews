@@ -256,6 +256,39 @@
     else if (to === ALL) select('files');
     else navigateFile(focusOrder[to].layer, focusOrder[to].file);
   }
+  // The page's own tip, in the theme: anything with data-tip shows its lines beside it on hover, and
+  // a row holding one shows it when the keyboard reaches the row. The first line is the headline.
+  const tip = document.createElement('div');
+  tip.id = 'tip';
+  tip.className = 'tip';
+  tip.hidden = true;
+  tip.setAttribute('popover', 'manual');
+  tip.setAttribute('role', 'tooltip');
+  document.body.append?.(tip);
+  let tipFor = null;
+  function hideTip() {
+    if (!tipFor) return;
+    tipFor = null;
+    try { tip.hidePopover(); } catch { /* it was not a popover */ }
+    tip.hidden = true;
+  }
+  function showTip(mark) {
+    if (mark === tipFor) return;
+    tipFor = mark;
+    tip.innerHTML = mark.dataset.tip.split('\n').map((line, index) => index ? `<span>${escape(line)}</span>` : `<strong>${escape(line)}</strong>`).join('');
+    tip.hidden = false;
+    try { tip.showPopover(); } catch { /* no popovers here: it is still positioned */ }
+    const at = mark.getBoundingClientRect(), size = tip.getBoundingClientRect();
+    const left = at.right + 10 + size.width <= innerWidth - 8 ? at.right + 10 : Math.max(8, at.left - size.width - 10);
+    tip.style.left = `${left}px`;
+    tip.style.top = `${Math.max(8, Math.min(innerHeight - size.height - 8, at.top + at.height / 2 - size.height / 2))}px`;
+  }
+  const tipMark = target => target.closest?.('[data-tip]');
+  document.addEventListener('mouseover', event => { const mark = tipMark(event.target); if (mark) showTip(mark); else hideTip(); });
+  document.addEventListener('focusin', event => { const mark = event.target.matches?.(':focus-visible') && (tipMark(event.target) || event.target.querySelector?.('[data-tip]')); if (mark) showTip(mark); else hideTip(); });
+  document.addEventListener('scroll', hideTip, true);
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') hideTip(); }, true);
+
   // S labels everything that can be clicked in the pane the keyboard is in, as a jump plugin does in
   // an editor: the page dims, each link and button gets a letter or two, and typing them clicks it.
   let hints = null; // {typed, items: [{label, element, tag}]}
@@ -523,7 +556,7 @@
         const slash = file.path.lastIndexOf('/');
         const filename = file.path.slice(slash + 1);
         const directory = slash < 0 ? '' : file.path.slice(0, slash);
-        return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" aria-current="${state.navFile === id && state.view === layer.id ? 'location' : 'false'}" title="${escape(file.path)}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}"><span class="file-status" aria-hidden="true" title="${fileViewed(file) ? 'Viewed. Click to unmark' : 'Mark as viewed'}">${fileViewed(file) ? icon('check') : ''}</span><span class="nav-file-label"><span class="nav-file-name">${escape(filename)}</span>${directory ? `<small class="nav-file-directory">${escape(directory)}</small>` : ''}</span>${riskMark(file)}${navPreviewMark(file)}</button></li>`;
+        return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" aria-current="${state.navFile === id && state.view === layer.id ? 'location' : 'false'}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}"><span class="file-status" aria-hidden="true" title="${fileViewed(file) ? 'Viewed. Click to unmark' : 'Mark as viewed'}">${fileViewed(file) ? icon('check') : ''}</span><span class="nav-file-label"><span class="nav-file-name">${escape(filename)}</span>${directory ? `<small class="nav-file-directory">${escape(directory)}</small>` : ''}</span>${needMark(file)}${navPreviewMark(file)}</button></li>`;
       };
       matching.forEach(layer => {
         const count = layerComments(layer).length;
@@ -541,7 +574,8 @@
             return `<button data-file-link="${item.file}" data-file-layer="${layer.id}" title="${escape(file.path)}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}" aria-current="${current && activeComponentFile(layer, component) === item.file ? 'location' : 'false'}"><span class="file-status ${fileViewed(file) ? 'is-viewed' : ''}" aria-hidden="true" title="${fileViewed(file) ? 'Viewed. Click to unmark' : 'Mark as viewed'}">${fileViewed(file) ? icon('check') : ''}</span>${file.path.endsWith('.rb') ? 'Ruby' : 'Template'}</button>`;
           }).join('')}</div></li>`;
         }).join('');
-        const tests = ordered.tests.length ? `<li class="nav-tests-label" role="presentation">Tests</li>${ordered.tests.map(id => fileLink(id, layer)).join('')}` : '';
+        const testLinks = ordered.tests.map(id => fileLink(id, layer)).join('');
+        const tests = testLinks ? `<li class="nav-tests-label" role="presentation">Tests</li>${testLinks}` : '';
         const expanded = state.view === layer.id || !!query;
         html += `<li><button data-view="${layer.id}" aria-current="${state.view === layer.id ? 'page' : 'false'}" aria-expanded="${expanded}" aria-controls="nav-files-${layer.id}"><span class="step-number">${completed.total && completed.viewed === completed.total ? icon('check') : layers.indexOf(layer) + 1}</span><span class="step-body"><strong>${escape(titleWithoutNumber(group.layers.length === 1 ? group.title : layer.title))}</strong><small>${progressText(completed)}${count ? ` · ${count} comments` : ''}</small></span></button>${expanded ? `<ul id="nav-files-${layer.id}" class="nav-files">${links}${tests}</ul>` : `<ul id="nav-files-${layer.id}" hidden></ul>`}</li>`;
       });
@@ -1813,13 +1847,32 @@
   let riskRedoable = false; // Rank again: offered by the served page only (ReviewRisk.allowRedo)
   const riskRedo = (label = 'Rank again') => `<button type="button" class="risk-redo" data-risk-redo${riskRedoable ? '' : ' hidden'} title="Ask your agent to rank the risky files">${icon('refresh-cw')}<span>${label}</span></button>`;
   const riskOf = fid => riskRanking?.files?.find(entry => entry.file === fid);
-  // The sidebar marks the files the ranking calls MEDIUM or worse, so the ranking follows the reader.
-  function riskMark(file) {
-    const entry = riskOf(file.id);
-    if (!entry || entry.score < 35) return '';
-    const level = ReviewTools.riskLevel(entry.score);
-    return `<span class="nav-risk risk-${level.key}" title="${escape(`${entry.score}% · ${level.label}: ${entry.reason}`)}" aria-label="${escape(`${level.label} risk`)}"></span>`;
+  // What is known about a file (ReviewTools.fileNeed). Its sidebar row carries the risk word only;
+  // who has to read it is said by the file's own header, by the tip on the word, and by the list
+  // the verdict strip opens (ReviewVerdict.yoursHTML).
+  let verdict = null; // JevMyPR's, on the served page once the reviewer turned it on (ReviewVerdict.set)
+  const needOf = file => ReviewTools.fileNeed(verdict?.files?.[file.path], riskOf(file.id));
+  const needTip = need => `data-tip="${escape(need.lines.join('\n'))}" aria-label="${escape(need.lines.join('. '))}"`;
+  function needMark(file, spelled = false) {
+    const need = needOf(file);
+    const word = need?.word ? `<span class="need need-${need.tone}" ${needTip(need)}>${need.word}</span>` : '';
+    if (!spelled) return word;
+    return `<span class="need-set" data-need="${file.id}">${need?.who ? `<span class="need-who-label is-${need.who}" ${needTip(need)}>${escape(ReviewTools.needLabel(need.who))}</span>` : ''}${word}</span>`;
   }
+  window.ReviewVerdict = {
+    // The files JevMyPR wants a person to read, in reading order, each a link to it.
+    yoursHTML() {
+      const rows = layers.flatMap(layer => layer.items.map(item => [layer, files.get(item.file)])).filter(([, file]) => verdict?.files?.[file.path] === 'human');
+      return rows.map(([layer, file]) => `<li><button type="button" data-file-link="${file.id}" data-file-layer="${layer.id}"><span>${escape(file.path)}</span>${needMark(file)}</button></li>`).join('');
+    },
+    set(next) {
+      const ready = next?.status === 'ready' ? next : null;
+      if (JSON.stringify(ready) === JSON.stringify(verdict)) return;
+      verdict = ready;
+      renderNavigation();
+      document.querySelectorAll('#content [data-need]').forEach(mark => { const file = files.get(mark.dataset.need); if (file) mark.outerHTML = needMark(file, true); });
+    }
+  };
   function renderRiskRanking() {
     if (riskRanking === 'ranking') {
       return `<section class="risk-rank risk-pending" aria-labelledby="risk-title" role="status"><span class="risk-pending-mark" aria-hidden="true"><i></i><i></i><i></i></span><div><h2 id="risk-title">Risk ranking</h2><p>Your agent is scoring the changed files for security, data volume, money and the other risks. It appears here when ready; start reading meanwhile.</p></div></section>`;
@@ -1922,7 +1975,7 @@
     }
     const groupNumber = review.groups.indexOf(entry.layer.group) + 1;
     const stepTitle = entry.layer.title === entry.layer.group.title ? '' : `<span class="crumb-sep" aria-hidden="true">›</span><span class="crumb-step">${escape(entry.layer.title)}</span>`;
-    return `<section class="focus-reader"><header class="focus-file-header"><div class="focus-meta"><span class="focus-group" title="${escape(`Group ${groupNumber} of ${review.groups.length}: ${entry.layer.group.title}`)}"><span class="crumb-number">${groupNumber}/${review.groups.length}</span>${escape(titleWithoutNumber(entry.layer.group.title))}${stepTitle}</span><div class="focus-file-actions" role="group" aria-label="Changed sections"><button class="icon-button" data-change-step="-1" disabled aria-label="Previous changed section" title="Previous changed section">${icon('chevron-left')}</button><span id="change-position">${file.hunks.length} changes</span><button class="icon-button" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} aria-label="Next changed section" title="Next changed section">${icon('chevron-right')}</button></div></div><div class="focus-identity"><div class="current-file"><code>${escape(file.path)}</code><button class="icon-button copy-file-path" data-copy-file title="Copy the full relative file path" aria-label="Copy file path">${icon('copy')}</button></div>${componentLinks}${previewToggle(file)}${notVisualNote(file)}<details class="file-about"><summary>${icon('info')}<span>Why this file</span></summary><p>${escape(entry.layer.summary || entry.layer.group.summary)}</p>${items.map(item => item.summary ? `<p>${escape(item.summary)}</p>` : '').join('')}</details><div class="focus-progress-actions"><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" ${fileViewed(file) ? 'checked' : ''}> <span>${fileViewed(file) ? 'Viewed' : 'Mark viewed'}</span></label><button class="btn btn-sm btn-ghost" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file ${icon('arrow-right')}</button></div></div></header>${!full ? '<p class="focus-unavailable">Full source was not captured or exceeds the text limit. Showing the saved diff; no current working files have been substituted.</p>' : ''}${(() => { const code = file.hunks.length || full?.length ? renderDiffTable(file, full || file.hunks, summaries) : `<pre>${escape(file.note || file.patch || 'No text diff available.')}</pre>`; return code; })()}<footer class="focus-end"><span>${focusIndex + 1 === focusOrder.length ? 'End of the review' : `Next: ${escape(files.get(focusOrder[focusIndex + 1].file).path)}`}</span><button class="btn btn-sm btn-primary" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></footer></section>`;
+    return `<section class="focus-reader"><header class="focus-file-header"><div class="focus-meta"><span class="focus-group" title="${escape(`Group ${groupNumber} of ${review.groups.length}: ${entry.layer.group.title}`)}"><span class="crumb-number">${groupNumber}/${review.groups.length}</span>${escape(titleWithoutNumber(entry.layer.group.title))}${stepTitle}</span><div class="focus-file-actions" role="group" aria-label="Changed sections"><button class="icon-button" data-change-step="-1" disabled aria-label="Previous changed section" title="Previous changed section">${icon('chevron-left')}</button><span id="change-position">${file.hunks.length} changes</span><button class="icon-button" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} aria-label="Next changed section" title="Next changed section">${icon('chevron-right')}</button></div></div><div class="focus-identity"><div class="current-file"><code>${escape(file.path)}</code><button class="icon-button copy-file-path" data-copy-file title="Copy the full relative file path" aria-label="Copy file path">${icon('copy')}</button>${needMark(file, true)}</div>${componentLinks}${previewToggle(file)}${notVisualNote(file)}<details class="file-about"><summary>${icon('info')}<span>Why this file</span></summary><p>${escape(entry.layer.summary || entry.layer.group.summary)}</p>${items.map(item => item.summary ? `<p>${escape(item.summary)}</p>` : '').join('')}</details><div class="focus-progress-actions"><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" ${fileViewed(file) ? 'checked' : ''}> <span>${fileViewed(file) ? 'Viewed' : 'Mark viewed'}</span></label><button class="btn btn-sm btn-ghost" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file ${icon('arrow-right')}</button></div></div></header>${!full ? '<p class="focus-unavailable">Full source was not captured or exceeds the text limit. Showing the saved diff; no current working files have been substituted.</p>' : ''}${(() => { const code = file.hunks.length || full?.length ? renderDiffTable(file, full || file.hunks, summaries) : `<pre>${escape(file.note || file.patch || 'No text diff available.')}</pre>`; return code; })()}<footer class="focus-end"><span>${focusIndex + 1 === focusOrder.length ? 'End of the review' : `Next: ${escape(files.get(focusOrder[focusIndex + 1].file).path)}`}</span><button class="btn btn-sm btn-primary" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></footer></section>`;
   }
   function focusFile(index) {
     document.body.classList.remove('navigation-open'); $('nav-toggle').setAttribute('aria-expanded', 'false');
@@ -2071,7 +2124,7 @@
   });
   window.addEventListener('scroll', updateChangeNavigation, {passive:true});
   function setFontSize(size) {
-    state.codeFontSize = Math.max(10, Math.min(20, Number(size) || 13));
+    state.codeFontSize = Math.max(10, Math.min(20, Number(size) || 12));
     document.body.style.setProperty('--code-font-size', `${state.codeFontSize}px`);
     document.body.style.setProperty('--code-line-height', `${Math.round(state.codeFontSize * 1.8)}px`);
     $('font-size').textContent = `${state.codeFontSize}px`;

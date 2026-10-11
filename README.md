@@ -227,6 +227,17 @@ References: [review JSON](references/report-schema.md), [incremental reviews](re
   answers by letter, not by name, and says how far each agrees with it. Claude, Codex, Grok, Antigravity (`agy`),
   Gemini and opencode CLIs are asked headless and read-only; an agent checks the review it runs only
   on a model the reviewer named.
+- **JevMyPR's verdict** (`lib/dcr/jevmypr.rb`) is the strip above a served review: whether the
+  change needs a human review, an LLM review or none, with the confidence and a link to the verdict
+  page, and how many files need the reviewer, which opens a list of them. A file's own header says
+  what JevMyPR thinks of it; the sidebar only carries the risk word (`CRIT`, `HIGH`, `MED`) on
+  the files the Risk ranking calls out, and the tip on that word says both. It comes from
+  [JevMyPR's open API](https://github.com/romerramos/jevmypr#open-api), an outside service, so it is
+  off until the reviewer turns it on in the strip, per repository (kept in
+  `~/.config/dcr/settings.json`; the View menu turns it off again). Turned on, the server sends the
+  review's title and every changed file's name and patch, once per diff, and keeps the answer in the
+  series' `state.json`. When JevMyPR is unreachable or refuses (rate limit, budget, too big), the
+  strip shows its message and the review works as usual. Exports never carry it.
 - **Themes** are pairs of [daisyUI themes](https://daisyui.com/docs/themes/), `NAME-light` and
   `NAME-dark`, in `assets/themes/NAME.css`; the page sets `data-theme="NAME-light"` and
   `data-mode="light"`. `assets/themes/base.css` is the contract: every colour the app's stylesheets
@@ -258,6 +269,7 @@ ruby scripts/test_live.rb          # live server state, threads, focus, tailnet 
 ruby scripts/test_server.rb        # the served page, the recorder's command queue and uploads
 ruby scripts/test_themes.rb       # the theme contract: tokens, light and dark for every theme, no stray colours
 ruby scripts/test_second_opinion.rb # adversaries: the panel, model lists, the questions, headless runs (stand-in CLIs)
+ruby scripts/test_jevmypr.rb       # JevMyPR's verdict: what is sent, only when turned on, errors and no network (a stand-in service)
 ruby scripts/test_github.rb        # posting to the pull request through gh (a stand-in gh, nothing reaches GitHub)
 ruby scripts/test_live_previews.rb # preview requests, stylesheets, stand-ins
 ruby scripts/test_app_proxy.rb     # the running app inside the review

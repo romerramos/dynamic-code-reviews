@@ -1244,6 +1244,55 @@
   // Copy for LLMs carries the conversation, and where to read the rest of it.
   globalThis.ReviewTools.setConversationSource(id => threads[id]?.messages?.length ? {messages: threads[id].messages, series: review.history?.series} : null);
 
+  // --- JevMyPR's verdict ---------------------------------------------------------------------
+  // A strip between the toolbar and the review. The server sends the diff only once the reviewer
+  // turned it on for this repository; the answer arrives with the poll, like everything else.
+  const jevStrip = document.createElement('aside');
+  jevStrip.id = 'dcr-jev';
+  jevStrip.className = 'dcr-jev';
+  jevStrip.setAttribute('aria-label', 'JevMyPR verdict');
+  jevStrip.hidden = true;
+  content.before(jevStrip);
+  const jevSwitch = document.createElement('section');
+  jevSwitch.className = 'view-row';
+  jevSwitch.innerHTML = '<label class="view-switch"><input id="dcr-jev-toggle" class="toggle toggle-sm toggle-primary" type="checkbox"><span>JevMyPR verdict <small>sends this diff out</small></span></label>';
+  document.querySelector('#view-menu .view-keys')?.before(jevSwitch);
+  let jev = null; // {enabled, host, verdict}, once the server has said
+  // The files that need the reviewer, listed under the strip's count; choosing one opens it.
+  const jevList = document.createElement('div');
+  jevList.id = 'dcr-jev-list';
+  jevList.className = 'dcr-jev-list';
+  jevList.setAttribute('popover', 'auto');
+  jevList.setAttribute('aria-label', 'Files that need a human review');
+  document.body.append(jevList);
+  jevList.addEventListener('toggle', event => {
+    if (event.newState !== 'open') return;
+    jevList.innerHTML = `<h2>Need a human review</h2><ul>${window.ReviewVerdict?.yoursHTML() || ''}</ul>`;
+    const at = jevStrip.querySelector('.dcr-jev-yours')?.getBoundingClientRect();
+    if (!at) return;
+    jevList.style.left = `${Math.max(8, Math.min(at.left, innerWidth - jevList.offsetWidth - 8))}px`;
+    jevList.style.top = `${at.bottom + 6}px`;
+  });
+  jevList.addEventListener('click', event => { if (event.target.closest('[data-file-link]')) jevList.hidePopover(); });
+  const renderVerdict = () => {
+    if (!jev) return;
+    window.ReviewVerdict?.set(jev.enabled === true ? jev.verdict : null);
+    const html = tools.jevBannerHTML(jev);
+    if (jevStrip.innerHTML !== html) jevStrip.innerHTML = html;
+    set(jevStrip, 'hidden', !html);
+    set(jevSwitch.querySelector('input'), 'checked', jev.enabled === true);
+  };
+  const showVerdict = verdict => { if (jev) { jev.verdict = verdict || null; renderVerdict(); } };
+  const askVerdict = async extra => {
+    try { jev = await api('/api/verdict', {key, ...extra}); renderVerdict(); }
+    catch { /* the review works without it */ }
+  };
+  jevStrip.addEventListener('click', event => {
+    const action = event.target.closest('[data-dcr-jev]')?.dataset.dcrJev;
+    if (action) askVerdict(action === 'again' ? {again: true} : {enabled: action === 'on'});
+  });
+  jevSwitch.addEventListener('change', event => askVerdict({enabled: event.target.checked}));
+
   // --- sync ----------------------------------------------------------------------------------
   const apply = data => {
     threads = data.threads; rev = data.rev; latest = data.latest_revision; listening = data.listening; listener = data.agent || listener; listenerModel = data.agent_model || (data.agent ? null : listenerModel); online = true; previews = data.previews || {};
@@ -1252,6 +1301,7 @@
     receiveComments(data.comments || []);
     // The Risk ranking the agent posts while the reader is already on the diff; until then, a placeholder.
     if ('risk_ranking' in data) window.ReviewRisk?.set(data.risk_ranking);
+    if ('verdict' in data) showVerdict(data.verdict);
     window.ReviewRisk?.allowRedo(online);
     if (!seenKnown) { tools.unseen(threads, seen).forEach(item => seen.add(item.id)); saveSeen(); seenKnown = true; }
     const arrived = tools.unseen(threads, seen).filter(item => !announced.has(item.id));
@@ -1272,5 +1322,6 @@
   if (ledger) new MutationObserver(() => { mount(); decorateLedger(); renderPanel(); }).observe(ledger, {childList: true, subtree: true});
   mount();
   poll();
+  askVerdict();
   api('/api/adversaries').then(data => { adversaries = data.adversaries; decorate(); renderAgent(); if (data.decided === false) openIntro(); }).catch(() => { /* none until the card lists them */ });
 })();

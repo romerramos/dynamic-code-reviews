@@ -19,7 +19,7 @@ module DCR
     KEY = /\A[A-Za-z0-9_.:-]{1,300}\z/
     AUTHORS = %w[user agent].freeze
 
-    def self.empty = {'version' => 1, 'rev' => 0, 'blobs' => {}, 'threads' => {}, 'previews' => {}, 'comments' => {}, 'risk_rankings' => {}, 'github' => {}, 'outbox' => [], 'acked' => 0, 'seq' => 0}
+    def self.empty = {'version' => 1, 'rev' => 0, 'blobs' => {}, 'threads' => {}, 'previews' => {}, 'comments' => {}, 'risk_rankings' => {}, 'verdicts' => {}, 'github' => {}, 'outbox' => [], 'acked' => 0, 'seq' => 0}
 
     # The key the page saves a revision's progress under (see LiveTools.progressKey).
     def self.review_key(fingerprint, series, number) = "dynamic-review:#{fingerprint}:#{series}:#{number}"
@@ -367,6 +367,13 @@ module DCR
         state['risk_rankings'][key] = {'requested' => Time.now.utc.iso8601}
         enqueue(state, 'risk', key, [], 'Rank the risk again.')
       end
+    end
+
+    # JevMyPR's verdict on a diff, by the diff's fingerprint: every revision of the same code shares
+    # it. {'status' => 'asking'} while the request is out, then what JevMyPR#ask returned.
+    def save_verdict(fingerprint, verdict)
+      raise ArgumentError, 'Invalid fingerprint' unless fingerprint.to_s.match?(/\A[A-Za-z0-9]{1,128}\z/)
+      update { |state| state['verdicts'][fingerprint] = verdict }
     end
 
     def post_comments(key, comments)

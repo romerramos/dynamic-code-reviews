@@ -4,6 +4,7 @@ require 'json'
 require 'uri'
 require_relative 'agent_catalog'
 require_relative 'github'
+require_relative 'jevmypr'
 require_relative 'page'
 require_relative 'progress_archive'
 require_relative 'second_opinion'
@@ -19,8 +20,10 @@ module DCR
 
     # evidence: callable taking the request hash, for attaching a recording to the series.
     # catalog: callable(fresh) listing the agent CLIs here. ask_adversaries: callable(key, id, text)
-    # that has the reviewer's adversaries answer a question in the background.
-    def initialize(directory, settings: Settings.new, evidence: nil, github: GitHub.new(directory), catalog: nil, ask_adversaries: nil)
+    # that has the reviewer's adversaries answer a question in the background. jevmypr: the client
+    # for the outside verdict, asked only for a repository whose reviewer turned it on.
+    def initialize(directory, settings: Settings.new, evidence: nil, github: GitHub.new(directory), catalog: nil, ask_adversaries: nil, jevmypr: JevMyPR.new)
+      @jevmypr = jevmypr
       @state = State.new(directory)
       @settings = settings
       @evidence = evidence
@@ -67,6 +70,7 @@ module DCR
       when ['GET', '/api/adversaries'] then [200, adversaries]
       when ['GET', '/api/agents'] then [200, adversaries.merge('agents' => @catalog.call(query['fresh'] == '1'))]
       when ['POST', '/api/agents'] then (@settings.save_adversaries(json(body)['adversaries']); [200, adversaries])
+      when ['POST', '/api/verdict'] then [200, verdict(json(body))]
       when ['POST', '/api/finish'] then [200, {'entry' => @state.finish(json(body)['key'])}]
       when ['GET', '/api/github'] then [200, @github.status(key)]
       when ['POST', '/api/github/comment'] then github_comment(json(body))
@@ -97,6 +101,60 @@ module DCR
       message = @state.user_message(input['key'], input['id'], input['body'])
       @ask_adversaries.call(input['key'], input['id'].to_s, SecondOpinion.follow_up(@state.read, input['key'], input['id'].to_s)) if input['adversaries'] == true
       [200, {'message' => message}]
+    end
+
+    ASKING_SECONDS = 180 # a request still out after this was lost (the server stopped mid-call)
+    RETRY_SECONDS = 120  # JevMyPR takes one call every two minutes
+
+    # The page's one call about JevMyPR: {key}, with enabled: true/false when the reviewer answers
+    # the offer, and again: true for Try again. Only when the reviewer turned it on for this
+    # repository is a diff with no verdict yet sent, once, in the background; the answer reaches
+    # every open page through the poll. Returns where it stands.
+    def verdict(input)
+      key = input['key']
+      raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
+      fingerprint = key.split(':')[1].to_s
+      repo = manifest['repo'] || Dir.pwd
+      @settings.save_jevmypr(repo, input['enabled']) if input.key?('enabled')
+      enabled = @settings.jevmypr(repo)
+      saved = @state.read['verdicts'][fingerprint]
+      saved = ask_jevmypr(key, fingerprint) if enabled == true && due?(saved, input['again'] == true)
+      {'enabled' => enabled, 'host' => @jevmypr.host, 'verdict' => saved}
+    end
+
+    def ask_jevmypr(key, fingerprint)
+      files = revision_files(key)
+      return @state.save_verdict(fingerprint, {'status' => 'error', 'code' => 'no_diff', 'message' => 'This revision has no saved diff to send.', 'at' => Time.now.utc.iso8601}) if files.empty?
+      request = JevMyPR.request(files, title: revision(key)&.fetch('title', nil))
+      asking = @state.save_verdict(fingerprint, {'status' => 'asking', 'at' => Time.now.utc.iso8601})
+      Thread.new do
+        @state.save_verdict(fingerprint, @jevmypr.ask(request))
+      rescue StandardError => error
+        @state.save_verdict(fingerprint, {'status' => 'error', 'code' => 'failed', 'message' => "The verdict could not be asked for: #{error.message[0, 200]}", 'at' => Time.now.utc.iso8601})
+      end
+      asking
+    end
+
+    # Ask when there is nothing yet, when a request was lost, or when an error may be tried again:
+    # at once if the reviewer asks and JevMyPR named no later time, else after its wait.
+    def due?(saved, again)
+      return true unless saved
+      age = Time.now - Time.parse(saved['at'].to_s)
+      return age > ASKING_SECONDS if saved['status'] == 'asking'
+      return false unless saved['status'] == 'error'
+      saved['retry_at'] ? Time.now >= Time.parse(saved['retry_at']) : again || age > RETRY_SECONDS
+    rescue ArgumentError
+      true
+    end
+
+    def revision(key) = Array(manifest['revisions']).find { |entry| entry['number'].to_s == key.split(':').last }
+
+    # The changed files of the revision the key names, from the snapshot its page embeds.
+    def revision_files(key)
+      page = File.join(File.dirname(@state.path), 'revisions', format('%03d.html', Integer(key.split(':').last, 10)))
+      File.file?(page) ? Array(Page.payload(File.read(page)).dig('snapshot', 'files')) : []
+    rescue StandardError
+      []
     end
 
     def question_in_background(key, id, text)
@@ -194,7 +252,7 @@ module DCR
     def snapshot(key)
       raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
       state = @state.read
-      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'github' => state['github'][key] || {}, 'comments' => state['comments'][key] || [], 'risk_ranking' => state['risk_rankings'][key], 'previews' => preview_status(state['previews'][key]), 'latest_revision' => latest_revision, 'listening' => @state.listening?, 'agent' => @state.listener, 'agent_model' => @state.listener_model,
+      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'github' => state['github'][key] || {}, 'comments' => state['comments'][key] || [], 'risk_ranking' => state['risk_rankings'][key], 'verdict' => state['verdicts'][key.split(':')[1].to_s],'previews' => preview_status(state['previews'][key]), 'latest_revision' => latest_revision, 'listening' => @state.listening?, 'agent' => @state.listener, 'agent_model' => @state.listener_model,
        'pending' => state['outbox'].count { |entry| entry['seq'] > state['acked'] && entry['key'] == key }}
     end
 

@@ -71,7 +71,7 @@
 }
 [data-theme^="terminal-"] *{letter-spacing:0!important;scrollbar-color:var(--terminal-surface1) transparent;scrollbar-width:thin}
 /* Everything is the size of the code, so the Code size control zooms the whole terminal. */
-[data-theme^="terminal-"] body *:not(svg,svg *,.dcr-app *){font-size:var(--code-font-size,13px)!important}
+[data-theme^="terminal-"] body *:not(svg,svg *,.dcr-app *){font-size:var(--code-font-size,12px)!important}
 [data-theme^="terminal-"] ::selection{background:var(--terminal-fill);color:var(--terminal-on-fill)}
 [data-theme^="terminal-"] :focus-visible:not([tabindex="-1"]){outline:1px solid var(--terminal-hot)!important;outline-offset:0!important}
 @media(prefers-reduced-motion:no-preference){[data-theme^="terminal-"] *{transition-duration:0s!important}}
@@ -232,3 +232,24 @@
 [data-theme^="terminal-"] .leader-menu button:hover{background:var(--terminal-hover)}
 [data-theme^="terminal-"] .leader-menu kbd{color:var(--terminal-fill);background:transparent;font-weight:700}
 [data-theme^="terminal-"] .hint-label{background:var(--terminal-fill);color:var(--terminal-on-fill)}
+/* what a file needs: a bare word in its colour; JevMyPR's strip: one line, the verdict as a filled cell */
+[data-theme^="terminal-"] .need{padding:0;background:transparent;font-weight:700;letter-spacing:0}
+[data-theme^="terminal-"] .need-critical{color:var(--terminal-red)}
+[data-theme^="terminal-"] .need-high{color:var(--terminal-peach)}
+[data-theme^="terminal-"] .need-medium{color:var(--terminal-yellow)}
+[data-theme^="terminal-"] .tip{border-color:var(--terminal-hot);box-shadow:none}
+[data-theme^="terminal-"] .dcr-jev{padding:0 20px 0 0;gap:0 2ch;min-height:calc(var(--status-h) + 4px);background:var(--surface)}
+[data-theme^="terminal-"] .dcr-jev-name{align-self:stretch;display:flex;align-items:center;padding:0 2ch;background:var(--terminal-hover);color:var(--ink);letter-spacing:0}
+[data-theme^="terminal-"] .dcr-jev-verdict{align-self:stretch;display:flex;align-items:center;margin-left:-2ch;padding:0 2ch;text-transform:uppercase;font-weight:700;color:var(--terminal-on-fill);background:var(--terminal-yellow)}
+[data-theme^="terminal-"] .dcr-jev-verdict:is(.is-human,.is-llm,.is-none){color:var(--terminal-on-fill)}
+[data-theme^="terminal-"] .dcr-jev-verdict.is-human{background:var(--terminal-red)}
+[data-theme^="terminal-"] .dcr-jev-verdict.is-llm{background:var(--terminal-peach)}
+[data-theme^="terminal-"] .dcr-jev-verdict.is-none{background:var(--terminal-green)}
+[data-theme^="terminal-"] .dcr-jev p{padding:6px 0}
+[data-theme^="terminal-"] .dcr-jev:has(.btn-primary){padding-top:4px;padding-bottom:4px}
+[data-theme^="terminal-"] .dcr-jev-list{border-color:var(--terminal-hot);box-shadow:none}
+[data-theme^="terminal-"] .dcr-jev-list li button:hover{background:var(--terminal-hover)}
+/* the recorder card (a review served without --app) has its own stylesheet: its buttons follow the theme too */
+[data-theme^="terminal-"] section#qa-panel button{border-radius:0;font-weight:700}
+[data-theme^="terminal-"] section#qa-panel button:not(.secondary){background:var(--terminal-fill);color:var(--terminal-on-fill)}
+[data-theme^="terminal-"] section#qa-panel button:not(.secondary):hover{background:color-mix(in srgb,var(--terminal-fill) 82%,var(--ink))}
