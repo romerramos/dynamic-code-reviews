@@ -340,7 +340,7 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 
 /* One complete file, with the walkthrough's order and existing comment anchors. */
 .font-controls{display:flex;align-items:center;gap:2px;white-space:nowrap}.font-controls output{font-size:11px;min-width:32px;text-align:center}
-.diff-table td.code code{font-size:var(--code-font-size,13px);line-height:var(--code-line-height,24px)}
+.diff-table td.code code{font-size:var(--code-font-size,12px);line-height:var(--code-line-height,22px)}
 .diff-table td.gutter,.diff-table .line-number{line-height:var(--code-line-height,24px);min-height:var(--code-line-height,24px)}
 .focus-reader{width:100%;min-width:0}.focus-file-header{position:sticky;top:-30px;z-index:5;background:var(--canvas);padding:14px 0;border-bottom:1px solid var(--line-neutral-2);display:flex;flex-wrap:wrap;align-items:end;gap:12px 24px}
 .focus-location{flex:1;min-width:0}.focus-location .eyebrow{display:block;margin-bottom:5px;font-size:11px}.focus-location label{font-size:12px;display:block;margin-bottom:5px}.focus-location select{width:100%;max-width:100%;font:13px var(--mono);height:38px;min-height:38px}

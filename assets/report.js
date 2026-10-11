@@ -2124,7 +2124,7 @@
   });
   window.addEventListener('scroll', updateChangeNavigation, {passive:true});
   function setFontSize(size) {
-    state.codeFontSize = Math.max(10, Math.min(20, Number(size) || 13));
+    state.codeFontSize = Math.max(10, Math.min(20, Number(size) || 12));
     document.body.style.setProperty('--code-font-size', `${state.codeFontSize}px`);
     document.body.style.setProperty('--code-line-height', `${Math.round(state.codeFontSize * 1.8)}px`);
     $('font-size').textContent = `${state.codeFontSize}px`;

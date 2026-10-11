@@ -71,7 +71,7 @@
 }
 [data-theme^="terminal-"] *{letter-spacing:0!important;scrollbar-color:var(--terminal-surface1) transparent;scrollbar-width:thin}
 /* Everything is the size of the code, so the Code size control zooms the whole terminal. */
-[data-theme^="terminal-"] body *:not(svg,svg *,.dcr-app *){font-size:var(--code-font-size,13px)!important}
+[data-theme^="terminal-"] body *:not(svg,svg *,.dcr-app *){font-size:var(--code-font-size,12px)!important}
 [data-theme^="terminal-"] ::selection{background:var(--terminal-fill);color:var(--terminal-on-fill)}
 [data-theme^="terminal-"] :focus-visible:not([tabindex="-1"]){outline:1px solid var(--terminal-hot)!important;outline-offset:0!important}
 @media(prefers-reduced-motion:no-preference){[data-theme^="terminal-"] *{transition-duration:0s!important}}
@@ -249,3 +249,7 @@
 [data-theme^="terminal-"] .dcr-jev:has(.btn-primary){padding-top:4px;padding-bottom:4px}
 [data-theme^="terminal-"] .dcr-jev-list{border-color:var(--terminal-hot);box-shadow:none}
 [data-theme^="terminal-"] .dcr-jev-list li button:hover{background:var(--terminal-hover)}
+/* the recorder card (a review served without --app) has its own stylesheet: its buttons follow the theme too */
+[data-theme^="terminal-"] section#qa-panel button{border-radius:0;font-weight:700}
+[data-theme^="terminal-"] section#qa-panel button:not(.secondary){background:var(--terminal-fill);color:var(--terminal-on-fill)}
+[data-theme^="terminal-"] section#qa-panel button:not(.secondary):hover{background:color-mix(in srgb,var(--terminal-fill) 82%,var(--ink))}
