@@ -227,7 +227,8 @@
 [data-theme^="terminal-"] .preview-toggle::before{content:"[";color:var(--terminal-overlay0)}[data-theme^="terminal-"] .preview-toggle::after{content:"]";color:var(--terminal-overlay0)}
 [data-theme^="terminal-"] .preview-toggle:hover{background:var(--terminal-hover)}[data-theme^="terminal-"] .preview-toggle:hover::before,[data-theme^="terminal-"] .preview-toggle:hover::after{color:var(--terminal-fill)}
 [data-theme^="terminal-"] .more-list{border:3px double var(--terminal-overlay0);background:var(--surface);box-shadow:none}
-[data-theme^="terminal-"] .thread-source{width:auto;justify-content:flex-start;margin-left:-.5ch}
+[data-theme^="terminal-"] .thread-source{width:auto;justify-content:flex-start;margin-left:calc(28px - .5ch)}
+@media(max-width:740px){[data-theme^="terminal-"] .thread-source{margin-left:calc(18px - .5ch)}}
 [data-theme^="terminal-"] .thread-type-icon{background:transparent;width:auto;height:auto}
 [data-theme^="terminal-"] .leader-menu button:hover{background:var(--terminal-hover)}
 [data-theme^="terminal-"] .leader-menu kbd{color:var(--terminal-fill);background:transparent;font-weight:700}
