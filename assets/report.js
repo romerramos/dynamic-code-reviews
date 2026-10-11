@@ -148,6 +148,22 @@
   leaderMenu.setAttribute('aria-label', 'Commands');
   leaderMenu.setAttribute('popover', 'manual');
   document.body.append?.(leaderMenu);
+  function findInSidebar() {
+    if (document.body.classList.contains('sidebar-collapsed')) $('nav-toggle').click();
+    $('search').focus();
+  }
+  // The served review has a chip for the agent running it; its card is where adversaries are chosen.
+  // Opened from the keyboard, the card takes the keyboard: Space lists its switches, S labels its
+  // lists of models and efforts, Esc closes it.
+  const agentChip = () => { const chip = document.getElementById('dcr-presence'); return shown(chip) ? chip : null; };
+  const agentCard = () => { const card = document.getElementById('dcr-presence-card'); return card && !card.hidden ? card : null; };
+  function openAgentCard() {
+    if (!agentCard()) agentChip()?.click();
+    const card = agentCard();
+    if (!card) return;
+    card.setAttribute('tabindex', '-1');
+    card.focus({preventScroll:true});
+  }
   function leaderCommands(markFile) {
     const view = name => document.querySelector(`.dcr-views button[data-view="${name}"]`);
     const inApp = view('app')?.getAttribute('aria-pressed') === 'true';
@@ -161,20 +177,22 @@
       previews && {key:'p', label:'Template previews', run: () => previews.click()},
       {key:'l', label: ledgerOpen() ? 'Hide your review' : 'Show your review', run: () => { setLedger(!ledgerOpen()); setPane(ledgerOpen() ? 'ledger' : 'main'); }},
       {key:'d', label:'Review details', run: () => $('context-toggle').click()},
-      {key:'/', label:'Find a file or step', run: () => { if (collapsed) $('nav-toggle').click(); $('search').focus(); }},
+      agentChip() && {key:'g', label:'Agents and adversaries', run: openAgentCard},
+      {key:'/', label:'Find a file or step', run: findInSidebar},
+      {key:'?', label:'Every key', run: () => $('keys-dialog').showModal()},
       {key:' ', label:'Mark the file viewed, or not', run: markFile}
     ].filter(Boolean);
   }
   // What is open over the page: a dialog, or a menu or popover that floats.
   // The composer under a line counts too, while the keyboard is in it.
-  const openOverlay = () => document.activeElement?.closest?.('#inline-composer') || document.querySelector('dialog[open]') || [...document.querySelectorAll('[popover]')].find(node => node !== leaderMenu && node.matches(':popover-open')) || null;
+  const openOverlay = () => document.activeElement?.closest?.('#inline-composer') || document.querySelector('dialog[open]') || agentCard() || [...document.querySelectorAll('[popover]')].find(node => node !== leaderMenu && node.matches(':popover-open')) || null;
   // Over the page the commands are the overlay's own: each of its buttons under a letter of its
   // label, and Q to close it. The sidebars are out of reach there, so they are not offered.
   function overlayCommands(overlay) {
     const taken = new Set(['q', ' ']);
     const closes = button => button.matches('[rel="prev"], [data-close], [data-gh-close], [data-dcr-close], [data-composer-cancel], [data-close-comment], [aria-label^="Close"]');
     const shut = [...overlay.querySelectorAll('button')].find(button => shown(button) && closes(button));
-    const commands = [{key:'q', label:'Close this', run: () => shut ? shut.click() : overlay.close ? overlay.close() : overlay.hidePopover?.()}];
+    const commands = [{key:'q', label:'Close this', run: () => shut ? shut.click() : overlay.close ? overlay.close() : overlay === agentCard() ? agentChip()?.click() : overlay.hidePopover?.()}];
     const seen = new Set();
     // Its buttons, and its choices: a label around a radio button or a checkbox picks that.
     [...overlay.querySelectorAll('button, summary, label')].forEach(button => {
@@ -2031,8 +2049,8 @@
   // While the keyboard is in a text the page says so (a theme may show the mode).
   const textField = node => node?.tagName === 'TEXTAREA' || (node?.tagName === 'INPUT' && !/^(checkbox|radio|range|button|submit)$/.test(node.type));
   document.addEventListener('keydown', event => {
-    if (event.key !== 'Escape' || !textField(event.target) || event.target.id === 'search') return;
-    const around = event.target.closest('#inline-composer, dialog, [popover], .dcr-detail, .popover-comment, .dcr-thread');
+    if (event.key !== 'Escape' || !(textField(event.target) || event.target.tagName === 'SELECT') || event.target.id === 'search') return;
+    const around = event.target.closest('#inline-composer, dialog, [popover], #dcr-presence-card, .dcr-detail, .popover-comment, .dcr-thread');
     if (!around) return;
     event.preventDefault(); event.stopPropagation();
     if (!around.hasAttribute('tabindex')) around.setAttribute('tabindex', '-1');
@@ -2704,6 +2722,8 @@
   $('clear-range').onclick = clearSelection;
   $('cancel-comment').onclick = () => $('comment-editor').close();
   $('close-copy').onclick = () => $('copy-dialog').close();
+  $('keys-dialog').addEventListener('click', event => { if (event.target.closest('[data-close]')) $('keys-dialog').close(); });
+  $('view-menu').addEventListener('click', event => { if (event.target.closest('[data-open-keys]')) { $('view-menu').hidePopover?.(); $('keys-dialog').showModal(); } });
   $('close-previews').onclick = () => $('previews-dialog').close();
   // Toolbar icons come from the bundled Lucide set; the static glyphs are only fallbacks.
   $('nav-toggle').innerHTML = icon('panel-left');
@@ -2827,6 +2847,9 @@
     if (event.key === '[' || event.key === ']') { event.preventDefault(); jumpSection(event.key === ']' ? 1 : -1); return; }
     if ((event.key === '{' || event.key === '}') && pane === 'main' && cursor()) { event.preventDefault(); moveByBlock(event.key === '}' ? 1 : -1); return; }
     if (key === 'o') { event.preventDefault(); select('overview'); setPane('main'); return; }
+    // / finds a file or step; ? lists every key.
+    if (event.key === '/') { event.preventDefault(); findInSidebar(); return; }
+    if (event.key === '?') { event.preventDefault(); $('keys-dialog').showModal(); return; }
     // J and K: in the sidebar the next and previous file; when reading they scroll; in Your review
     // the next and previous comment, or the open conversation.
     if (key === 'j' || key === 'k') {

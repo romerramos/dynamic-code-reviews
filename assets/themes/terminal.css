@@ -91,7 +91,7 @@
 [data-theme^="terminal-"] body[data-leader]::before{background:var(--terminal-hot)}
 
 [data-theme^="terminal-"] body::after{content:attr(data-position) "  ·  " attr(data-progress);position:fixed;z-index:19;left:0;right:0;bottom:0;height:var(--status-h);padding:0 2ch 0 calc((var(--terminal-mode-len) + var(--terminal-focus-len) + 5) * 1ch);display:flex;align-items:center;border-top:1px solid var(--line);background:var(--canvas);color:var(--ink);font:12px/1 var(--mono);white-space:pre;overflow:hidden}
-[data-theme^="terminal-"]::after{content:"space menu  ·  h/l pane  ·  j/k " var(--terminal-jk) "  ·  s jump  ·  m viewed  ·  z " var(--terminal-z) "  ·  f " var(--terminal-f);position:fixed;z-index:20;right:0;bottom:0;height:var(--status-h);padding:0 2ch;display:flex;align-items:center;border-top:1px solid var(--line);background:var(--canvas);color:var(--muted);font:12px/1 var(--mono);white-space:pre}
+[data-theme^="terminal-"]::after{content:"? keys  ·  space menu  ·  h/l pane  ·  j/k " var(--terminal-jk) "  ·  s jump  ·  m viewed  ·  z " var(--terminal-z) "  ·  f " var(--terminal-f);position:fixed;z-index:20;right:0;bottom:0;height:var(--status-h);padding:0 2ch;display:flex;align-items:center;border-top:1px solid var(--line);background:var(--canvas);color:var(--muted);font:12px/1 var(--mono);white-space:pre}
 [data-theme^="terminal-"]:has(body[data-leader])::after{content:"pick a key  ·  esc close";color:var(--ink)}
 [data-theme^="terminal-"]:has(body[data-editing]){--terminal-mode:"EDIT";--terminal-mode-len:4;--terminal-focus:"";--terminal-focus-len:0}
 [data-theme^="terminal-"] body[data-editing]::before{background:var(--dcr-ok)}
@@ -179,7 +179,7 @@
 [data-theme^="terminal-"] progress.progress::-moz-progress-bar{background:repeating-linear-gradient(90deg,var(--dcr-ok) 0 6px,transparent 6px 8px)}
 
 /* --- headings: a rule that carries its label --------------------------------------------------- */
-[data-theme^="terminal-"] :is(.eyebrow,.view-menu h2,.leader-menu h2,.dcr-opinions-title,.dcr-adv-title){display:flex;align-items:center;gap:1ch;text-transform:uppercase;font-weight:700;color:var(--accent)}
+[data-theme^="terminal-"] :is(.eyebrow,.view-menu h2,.leader-menu h2,.keys-list h3,.dcr-opinions-title,.dcr-adv-title){display:flex;align-items:center;gap:1ch;text-transform:uppercase;font-weight:700;color:var(--accent)}
 [data-theme^="terminal-"] :is(.eyebrow,.view-menu h2,.leader-menu h2,.dcr-opinions-title,.dcr-adv-title)::before{content:"──";color:var(--terminal-surface1);font-weight:400}
 [data-theme^="terminal-"] :is(.eyebrow,.view-menu h2,.leader-menu h2)::after{content:"";flex:1;border-top:1px solid var(--line)}
 [data-theme^="terminal-"] :is(h1,h2,h3){font-weight:700}
