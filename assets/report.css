@@ -424,8 +424,8 @@ body.reading-focus main#content{padding-top:12px}
 .token.function,.token.class-name{color:var(--tok-func)}
 .token.operator,.token.entity,.token.url{color:var(--tok-op)}
 .token.regex,.token.important,.token.variable{color:var(--tok-regex)}
-.token.tag{color:var(--tok-tag)}
-.token.builtin{color:var(--tok-builtin)}
+.token.tag,.token.selector{color:var(--tok-tag)}
+.token.builtin,.token.namespace,.token.decorator,.token.annotation{color:var(--tok-builtin)}
 .token.interpolation-punctuation{color:var(--tok-interp)}
 .token.erb-delimiter{color:var(--tok-erb);font-weight:600}
 

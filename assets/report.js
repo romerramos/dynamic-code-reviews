@@ -587,11 +587,27 @@
     if (again) again.focus({preventScroll:true}); else if (keyboardHere) setPane('nav');
   }
 
+  const LANGUAGE_BY_EXTENSION = {
+    rb:'ruby',rake:'ruby',gemspec:'ruby',ru:'ruby',jbuilder:'ruby',
+    js:'javascript',mjs:'javascript',cjs:'javascript',jsx:'jsx',ts:'typescript',mts:'typescript',cts:'typescript',tsx:'tsx',
+    json:'json',jsonc:'json',json5:'json',webmanifest:'json',yml:'yaml',yaml:'yaml',toml:'toml',ini:'ini',cfg:'ini',conf:'ini',editorconfig:'ini',
+    html:'markup',htm:'markup',xhtml:'markup',xml:'markup',svg:'markup',vue:'markup',svelte:'markup',plist:'markup',xsd:'markup',xsl:'markup',
+    css:'css',scss:'scss',sass:'scss',less:'scss',
+    sh:'bash',bash:'bash',zsh:'bash',fish:'bash',sql:'sql',graphql:'graphql',gql:'graphql',
+    rs:'rust',go:'go',py:'python',pyi:'python',pyw:'python',
+    c:'c',h:'c',cc:'cpp',cpp:'cpp',cxx:'cpp',hh:'cpp',hpp:'cpp',hxx:'cpp',cs:'csharp',
+    java:'java',kt:'kotlin',kts:'kotlin',swift:'swift',php:'php',phtml:'php',
+    ex:'elixir',exs:'elixir',lua:'lua',md:'markdown',markdown:'markdown',mdx:'markdown',mk:'makefile',dockerfile:'docker'
+  };
+  const LANGUAGE_BY_NAME = {
+    Gemfile:'ruby',Rakefile:'ruby',Guardfile:'ruby',Brewfile:'ruby',Vagrantfile:'ruby',Podfile:'ruby',
+    Dockerfile:'docker',Containerfile:'docker',Makefile:'makefile',GNUmakefile:'makefile','Cargo.lock':'toml','poetry.lock':'toml','uv.lock':'toml'
+  };
   function language(path) {
     if (/\.erb$/i.test(path)) return 'erb';
-    if (/\.(scss|sass)$/i.test(path)) return 'css';
-    const extension = path.split('.').pop().toLowerCase();
-    return ({rb:'ruby',rake:'ruby',gemspec:'ruby',js:'javascript',mjs:'javascript',cjs:'javascript',ts:'typescript',json:'json',yml:'yaml',yaml:'yaml',sql:'sql',html:'markup',xml:'markup',svg:'markup',css:'css',sh:'bash',bash:'bash'})[extension] || (/\b(Gemfile|Rakefile)$/.test(path) ? 'ruby' : 'none');
+    const name = path.split('/').pop();
+    const extension = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
+    return LANGUAGE_BY_NAME[name] || LANGUAGE_BY_EXTENSION[extension] || (/^Dockerfile\./.test(name) ? 'docker' : 'none');
   }
 
   // Tokenize a whole side of a hunk, then distribute escaped tokens across its

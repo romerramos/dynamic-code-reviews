@@ -16,7 +16,10 @@ module DCR
 
     ASSETS = File.expand_path('../../assets', __dir__)
     LIVE = File.expand_path('../../live', __dir__)
-    LANGUAGES = %w[core markup clike javascript css ruby sql json yaml bash typescript].freeze
+    LANGUAGES = %w[
+      core markup clike javascript css scss ruby sql json yaml bash typescript jsx tsx c cpp csharp java kotlin go
+      rust python toml swift markup-templating php markdown docker elixir graphql lua makefile ini
+    ].freeze
     OFFLINE_CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; media-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'"
     # The served review keeps its own inline scripts and embedded media, and may also load
     # the QA panel and talk to the server. The saved HTML file keeps its stricter offline policy.

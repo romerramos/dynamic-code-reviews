@@ -10,8 +10,10 @@ Keep their licenses with this skill when sharing it.
   - We use the precompiled component classes. Application layout is ordinary CSS,
     so the Tailwind browser script shown in the CDN quickstart is unnecessary.
 - Prism 1.30.0: https://cdn.jsdelivr.net/npm/prismjs@1.30.0/components/
-  - Components: core, markup, clike, javascript, css, ruby, sql, json, yaml, bash,
-    typescript. The renderer embeds them in dependency order.
+  - Components: core, markup, clike, javascript, css, scss, ruby, sql, json, yaml,
+    bash, typescript, jsx, tsx, c, cpp, csharp, java, kotlin, go, rust, python,
+    toml, swift, markup-templating, php, markdown, docker, elixir, graphql, lua,
+    makefile, ini. The renderer embeds them in dependency order.
   - License: `PRISM-LICENSE` (MIT).
   - No autoloader, worker or network plugins. Unsupported languages remain readable
     plain text; highlighting is presentation, not a parser or correctness check.
