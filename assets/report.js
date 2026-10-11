@@ -257,7 +257,7 @@
     else navigateFile(focusOrder[to].layer, focusOrder[to].file);
   }
   // The page's own tip, in the theme: anything with data-tip shows its lines beside it on hover, and
-  // a row holding one shows it when the keyboard reaches the row. The first line is the headline.
+  // a row holding one shows it when the keyboard reaches the row (a row, not a whole pane). The first line is the headline.
   const tip = document.createElement('div');
   tip.id = 'tip';
   tip.className = 'tip';
@@ -285,9 +285,10 @@
   }
   const tipMark = target => target.closest?.('[data-tip]');
   document.addEventListener('mouseover', event => { const mark = tipMark(event.target); if (mark) showTip(mark); else hideTip(); });
-  document.addEventListener('focusin', event => { const mark = event.target.matches?.(':focus-visible') && (tipMark(event.target) || event.target.querySelector?.('[data-tip]')); if (mark) showTip(mark); else hideTip(); });
+  document.addEventListener('focusin', event => { const mark = event.target.matches?.(':focus-visible') && (tipMark(event.target) || (event.target.matches('button, a, summary') && event.target.querySelector('[data-tip]'))); if (mark) showTip(mark); else hideTip(); });
   document.addEventListener('scroll', hideTip, true);
-  document.addEventListener('keydown', event => { if (event.key === 'Escape') hideTip(); }, true);
+  // Any key puts the tip away: it is about where the keyboard was. Reaching another row shows that row's.
+  document.addEventListener('keydown', hideTip, true);
 
   // S labels everything that can be clicked in the pane the keyboard is in, as a jump plugin does in
   // an editor: the page dims, each link and button gets a letter or two, and typing them clicks it.
