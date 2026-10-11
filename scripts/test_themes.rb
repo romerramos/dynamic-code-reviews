@@ -72,3 +72,22 @@ Dir.mktmpdir('dcr-theme') do |dir|
   assert(settings.write('theme' => 'aida') == {'theme' => 'aida'} && settings.write('theme' => 'nope') == {'theme' => 'aida'}, 'A theme is saved only when it exists')
 end
 puts 'PASS the page carries the contract and every theme, and the chosen theme is kept with the settings'
+
+# A page carries daisyUI without the rules for classes the app never names: the rest is left as written.
+full = File.read(File.join(ROOT, 'assets/vendor/daisyui.css'))
+everything = Class.new { def include?(_name) = true }.new
+assert(DCR::Stylesheet.prune(full, everything) == full, 'Pruning with every class known must leave daisyUI as it is')
+words = %w[btn badge- tab].to_set
+{'.btn' => true, '.sm\:btn' => false, '.\32 xl\:btn' => false, '.btn:not(.unused)' => true, '.btn:has(.unused)' => true,
+ ':is(.unused,.btn) span' => true, ':is(.unused,.other)>*' => false, ':where(.unused)' => false, '.badge-error' => true,
+ '.btn.unused' => false, '&:is(.unused)' => false, '& > .tab' => true, ':root' => true, '[data-tip=".unused"]' => true}.each do |selector, kept|
+  assert(DCR::Stylesheet.possible?(selector, words) == kept, "#{selector} should #{kept ? 'stay' : 'go'}")
+end
+sample = '@layer a{.btn,.sm\:btn{color:red;&:hover{color:blue}}.unused{top:0}@media (width>=40rem){.unused{top:0}}@keyframes spin{to{rotate:1turn}}}'
+assert(DCR::Stylesheet.prune(sample, words) == '@layer a{.btn{color:red;&:hover{color:blue}}@keyframes spin{to{rotate:1turn}}}', 'A rule goes with what is nested in it, a selector alone from a list, and an emptied group whole')
+pruned = DCR::Page.daisyui
+assert(pruned.count('{') == pruned.count('}'), 'The pruned daisyUI must keep its braces balanced')
+assert(pruned.size < full.size / 4, 'The pruned daisyUI should be a fraction of the whole')
+%w[.btn{ .btn-primary .badge .modal-box .loading].each { |name| assert(pruned.include?(name), "The pruned daisyUI lost #{name}") }
+assert(!pruned.include?('\:'), 'No rule for a screen-width variant should remain')
+puts 'PASS a page carries only the daisyUI rules for classes the app names'

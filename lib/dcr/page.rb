@@ -3,6 +3,7 @@
 require 'digest'
 require 'erb'
 require 'json'
+require_relative 'stylesheet'
 
 module DCR
   # Every HTML page a review is read in comes from here, rendered from a template in assets/.
@@ -71,6 +72,15 @@ module DCR
       end
     end
 
+    # daisyUI as a page carries it: only the rules for classes the app's own files name. See Stylesheet.
+    def daisyui
+      @daisyui ||= begin
+        root = File.expand_path('..', ASSETS)
+        own = Dir[File.join(root, '{assets,assets/themes,live,recorder}', '*.{js,css,erb,html}'), File.join(root, 'lib/dcr/*.rb')]
+        Stylesheet.prune(File.read(File.join(ASSETS, 'vendor/daisyui.css')), Stylesheet.words(own))
+      end
+    end
+
     # The review data embedded in a rendered page, as `render` received it.
     def payload(html)
       json = html[/<script\b(?=[^>]*\bid=["']data["'])[^>]*>(.*?)<\/script>/m, 1]
@@ -118,7 +128,7 @@ module DCR
 
       def styles
         licenses = %w[DAISYUI-LICENSE PRISM-LICENSE lucide/LICENSE glightbox/LICENSE].map { |name| asset(File.join('vendor', name)) }.join("\n")
-        "/* Third-party licenses\n#{licenses}\n*/\n#{asset('vendor/daisyui.css')}\n#{asset('vendor/glightbox/glightbox.min.css')}\n#{Page.theme_styles}\n#{asset('report.css')}"
+        "/* Third-party licenses\n#{licenses}\n*/\n#{Page.daisyui}\n#{asset('vendor/glightbox/glightbox.min.css')}\n#{Page.theme_styles}\n#{asset('report.css')}"
       end
 
       def scripts
@@ -142,7 +152,7 @@ module DCR
 
       private
 
-      def styles = asset('vendor/daisyui.css') + Page.theme_styles + asset('report.css')
+      def styles = Page.daisyui + Page.theme_styles + asset('report.css')
       def name = @history['name']
       def revisions = @history['revisions']
       def latest?(entry) = entry == revisions.last
