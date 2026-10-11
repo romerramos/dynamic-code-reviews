@@ -66,7 +66,7 @@
 [data-theme^="terminal-"]{
   --review-font-family:"JetBrains Mono Variable","JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
   --mono:"JetBrains Mono Variable","JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
-  --round:0;--shade:transparent;--status-h:26px;--pane-ring:var(--terminal-fill);--chrome-h:44px;--toolbar-h:44px;
+  --round:0;--shade:transparent;--status-h:26px;--pane-ring:var(--terminal-fill);--cursor-line:color-mix(in srgb,var(--terminal-fill) 20%,transparent);--chrome-h:44px;--toolbar-h:44px;
   font-variant-ligatures:none;scrollbar-color:var(--terminal-surface1) transparent;scrollbar-width:thin;
 }
 [data-theme^="terminal-"] *{letter-spacing:0!important;scrollbar-color:var(--terminal-surface1) transparent;scrollbar-width:thin}
@@ -80,7 +80,8 @@
 /* --- the status line, as in a modal editor: the mode you are in, where you are and how far, then
    the keys, each named for what it would switch to ----------------------------------------------- */
 [data-theme^="terminal-"]{--terminal-mode:"FILE";--terminal-mode-len:4;--terminal-focus:"";--terminal-focus-len:0;--terminal-z:"walkthrough";--terminal-f:"focus";--terminal-jk:"file"}
-[data-theme^="terminal-"]:has(body[data-pane="main"]){--terminal-jk:"scroll"}
+[data-theme^="terminal-"]:has(body[data-pane="main"]){--terminal-jk:"line  ·  c comment  ·  v range"}
+[data-theme^="terminal-"]:has(body[data-pane="ledger"]){--terminal-jk:"comment"}
 [data-theme^="terminal-"]:has(body[data-reading="walkthrough"]){--terminal-mode:"WALKTHROUGH";--terminal-mode-len:11;--terminal-z:"file by file"}
 [data-theme^="terminal-"]:has(body.zen){--terminal-focus:" · FOCUS";--terminal-focus-len:8;--terminal-f:"leave focus"}
 [data-theme^="terminal-"] body::before{content:var(--terminal-mode) var(--terminal-focus);position:fixed;z-index:20;left:0;bottom:0;height:var(--status-h);padding:0 1.5ch;display:flex;align-items:center;background:var(--terminal-fill);color:var(--terminal-on-fill);font:700 12px/1 var(--mono);white-space:pre}
@@ -90,8 +91,17 @@
 [data-theme^="terminal-"] body[data-leader]::before{background:var(--terminal-hot)}
 
 [data-theme^="terminal-"] body::after{content:attr(data-position) "  ·  " attr(data-progress);position:fixed;z-index:19;left:0;right:0;bottom:0;height:var(--status-h);padding:0 2ch 0 calc((var(--terminal-mode-len) + var(--terminal-focus-len) + 5) * 1ch);display:flex;align-items:center;border-top:1px solid var(--line);background:var(--canvas);color:var(--ink);font:12px/1 var(--mono);white-space:pre;overflow:hidden}
-[data-theme^="terminal-"]::after{content:"1-9 step  ·  tab pane  ·  j/k " var(--terminal-jk) "  ·  {/} section  ·  v viewed  ·  space menu  ·  z " var(--terminal-z) "  ·  f " var(--terminal-f) "  ·  esc close";position:fixed;z-index:20;right:0;bottom:0;height:var(--status-h);padding:0 2ch;display:flex;align-items:center;border-top:1px solid var(--line);background:var(--canvas);color:var(--muted);font:12px/1 var(--mono);white-space:pre}
+[data-theme^="terminal-"]::after{content:"space menu  ·  h/l pane  ·  j/k " var(--terminal-jk) "  ·  s jump  ·  m viewed  ·  z " var(--terminal-z) "  ·  f " var(--terminal-f);position:fixed;z-index:20;right:0;bottom:0;height:var(--status-h);padding:0 2ch;display:flex;align-items:center;border-top:1px solid var(--line);background:var(--canvas);color:var(--muted);font:12px/1 var(--mono);white-space:pre}
 [data-theme^="terminal-"]:has(body[data-leader])::after{content:"pick a key  ·  esc close";color:var(--ink)}
+[data-theme^="terminal-"]:has(body[data-editing]){--terminal-mode:"EDIT";--terminal-mode-len:4;--terminal-focus:"";--terminal-focus-len:0}
+[data-theme^="terminal-"] body[data-editing]::before{background:var(--dcr-ok)}
+[data-theme^="terminal-"]:has(body[data-editing])::after{content:"esc leave the text";color:var(--ink)}
+[data-theme^="terminal-"]:has(body[data-visual]){--terminal-mode:"VISUAL";--terminal-mode-len:6;--terminal-focus:"";--terminal-focus-len:0}
+[data-theme^="terminal-"] body[data-visual]::before{background:var(--terminal-mauve)}
+[data-theme^="terminal-"]:has(body[data-visual])::after{content:"j/k  d/u  {/} stretch the range  ·  c comment  ·  esc cancel";color:var(--ink)}
+[data-theme^="terminal-"]:has(body[data-hints]){--terminal-mode:"JUMP";--terminal-mode-len:4;--terminal-focus:"";--terminal-focus-len:0}
+[data-theme^="terminal-"] body[data-hints]::before{background:var(--terminal-hot)}
+[data-theme^="terminal-"]:has(body[data-hints])::after{content:"type a label  ·  esc cancel";color:var(--ink)}
 @media(max-width:1250px){[data-theme^="terminal-"]::after{display:none}}
 @media(max-width:740px){[data-theme^="terminal-"]{--status-h:0px}[data-theme^="terminal-"] body::before,T body::after{display:none}}
 
@@ -181,6 +191,7 @@
 [data-theme^="terminal-"] :is(.risk-rank,.review-thread,.file-card){box-shadow:none}
 [data-theme^="terminal-"] :is(.comment-popover[popover],.view-menu,.modal-box,#dcr-presence-card,#dcr-arrival,.dropdown-content,.leader-menu){border:3px double var(--terminal-overlay0);box-shadow:none;background:var(--surface)}
 [data-theme^="terminal-"] body.ledger-open .ledger{border-left:3px double var(--terminal-overlay0)}
+[data-theme^="terminal-"] .view-keys kbd{text-transform:none}
 [data-theme^="terminal-"] .review-note-popover[popover]{border-color:var(--accent)}
 [data-theme^="terminal-"] .comment-popover:not(.review-note-popover)[popover]{border-color:var(--yours)}
 [data-theme^="terminal-"] .popover-heading{text-transform:uppercase;font-weight:700;background:transparent}
@@ -220,3 +231,4 @@
 [data-theme^="terminal-"] .thread-type-icon{background:transparent;width:auto;height:auto}
 [data-theme^="terminal-"] .leader-menu button:hover{background:var(--terminal-hover)}
 [data-theme^="terminal-"] .leader-menu kbd{color:var(--terminal-fill);background:transparent;font-weight:700}
+[data-theme^="terminal-"] .hint-label{background:var(--terminal-fill);color:var(--terminal-on-fill)}

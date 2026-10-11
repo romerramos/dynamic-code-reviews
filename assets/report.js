@@ -109,15 +109,33 @@
     const label = {fresh:'New preview ready', ready:'Preview ready', requested:'Preview requested', working:'Building preview', selected:'Selected for preview'}[status];
     return label ? `<span class="nav-preview is-${status}" title="${label}" aria-label="${label}">${icon(status === 'requested' ? 'clock' : 'scan-text')}</span>` : '';
   }
-  // The keyboard is in one of two panes, the sidebar ('nav') or what is being read ('main'); the
-  // page shows which with a ring. Tab and a click move it; the arrows walk the sidebar's rows.
+  // The keyboard is in one of three panes: the sidebar ('nav'), what is being read ('main') and Your
+  // review ('ledger') while it is open. The page shows which with a ring. Tab, H and L (or the left
+  // and right arrows) and a click move it.
   let pane = 'nav';
   const currentNavRow = () => $('navigation').querySelector('[aria-current="location"]') || $('navigation').querySelector('[aria-current="page"]') || $('navigation').querySelector('button');
+  const shown = node => !!node?.getClientRects().length;
+  // Your review lists comments, each with one thing to open: its conversation when it has one (the
+  // served review adds that), else its place in the code. An open conversation covers the list.
+  const ledgerRows = () => [...$('ledger-body').querySelectorAll('.ledger-item')].map(item => item.querySelector('[data-dcr-open]') || item.querySelector('.ledger-jump')).filter(shown);
+  const conversation = () => { const view = $('ledger').querySelector('.dcr-detail'); return view && !view.hidden ? view : null; };
+  const panes = () => ['nav', 'main', 'ledger'].filter(name => name === 'main' || shown(name === 'nav' ? $('navigation') : $('ledger')));
   function setPane(name, focus = true) {
-    if (name === 'nav' && !$('navigation').getClientRects().length) name = 'main'; // focus mode hides the sidebar
+    if (!panes().includes(name)) name = 'main'; // focus mode hides the sidebar; Your review may be closed
     pane = name;
     document.body.dataset.pane = name;
-    if (focus) (name === 'main' ? $('content') : currentNavRow())?.focus({preventScroll:true});
+    if (!focus) return;
+    const target = name === 'main' ? $('content') : name === 'nav' ? currentNavRow()
+      : conversation()?.querySelector('[data-dcr-back]') || ledgerRows().find(row => row === document.activeElement) || ledgerRows()[0] || $('ledger-close');
+    target?.focus({preventScroll:true});
+    if (name === 'main') cursor(); // in a diff, the keyboard is on a line
+  }
+  // Tab goes round the panes; H and L go to the one on the left or right and stop at the ends.
+  function movePane(delta, wrap = false) {
+    const order = panes();
+    const at = order.indexOf(pane) + delta;
+    const next = wrap ? order[(at + order.length) % order.length] : order[at];
+    if (next) setPane(next);
   }
   // Space opens a menu of commands, each one more key away (the leader key of a modal editor, with
   // its menu shown). The menu lists only what this page can do now; Space again marks the file.
@@ -128,6 +146,7 @@
   leaderMenu.hidden = true;
   leaderMenu.setAttribute('role', 'menu');
   leaderMenu.setAttribute('aria-label', 'Commands');
+  leaderMenu.setAttribute('popover', 'manual');
   document.body.append?.(leaderMenu);
   function leaderCommands(markFile) {
     const view = name => document.querySelector(`.dcr-views button[data-view="${name}"]`);
@@ -135,22 +154,59 @@
     const previews = view('previews') || document.querySelector('#preview-list-toggle:not([hidden])');
     const collapsed = document.body.classList.contains('sidebar-collapsed');
     return [
+      state.view !== 'overview' && {key:'o', label:'Overview', run: () => { select('overview'); setPane('main'); }},
+      state.view !== 'files' && {key:'c', label:'All changes', run: () => { select('files'); setPane('main'); }},
       {key:'e', label: collapsed ? 'Show the sidebar' : 'Hide the sidebar', run: () => { $('nav-toggle').click(); setPane(document.body.classList.contains('sidebar-collapsed') ? 'main' : 'nav'); }},
       view('app') && {key:'a', label: inApp ? 'Back to the code' : 'Open the app', run: () => (inApp ? view('code') : view('app')).click()},
       previews && {key:'p', label:'Template previews', run: () => previews.click()},
-      {key:'l', label: ledgerOpen() ? 'Hide your review' : 'Show your review', run: () => setLedger(!ledgerOpen())},
+      {key:'l', label: ledgerOpen() ? 'Hide your review' : 'Show your review', run: () => { setLedger(!ledgerOpen()); setPane(ledgerOpen() ? 'ledger' : 'main'); }},
       {key:'d', label:'Review details', run: () => $('context-toggle').click()},
       {key:'/', label:'Find a file or step', run: () => { if (collapsed) $('nav-toggle').click(); $('search').focus(); }},
       {key:' ', label:'Mark the file viewed, or not', run: markFile}
     ].filter(Boolean);
   }
-  function openLeader(markFile) {
-    leader = leaderCommands(markFile);
-    leaderMenu.innerHTML = `<h2>Menu</h2><ul>${leader.map(command => `<li><button type="button" role="menuitem" data-leader="${escape(command.key)}"><kbd>${command.key === ' ' ? 'Space' : escape(command.key.toUpperCase())}</kbd><span>${escape(command.label)}</span></button></li>`).join('')}</ul><p><kbd>Esc</kbd> close</p>`;
+  // What is open over the page: a dialog, or a menu or popover that floats.
+  // The composer under a line counts too, while the keyboard is in it.
+  const openOverlay = () => document.activeElement?.closest?.('#inline-composer') || document.querySelector('dialog[open]') || [...document.querySelectorAll('[popover]')].find(node => node !== leaderMenu && node.matches(':popover-open')) || null;
+  // Over the page the commands are the overlay's own: each of its buttons under a letter of its
+  // label, and Q to close it. The sidebars are out of reach there, so they are not offered.
+  function overlayCommands(overlay) {
+    const taken = new Set(['q', ' ']);
+    const closes = button => button.matches('[rel="prev"], [data-close], [data-gh-close], [data-dcr-close], [data-composer-cancel], [data-close-comment], [aria-label^="Close"]');
+    const shut = [...overlay.querySelectorAll('button')].find(button => shown(button) && closes(button));
+    const commands = [{key:'q', label:'Close this', run: () => shut ? shut.click() : overlay.close ? overlay.close() : overlay.hidePopover?.()}];
+    const seen = new Set();
+    // Its buttons, and its choices: a label around a radio button or a checkbox picks that.
+    [...overlay.querySelectorAll('button, summary, label')].forEach(button => {
+      const choice = button.tagName === 'LABEL' ? button.querySelector('input[type="radio"], input[type="checkbox"]') : null;
+      if (button.tagName === 'LABEL' && (!choice || choice.disabled)) return;
+      if (commands.length >= 14 || !shown(button) || button.disabled || closes(button) || button.closest('#leader-menu')) return;
+      // A button that shows only a mark (A+, an icon) is named by its label for screen readers.
+      const text = button.textContent.trim();
+      const label = (text.length > 2 ? text : button.getAttribute('aria-label') || button.title || text).replace(/\s+/g, ' ');
+      if (!label || label.length > 44 || seen.has(label)) return;
+      const key = [...label.toLowerCase()].find(letter => /[a-z0-9]/.test(letter) && !taken.has(letter));
+      if (!key) return;
+      taken.add(key); seen.add(label);
+      commands.push({key, label: choice?.checked ? `${label} (chosen)` : label, run: () => { if (choice) choice.click(); else { button.focus(); button.click(); } }});
+    });
+    return commands;
+  }
+  function openLeader(commands, overlay = null) {
+    leader = commands;
+    leaderMenu.innerHTML = `<h2>Menu</h2><ul>${leader.map(command => `<li><button type="button" role="menuitem" data-leader="${escape(command.key)}"><kbd>${command.key === ' ' ? 'space' : escape(command.key)}</kbd><span>${escape(command.label)}</span></button></li>`).join('')}</ul><p><kbd>esc</kbd> close</p>`;
+    // Inside an open dialog, so it is drawn over it and its rows can be clicked; then into the top layer.
+    (overlay?.tagName === 'DIALOG' ? overlay : document.body).append(leaderMenu);
     leaderMenu.hidden = false;
+    try { leaderMenu.showPopover(); } catch { /* shown in place where popovers are not supported */ }
     document.body.dataset.leader = ''; // for a theme that shows the mode
   }
-  function endLeader() { leader = null; leaderMenu.hidden = true; delete document.body.dataset.leader; }
+  function endLeader() {
+    leader = null;
+    try { leaderMenu.hidePopover(); } catch { /* it was not a popover */ }
+    leaderMenu.hidden = true;
+    delete document.body.dataset.leader;
+  }
   function runLeader(key) {
     const command = leader?.find(entry => entry.key === key);
     endLeader();
@@ -167,23 +223,272 @@
   }
   // The file being read: the one shown in file-by-file mode, the one scrolled to in a walkthrough step.
   const readingFile = () => files.get(fileReadingActive() ? focusOrder[focusIndex]?.file : state.navFile);
-  // The next or previous file in reading order, across steps, opened where it is read.
+  // The next or previous stop in the sidebar, from the top: Overview, All changes, then every file
+  // in reading order across the steps, each opened where it is read.
   function stepFile(delta) {
-    if (fileReadingActive()) { focusFile(focusIndex + delta); return; }
+    const OVERVIEW = -2, ALL = -1;
     const at = focusOrder.findIndex(entry => entry.layer.id === state.view && entry.file === state.navFile);
     const first = focusOrder.findIndex(entry => entry.layer.id === state.view);
-    // On a step with no file reached yet, J opens its first; on the overview, the first of all.
-    const from = at >= 0 ? at : first >= 0 ? first - (delta > 0 ? 1 : 0) : -1;
-    const target = focusOrder[Math.max(0, Math.min(focusOrder.length - 1, from + delta))];
-    if (target && !(at >= 0 && focusOrder[at] === target)) navigateFile(target.layer, target.file);
+    // On a step with no file reached yet, J opens its first and K the one before it.
+    const from = state.view === 'overview' ? OVERVIEW : state.view === 'files' ? ALL
+      : fileReadingActive() ? focusIndex : at >= 0 ? at : first - (delta > 0 ? 1 : 0);
+    const to = Math.max(OVERVIEW, Math.min(focusOrder.length - 1, from + delta));
+    if (to === from && (at >= 0 || from < 0 || fileReadingActive())) return;
+    if (to === OVERVIEW) select('overview');
+    else if (to === ALL) select('files');
+    else navigateFile(focusOrder[to].layer, focusOrder[to].file);
   }
-  // A tap moves a little over half a screen, smoothly; holding the key scrolls steadily. A tap at the
-  // very end goes on to the next file or step, and one at the very top back to the previous.
+  // S labels everything that can be clicked in the pane the keyboard is in, as a jump plugin does in
+  // an editor: the page dims, each link and button gets a letter or two, and typing them clicks it.
+  let hints = null; // {typed, items: [{label, element, tag}]}
+  const hintLayer = document.createElement('div');
+  hintLayer.id = 'hint-layer';
+  hintLayer.className = 'hint-layer';
+  hintLayer.hidden = true;
+  hintLayer.setAttribute('popover', 'manual');
+  hintLayer.setAttribute('aria-hidden', 'true');
+  document.body.append?.(hintLayer);
+  function endHints() {
+    hints = null;
+    try { hintLayer.hidePopover(); } catch { /* it was not a popover */ }
+    hintLayer.hidden = true;
+    hintLayer.replaceChildren();
+    delete document.body.dataset.hints;
+  }
+  function openHints(inside = null) {
+    const scope = inside || (pane === 'nav' ? document.querySelector('.sidebar') : pane === 'ledger' ? $('ledger') : document.querySelector('.review-area'));
+    const seen = new Set();
+    const targets = [...scope.querySelectorAll('a[href], button, summary, label.file-viewed, input, select, textarea, [role="button"]')].filter(element => {
+      if (element.disabled || element.closest('label.file-viewed') && element.tagName !== 'LABEL') return false;
+      const box = element.getBoundingClientRect();
+      if (!box.width || !box.height || box.bottom < 0 || box.top > innerHeight) return false;
+      // What is under its middle must be the thing itself: not scrolled under a header, not covered.
+      const top = document.elementFromPoint(box.left + Math.min(box.width / 2, 12), box.top + box.height / 2);
+      if (!top || !(element.contains(top) || top.contains(element)) || seen.has(element)) return false;
+      seen.add(element);
+      return true;
+    });
+    if (!targets.length) return;
+    // Home row first; two letters each once there are more targets than letters.
+    const LETTERS = 'asdfghjklqwertyuiopzxcvbnm';
+    const label = index => targets.length <= LETTERS.length ? LETTERS[index] : LETTERS[Math.floor(index / LETTERS.length)] + LETTERS[index % LETTERS.length];
+    hints = {typed: '', from: document.activeElement, items: targets.slice(0, LETTERS.length * LETTERS.length).map((element, index) => ({label: label(index), element}))};
+    const edge = scope.getBoundingClientRect().left;
+    hintLayer.innerHTML = hints.items.map(item => {
+      const box = item.element.getBoundingClientRect();
+      // Just left of what it names, so the first letters stay readable; over its corner when there is no room.
+      const beside = box.left - edge > 30;
+      return `<span class="hint-label${beside ? ' is-beside' : ''}" data-hint="${item.label}" style="left:${Math.max(2, Math.round(box.left - (beside ? 3 : 4)))}px;top:${Math.max(2, Math.round(box.top + (beside ? Math.max(0, (box.height - 20) / 2) : -4)))}px">${item.label}</span>`;
+    }).join('');
+    hintLayer.hidden = false;
+    (inside?.tagName === 'DIALOG' ? inside : document.body).append(hintLayer); // over a dialog, as the menu is
+    try { hintLayer.showPopover(); } catch { /* shown in place where popovers are not supported */ }
+    document.body.dataset.hints = ''; // for a theme that shows the mode
+  }
+  // A letter narrows the labels; the one that is typed out is clicked (a field is only focused).
+  function typeHint(letter) {
+    const typed = hints.typed + letter;
+    const left = hints.items.filter(item => item.label.startsWith(typed));
+    if (!left.length) { endHints(); return; }
+    const hit = left.find(item => item.label === typed);
+    if (!hit) {
+      hints.typed = typed;
+      hintLayer.querySelectorAll('.hint-label').forEach(node => { node.hidden = !node.dataset.hint.startsWith(typed); node.innerHTML = `<b>${typed}</b>${node.dataset.hint.slice(typed.length)}`; });
+      return;
+    }
+    const from = hints.from;
+    endHints();
+    // A text or a list to choose from takes the keyboard. Anything else is clicked and left: the
+    // keyboard goes back to where it was, so the next key is not swallowed by a checkbox.
+    if (textField(hit.element) || hit.element.tagName === 'SELECT') { hit.element.focus({preventScroll:true}); return; }
+    hit.element.click();
+    if (from?.isConnected && from !== document.body) from.focus({preventScroll:true});
+    else if (document.activeElement === hit.element) hit.element.blur();
+  }
+  ['scroll', 'resize'].forEach(type => window.addEventListener(type, () => { if (hints) endHints(); }, {passive:true, capture:true}));
+  // Scrolling by key glides towards a place that every press moves on, so quick presses add up
+  // and a held key becomes one steady motion; starting a new animation per press cut each other
+  // short. The wheel, a touch or a drag takes over at once.
+  const glides = new Map(); // element -> {target, frame, at}
+  const stopGlide = element => { const state = glides.get(element); if (state) { cancelAnimationFrame(state.frame); glides.delete(element); } };
+  function glide(element, delta) {
+    const limit = element.scrollHeight - element.clientHeight;
+    const state = glides.get(element) || {target: element.scrollTop, frame: 0, at: 0};
+    state.target = Math.max(0, Math.min(limit, state.target + delta));
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { stopGlide(element); element.scrollTo({top: state.target, behavior:'instant'}); return; }
+    if (glides.has(element)) return;
+    glides.set(element, state);
+    const tick = now => {
+      const gap = state.target - element.scrollTop;
+      // The same pace on any screen: each 60 ms closes about two thirds of what is left.
+      const share = state.at ? 1 - Math.exp(-(now - state.at) / 55) : 0.2;
+      state.at = now;
+      if (Math.abs(gap) < 1) { element.scrollTo({top: state.target, behavior:'instant'}); glides.delete(element); return; }
+      element.scrollTo({top: element.scrollTop + Math.sign(gap) * Math.max(1, Math.abs(gap) * share), behavior:'instant'});
+      state.frame = requestAnimationFrame(tick);
+    };
+    state.frame = requestAnimationFrame(tick);
+  }
+  ['wheel', 'touchstart', 'pointerdown'].forEach(type => document.addEventListener(type, () => [...glides.keys()].forEach(stopGlide), {passive:true, capture:true}));
+  const keyStep = (element, held) => held ? 64 : Math.round(element.clientHeight * 0.5);
+  // A tap moves half a screen and holding the key scrolls steadily. A tap at the very end goes on
+  // to the next file or step, and one at the very top back to the previous.
   function scrollReading(direction, held) {
     const content = $('content');
     const atEdge = direction > 0 ? content.scrollTop + content.clientHeight >= content.scrollHeight - 4 : content.scrollTop <= 0;
-    if (atEdge) { if (!held) { step(direction); $('content').focus({preventScroll:true}); } return; }
-    content.scrollBy({top: direction * (held ? 56 : Math.round(content.clientHeight * 0.55)), behavior: held ? 'instant' : 'smooth'});
+    if (atEdge) { if (!held) { stopGlide(content); step(direction); $('content').focus({preventScroll:true}); } return; }
+    glide(content, direction * keyStep(content, held));
+  }
+  // --- The line cursor ---------------------------------------------------------------------------
+  // In a diff the keyboard is on one line. J and K move it, D and U by half a screen, G to the
+  // file's first line and Shift+G to its last; the page follows. C comments on the line, E edits
+  // your comment on it (or opens the one that is there), Enter reads it.
+  let cursorRow = null;
+  let cursorPlace = null; // {table, index}: where it was, to put it back after the page is redrawn
+  const isRow = node => node?.classList?.contains('code-row');
+  const visible = node => node.checkVisibility ? node.checkVisibility() : !!node.getClientRects().length;
+  const diffTables = () => [...$('content').querySelectorAll('table.diff-table')].filter(visible);
+  function glideTo(element, top) {
+    const state = glides.get(element);
+    glide(element, top - (state ? state.target : element.scrollTop));
+  }
+  function setCursor(row, follow = true) {
+    cursorRow?.classList.remove('is-cursor');
+    cursorRow = row || null;
+    if (!row) return;
+    row.classList.add('is-cursor');
+    const table = row.closest('table');
+    cursorPlace = {table: table.getAttribute('aria-label'), index: row.rowIndex};
+    if (!follow) return;
+    // Keep a quarter of the screen above and below it, as an editor keeps lines around its cursor.
+    const content = $('content');
+    const box = content.getBoundingClientRect();
+    const line = row.getBoundingClientRect();
+    const margin = Math.min(box.height * 0.25, 220);
+    const pinned = document.querySelector('.focus-file-header')?.getBoundingClientRect().bottom || box.top;
+    const top = Math.max(box.top, pinned) + margin;
+    const now = glides.get(content) ? glides.get(content).target : content.scrollTop;
+    const shift = now - content.scrollTop; // how far a glide still has to go
+    // A jump to a section leaves the page alone when the section is already in the upper half;
+    // otherwise it brings it a third of the way down: what led to it above, the change itself below.
+    if (follow === 'third') {
+      const roof = Math.max(box.top, pinned);
+      if (line.top - shift < top || line.top - shift > roof + (box.bottom - roof) / 2) glideTo(content, now + (line.top - shift) - (roof + (box.bottom - roof) / 3));
+      return;
+    }
+    if (line.top - shift < top) glideTo(content, now + (line.top - shift) - top);
+    else if (line.bottom - shift > box.bottom - margin) glideTo(content, now + (line.bottom - shift) - (box.bottom - margin));
+  }
+  // The row it is on, found again after a redraw, else the first one on screen.
+  function cursor() {
+    const content = $('content');
+    const box = content.getBoundingClientRect();
+    const onScreen = row => { const line = row.getBoundingClientRect(); return line.bottom > box.top && line.top < box.bottom; };
+    if (cursorRow?.isConnected && visible(cursorRow) && onScreen(cursorRow)) return cursorRow;
+    const tables = diffTables();
+    const again = cursorPlace && !cursorRow?.isConnected && tables.find(table => table.getAttribute('aria-label') === cursorPlace.table)?.rows[cursorPlace.index];
+    if (isRow(again) && onScreen(again)) { setCursor(again, false); return again; }
+    const pinned = document.querySelector('.focus-file-header')?.getBoundingClientRect().bottom || box.top;
+    for (const table of tables) {
+      const frame = table.getBoundingClientRect();
+      if (frame.bottom <= pinned || frame.top >= box.bottom) continue;
+      const first = [...table.rows].find(row => isRow(row) && row.getBoundingClientRect().top >= pinned - 2);
+      if (first) { setCursor(first, false); return first; }
+    }
+    return null;
+  }
+  const rowsOf = table => [...table.rows].filter(isRow);
+  // Moves it by lines, into the next or previous file's diff when one runs out. Says whether it moved.
+  function moveCursor(lines) {
+    const from = cursor();
+    if (!from) return false;
+    let table = from.closest('table');
+    let rows = rowsOf(table);
+    let index = rows.indexOf(from) + lines;
+    const tables = diffTables();
+    while (index >= rows.length || index < 0) {
+      const next = tables[tables.indexOf(table) + (index < 0 ? -1 : 1)];
+      if (!next) { index = Math.max(0, Math.min(rows.length - 1, index)); break; }
+      index = index < 0 ? index + rowsOf(next).length : index - rows.length;
+      table = next; rows = rowsOf(table);
+    }
+    if (rows[index] === from) return false;
+    setCursor(rows[index]);
+    return true;
+  }
+  function cursorKey(key, held, shift) {
+    const content = $('content');
+    const page = Math.max(4, Math.floor(content.clientHeight / 2 / (cursor()?.getBoundingClientRect().height || 24)));
+    if (key === 'g') { const rows = cursor() && rowsOf(cursorRow.closest('table')); if (rows) setCursor(rows[shift ? rows.length - 1 : 0]); return; }
+    const lines = key === 'j' ? 1 : key === 'k' ? -1 : key === 'd' ? page : -page;
+    if (moveCursor(lines) || held || visual) return;
+    // A tap with nowhere left to go: up to the top of the page first, then on to the next file or back.
+    if (lines < 0 && content.scrollTop > 0) { glideTo(content, 0); return; }
+    stopGlide(content); step(Math.sign(lines)); $('content').focus({preventScroll:true}); cursor();
+  }
+  // { and } as in a modal editor: to the blank line before or after this block of code, or to the
+  // file's first or last line when there is none; from there, on into the next file's diff.
+  function moveByBlock(direction) {
+    const from = cursor();
+    if (!from) return;
+    const rows = rowsOf(from.closest('table'));
+    // A line's text starts with its +, − or space; what follows is the code.
+    const blank = row => [...row.querySelectorAll('td.code')].every(cell => !(cell.querySelector('.sign') ? cell.textContent.replace(cell.querySelector('.sign').textContent, '') : cell.textContent).trim());
+    let index = rows.indexOf(from) + direction;
+    while (rows[index] && blank(rows[index])) index += direction; // leave the blank lines it is already on
+    while (rows[index] && !blank(rows[index])) index += direction;
+    const to = rows[Math.max(0, Math.min(rows.length - 1, index))];
+    if (to === from) moveCursor(direction); else setCursor(to);
+  }
+  // --- Visual mode: V starts a range at the cursor's line, the moves stretch it, C comments on it ---
+  // A comment covers lines of one change on one side, so the range stops where that would end.
+  let visual = null; // {anchor: the row it started on}
+  const lineOf = row => row?.querySelector('button.line-number[data-range-side="new"]') || row?.querySelector('button.line-number');
+  const sameRange = (a, b) => !!a && !!b && a.dataset.rangeHunk === b.dataset.rangeHunk && a.dataset.rangeSide === b.dataset.rangeSide;
+  function paintVisual() {
+    $('content').querySelectorAll('.code-row.is-visual').forEach(row => row.classList.remove('is-visual'));
+    if (!visual || !visual.anchor.isConnected || !cursorRow) return;
+    const rows = rowsOf(visual.anchor.closest('table'));
+    const [from, to] = [rows.indexOf(visual.anchor), rows.indexOf(cursorRow)].sort((a, b) => a - b);
+    if (from >= 0) rows.slice(from, to + 1).forEach(row => row.classList.add('is-visual'));
+  }
+  function endVisual() { visual = null; paintVisual(); delete document.body.dataset.visual; }
+  function startVisual() {
+    const row = cursor();
+    if (!lineOf(row)) return; // a line no comment can be made on
+    visual = {anchor: row};
+    document.body.dataset.visual = ''; // for a theme that shows the mode
+    paintVisual();
+  }
+  // A move in visual mode: taken back when it would leave the lines one comment can cover.
+  function visualMove(move) {
+    const before = cursorRow;
+    move();
+    if (!sameRange(lineOf(visual.anchor), lineOf(cursorRow))) setCursor(before);
+    paintVisual();
+  }
+  function commentAtCursor() {
+    const row = cursor();
+    const button = lineOf(row);
+    if (!button) return;
+    const anchor = visual && lineOf(visual.anchor);
+    endVisual();
+    // The composer opens under the line, or under the range, with the keyboard in its text.
+    if (anchor && anchor !== button) { selectLine(anchor); selectLine(button, true); } else selectLine(button);
+  }
+  function openAtCursor(edit) {
+    const marker = cursor()?.querySelector('.comment-trigger');
+    if (!marker) return;
+    const mine = edit && comments.find(comment => comment.personal && marker.dataset.notes.split(' ').includes(comment.id) && ghState(comment.id).state !== 'posted');
+    if (mine) openEditor(mine); else openComment(marker);
+  }
+  // J and K in Your review: from one comment to the next, or through the conversation that is open.
+  function stepLedger(direction, held) {
+    const scroller = conversation()?.querySelector('.dcr-scroll');
+    if (scroller) { glide(scroller, direction * keyStep(scroller, held)); return; }
+    const rows = ledgerRows();
+    const at = rows.indexOf(document.activeElement);
+    rows[Math.max(0, Math.min(rows.length - 1, at < 0 ? 0 : at + direction))]?.focus();
   }
   function renderNavigation() {
     const keyboardHere = $('navigation').contains?.(document.activeElement); // absent only outside a browser
@@ -1625,6 +1930,13 @@
     const headings = [...$('content').querySelectorAll('.change-anchor')];
     const top = document.querySelector('.focus-file-header')?.getBoundingClientRect().bottom + 8;
     let current = headings.length ? 0 : -1;
+    // With the keyboard on a line that is on screen, the section is the one that line is in.
+    const box = $('content').getBoundingClientRect();
+    const line = pane === 'main' && cursorRow?.isConnected ? cursorRow.getBoundingClientRect() : null;
+    if (line && (glides.has($('content')) || line.bottom > box.top && line.top < box.bottom)) { // on screen, or on its way there
+      headings.forEach((node, index) => { if (node === cursorRow || node.compareDocumentPosition(cursorRow) & Node.DOCUMENT_POSITION_FOLLOWING) current = index; });
+      return {headings, top, current};
+    }
     headings.forEach((node, index) => { if (node.getBoundingClientRect().top <= top + 4) current = index; });
     if (selectedChange?.file === focusOrder[focusIndex]?.file && Math.abs(reviewScrollTop() - selectedChange.scrollTop) < 2) {
       const selected = headings.findIndex(node => node.id === selectedChange.id);
@@ -1636,17 +1948,24 @@
     const {headings, current} = changedSectionPosition();
     selectChangedSection(headings[current + delta]);
   }
-  // { and }: the previous and next changed section. File by file has its own pager and header to
+  // [ and ]: the previous and next changed section. File by file has its own pager and header to
   // clear; in a walkthrough step the sections of all its files follow one another down the page.
   function jumpSection(delta) {
-    if (fileReadingActive()) { jumpChangedSection(delta); return; }
     const content = $('content');
-    const line = content.getBoundingClientRect().top + 72;
     const anchors = [...content.querySelectorAll('.change-anchor, .range-heading')].filter(node => !node.checkVisibility || node.checkVisibility());
+    // A section's first line of code: the anchor itself, or the line under a range's heading.
+    const firstLine = anchor => { let row = anchor; while (row && !isRow(row)) row = row.nextElementSibling; return row; };
+    const here = cursor();
     let current = -1;
-    anchors.forEach((node, index) => { if (node.getBoundingClientRect().top <= line + 4) current = index; });
-    const target = anchors[current + delta];
-    if (target) content.scrollTo({top: content.scrollTop + target.getBoundingClientRect().top - line, behavior:'smooth'});
+    if (here) anchors.forEach((node, index) => { if (firstLine(node) === here || node.compareDocumentPosition(here) & Node.DOCUMENT_POSITION_FOLLOWING) current = index; });
+    else { const line = content.getBoundingClientRect().top + 72; anchors.forEach((node, index) => { if (node.getBoundingClientRect().top <= line + 4) current = index; }); }
+    // Back, from inside a section, is first to that section's start.
+    const inside = delta < 0 && here && anchors[current] && firstLine(anchors[current]) !== here;
+    const row = firstLine(anchors[inside ? current : current + delta]);
+    if (!row) return;
+    setCursor(row, 'third');
+    selectedChange = null;
+    updateChangeNavigation();
   }
   function reviewScrollTop() {
     return getComputedStyle($('content')).overflowY === 'visible' ? window.scrollY : $('content').scrollTop;
@@ -1707,9 +2026,29 @@
   }
   $('content').addEventListener('scroll', followReading, {passive:true});
   document.body.dataset.pane = pane;
+  // Esc in a text leaves the text, not what the text is in: the keyboard goes to the composer, the
+  // dialog or the conversation around it, where Space, S and I work, and a second Esc closes it.
+  // While the keyboard is in a text the page says so (a theme may show the mode).
+  const textField = node => node?.tagName === 'TEXTAREA' || (node?.tagName === 'INPUT' && !/^(checkbox|radio|range|button|submit)$/.test(node.type));
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || !textField(event.target) || event.target.id === 'search') return;
+    const around = event.target.closest('#inline-composer, dialog, [popover], .dcr-detail, .popover-comment, .dcr-thread');
+    if (!around) return;
+    event.preventDefault(); event.stopPropagation();
+    if (!around.hasAttribute('tabindex')) around.setAttribute('tabindex', '-1');
+    around.focus({preventScroll:true});
+  }, true);
+  document.addEventListener('focusin', event => { if (textField(event.target)) document.body.dataset.editing = ''; });
+  document.addEventListener('focusout', event => { if (textField(event.target)) delete document.body.dataset.editing; });
+  // Esc in the search field gives the keyboard back to the sidebar, so the other keys work again.
+  $('search').addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); event.target.blur(); setPane('nav'); } });
   document.addEventListener('pointerdown', event => {
     if (leader && !event.target.closest?.('#leader-menu')) endLeader();
-    if (event.target.closest?.('.sidebar')) setPane('nav', false);
+    if (hints) endHints();
+    const row = event.target.closest?.('#content tr.code-row');
+    if (row) setCursor(row, false);
+    if (event.target.closest?.('.ledger')) setPane('ledger', false);
+    else if (event.target.closest?.('.sidebar')) setPane('nav', false);
     else if (event.target.closest?.('.review-area')) setPane('main', false);
   });
   window.addEventListener('scroll', updateChangeNavigation, {passive:true});
@@ -2356,7 +2695,7 @@
     if (event.target.closest('[data-copy-file]')) copyText(files.get(focusOrder[focusIndex].file).path);
     const button = event.target.closest('[data-change-step]');
     if (button) {
-      jumpChangedSection(Number(button.dataset.changeStep));
+      jumpSection(Number(button.dataset.changeStep));
     }
   });
   $('search').oninput = () => { renderNavigation(); if (state.view === 'files') render(); };
@@ -2417,45 +2756,92 @@
       }
       return;
     }
-    if (/INPUT|TEXTAREA|SELECT/.test(event.target.tagName) || event.metaKey || event.ctrlKey || event.altKey || $('details-dialog').open || $('comment-editor').open || $('copy-dialog').open || $('previews-dialog').open || $('send-dialog').open || $('comment-popover').matches(':popover-open')) return;
-    const key = event.key.toLowerCase();
-    // 1 to 9 open that step of the walkthrough, with the keyboard in the sidebar.
-    if (/^[1-9]$/.test(event.key) && layers[Number(event.key) - 1]) { event.preventDefault(); select(layers[Number(event.key) - 1].id); setPane('nav'); return; }
-    // Tab moves the keyboard between the sidebar and what is being read. Inside a menu or a dialog,
-    // and with Shift, it walks the controls as it always does.
-    if (event.key === 'Tab' && !event.shiftKey && !document.querySelector('dialog[open], :popover-open')) { event.preventDefault(); setPane(pane === 'nav' ? 'main' : 'nav'); return; }
-    if (pane === 'nav' && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
-      const rows = [...$('navigation').querySelectorAll('button')].filter(button => button.getClientRects().length);
-      const at = rows.indexOf(document.activeElement) >= 0 ? rows.indexOf(document.activeElement) : rows.indexOf(currentNavRow());
-      event.preventDefault();
-      rows[Math.max(0, Math.min(rows.length - 1, at + (event.key === 'ArrowDown' ? 1 : -1)))]?.focus();
+    // Only a text or a list being chosen from keeps the keys to itself; a checkbox or a radio button does not.
+    if (textField(event.target) || event.target.tagName === 'SELECT' || event.target.isContentEditable || event.metaKey || event.ctrlKey || event.altKey) return;
+    // The arrows are H, J, K and L: left, down, up and right mean the same on either set of keys.
+    // (On a row of tabs they still choose the tab, and with Shift they select text.)
+    const ARROWS = {ArrowLeft:'h', ArrowDown:'j', ArrowUp:'k', ArrowRight:'l'};
+    const typed = event.key.toLowerCase();
+    const key = (!event.shiftKey && !event.target.matches?.('[role="tab"]') && ARROWS[event.key]) || typed;
+    const overlay = openOverlay();
+    // With the labels up, letters choose one; anything else puts them away.
+    if (hints) {
+      event.preventDefault(); event.stopPropagation();
+      if (/^[a-z]$/.test(typed)) typeHint(typed); else endHints();
       return;
     }
     // With the menu open, the next key picks from it. Esc closes it; a key that is not on it
     // closes it and does what it always does.
     if (leader) {
-      if (event.key === 'Escape') { event.preventDefault(); endLeader(); return; }
-      if (runLeader(key)) { event.preventDefault(); return; }
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); endLeader(); return; }
+      if (runLeader(typed)) { event.preventDefault(); return; }
     }
+    // Space opens the menu anywhere but in a field: the page's commands, or those of what is open over it.
     if (event.key === ' ') {
-      const active = document.activeElement;
-      if (!$('navigation').contains(active) && active !== document.body && active !== $('content')) return; // on another control, Space is that control's
       event.preventDefault();
-      if (!event.repeat) openLeader(markKeyboardFile);
+      if (!event.repeat) openLeader(overlay ? overlayCommands(overlay) : leaderCommands(markKeyboardFile), overlay);
       return;
     }
-    if (key === 'v') { event.preventDefault(); markKeyboardFile(); return; }
-    if (event.key === '{' || event.key === '}') { event.preventDefault(); jumpSection(event.key === '}' ? 1 : -1); return; }
-    // J and K: in the sidebar they go to the next and previous file; in what is being read they scroll it.
+    // Over the page, or in the composer: S labels what is there, I goes into its text, and Esc
+    // closes the composer (a dialog or a menu closes itself). The other keys wait for the page.
+    if (overlay) {
+      if (key === 's') { event.preventDefault(); openHints(overlay); }
+      else if (key === 'i') { const field = overlay.querySelector('textarea:not([disabled]), input[type="text"], input:not([type])'); if (field) { event.preventDefault(); field.focus(); } }
+      else if (event.key === 'Escape' && overlay.id === 'inline-composer') { event.preventDefault(); clearSelection(); setPane('main'); }
+      return;
+    }
+    // 1 to 9 open that step of the walkthrough, with the keyboard in the sidebar.
+    if (/^[1-9]$/.test(event.key) && layers[Number(event.key) - 1]) { event.preventDefault(); select(layers[Number(event.key) - 1].id); setPane('nav'); return; }
+    // Tab goes round the panes; with Shift it walks the controls as it always does. H and L go left and right.
+    if (event.key === 'Tab' && !event.shiftKey) { event.preventDefault(); movePane(1, true); return; }
+    if (key === 'h' || key === 'l') {
+      event.preventDefault();
+      // In a conversation H goes back to the list first; on a comment L opens it.
+      if (pane === 'ledger' && key === 'h' && conversation()) conversation().querySelector('[data-dcr-back]').click();
+      else if (pane === 'ledger' && key === 'l') { if (!conversation() && ledgerRows().includes(document.activeElement)) document.activeElement.click(); }
+      else movePane(key === 'l' ? 1 : -1);
+      return;
+    }
+    // I, in a conversation, starts a reply.
+    if (key === 'i' && pane === 'ledger' && conversation()) { event.preventDefault(); conversation().querySelector('textarea:not([disabled])')?.focus(); return; }
+    // M marks the file the keyboard is on as viewed, or not.
+    if (key === 'm') { event.preventDefault(); markKeyboardFile(); return; }
+    // In visual mode the moves stretch the range, C comments on it, and V or Esc leaves it.
+    if (visual) {
+      event.preventDefault();
+      if (!cursorRow?.isConnected || !visual.anchor.isConnected || key === 'v' || event.key === 'Escape') { endVisual(); return; }
+      if (key === 'c') { commentAtCursor(); return; }
+      if ('jkdug'.includes(key) && key.length === 1) visualMove(() => cursorKey(key, event.repeat, event.shiftKey));
+      else if (event.key === '{' || event.key === '}') visualMove(() => moveByBlock(event.key === '}' ? 1 : -1));
+      return;
+    }
+    if (key === 'v' && pane === 'main' && cursor()) { event.preventDefault(); startVisual(); return; }
+    if (key === 's') { event.preventDefault(); openHints(); return; }
+    // On a line of a diff: D and U half a screen, G the file's ends, C comment, E edit, Enter read.
+    if (pane === 'main' && cursor()) {
+      if (key === 'd' || key === 'u' || key === 'g') { event.preventDefault(); cursorKey(key, event.repeat, event.shiftKey); return; }
+      if (key === 'c') { event.preventDefault(); commentAtCursor(); return; }
+      if (key === 'e' || event.key === 'Enter') { if (cursorRow.querySelector('.comment-trigger')) { event.preventDefault(); openAtCursor(key === 'e'); } return; }
+    }
+    // [ and ]: the previous and next changed section. { and }: in a diff, the blank line before or after.
+    if (event.key === '[' || event.key === ']') { event.preventDefault(); jumpSection(event.key === ']' ? 1 : -1); return; }
+    if ((event.key === '{' || event.key === '}') && pane === 'main' && cursor()) { event.preventDefault(); moveByBlock(event.key === '}' ? 1 : -1); return; }
+    if (key === 'o') { event.preventDefault(); select('overview'); setPane('main'); return; }
+    // J and K: in the sidebar the next and previous file; when reading they scroll; in Your review
+    // the next and previous comment, or the open conversation.
     if (key === 'j' || key === 'k') {
       event.preventDefault();
-      if (pane === 'main') scrollReading(key === 'j' ? 1 : -1, event.repeat);
+      if (pane === 'main' && cursor()) cursorKey(key, event.repeat);
+      else if (pane === 'main') scrollReading(key === 'j' ? 1 : -1, event.repeat);
+      else if (pane === 'ledger') stepLedger(key === 'j' ? 1 : -1, event.repeat);
       else { stepFile(key === 'j' ? 1 : -1); setPane('nav'); currentNavRow()?.scrollIntoView({block:'nearest'}); }
     }
     if (key === 'z') chooseReadingMode(!focusMode);
     if (key === 'f') setZen(!document.body.classList.contains('zen'));
-    if (key === 'l') setLedger(!ledgerOpen());
+    // Esc leaves focus mode; otherwise it closes Your review when that is open. (A conversation
+    // open in it takes Esc first, to go back to the list.)
     if (event.key === 'Escape' && document.body.classList.contains('zen')) setZen(false);
+    else if (event.key === 'Escape' && document.body.classList.contains('ledger-open')) { event.preventDefault(); setLedger(false); if (pane === 'ledger') setPane('main'); }
   });
   $('title').textContent = review.title;
   if (review.history) {

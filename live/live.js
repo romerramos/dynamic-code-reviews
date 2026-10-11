@@ -727,7 +727,8 @@
   });
   document.addEventListener('click', event => {
     const open = event.target.closest('[data-dcr-open]');
-    if (open) openConversation(open.dataset.dcrOpen);
+    // Opened with the keyboard, the conversation is for reading first: J and K scroll it, I replies.
+    if (open) openConversation(open.dataset.dcrOpen, {focus: event.detail !== 0});
   });
   // From an announced answer: open that conversation in Your review, rather than leaving the page.
   const showConversation = id => openConversation(id);
