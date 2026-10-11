@@ -163,11 +163,14 @@
 [data-theme^="terminal-"] .sidebar nav .menu>li>button[data-view][aria-current="page"] .step-number{background:transparent;box-shadow:none;border:0;font-weight:700}
 [data-theme^="terminal-"] .sidebar nav button.nav-file[aria-current="location"],[data-theme^="terminal-"] .sidebar nav button.nav-file[aria-current="location"]:hover{background:var(--terminal-hover);box-shadow:inset 2px 0 0 var(--terminal-hot)}
 [data-theme^="terminal-"] .sidebar nav button.nav-file[aria-current="location"] .nav-file-name{color:var(--ink)}
+[data-theme^="terminal-"] .sidebar nav button.nav-match:is(:hover,[aria-current="true"]){background:var(--terminal-hover)}
+[data-theme^="terminal-"] .nav-match mark{background:var(--terminal-hot);color:var(--terminal-on-fill)}
 
 /* The two views of the whole change, then a rule, then the guided steps as one tight list. */
 [data-theme^="terminal-"] .sidebar nav .nav-section{margin:0}
 [data-theme^="terminal-"] #navigation>.menu:first-child{padding-bottom:10px}
 [data-theme^="terminal-"] #navigation>.nav-section:first-of-type::before{content:"Steps";display:flex;align-items:center;gap:1ch;margin:4px 0 6px;padding:0 1ch;text-transform:uppercase;font-weight:700;color:var(--accent)}
+[data-theme^="terminal-"] #navigation>.nav-found:first-of-type::before{content:"Found"}
 [data-theme^="terminal-"] #navigation>.nav-section:first-of-type{border-top:1px solid var(--line);padding-top:10px}
 [data-theme^="terminal-"] .sidebar nav .nav-group-title{margin:10px 1ch 4px;text-transform:uppercase;color:var(--muted)}
 [data-theme^="terminal-"] .sidebar nav .menu>li>button[data-view]:not([aria-current="page"]) .step-body small{color:var(--terminal-overlay1)}

@@ -195,6 +195,17 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 @media(max-width:767px) { .expanded-diff-header { padding: 16px 56px 14px 16px; } .expanded-diff-header h2 { font-size: 15px; } .expanded-diff-body { padding: 8px; } }
 
 /* Keep controls usable when the navigation rail has more content than height. */
+.nav-empty{margin:12px;font-size:13px}
+/* What search found in a file: its lines under the file's row, the text that matched marked. */
+.sidebar nav .nav-matches{display:block;margin:0 0 8px 26px;padding:0;list-style:none;border-left:1px solid var(--line-neutral-2)}
+.sidebar nav .nav-matches::before{display:none}
+.sidebar nav button.nav-match{display:flex;align-items:baseline;gap:8px;width:100%;min-height:0;padding:3px 6px 3px 8px;margin:0;text-align:left;font:11px/1.55 var(--mono);color:var(--ink-neutral-4);border-radius:calc(4px * var(--round))}
+.sidebar nav button.nav-match:hover,.sidebar nav button.nav-match[aria-current="true"]{background:var(--bg-neutral-3);color:var(--ink-neutral-2)}
+.nav-match-number{flex:none;min-width:3ch;text-align:right;font-size:10px;color:var(--ink-neutral-6)}
+.nav-match-number.is-removed{color:var(--removed)}
+.nav-match code{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:inherit;background:none;padding:0}
+.nav-match mark{background:var(--note-bg);color:var(--ink-neutral-1);border-radius:calc(2px * var(--round))}
+.sidebar nav .nav-matches li.nav-match-more{padding:2px 8px 0;font-size:10px;color:var(--ink-neutral-6)}
 .sidebar #search{flex:0 0 40px;height:40px;min-height:40px;padding:0 12px;line-height:1.5}
 .sidebar-heading,.sidebar-footer{flex-shrink:0}
 .history-links{display:flex;flex-wrap:wrap;gap:12px 20px;margin-top:18px;font-size:13px}

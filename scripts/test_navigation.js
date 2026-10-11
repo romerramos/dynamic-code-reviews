@@ -58,7 +58,7 @@ const sandbox = {
 vm.createContext(sandbox);
 const source = fs.readFileSync(require.resolve('../assets/report.js'),'utf8');
 // Expose the real closures, suppressing only the initial overview render.
-vm.runInContext(source.replace(/  render\(\);\n\}\)\(\);\s*$/, '  globalThis.navigationTest = {renderNavigation, navigateFile, select, layers};\n})();'), sandbox);
+vm.runInContext(source.replace(/  render\(\);\n\}\)\(\);\s*$/, '  globalThis.navigationTest = {renderNavigation, navigateFile, select, layers, files, searchLines};\n})();'), sandbox);
 const ui = sandbox.navigationTest;
 ui.renderNavigation();
 assert(!get('navigation').innerHTML.includes('data-component-link='), 'Overview should not expand every step');
@@ -98,7 +98,43 @@ ui.select('g1l0');
 assert(!get('navigation').innerHTML.includes('data-component-link='),'Switching steps should collapse the previous file list');
 get('search').value='LongMessageComponent';
 ui.renderNavigation();
-assert(get('navigation').innerHTML.includes('data-component-link='),'Component-name search must reveal its step');
+assert(get('navigation').innerHTML.includes('data-file-link="f0"')&&get('navigation').innerHTML.includes('data-file-link="f1"'),'Component-name search must find its files');
+const searched=get('navigation').innerHTML;
+const listed=[...searched.matchAll(/aria-label="Open ([^",]+), (?:not )?viewed"/g)].map(match=>match[1]);
+assert(listed.length&&listed.every(path=>/long_message_component/i.test(path)),`Search must list only the matching files, got ${listed.join(', ')}`);
+get('search').value='no-such-file';
+ui.renderNavigation();
+assert(!get('navigation').innerHTML.includes('data-file-link=')&&get('navigation').innerHTML.includes('No file or line of code matches.'),'A search with no file says so');
+// Search reads the code too: a file stays for a line that has the text, with its lines under it.
+ui.searchLines.clear();
+ui.files.get('f2').hunks=[{id:'h-search',old_start:1,old_count:1,new_start:1,new_count:2,rows:{unified:[{kind:'removed',text:'  def old_owner = nil',old:1},{kind:'added',text:'  def assignee = owner_of(message)',new:1},{kind:'added',text:'  <b>bold</b>',new:2}]}}];
+get('search').value='OWNER_of';
+ui.renderNavigation();
+const grep=get('navigation').innerHTML;
+assert(grep.includes('data-match-file="f2"')&&grep.includes('data-match-side="new"')&&grep.includes('data-match-line="1"'),'A line of code that matches must be listed under its file');
+assert(grep.includes('def assignee = <mark>owner_of</mark>(message)'),'The text that matched is marked in the line, as it is written');
+assert(!grep.includes('long_message_component'),'A file without the text or the name must go');
+// Names come first: a file named for what was typed is above one that only has it in its code.
+ui.files.get('f2').hunks[0].rows.unified.push({kind:'added',text:'  render LongMessage.new # long_message',new:3});
+ui.searchLines.clear();
+get('search').value='long_message';
+ui.renderNavigation();
+const ranked=get('navigation').innerHTML;
+assert(ranked.indexOf('Files · 2')>=0&&ranked.indexOf('Files · 2')<ranked.indexOf('data-file-link="f0"')&&ranked.indexOf('data-file-link="f1"')<ranked.indexOf('In the code · 1')&&ranked.indexOf('In the code · 1')<ranked.indexOf('data-file-link="f2"'),'Files matched by name are listed before files matched by their code');
+assert(!ranked.includes('data-view="g0l0"'),'Search results replace the steps while something is typed');
+get('search').value='old_owner';
+ui.renderNavigation();
+assert(get('navigation').innerHTML.includes('data-match-side="old"')&&get('navigation').innerHTML.includes('removed line 1'),'A removed line is found, and said to be removed');
+get('search').value='<b>';
+ui.renderNavigation();
+assert(get('navigation').innerHTML.includes('<mark>&lt;b&gt;</mark>bold&lt;/b&gt;'),'Code in a result is escaped');
+get('search').value='e';
+ui.renderNavigation();
+assert(!get('navigation').innerHTML.includes('data-match-file='),'One letter searches names only');
+ui.files.get('f2').hunks=[];
+ui.searchLines.clear();
+get('search').value='';
+ui.renderNavigation();
 console.log('PASS navigation reveals component controls, restores selection and keeps the sidebar shallow');
 // File-by-file remains the default reading mode when the reader enters a layer.
 sandbox.location.hash = '';

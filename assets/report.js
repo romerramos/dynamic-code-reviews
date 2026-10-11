@@ -178,7 +178,7 @@
       {key:'l', label: ledgerOpen() ? 'Hide your review' : 'Show your review', run: () => { setLedger(!ledgerOpen()); setPane(ledgerOpen() ? 'ledger' : 'main'); }},
       {key:'d', label:'Review details', run: () => $('context-toggle').click()},
       agentChip() && {key:'g', label:'Agents and adversaries', run: openAgentCard},
-      {key:'/', label:'Find a file or step', run: findInSidebar},
+      {key:'/', label:'Find a file or a line of code', run: findInSidebar},
       {key:'?', label:'Every key', run: () => $('keys-dialog').showModal()},
       {key:' ', label:'Mark the file viewed, or not', run: markFile}
     ].filter(Boolean);
@@ -542,23 +542,117 @@
     const at = rows.indexOf(document.activeElement);
     rows[Math.max(0, Math.min(rows.length - 1, at < 0 ? 0 : at + direction))]?.focus();
   }
+  // Search reads the code too: every line of each file as it is captured (the whole file where the
+  // review has it, else its changed sections), with the lines a change removed.
+  const MATCHES_SHOWN = 6;
+  const searchLines = new Map(); // file id -> [{side, number, text, lower, full}]
+  let searched = {query:null, found:new Map()}; // the lines each file has for the query being typed
+  let searchAt = null; // the line Enter last opened, as 'file:side:number'
+  function linesOf(file) {
+    if (!searchLines.has(file.id)) {
+      if (!fullContextCache.has(file.id)) {
+        try { fullContextCache.set(file.id, ReviewTools.fullFileHunks(file)); }
+        catch { fullContextCache.set(file.id, null); }
+      }
+      const hunks = fullContextCache.get(file.id) || file.hunks;
+      // A line outside the changed sections shows only when the file is read whole.
+      searchLines.set(file.id, hunks.flatMap(hunk => (hunk.rows?.unified || []).map(line => {
+        const side = line.new !== undefined ? 'new' : 'old';
+        return {side, number: line[side], text: line.text, lower: line.text.toLowerCase(), full: !!hunk.contextOnly};
+      })));
+    }
+    return searchLines.get(file.id);
+  }
+  // A single letter is in nearly every line, so the code is read from two.
+  function linesFound(id, query) {
+    if (query.length < 2) return [];
+    if (searched.query !== query) searched = {query, found:new Map()};
+    if (!searched.found.has(id)) searched.found.set(id, linesOf(files.get(id)).filter(line => line.lower.includes(query)));
+    return searched.found.get(id);
+  }
+  // The line with what was typed marked in it, cut to the part around it when the line is long.
+  function matchSnippet(text, query) {
+    const lead = text.length - text.trimStart().length;
+    const at = text.toLowerCase().indexOf(query);
+    const from = at - lead > 28 ? at - 18 : lead;
+    const before = text.slice(from, at), hit = text.slice(at, at + query.length), after = text.slice(at + query.length, at + query.length + 80);
+    return `${from > lead ? '…' : ''}${escape(before)}<mark>${escape(hit)}</mark>${escape(after)}`;
+  }
+  function matchList(id, layer, query) {
+    const lines = linesFound(id, query);
+    if (!lines.length) return '';
+    const path = files.get(id).path;
+    const rows = lines.slice(0, MATCHES_SHOWN).map(line => `<li><button type="button" class="nav-match" data-match-file="${id}" data-match-layer="${layer.id}" data-match-side="${line.side}" data-match-line="${line.number}"${line.full ? ' data-match-full' : ''} aria-current="${searchAt === `${id}:${line.side}:${line.number}` ? 'true' : 'false'}" aria-label="${escape(`Open ${path}, ${line.side === 'old' ? 'removed ' : ''}line ${line.number}`)}"><span class="nav-match-number${line.side === 'old' ? ' is-removed' : ''}">${line.number}</span><code>${matchSnippet(line.text, query)}</code></button></li>`).join('');
+    const more = lines.length > MATCHES_SHOWN ? `<li class="nav-match-more">${lines.length - MATCHES_SHOWN} more line${lines.length - MATCHES_SHOWN === 1 ? '' : 's'} in this file</li>` : '';
+    return `<li><ul class="nav-matches" aria-label="${escape(`Lines of ${path} that match`)}">${rows}${more}</ul></li>`;
+  }
+  // Opens a file at a line that search found, with the line cursor on it. A line outside the
+  // changed sections is only in the whole file, so it is read file by file.
+  function openMatch(button, keepFocus = false) {
+    const {matchFile: id, matchLayer, matchSide: side, matchLine: number} = button.dataset;
+    if ('matchFull' in button.dataset && !focusMode) chooseReadingMode(true);
+    searchAt = `${id}:${side}:${number}`;
+    navigateFile(layers.find(layer => layer.id === matchLayer), id);
+    const scope = document.querySelector(`.file-card[data-file="${id}"]`) || $('content');
+    const row = scope.querySelector(`.gutter[data-side="${side}"][data-line="${number}"]`)?.closest('tr');
+    if (!keepFocus) setPane('main');
+    if (!row) return;
+    setCursor(row, false);
+    row.scrollIntoView({block:'center', behavior:'instant'});
+  }
+  // Enter in the search field goes to the next thing found (Shift: the previous), in the order
+  // shown: a file's lines, or the file itself when only its name matches. The keyboard stays in
+  // the field, to go on to the one after.
+  function stepSearch(delta) {
+    const nav = $('navigation');
+    const key = button => button.dataset.matchFile ? `${button.dataset.matchFile}:${button.dataset.matchSide}:${button.dataset.matchLine}` : button.dataset.fileLink;
+    const stops = [...nav.querySelectorAll('.nav-file')].flatMap(file => {
+      const lines = [...nav.querySelectorAll(`.nav-match[data-match-file="${file.dataset.fileLink}"]`)];
+      return lines.length ? lines : [file];
+    });
+    if (!stops.length) return;
+    const at = stops.findIndex(button => key(button) === searchAt);
+    const next = stops[at < 0 ? (delta > 0 ? 0 : stops.length - 1) : (at + delta + stops.length) % stops.length];
+    const stop = key(next);
+    if (next.dataset.matchFile) openMatch(next, true);
+    else { searchAt = stop; navigateFile(layers.find(layer => layer.id === next.dataset.fileLayer), next.dataset.fileLink); }
+    $('search').focus({preventScroll:true});
+    [...nav.querySelectorAll('.nav-file, .nav-match')].find(button => key(button) === stop)?.scrollIntoView({block:'nearest'});
+  }
   function renderNavigation() {
     const keyboardHere = $('navigation').contains?.(document.activeElement); // absent only outside a browser
     const keyboardRow = keyboardHere && document.activeElement.dataset.fileLink;
     const query = $('search').value.trim().toLowerCase();
     let html = `<ul class="menu"><li><button data-view="overview" aria-current="${state.view === 'overview' ? 'page' : 'false'}"><span class="step-number">☷</span><span class="step-body"><strong>Overview</strong><small>Comments & evidence</small></span></button></li><li><button data-view="files" aria-current="${state.view === 'files' ? 'page' : 'false'}"><span class="step-number">⌘</span><span class="step-body"><strong>All changes</strong><small>Diffs by responsibility · ${files.size} files</small></span></button></li></ul>`;
-    review.groups.forEach(group => {
-      const matching = layers.filter(layer => layer.group === group && `${group.title} ${layer.title} ${layer.items.map(item => files.get(item.file).path).join(' ')} ${components(layer).map(pair => pair.name).join(' ')}`.toLowerCase().includes(query));
+    const fileLink = (id, layer) => {
+      const file = files.get(id);
+      const slash = file.path.lastIndexOf('/');
+      const filename = file.path.slice(slash + 1);
+      const directory = slash < 0 ? '' : file.path.slice(0, slash);
+      return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" aria-current="${state.navFile === id && state.view === layer.id ? 'location' : 'false'}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}"><span class="file-status" aria-hidden="true" title="${fileViewed(file) ? 'Viewed. Click to unmark' : 'Mark as viewed'}">${fileViewed(file) ? icon('check') : ''}</span><span class="nav-file-label"><span class="nav-file-name">${escape(filename)}</span>${directory ? `<small class="nav-file-directory">${escape(directory)}</small>` : ''}</span>${needMark(file)}${navPreviewMark(file)}</button></li>${query ? matchList(id, layer, query) : ''}`;
+    };
+    // With something typed the sidebar is what search found, not the walkthrough: first the files
+    // whose name has it (the file's own name before its folders'), then the files with it in their
+    // code. Each file has the lines that match under it.
+    if (query) {
+      const rank = entry => {
+        const path = files.get(entry.file).path.toLowerCase();
+        if (path.slice(path.lastIndexOf('/') + 1).includes(query)) return 0;
+        if (path.includes(query) || components(entry.layer).some(pair => pair.name.toLowerCase().includes(query) && pair.items.some(item => item.file === entry.file))) return 1;
+        return linesFound(entry.file, query).length ? 2 : 3;
+      };
+      const ranked = focusOrder.filter((entry, index) => focusOrder.findIndex(other => other.file === entry.file) === index).map(entry => ({entry, rank: rank(entry)}));
+      const list = (title, entries) => entries.length ? `<section class="nav-section nav-found"><h3 class="nav-group-title">${title} · ${entries.length}</h3><ul class="nav-files">${entries.map(({entry}) => fileLink(entry.file, entry.layer)).join('')}</ul></section>` : '';
+      const named = [0, 1].flatMap(level => ranked.filter(item => item.rank === level));
+      const coded = ranked.filter(item => item.rank === 2);
+      html += list('Files', named) + list('In the code', coded);
+      if (!named.length && !coded.length) html += '<p class="nav-empty muted">No file or line of code matches.</p>';
+    }
+    if (!query) review.groups.forEach(group => {
+      const matching = layers.filter(layer => layer.group === group);
       if (!matching.length) return;
       // A single-step group needs one heading, not the same title twice.
       html += `<section class="nav-section">${group.layers.length > 1 ? `<h3 class="nav-group-title">${escape(titleWithoutNumber(group.title))}</h3>` : ''}<ul class="menu">`;
-      const fileLink = (id, layer) => {
-        const file = files.get(id);
-        const slash = file.path.lastIndexOf('/');
-        const filename = file.path.slice(slash + 1);
-        const directory = slash < 0 ? '' : file.path.slice(0, slash);
-        return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" aria-current="${state.navFile === id && state.view === layer.id ? 'location' : 'false'}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}"><span class="file-status" aria-hidden="true" title="${fileViewed(file) ? 'Viewed. Click to unmark' : 'Mark as viewed'}">${fileViewed(file) ? icon('check') : ''}</span><span class="nav-file-label"><span class="nav-file-name">${escape(filename)}</span>${directory ? `<small class="nav-file-directory">${escape(directory)}</small>` : ''}</span>${needMark(file)}${navPreviewMark(file)}</button></li>`;
-      };
       matching.forEach(layer => {
         const count = layerComments(layer).length;
         const completed = progress(layer.items);
@@ -577,7 +671,7 @@
         }).join('');
         const testLinks = ordered.tests.map(id => fileLink(id, layer)).join('');
         const tests = testLinks ? `<li class="nav-tests-label" role="presentation">Tests</li>${testLinks}` : '';
-        const expanded = state.view === layer.id || !!query;
+        const expanded = state.view === layer.id;
         html += `<li><button data-view="${layer.id}" aria-current="${state.view === layer.id ? 'page' : 'false'}" aria-expanded="${expanded}" aria-controls="nav-files-${layer.id}"><span class="step-number">${completed.total && completed.viewed === completed.total ? icon('check') : layers.indexOf(layer) + 1}</span><span class="step-body"><strong>${escape(titleWithoutNumber(group.layers.length === 1 ? group.title : layer.title))}</strong><small>${progressText(completed)}${count ? ` · ${count} comments` : ''}</small></span></button>${expanded ? `<ul id="nav-files-${layer.id}" class="nav-files">${links}${tests}</ul>` : `<ul id="nav-files-${layer.id}" hidden></ul>`}</li>`;
       });
       html += '</ul></section>';
@@ -2128,8 +2222,12 @@
   }, true);
   document.addEventListener('focusin', event => { if (textField(event.target)) document.body.dataset.editing = ''; });
   document.addEventListener('focusout', event => { if (textField(event.target)) delete document.body.dataset.editing; });
-  // Esc in the search field gives the keyboard back to the sidebar, so the other keys work again.
-  $('search').addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); event.target.blur(); setPane('nav'); } });
+  // Esc in the search field gives the keyboard back, so the other keys work again: to what Enter
+  // opened, else to the sidebar. Enter goes through what was found.
+  $('search').addEventListener('keydown', event => {
+    if (event.key === 'Escape') { event.preventDefault(); event.target.blur(); setPane(searchAt ? 'main' : 'nav'); }
+    else if (event.key === 'Enter') { event.preventDefault(); stepSearch(event.shiftKey ? -1 : 1); }
+  });
   document.addEventListener('pointerdown', event => {
     if (leader && !event.target.closest?.('#leader-menu')) endLeader();
     if (hints) endHints();
@@ -2589,6 +2687,8 @@
       navigateFile(layer, activeComponentFile(layer, component));
       return;
     }
+    const matchLine = event.target.closest('.nav-match');
+    if (matchLine) { openMatch(matchLine); renderNavigation(); return; }
     const fileLink = event.target.closest('[data-file-link]');
     // The box beside a file marks it viewed, without leaving where you are; the rest of the row opens it.
     if (fileLink && event.target.closest('.file-status')) {
@@ -2786,7 +2886,7 @@
       jumpSection(Number(button.dataset.changeStep));
     }
   });
-  $('search').oninput = () => { renderNavigation(); if (state.view === 'files') render(); };
+  $('search').oninput = () => { searchAt = null; renderNavigation(); if (state.view === 'files') render(); };
   $('context-toggle').onclick = context;
   $('write-comment').onclick = () => openEditor();
   $('clear-range').onclick = clearSelection;

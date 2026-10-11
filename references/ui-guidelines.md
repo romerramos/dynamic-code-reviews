@@ -26,7 +26,15 @@ from its original snapshot and analysis when refreshing presentation only.
   the available sidebar width and wraps its title. Keep viewed-file counts and comment
   counts subordinate to the title. A single-step group has one heading, not duplicate
   group and step labels. Only the active step expands its flat file/component list;
-  search reveals matching steps, including matches on component names. Ordinary
+  search replaces the steps with what it found while something is typed. List the
+  files whose name matches first (the file's own name before its folders, then a
+  component name), under Files; then the files that only have the text in their
+  captured code, under In the code. Under each file show up to six matching lines
+  (line number, the text that matched marked), then how many more. A line opens its
+  file with the line cursor on it, file by file when the line is outside the changed
+  sections. Enter in the field goes to the next result and Shift+Enter to the
+  previous, keeping the keyboard in the field; Esc then leaves it on that line.
+  Search the code from two characters; one searches names only. Ordinary
   files retain actual filenames and a smaller directory subtitle (omit for root
   files). Wrap names and subtitles without ellipsis. Expose full paths in tooltips
   and accessible labels. Component rows use one name, one namespace line, compact
