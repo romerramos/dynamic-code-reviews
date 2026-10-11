@@ -2786,7 +2786,7 @@
     const overlay = openOverlay();
     // With the labels up, letters choose one; anything else puts them away.
     if (hints) {
-      event.preventDefault(); event.stopPropagation();
+      event.preventDefault(); event.stopImmediatePropagation(); // no other shortcut may take a label's letter
       if (/^[a-z]$/.test(typed)) typeHint(typed); else endHints();
       return;
     }
@@ -2794,7 +2794,7 @@
     // closes it and does what it always does.
     if (leader) {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); endLeader(); return; }
-      if (runLeader(typed)) { event.preventDefault(); return; }
+      if (runLeader(typed)) { event.preventDefault(); event.stopImmediatePropagation(); return; }
     }
     // Space opens the menu anywhere but in a field: the page's commands, or those of what is open over it.
     if (event.key === ' ') {
@@ -2828,7 +2828,7 @@
     if (key === 'm') { event.preventDefault(); markKeyboardFile(); return; }
     // In visual mode the moves stretch the range, C comments on it, and V or Esc leaves it.
     if (visual) {
-      event.preventDefault();
+      event.preventDefault(); event.stopImmediatePropagation();
       if (!cursorRow?.isConnected || !visual.anchor.isConnected || key === 'v' || event.key === 'Escape') { endVisual(); return; }
       if (key === 'c') { commentAtCursor(); return; }
       if ('jkdug'.includes(key) && key.length === 1) visualMove(() => cursorKey(key, event.repeat, event.shiftKey));

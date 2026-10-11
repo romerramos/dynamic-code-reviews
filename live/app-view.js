@@ -791,7 +791,8 @@
   window.dispatchEvent(new Event('dcr-app-ready'));
   // A opens the app from anywhere in the review, Focus included, where the toolbar is hidden.
   document.addEventListener('keydown', event => {
-    if (event.key.toLowerCase() !== 'a' || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+    // A key the review already used (a label in jump mode, a pick from the Space menu) is not A for the app.
+    if (event.defaultPrevented || event.key.toLowerCase() !== 'a' || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
     if (event.target.closest?.('input, textarea, select, [contenteditable]') || document.querySelector('dialog[open]')) return;
     event.preventDefault();
     open();
