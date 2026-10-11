@@ -185,7 +185,7 @@
   }
   // What is open over the page: a dialog, or a menu or popover that floats.
   // The composer under a line counts too, while the keyboard is in it.
-  const openOverlay = () => document.activeElement?.closest?.('#inline-composer') || document.querySelector('dialog[open]') || agentCard() || [...document.querySelectorAll('[popover]')].find(node => node !== leaderMenu && node.matches(':popover-open')) || null;
+  const openOverlay = () => document.activeElement?.closest?.('#inline-composer') || document.querySelector('dialog[open]') || agentCard() || [...document.querySelectorAll('[popover]')].find(node => node !== leaderMenu && node.getAttribute('role') !== 'tooltip' && node.matches(':popover-open')) || null;
   // Over the page the commands are the overlay's own: each of its buttons under a letter of its
   // label, and Q to close it. The sidebars are out of reach there, so they are not offered.
   function overlayCommands(overlay) {
