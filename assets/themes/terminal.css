@@ -81,6 +81,7 @@
    the keys, each named for what it would switch to ----------------------------------------------- */
 [data-theme^="terminal-"]{--terminal-mode:"FILE";--terminal-mode-len:4;--terminal-focus:"";--terminal-focus-len:0;--terminal-z:"walkthrough";--terminal-f:"focus";--terminal-jk:"file"}
 [data-theme^="terminal-"]:has(body[data-pane="main"]){--terminal-jk:"line  ·  c comment  ·  v range"}
+[data-theme^="terminal-"]:has(body[data-pane="main"][data-on-comment]){--terminal-jk:"line  ·  K read comment  ·  n next comment  ·  c comment  ·  v range"}
 [data-theme^="terminal-"]:has(body[data-pane="ledger"]){--terminal-jk:"comment"}
 [data-theme^="terminal-"]:has(body[data-reading="walkthrough"]){--terminal-mode:"WALKTHROUGH";--terminal-mode-len:11;--terminal-z:"file by file"}
 [data-theme^="terminal-"]:has(body.zen){--terminal-focus:" · FOCUS";--terminal-focus-len:8;--terminal-f:"leave focus"}

@@ -35,6 +35,9 @@ body[data-pane="main"] .code-row.is-cursor>td{background-image:linear-gradient(v
 /* The lines of a range being chosen in visual mode. */
 .diff-table .code-row.is-visual>td{background-image:linear-gradient(var(--cursor-line),var(--cursor-line))}
 body[data-pane="main"] .code-row.is-cursor>td:first-child{box-shadow:inset 3px 0 var(--pane-ring)}
+/* The cursor's line has a comment: its subject at the end of the line, in the room the code leaves. */
+.diff-table td.code[data-peek]{position:relative}
+body[data-pane="main"] .diff-table td.code[data-peek]::after{content:attr(data-peek);position:absolute;right:12px;top:0;max-width:var(--peek-width);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:italic 11px/var(--code-line-height,22px) var(--mono);color:var(--ink-neutral-6);pointer-events:none}
 #inline-composer:focus,.dcr-detail:focus,.popover-comment:focus,.dcr-thread:focus,dialog:focus,[popover]:focus{outline:none}
 /* Which pane the keyboard is in (see setPane): a ring a theme may colour, faint by default. */
 body[data-pane="nav"] .sidebar,body[data-pane="main"] .review-area,body[data-pane="ledger"] .ledger{outline:1px solid var(--pane-ring);outline-offset:-1px}

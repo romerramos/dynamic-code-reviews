@@ -409,6 +409,7 @@
     cursorRow = row || null;
     if (!row) return;
     row.classList.add('is-cursor');
+    peekComments(row);
     const table = row.closest('table');
     cursorPlace = {table: table.getAttribute('aria-label'), index: row.rowIndex};
     if (!follow) return;
@@ -527,6 +528,61 @@
     endVisual();
     // The composer opens under the line, or under the range, with the keyboard in its text.
     if (anchor && anchor !== button) { selectLine(anchor); selectLine(button, true); } else selectLine(button);
+  }
+  // The comments on a row's lines: those whose range has one of them, on either side.
+  function commentsOn(row) {
+    if (!row || !showComments) return [];
+    return [...row.querySelectorAll('.gutter[data-line]')].flatMap(cell => {
+      const line = Number(cell.dataset.line);
+      return comments.filter(comment => [cell.dataset.hunk, cell.dataset.fullHunk].includes(comment.hunk) && comment.side === cell.dataset.side && comment.start <= line && line <= (comment.end ?? comment.start));
+    });
+  }
+  // A line with a comment says so when the cursor reaches it, as an editor writes a diagnostic at
+  // the end of its line: the comment's subject, in the room the code leaves, and not where it leaves none.
+  let peekCell = null;
+  function peekComments(row) {
+    if (peekCell) { delete peekCell.dataset.peek; peekCell.style.removeProperty('--peek-width'); peekCell = null; }
+    const found = [...new Set(commentsOn(row))];
+    if (found.length) document.body.dataset.onComment = ''; else delete document.body.dataset.onComment;
+    const cell = found.length ? [...row.querySelectorAll('td.code')].pop() : null;
+    const code = cell?.querySelector('code');
+    if (!code) return;
+    const text = document.createRange();
+    text.selectNodeContents(code);
+    const room = cell.getBoundingClientRect().right - Math.max(text.getBoundingClientRect().right, code.getBoundingClientRect().left) - 40;
+    if (room < 140) return;
+    cell.dataset.peek = `${found[0].subject}${found.length > 1 ? `  +${found.length - 1}` : ''}`;
+    cell.style.setProperty('--peek-width', `${Math.floor(room)}px`);
+    peekCell = cell;
+  }
+  // K reads the comments on the cursor's line, or on the lines of a range: the popover of the
+  // first, with all of them in it. K again closes it.
+  function readAtCursor() {
+    const row = cursor();
+    if (!row) return;
+    let rows = [row];
+    if (visual?.anchor.isConnected && visual.anchor.closest('table') === row.closest('table')) {
+      const all = rowsOf(row.closest('table')), a = all.indexOf(visual.anchor), b = all.indexOf(row);
+      rows = all.slice(Math.min(a, b), Math.max(a, b) + 1);
+    }
+    const found = [...new Set(rows.flatMap(commentsOn))];
+    const marker = found.map(comment => [...$('content').querySelectorAll('.comment-trigger')].find(button => button.dataset.notes.split(' ').includes(comment.id))).find(Boolean);
+    if (!marker) { toast(rows.length > 1 ? 'No comment on these lines' : 'No comment on this line'); return; }
+    openComment(marker, found.map(comment => comment.id));
+  }
+  // N and Shift+N: the next and the previous line with a comment, in the files being read.
+  function stepComment(delta, read = false) {
+    const from = cursor();
+    if (!from) return;
+    const rows = [...new Set(diffTables().flatMap(table => [...table.querySelectorAll('.comment-trigger')]).map(marker => marker.closest('tr')).filter(isRow))];
+    const side = delta > 0 ? Node.DOCUMENT_POSITION_FOLLOWING : Node.DOCUMENT_POSITION_PRECEDING;
+    const ahead = rows.filter(row => from.compareDocumentPosition(row) & side);
+    const next = delta > 0 ? ahead[0] : ahead[ahead.length - 1];
+    if (!next) { toast(delta > 0 ? 'No comment after this line' : 'No comment before this line'); return; }
+    // Straight there, not glided: the next key, or the comment opened beside it, needs the line in place.
+    setCursor(next, false);
+    next.scrollIntoView({block:'center', behavior:'instant'});
+    if (read) openComment(next.querySelector('.comment-trigger'));
   }
   function openAtCursor(edit) {
     const marker = cursor()?.querySelector('.comment-trigger');
@@ -1064,12 +1120,11 @@
     positionAnnotation($('comment-popover'), commentAnchor, closeComments);
   }
 
-  function openComment(trigger) {
+  function openComment(trigger, ids = trigger.dataset.notes.split(' ')) {
     const popover = $('comment-popover');
     if (trigger === commentAnchor && popover.matches(':popover-open')) { closeComments(); return; }
     commentAnchor?.setAttribute('aria-expanded', 'false');
     commentAnchor = trigger;
-    const ids = trigger.dataset.notes.split(' ');
     const anchored = comments.filter(comment => ids.includes(comment.id));
     popover.innerHTML = `<header class="popover-heading"><strong id="comment-popover-title">${anchored.length === 1 ? 'Review comment' : `${anchored.length} review comments`}</strong><button type="button" class="btn btn-xs btn-circle btn-ghost" data-close-comment aria-label="Close comment">✕</button></header>${anchored.map(commentHTML).join('')}`;
     trigger.setAttribute('aria-expanded', 'true');
@@ -2975,6 +3030,12 @@
     // Over the page, or in the composer: S labels what is there, I goes into its text, and Esc
     // closes the composer (a dialog or a menu closes itself). The other keys wait for the page.
     if (overlay) {
+      // Over a comment that is being read: K puts it away, N and Shift+N read the next and the previous.
+      if (overlay.id === 'comment-popover' && (event.key === 'K' || key === 'n')) {
+        event.preventDefault(); closeComments(); setPane('main');
+        if (key === 'n') stepComment(event.shiftKey ? -1 : 1, true);
+        return;
+      }
       if (key === 's') { event.preventDefault(); openHints(overlay); }
       else if (key === 'i') { const field = overlay.querySelector('textarea:not([disabled]), input[type="text"], input:not([type])'); if (field) { event.preventDefault(); field.focus(); } }
       else if (event.key === 'Escape' && overlay.id === 'inline-composer') { event.preventDefault(); clearSelection(); setPane('main'); }
@@ -3001,6 +3062,7 @@
       event.preventDefault(); event.stopImmediatePropagation();
       if (!cursorRow?.isConnected || !visual.anchor.isConnected || key === 'v' || event.key === 'Escape') { endVisual(); return; }
       if (key === 'c') { commentAtCursor(); return; }
+      if (event.key === 'K') { readAtCursor(); return; }
       if ('jkdug'.includes(key) && key.length === 1) visualMove(() => cursorKey(key, event.repeat, event.shiftKey));
       else if (event.key === '{' || event.key === '}') visualMove(() => moveByBlock(event.key === '}' ? 1 : -1));
       return;
@@ -3009,6 +3071,9 @@
     if (key === 's') { event.preventDefault(); openHints(); return; }
     // On a line of a diff: D and U half a screen, G the file's ends, C comment, E edit, Enter read.
     if (pane === 'main' && cursor()) {
+      // K reads the comments on the line (k alone is still up); N and Shift+N go to the next and previous one.
+      if (event.key === 'K') { event.preventDefault(); readAtCursor(); return; }
+      if (key === 'n') { event.preventDefault(); stepComment(event.shiftKey ? -1 : 1); return; }
       if (key === 'd' || key === 'u' || key === 'g') { event.preventDefault(); cursorKey(key, event.repeat, event.shiftKey); return; }
       if (key === 'c') { event.preventDefault(); commentAtCursor(); return; }
       if (key === 'e' || event.key === 'Enter') { if (cursorRow.querySelector('.comment-trigger')) { event.preventDefault(); openAtCursor(key === 'e'); } return; }
