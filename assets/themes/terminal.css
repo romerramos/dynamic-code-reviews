@@ -76,7 +76,8 @@
 /* Everything is the size of the code, so the Code size control zooms the whole terminal. */
 [data-theme^="terminal-"] body *:not(svg,svg *,.dcr-app *){font-size:var(--code-font-size,12px)!important}
 [data-theme^="terminal-"] ::selection{background:var(--terminal-fill);color:var(--terminal-on-fill)}
-[data-theme^="terminal-"] :focus-visible:not([tabindex="-1"]){outline:1px solid var(--terminal-hot)!important;outline-offset:0!important}
+/* Where the keyboard is: a bar down the left edge, like a cursor in the margin, never a box around the thing. */
+[data-theme^="terminal-"] :focus-visible:not([tabindex="-1"]){outline:0!important;box-shadow:inset 3px 0 0 var(--terminal-hot)!important}
 @media(prefers-reduced-motion:no-preference){[data-theme^="terminal-"] *{transition-duration:0s!important}}
 [data-theme^="terminal-"] a{text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
 
@@ -152,7 +153,7 @@
 [data-theme^="terminal-"] :is(.select,.input,.textarea,textarea,#search)::placeholder{color:var(--terminal-overlay1)}
 /* The app's address bar is one field: the ring is the bar's own line, with no glow and no second box around the text in it. */
 [data-theme^="terminal-"] .dcr-app-address:focus-within{border-color:var(--terminal-hot);box-shadow:none}
-[data-theme^="terminal-"] .dcr-app-address input:focus-visible{outline:0!important}
+[data-theme^="terminal-"] .dcr-app-address input:focus-visible{outline:0!important;box-shadow:none!important}
 /* A spinner is the terminal's own: a bar turning in steps, | / - \. A ring with square corners is a box with one odd side. */
 [data-theme^="terminal-"] :is(.gh-spinner,.dcr-app-prep-spin){border:0;border-radius:0;background:linear-gradient(currentColor,currentColor) center/2px 100% no-repeat;animation-timing-function:steps(8)}
 [data-theme^="terminal-"] .dcr-app-prep-spin{color:var(--accent)}

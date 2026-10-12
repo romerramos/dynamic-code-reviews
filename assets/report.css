@@ -1037,7 +1037,7 @@ dialog.stage::backdrop{background:color-mix(in srgb,var(--bg-neutral-8) 40%,tran
 .risk-low .risk-bar i{background:color-mix(in oklab,var(--ink) 25%,transparent)}
 .risk-low .risk-score b,.risk-medium .risk-score b{color:var(--muted)}
 .risk-top{display:flex;align-items:baseline;gap:8px 10px;flex-wrap:wrap;min-width:0}
-.risk-path{min-width:0;padding:0;border:0;background:none;color:var(--ink);font:12.5px/1.5 var(--mono);text-align:left;overflow-wrap:anywhere;cursor:pointer}
+.risk-path{min-width:0;padding:0;border:0;background:none;color:var(--ink);font:12.5px/1.5 var(--mono);text-align:left;white-space:normal;overflow-wrap:anywhere;cursor:pointer}
 button.risk-path:hover .risk-name{text-decoration:underline}
 .risk-dir{color:var(--muted)}
 .risk-name{font-weight:600}
@@ -1046,7 +1046,7 @@ button.risk-path:hover .risk-name{text-decoration:underline}
 .risk-tag{padding:0 7px;border:1px solid var(--line);border-radius:calc(999px * var(--round));color:var(--muted);font-size:11px;line-height:18px;white-space:nowrap}
 .risk-reason{margin:3px 0 0;color:var(--ink);font-size:13.5px;line-height:1.5}
 .risk-calm{margin:0;padding-top:10px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
-@media(max-width:640px){.risk-row{grid-template-columns:1fr;gap:6px}}
+@media(max-width:640px){.risk-row{grid-template-columns:minmax(0,1fr);gap:6px}}
 .risk-redo{display:inline-flex;align-items:center;gap:6px;margin-left:auto;padding:3px 9px;border:1px solid var(--line);border-radius:calc(999px * var(--round));background:transparent;color:var(--muted);font-size:12px;font-weight:550;cursor:pointer}
 .risk-redo[hidden]{display:none}
 .risk-redo svg{width:13px;height:13px}
