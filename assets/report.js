@@ -2990,7 +2990,11 @@
   $('cancel-comment').onclick = () => $('comment-editor').close();
   $('close-copy').onclick = () => $('copy-dialog').close();
   $('keys-dialog').addEventListener('click', event => { if (event.target.closest('[data-close]')) $('keys-dialog').close(); });
-  $('view-menu').addEventListener('click', event => { if (event.target.closest('[data-open-keys]')) { $('view-menu').hidePopover?.(); $('keys-dialog').showModal(); } });
+  $('view-menu').addEventListener('click', event => {
+    if (event.target.closest('[data-open-keys]')) { $('view-menu').hidePopover?.(); $('keys-dialog').showModal(); }
+    // On a phone the header has no room for Details, so it is here.
+    if (event.target.closest('[data-open-details]')) { $('view-menu').hidePopover?.(); context(); }
+  });
   $('close-previews').onclick = () => $('previews-dialog').close();
   // Toolbar icons come from the bundled Lucide set; the static glyphs are only fallbacks.
   $('nav-toggle').innerHTML = icon('panel-left');
