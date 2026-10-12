@@ -132,8 +132,8 @@
     return label ? `<span class="nav-preview is-${status}" title="${label}" aria-label="${label}">${icon(status === 'requested' ? 'clock' : 'scan-text')}</span>` : '';
   }
   // The keyboard is in one of three panes: the sidebar ('nav'), what is being read ('main') and Your
-  // review ('ledger') while it is open. The page shows which with a ring. Tab, H and L (or the left
-  // and right arrows) and a click move it.
+  // review ('ledger') while it is open. The page shows which with a ring. Tab, the left and right
+  // arrows, Ctrl+H and Ctrl+L, and a click move it.
   let pane = 'nav';
   // In a component's box the row is the file being read (Ruby or Template), not the box's title:
   // J and K go from one to the other, and the keyboard is seen to.
@@ -154,7 +154,7 @@
     target?.focus({preventScroll:true});
     if (name === 'main') cursor(); // in a diff, the keyboard is on a line
   }
-  // Tab goes round the panes; H and L go to the one on the left or right and stop at the ends.
+  // Tab goes round the panes; the arrows go to the one on the left or right and stop at the ends.
   function movePane(delta, wrap = false) {
     const order = panes();
     const at = order.indexOf(pane) + delta;
@@ -3161,12 +3161,12 @@
       ], null, true);
       return;
     }
-    // Ctrl+H and Ctrl+L go to the pane on the left or right, as between an editor's splits; in focus
-    // mode too, where H and L alone are files.
+    // Ctrl+H and Ctrl+L go to the pane on the left or right, as between an editor's splits.
     if (event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && ['h', 'l'].includes(event.key.toLowerCase()) && !inText && !openOverlay()) { event.preventDefault(); movePane(event.key.toLowerCase() === 'l' ? 1 : -1); return; }
     // Only a text or a list being chosen from keeps the keys to itself; a checkbox or a radio button does not.
     if (textField(event.target) || event.target.tagName === 'SELECT' || event.target.isContentEditable || event.metaKey || event.ctrlKey || event.altKey) return;
-    // The arrows are H, J, K and L: left, down, up and right mean the same on either set of keys.
+    // The arrows are H, J, K and L, but for the sidebar and the reading area, where only left and
+    // right go to the pane on that side.
     // (On a row of tabs they still choose the tab, and with Shift they select text.)
     const ARROWS = {ArrowLeft:'h', ArrowDown:'j', ArrowUp:'k', ArrowRight:'l'};
     const typed = event.key.toLowerCase();
@@ -3208,15 +3208,27 @@
     }
     // 1 to 9 open that step of the walkthrough, with the keyboard in the sidebar.
     if (/^[1-9]$/.test(event.key) && layers[Number(event.key) - 1]) { event.preventDefault(); select(layers[Number(event.key) - 1].id); setPane('nav'); return; }
-    // Tab goes round the panes; with Shift it walks the controls as it always does. H and L go left and right.
+    // Tab goes round the panes; with Shift it walks the controls as it always does. The arrows go left and right.
     if (event.key === 'Tab' && !event.shiftKey) { event.preventDefault(); movePane(1, true); return; }
+    // In the sidebar L, or Enter, opens the row the keyboard is on and goes to read it, as in a file tree.
+    const navRow = pane === 'nav' && $('navigation').contains(document.activeElement) && document.activeElement.closest('button');
+    if (pane === 'nav' && (key === 'l' && key === typed && !event.shiftKey || event.key === 'Enter' && navRow)) {
+      event.preventDefault();
+      if (navRow && !navRow.matches('[aria-current]')) navRow.click();
+      setPane('main');
+      return;
+    }
     if (key === 'h' || key === 'l') {
       event.preventDefault();
       // In a conversation H goes back to the list first; on a comment L opens it.
       if (pane === 'ledger' && key === 'h' && conversation()) conversation().querySelector('[data-dcr-back]').click();
       else if (pane === 'ledger' && key === 'l') { if (!conversation() && ledgerRows().includes(document.activeElement)) document.activeElement.click(); }
+      // Shift+H and Shift+L are the file before and the next, as an editor's buffers; the keyboard stays where it is.
+      else if (pane !== 'ledger' && event.shiftKey && key === typed) { const at = pane; stepFile(key === 'l' ? 1 : -1); setPane(at); if (at === 'nav') currentNavRow()?.scrollIntoView({block:'nearest'}); }
       // In focus mode there is one thing on the page, so from it H and L are the file before and the next.
       else if (pane !== 'ledger' && document.body.classList.contains('zen')) { const by = key === 'l' ? 1 : -1; if (pane !== 'main') setPane('main'); if (!fileReadingActive() || focusOrder[focusIndex + by]) step(by); }
+      // Anywhere else H and L do nothing: only the arrows go to the pane on that side.
+      else if (pane !== 'ledger' && key === typed) { /* nothing */ }
       else movePane(key === 'l' ? 1 : -1);
       return;
     }
