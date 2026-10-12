@@ -103,6 +103,14 @@
     $('theme').value = settings.theme;
     $('syntax-theme').value = settings.syntaxTheme;
     $('whitespace-toggle').checked = settings.ignoreWhitespace;
+    // The tab's icon is the mark as the theme paints it in the header.
+    const mark = document.querySelector('.brand-icon svg');
+    const tab = document.querySelector('link[rel="icon"]');
+    if (mark?.cloneNode && tab) {
+      const copy = mark.cloneNode(true);
+      [['rect', 'fill'], ['path', 'stroke'], ['circle', 'fill']].forEach(([shape, paint]) => copy.querySelector(shape).setAttribute(paint, getComputedStyle(mark.querySelector(shape))[paint]));
+      tab.href = `data:image/svg+xml,${encodeURIComponent(copy.outerHTML)}`;
+    }
   }
   function saveSettings() {
     try { localStorage.setItem(settingsKey, JSON.stringify(settings)); } catch { /* applies to this page only */ }
