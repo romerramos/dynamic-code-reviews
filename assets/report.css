@@ -513,7 +513,7 @@ body.reading-focus main#content{padding-top:12px}
 .app-header .brand-icon,.app-header .brand-icon svg{width:28px;height:28px;flex-basis:28px}
 .header-title{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;flex:1;min-width:0}
 .header-title strong{max-width:100%;font-size:14px;font-weight:620;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.header-meta{display:flex;align-items:center;gap:8px;min-width:0;font-size:11.5px;color:var(--muted)}
+.header-meta{display:flex;align-items:center;gap:8px;min-width:0;max-width:100%;font-size:11.5px;color:var(--muted)}
 .header-meta #repo-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .header-meta .badge{padding:0 6px;min-height:18px;font:500 10.5px/18px var(--mono);background:var(--bg-neutral-3);color:var(--ink-neutral-5)}
 .header-title #scope{display:inline-flex;min-width:0}.header-title #scope .badge{display:block;max-width:88ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1158,4 +1158,31 @@ button.risk-path:hover .risk-name{text-decoration:underline}
   .step-end{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:24px;padding:16px 0;border-top:1px solid var(--line-neutral-2);font-size:12px;color:var(--muted)}
   /* What floats at the bottom floats above the bar. */
   #toast,.range-actions{bottom:calc(var(--toolbar-h) + 14px + env(safe-area-inset-bottom))}
+}
+/* Tablets. There is room for the code or for the bars, and the code is what is read: the two bars
+   are as thin as what is in them, and a file's header is two lines (the step, then the path with
+   the component's two files, why this file, viewed and next). As on a phone, what is for a wide
+   screen and a pointer stays there: the pager of changed sections, copying the path, who should
+   review the file, and the template's preview, which the Previews tab opens. */
+@media(min-width:651px) and (max-width:1199px){
+  :root{--chrome-h:44px;--toolbar-h:44px}
+  .header-meta #repo-label{flex:none}
+  .review-area:has(.focus-reader) main#content{padding-top:12px}
+  .focus-file-header{top:-12px;padding:6px 0 8px}
+  .focus-meta .focus-file-actions,.focus-file-header :is(.copy-file-path,.need-set,.preview-toggle,.not-visual-note){display:none}
+  .focus-group{flex:1 1 100%;flex-wrap:nowrap;white-space:nowrap;overflow:hidden;color:var(--muted)}
+  .focus-group .crumb-group{min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .focus-identity{gap:4px 10px;margin-top:2px}
+  /* The path has the room the controls leave, on their line: cut as on a phone when that is not enough. */
+  .focus-file-header .current-file{flex:1 1 0}
+  .focus-file-header .current-file code{display:flex;flex:0 1 auto;min-width:0;white-space:nowrap;overflow-wrap:normal}
+  .current-file .path-head{flex:none}
+  .current-file .path-mid{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;direction:rtl;text-align:left}
+  .current-file .path-name{flex:none;max-width:calc(100% - 6ch);overflow:hidden;text-overflow:ellipsis}
+  .focus-file-header .current-file code.is-whole{display:block;white-space:normal;overflow-wrap:anywhere}
+  .current-file code.is-whole .path-mid{direction:ltr;overflow:visible}
+  .focus-file-header .file-about{min-width:0}
+  .focus-file-header .file-about:not([open]) summary span,.focus-file-header .focus-step-label{display:none}
+  .focus-progress-actions{flex:0 0 auto;margin-left:0}
+  .focus-progress-actions .file-viewed span{text-transform:capitalize}
 }

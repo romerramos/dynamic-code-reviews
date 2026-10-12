@@ -496,3 +496,5 @@ body.dcr-has-app #qa-panel{display:none}
   body.dcr-has-views .app-header .header-title{display:none}
   #dcr-presence .dcr-presence-text,#dcr-presence .dcr-presence-adv{display:none}
 }
+/* On a tablet too the verdict is on Overview, not a line over every file. */
+@media(min-width:651px) and (max-width:1199px){.review-area:has(.focus-reader) .dcr-jev{display:none}}
