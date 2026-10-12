@@ -122,7 +122,9 @@
   // review ('ledger') while it is open. The page shows which with a ring. Tab, H and L (or the left
   // and right arrows) and a click move it.
   let pane = 'nav';
-  const currentNavRow = () => $('navigation').querySelector('[aria-current="location"]') || $('navigation').querySelector('[aria-current="page"]') || $('navigation').querySelector('button');
+  // In a component's box the row is the file being read (Ruby or Template), not the box's title:
+  // J and K go from one to the other, and the keyboard is seen to.
+  const currentNavRow = () => $('navigation').querySelector('.nav-component-files [aria-current="location"]') || $('navigation').querySelector('[aria-current="location"]') || $('navigation').querySelector('[aria-current="page"]') || $('navigation').querySelector('button');
   const shown = node => !!node?.getClientRects().length;
   // Your review lists comments, each with one thing to open: its conversation when it has one (the
   // served review adds that), else its place in the code. An open conversation covers the list.
