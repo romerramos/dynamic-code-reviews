@@ -38,8 +38,8 @@ files that open offline.
 
 Clone this repository into your agent's skill folder, under the name `dynamic-code-reviews`. Keep the
 whole folder together; there is no installer, package manager or build step. The repository is
-private, so your GitHub account needs access (`gh auth login` if needed; never put a token in a clone
-URL).
+public: `gh repo clone` needs `gh auth login`, and `git clone
+https://github.com/romerramos/dynamic-code-reviews.git <folder>` works without an account.
 
 | Agent | Command |
 | --- | --- |
