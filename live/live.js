@@ -29,7 +29,9 @@
   let previews = {};          // path -> status (requested, working, ready, failed)
   const previewHtml = new Map(); // path -> {ready_at, html}, fetched once per build
   const previewsAnnounced = new Set();
-  const drafts = new Map(); // reply text survives the review re-rendering its cards
+  // Reply text survives the review re-rendering its cards, and, kept by the page as it is typed, a reload.
+  const kept = globalThis.ReviewDrafts;
+  const drafts = {get: id => kept.get(`reply:${id}`), set: (id, text) => kept.set(`reply:${id}`, text), delete: id => kept.set(`reply:${id}`, '')};
   // Adversaries: other agents that check the review. Chosen in the agent card, kept by the server
   // for every review on this computer. A question asks them only when its + is ticked, and every
   // message starts unticked, so nothing spends the reviewer's accounts by accident.
@@ -536,8 +538,11 @@
       <details class="gh-pending-list" ${ids.length <= 4 ? 'open' : ''}><summary>${ids.length} pending comment${ids.length === 1 ? '' : 's'}</summary><ul class="send-list">${rows}</ul></details>
       <p class="gh-finish-state" role="status" aria-live="polite" hidden></p>
       <footer class="dcr-gh-actions"><button type="button" class="act act-quiet" data-gh-close>Cancel</button><button type="button" class="act act-gh" data-gh-submit>Submit review</button></footer></form>`;
+    const summary = finishDialog.querySelector('.gh-summary');
+    summary.value = kept.get('summary');
+    summary.addEventListener('input', () => kept.set('summary', summary.value));
     finishDialog.showModal();
-    finishDialog.querySelector('.gh-summary').focus();
+    summary.focus();
     const status = ghProvider.status();
     if (status.phase !== 'ready') {
       finishDialog.querySelector('[data-gh-submit]').disabled = true;
@@ -567,6 +572,7 @@
     try {
       const result = await api('/api/github/review', {key, event: event_, body: form.elements.body.value, items});
       ghData.posted = {...ghData.posted, ...result.posted};
+      kept.set('summary', '');
       ids.forEach(id => { delete ghData.pending[id]; });
       const loose = Object.values(result.posted).filter(posted => posted.where === 'review').length;
       const label = {COMMENT: 'Review submitted', APPROVE: 'Approved', REQUEST_CHANGES: 'Changes requested'}[event_];

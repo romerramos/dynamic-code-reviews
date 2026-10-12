@@ -98,6 +98,8 @@
 [data-theme^="terminal-"] body::after{content:attr(data-position) "  ·  " attr(data-progress);position:fixed;z-index:19;left:0;right:0;bottom:0;height:var(--status-h);padding:0 2ch 0 calc((var(--terminal-mode-len) + var(--terminal-focus-len) + 5) * 1ch);display:flex;align-items:center;border-top:1px solid var(--line);background:var(--canvas);color:var(--ink);font:12px/1 var(--mono);white-space:pre;overflow:hidden}
 [data-theme^="terminal-"]::after{content:"? keys  ·  space menu  ·  h/l " var(--terminal-hl) "  ·  j/k " var(--terminal-jk) "  ·  s jump  ·  m viewed  ·  z " var(--terminal-z) "  ·  f " var(--terminal-f);position:fixed;z-index:20;right:0;bottom:0;height:var(--status-h);padding:0 2ch;display:flex;align-items:center;border-top:1px solid var(--line);background:var(--canvas);color:var(--muted);font:12px/1 var(--mono);white-space:pre}
 [data-theme^="terminal-"]:has(body[data-leader])::after{content:"pick a key  ·  esc close";color:var(--ink)}
+[data-theme^="terminal-"]:has(body:not([data-editing]) form.composer:focus-within){--terminal-mode:"COMMENT";--terminal-mode-len:7;--terminal-focus:"";--terminal-focus-len:0}
+[data-theme^="terminal-"]:has(body:not([data-editing]) form.composer:focus-within)::after{content:"i/a/o text  ·  h/j/k/l move  ·  enter choose  ·  q close, text kept";color:var(--ink)}
 [data-theme^="terminal-"]:has(body[data-editing]){--terminal-mode:"EDIT";--terminal-mode-len:4;--terminal-focus:"";--terminal-focus-len:0}
 [data-theme^="terminal-"] body[data-editing]::before{background:var(--dcr-ok)}
 [data-theme^="terminal-"]:has(body[data-editing])::after{content:"esc leave the text";color:var(--ink)}
@@ -157,6 +159,7 @@
 /* A spinner is the terminal's own: a bar turning in steps, | / - \. A ring with square corners is a box with one odd side. */
 [data-theme^="terminal-"] :is(.gh-spinner,.dcr-app-prep-spin){border:0;border-radius:0;background:linear-gradient(currentColor,currentColor) center/2px 100% no-repeat;animation-timing-function:steps(8)}
 [data-theme^="terminal-"] .dcr-app-prep-spin{color:var(--accent)}
+[data-theme^="terminal-"] :is(.composer-mode,.composer-type) input:focus-visible+span{outline:0;background:var(--terminal-hover);box-shadow:inset 3px 0 0 var(--terminal-hot)}
 [data-theme^="terminal-"] .toggle{border-color:var(--terminal-overlay0);color:var(--terminal-overlay1)}
 [data-theme^="terminal-"] .toggle:checked{background:var(--terminal-fill);border-color:var(--terminal-fill);color:var(--terminal-on-fill)}
 [data-theme^="terminal-"] .checkbox{border-color:var(--terminal-overlay0)}

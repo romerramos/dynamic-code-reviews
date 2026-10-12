@@ -55,6 +55,19 @@
   let editorRange = null;
   let editingID = null;
   let showComments = true;
+  // What the reader is still writing is kept as they type: a comment on a line, a reply, the review's
+  // summary. A reload, a new revision or a closed box never takes it; sending it, or Cancel, does.
+  // It stays in this browser, under a key the server is not sent: unsent words are the reader's own.
+  const draftsKey = `dcr-drafts:${snapshot.fingerprint}${review.history ? `:${review.history.series}` : ''}`;
+  let draftStore = {};
+  try { draftStore = JSON.parse(localStorage.getItem(draftsKey) || '{}') || {}; } catch { /* kept for this page only */ }
+  const drafts = window.ReviewDrafts = {
+    get: id => draftStore[id] || '',
+    set(id, text) {
+      if (text) draftStore[id] = text; else delete draftStore[id];
+      try { localStorage.setItem(draftsKey, JSON.stringify(draftStore)); } catch { /* kept for this page only */ }
+    }
+  };
   // Display preferences are global to the reviewer, not to one review, so they live under
   // their own key. A served review mirrors the key to the server (see live/live.js).
   const settingsKey = 'dynamic-review:settings';
@@ -201,7 +214,7 @@
   // label, and Q to close it. The sidebars are out of reach there, so they are not offered.
   function overlayCommands(overlay) {
     const taken = new Set(['q', ' ']);
-    const closes = button => button.matches('[rel="prev"], [data-close], [data-gh-close], [data-dcr-close], [data-composer-cancel], [data-close-comment], [aria-label^="Close"]');
+    const closes = button => button.matches('[rel="prev"], [data-close], [data-gh-close], [data-dcr-close], [data-composer-close], [data-composer-cancel], [data-close-comment], [aria-label^="Close"]');
     const shut = [...overlay.querySelectorAll('button')].find(button => shown(button) && closes(button));
     const commands = [{key:'q', label:'Close this', run: () => shut ? shut.click() : overlay.close ? overlay.close() : overlay === agentCard() ? agentChip()?.click() : overlay.hidePopover?.()}];
     const seen = new Set();
@@ -884,18 +897,21 @@
     form.className = 'composer';
     form.noValidate = true;
     form.setAttribute('aria-label', 'Add a comment');
-    form.innerHTML = `<header class="composer-head"><div class="composer-modes" role="radiogroup" aria-label="Who is this comment for?" hidden><label class="composer-mode"><input type="radio" name="composer-mode" value="agent"><span>${icon('sparkles')}Ask agent</span></label><label class="composer-mode"><input type="radio" name="composer-mode" value="pr"><span>${icon('message-square')}${prLabel}</span></label></div><span class="composer-where"></span><button type="button" class="act act-quiet act-icon" data-composer-cancel aria-label="Cancel comment" title="Cancel (Esc)">${icon('x')}</button></header>
+    form.innerHTML = `<header class="composer-head"><div class="composer-modes" role="radiogroup" aria-label="Who is this comment for?" hidden><label class="composer-mode"><input type="radio" name="composer-mode" value="agent"><span>${icon('sparkles')}Ask agent</span></label><label class="composer-mode"><input type="radio" name="composer-mode" value="pr"><span>${icon('message-square')}${prLabel}</span></label></div><span class="composer-where"></span><button type="button" class="act act-quiet act-icon" data-composer-close aria-label="Close; what you typed is kept" title="Close (Q). What you typed is kept.">${icon('x')}</button></header>
       <div class="composer-types" role="radiogroup" aria-label="Type of comment">${composerTypes.map(type => `<label class="composer-type"><input type="radio" name="composer-label" value="${type}"><span>${icon(commentTypes[type][0])}${commentTypes[type][1]}</span></label>`).join('')}</div>
       <textarea class="composer-text" rows="3" aria-label="Your comment"></textarea>
       <footer class="composer-foot"><label class="composer-blocking"><input type="checkbox" name="composer-blocking"><span>Blocks approval</span></label><span class="composer-hint"><kbd>⌘</kbd><kbd>↵</kbd> <span data-composer-hint></span></span><div class="composer-actions"><button type="button" class="act act-quiet" data-composer-cancel>Cancel</button><button type="submit" class="act act-pr" data-composer-save>Save comment</button><button type="submit" class="act act-secondary" data-gh-action="open" hidden>Copy &amp; open on GitHub ${icon('arrow-up-right')}</button><button type="submit" class="act act-secondary" data-gh-action="single" hidden title="Post it on the pull request now">Comment on GitHub</button><button type="submit" class="act act-gh" data-gh-action="review" hidden></button><button type="submit" class="act act-agent" data-composer-send hidden>${icon('send')}Ask agent</button></div></footer><p class="composer-gh" data-composer-gh role="status" aria-live="polite" hidden></p>`;
     const text = form.querySelector('.composer-text');
     const refresh = () => {
       composer.text = text.value;
+      if (composer.shownFor) drafts.set(`line:${composer.shownFor}`, text.value);
       syncComposerButtons();
     };
+    form.tabIndex = -1;
     text.addEventListener('input', refresh);
     text.addEventListener('keydown', event => {
-      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); clearSelection(); }
+      // Esc leaves the text, not the box: the keys then move in the box (see composerKey), and what was typed stays.
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); form.focus({preventScroll: true}); }
       else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); form.requestSubmit(); }
     });
     form.addEventListener('change', event => {
@@ -909,7 +925,9 @@
       form.querySelector('.composer-types').dataset.type = composer.label;
     });
     form.addEventListener('click', event => {
-      if (event.target.closest('[data-composer-cancel]')) clearSelection();
+      // The cross puts the box away and keeps what was typed; Cancel throws it away.
+      if (event.target.closest('[data-composer-close]')) clearSelection();
+      if (event.target.closest('[data-composer-cancel]')) { drafts.set(`line:${composer.shownFor}`, ''); clearSelection(); }
     });
     form.addEventListener('submit', event => {
       event.preventDefault();
@@ -918,6 +936,7 @@
       const ask = composerMode() === 'agent';
       const comment = {hunk: selection.hunk, side: selection.side, start: selection.start, end: selection.end, id: `mine-${crypto.randomUUID()}`,
         label: ask ? 'question' : composer.label, decoration: !ask && composer.blocking ? 'blocking' : 'non-blocking', audience: ask ? 'agent' : 'pr', subject: entered.subject, discussion: entered.discussion};
+      drafts.set(`line:${composer.shownFor}`, '');
       // ⌘ Enter means the main button, as on GitHub: Start a review / Add review comment.
       const action = ask ? 'ask' : event.submitter?.dataset.ghAction || composerPrimary();
       if (action === 'open') {
@@ -936,6 +955,40 @@
     composer.node = form;
     syncComposerFields();
     return form;
+  }
+  // In the composer, out of its text: H and L go along a row of its choices and buttons, J and K
+  // from row to row, Enter takes the one the keyboard is on. I goes back into the text where it was
+  // left, A at its end, O on a new line. Q closes the box and keeps what was typed; Esc closes it
+  // only when nothing was. Returns whether the key was the composer's.
+  function composerKey(form, key, event) {
+    const text = form.querySelector('.composer-text');
+    const close = () => { clearSelection(); setPane('main'); };
+    if (key === 'q') { close(); return true; }
+    if (event.key === 'Escape') { if (!text.value.trim()) close(); return true; }
+    if (key === 'a' || key === 'o') {
+      if (key === 'o' && text.value && !text.value.endsWith('\n')) { text.value += '\n'; text.dispatchEvent(new Event('input', {bubbles: true})); }
+      text.focus({preventScroll: true});
+      text.setSelectionRange(text.value.length, text.value.length);
+      return true;
+    }
+    if (event.key === 'Enter' && document.activeElement.matches('input[type="radio"], input[type="checkbox"]')) { document.activeElement.click(); return true; }
+    if (!['h', 'j', 'k', 'l'].includes(key)) return false;
+    // A choice is its label on the page; a row is what sits at one height.
+    const box = control => (control.closest('label') || control).getBoundingClientRect();
+    const stops = [...form.querySelectorAll('input[type="radio"], input[type="checkbox"], button')].filter(control => !control.disabled && box(control).width);
+    const rows = [];
+    stops.forEach(stop => { const middle = box(stop).top + box(stop).height / 2; const row = rows.find(entry => Math.abs(entry.middle - middle) < 12); if (row) row.stops.push(stop); else rows.push({middle, stops: [stop]}); });
+    rows.sort((a, b) => a.middle - b.middle).forEach(row => row.stops.sort((a, b) => box(a).left - box(b).left));
+    const at = rows.findIndex(row => row.stops.includes(document.activeElement));
+    let next;
+    if (at < 0) next = (key === 'k' || key === 'h' ? rows.at(-1) : rows[0])?.stops[0];
+    else if (key === 'h' || key === 'l') next = rows[at].stops[rows[at].stops.indexOf(document.activeElement) + (key === 'l' ? 1 : -1)];
+    else {
+      const from = box(document.activeElement).left + box(document.activeElement).width / 2;
+      next = rows[at + (key === 'j' ? 1 : -1)]?.stops.reduce((best, stop) => Math.abs(box(stop).left + box(stop).width / 2 - from) < Math.abs(box(best).left + box(best).width / 2 - from) ? stop : best);
+    }
+    next?.focus({preventScroll: true});
+    return true;
   }
   const splitComment = ReviewTools.splitComment;
   // What the PR buttons can do right now: post through the server (gh), copy and open, or only save.
@@ -1016,6 +1069,12 @@
     form.querySelector('.composer-where').textContent = where;
     const signature = `${selection.hunk}|${selection.side}|${selection.start}|${selection.end}`;
     if (composer.shownFor !== signature) {
+      // What was being written for these lines comes back; text typed while the range grew goes with it.
+      const kept = drafts.get(`line:${signature}`);
+      if (kept) composer.text = kept;
+      else if (composer.text) { drafts.set(`line:${composer.shownFor}`, ''); drafts.set(`line:${signature}`, composer.text); }
+      form.querySelector('.composer-text').value = composer.text;
+      syncComposerButtons();
       composer.shownFor = signature;
       setTimeout(() => { form.querySelector('.composer-text').focus({preventScroll: true}); form.scrollIntoView({block: 'nearest', behavior: 'instant'}); }); // a timer, not a frame: frames pause in a background tab
     }
@@ -1056,6 +1115,7 @@
     composer.suppressClick = true; setTimeout(() => { composer.suppressClick = false; });
     paintSelection();
   });
+  const editorDraft = () => `editor:${editorRange?.general ? 'general' : `${editorRange?.hunk}|${editorRange?.side}|${editorRange?.start}|${editorRange?.end}`}`;
   function openEditor(comment = null, general = false) {
     const range = comment || (general ? {general:true} : selection);
     if (!range || (!range.general && !ReviewTools.anchor(snapshot, range))) return;
@@ -1067,8 +1127,10 @@
     $('editor-snippet').hidden = !!range.general;
     $('editor-snippet').textContent = range.general ? '' : ReviewTools.sourceText(snapshot, range);
     $('editor-label').value = comment?.label || 'note';
-    $('editor-subject').value = comment?.subject || '';
-    $('editor-discussion').value = comment?.discussion || '';
+    // A new comment that was being written comes back; an existing one opens as it was saved.
+    const kept = comment ? null : (() => { try { return JSON.parse(drafts.get(editorDraft()) || 'null'); } catch { return null; } })();
+    $('editor-subject').value = comment?.subject || kept?.subject || '';
+    $('editor-discussion').value = comment?.discussion || kept?.discussion || '';
     $('editor-blocking').checked = comment?.decoration === 'blocking';
     $('comment-editor').showModal();
     $('editor-subject').focus();
@@ -3029,10 +3091,16 @@
     menu.style.top = `${Math.round(below ? anchor.bottom + 8 : Math.max(8, anchor.top - 8 - menu.offsetHeight))}px`;
     menu.style.left = `${Math.round(Math.max(12, Math.min(anchor.right - menu.offsetWidth, innerWidth - menu.offsetWidth - 12)))}px`;
   });
+  $('comment-form').addEventListener('input', () => {
+    if (editingID || !editorRange) return;
+    const words = {subject: $('editor-subject').value, discussion: $('editor-discussion').value};
+    drafts.set(editorDraft(), words.subject || words.discussion ? JSON.stringify(words) : '');
+  });
   $('comment-form').onsubmit = event => {
     event.preventDefault();
     const subject = $('editor-subject').value.trim();
     if (!subject || !editorRange) return;
+    if (!editingID) drafts.set(editorDraft(), '');
     const comment = {...editorRange, id:editingID || `mine-${crypto.randomUUID()}`, label:$('editor-label').value,
       decoration:$('editor-blocking').checked ? 'blocking' : 'non-blocking', subject, discussion:$('editor-discussion').value.trim()};
     const audience = state.personalComments.find(existing => existing.id === editingID)?.audience;
@@ -3097,9 +3165,11 @@
         if (key === 'n') stepComment(event.shiftKey ? -1 : 1, true);
         return;
       }
+      if (overlay.id === 'inline-composer' && composerKey(overlay, key, event)) { event.preventDefault(); return; }
+      // Q closes what is open over the page, whatever it is.
+      if (key === 'q') { event.preventDefault(); overlayCommands(overlay)[0].run(); return; }
       if (key === 's') { event.preventDefault(); openHints(overlay); }
       else if (key === 'i') { const field = overlay.querySelector('textarea:not([disabled]), input[type="text"], input:not([type])'); if (field) { event.preventDefault(); field.focus(); } }
-      else if (event.key === 'Escape' && overlay.id === 'inline-composer') { event.preventDefault(); clearSelection(); setPane('main'); }
       return;
     }
     // 1 to 9 open that step of the walkthrough, with the keyboard in the sidebar.
