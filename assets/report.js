@@ -2535,6 +2535,7 @@
     }
     document.body.classList.toggle('zen', on);
     $('zen-exit').hidden = !on;
+    if (on && pane === 'nav') setPane('main', false); // the sidebar is hidden, so its keys have nothing to act on
     if (on) $('zen-exit').focus({preventScroll:true}); else $('zen-toggle').focus({preventScroll:true});
     renderLedger();
   }
