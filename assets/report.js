@@ -3189,8 +3189,8 @@
     }
     // I, in a conversation, starts a reply.
     if (key === 'i' && pane === 'ledger' && conversation()) { event.preventDefault(); conversation().querySelector('textarea:not([disabled])')?.focus(); return; }
-    // M marks the file the keyboard is on as viewed, or not.
-    if (key === 'm') { event.preventDefault(); markKeyboardFile(); return; }
+    // M, or X, marks the file the keyboard is on as viewed, or not.
+    if (key === 'm' || key === 'x') { event.preventDefault(); markKeyboardFile(); return; }
     // In visual mode the moves stretch the range, C comments on it, and V or Esc leaves it.
     if (visual) {
       event.preventDefault(); event.stopImmediatePropagation();
