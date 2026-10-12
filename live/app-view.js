@@ -149,6 +149,16 @@
     $('[data-app-open]').href = app.upstream + path;
     remember(path);
   };
+  // What the app draws for the review (the box around what you point at) follows the review's theme.
+  const sendLook = () => {
+    const probe = document.createElement('i');
+    probe.style.cssText = 'color:var(--accent);background-color:var(--color-primary-content)';
+    dialog.append(probe);
+    const style = getComputedStyle(probe);
+    post({type: 'look', color: style.color, ink: style.backgroundColor, round: Number(style.getPropertyValue('--round')) || 0});
+    probe.remove();
+  };
+  new MutationObserver(() => { if (ready) sendLook(); }).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
   const setMode = next => {
     mode = ready && !left ? next : 'browse';
     dialog.querySelectorAll('[data-app-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.appMode === mode)));
@@ -199,6 +209,7 @@
       $('[data-app-mode="comment"]').disabled = !!left;
       setRoute(message.path);
       if (left) status('work', `The app went to ${left}, outside ${app.upstream}. Open it in a new tab, or go back.`);
+      sendLook();
       setMode(pendingMode || mode);
       pendingMode = null;
       if (pendingHighlight) { post({type: 'highlight', selector: pendingHighlight}); pendingHighlight = null; }

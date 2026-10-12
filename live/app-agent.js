@@ -137,13 +137,26 @@
 
   let mode = 'browse';
   let box, label, hovered;
+  // The highlight is the review's, drawn over the app: it wears the review theme's colour and corners.
+  let look = {color: '#4f4bc4', ink: '#fff', round: 1};
+  const paint = () => {
+    if (!box) return;
+    Object.assign(box.style, {borderColor: look.color, background: `color-mix(in srgb,${look.color} 8%,transparent)`, borderRadius: `${3 * look.round}px`});
+    Object.assign(label.style, {background: look.color, color: look.ink, borderRadius: `${4 * look.round}px`});
+  };
+  const setLook = next => {
+    const colour = value => typeof value === 'string' && CSS.supports('color', value);
+    look = {color: colour(next?.color) ? next.color : look.color, ink: colour(next?.ink) ? next.ink : look.ink, round: Number(next?.round) >= 0 ? Math.min(Number(next.round), 1) : look.round};
+    paint();
+  };
   const ensureBox = () => {
     if (box) return;
     box = document.createElement('div');
     label = document.createElement('div');
     for (const node of [box, label]) node.setAttribute('data-dcr-overlay', '');
-    box.style.cssText = 'position:fixed;z-index:2147483646;pointer-events:none;border:2px solid #4f4bc4;background:rgba(79,75,196,.08);border-radius:3px;transition:all .06s ease-out;display:none';
-    label.style.cssText = 'position:fixed;z-index:2147483647;pointer-events:none;padding:2px 6px;border-radius:4px;background:#4f4bc4;color:#fff;font:600 11px/1.5 ui-monospace,Menlo,monospace;display:none;max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+    box.style.cssText = 'position:fixed;z-index:2147483646;pointer-events:none;border:2px solid;transition:all .06s ease-out;display:none';
+    label.style.cssText = 'position:fixed;z-index:2147483647;pointer-events:none;padding:2px 6px;font:600 11px/1.5 ui-monospace,Menlo,monospace;display:none;max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+    paint();
     document.documentElement.append(box, label);
   };
   const outline = element => {
@@ -207,6 +220,7 @@
     if (event.origin !== REVIEW || event.source !== window.parent || event.data?.source !== 'dcr-review') return;
     const message = event.data;
     if (message.type === 'mode') setMode(message.mode === 'comment' ? 'comment' : 'browse');
+    else if (message.type === 'look') setLook(message);
     else if (message.type === 'highlight') highlight(message.selector, message.scroll !== false);
     else if (message.type === 'pointer') pointerOn(!!message.on);
     else if (message.type === 'hello') post('ready', {path: here(), title: document.title, left: document.querySelector('meta[name="dcr-left"]')?.content || null, ...ownHistory()});
