@@ -3161,6 +3161,9 @@
       ], null, true);
       return;
     }
+    // Ctrl+H and Ctrl+L go to the pane on the left or right, as between an editor's splits; in focus
+    // mode too, where H and L alone are files.
+    if (event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && ['h', 'l'].includes(event.key.toLowerCase()) && !inText && !openOverlay()) { event.preventDefault(); movePane(event.key.toLowerCase() === 'l' ? 1 : -1); return; }
     // Only a text or a list being chosen from keeps the keys to itself; a checkbox or a radio button does not.
     if (textField(event.target) || event.target.tagName === 'SELECT' || event.target.isContentEditable || event.metaKey || event.ctrlKey || event.altKey) return;
     // The arrows are H, J, K and L: left, down, up and right mean the same on either set of keys.
