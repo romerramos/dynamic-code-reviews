@@ -1,10 +1,12 @@
 /* Terminal: the review as a terminal app. One monospace face and one size, square corners, no
    shadows; one line around each box and none inside it, the selection is a solid bar, buttons
    wear brackets and a status line at the bottom keeps your place and the keys in sight.
-   Colours are Catppuccin (https://catppuccin.com/palette): Mocha in the dark, Latte in the light,
-   peach for what is selected, lavender for the cursor. In the light, orange text is a darker
-   orange (peach mixed with crust), which the palette's own peach is too pale for. See base.css for what each token is for.
-   @default @syntax catppuccin @mode dark */
+   Colours are Catppuccin Mocha in the dark (https://catppuccin.com/palette): peach for what is
+   selected, lavender for the cursor. In the light they are Rosé Pine Dawn
+   (https://rosepinetheme.com/palette): rose for what is selected, iris for the cursor, and rose
+   mixed with the night base where it is text, which the palette's own rose is too pale for.
+   Each mode asks for its palette's syntax colours. See base.css for what each token is for.
+   @default @syntax catppuccin @syntax-light rosepine @mode dark */
 @font-face{font-family:"JetBrains Mono Variable";font-style:normal;font-weight:100 800;font-display:swap;src:url(vendor/fonts/jetbrains-mono/jetbrains-mono-latin-wght-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 @font-face{font-family:"JetBrains Mono Variable";font-style:normal;font-weight:100 800;font-display:swap;src:url(vendor/fonts/jetbrains-mono/jetbrains-mono-latin-ext-wght-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
 @font-face{font-family:"JetBrains Mono Variable";font-style:italic;font-weight:100 800;font-display:swap;src:url(vendor/fonts/jetbrains-mono/jetbrains-mono-latin-wght-italic.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
@@ -37,29 +39,30 @@
 }
 :root:has(input.theme-controller[value=terminal-light]:checked),[data-theme="terminal-light"]{
   color-scheme:light;
-  /* Catppuccin Latte */
-  --terminal-rosewater:#dc8a78;--terminal-flamingo:#dd7878;--terminal-pink:#ea76cb;--terminal-mauve:#8839ef;--terminal-red:#d20f39;--terminal-maroon:#e64553;--terminal-peach:#fe640b;--terminal-yellow:#df8e1d;--terminal-green:#40a02b;--terminal-teal:#179299;--terminal-sky:#04a5e5;--terminal-sapphire:#209fb5;--terminal-blue:#1e66f5;--terminal-lavender:#7287fd;--terminal-text:#4c4f69;--terminal-subtext1:#5c5f77;--terminal-subtext0:#6c6f85;--terminal-overlay2:#7c7f93;--terminal-overlay1:#8c8fa1;--terminal-overlay0:#9ca0b0;--terminal-surface2:#acb0be;--terminal-surface1:#bcc0cc;--terminal-surface0:#ccd0da;--terminal-base:#eff1f5;--terminal-mantle:#e6e9ef;--terminal-crust:#dce0e8;
+  /* Rosé Pine Dawn, in the names the rules below use: rose where Mocha has peach, iris for lavender,
+     foam for green (the palette has none), love for red, and its three greys for the nine */
+  --terminal-rosewater:#d7827e;--terminal-flamingo:#d7827e;--terminal-pink:#d7827e;--terminal-mauve:#907aa9;--terminal-red:#b4637a;--terminal-maroon:#b4637a;--terminal-peach:#d7827e;--terminal-yellow:#ea9d34;--terminal-green:#56949f;--terminal-teal:#56949f;--terminal-sky:#56949f;--terminal-sapphire:#286983;--terminal-blue:#286983;--terminal-lavender:#907aa9;--terminal-text:#575279;--terminal-subtext1:#575279;--terminal-subtext0:#797593;--terminal-overlay2:#797593;--terminal-overlay1:#9893a5;--terminal-overlay0:#9893a5;--terminal-surface2:#cecacd;--terminal-surface1:#cecacd;--terminal-surface0:#dfdad9;--terminal-base:#faf4ed;--terminal-mantle:#f2e9e1;--terminal-crust:#f4ede8;
   /* daisyUI's variables */
-  --color-base-100:#eff1f5;--color-base-200:#e6e9ef;--color-base-300:#ccd0da;--color-base-content:#4c4f69;
-  --color-primary:#fe640b;--color-primary-content:#11111b;--color-secondary:#7287fd;--color-secondary-content:#eff1f5;
-  --color-accent:#179299;--color-accent-content:#eff1f5;--color-neutral:#ccd0da;--color-neutral-content:#4c4f69;
-  --color-info:#04a5e5;--color-info-content:#eff1f5;--color-success:#40a02b;--color-success-content:#eff1f5;
-  --color-warning:#df8e1d;--color-warning-content:#eff1f5;--color-error:#d20f39;--color-error-content:#eff1f5;
+  --color-base-100:#faf4ed;--color-base-200:#f2e9e1;--color-base-300:#dfdad9;--color-base-content:#575279;
+  --color-primary:#d7827e;--color-primary-content:#191724;--color-secondary:#907aa9;--color-secondary-content:#191724;
+  --color-accent:#56949f;--color-accent-content:#191724;--color-neutral:#dfdad9;--color-neutral-content:#575279;
+  --color-info:#56949f;--color-info-content:#191724;--color-success:#56949f;--color-success-content:#191724;
+  --color-warning:#ea9d34;--color-warning-content:#191724;--color-error:#b4637a;--color-error-content:#191724;
   --radius-selector:0rem;--radius-field:0rem;--radius-box:0rem;--size-selector:.25rem;--size-field:.25rem;--border:1px;--depth:0;--noise:0;
-  /* The page: base for what you read, mantle for what frames it */
-  --surface:#eff1f5;--canvas:#e6e9ef;--line:#ccd0da;--ink:#4c4f69;--muted:#6c6f85;--accent:#b74b10;--accent-soft:#f1ddd4;
-  --added:#cce1cd;--removed:#e9c4cf;--note:#df8e1d;--note-bg:#ede5db;--yours:#df8e1d;--yours-soft:#ede5db;
-  --dcr-ok:#40a02b;--dcr-work:#df8e1d;--dcr-off:#8c8fa1;--dcr-agree:#40a02b;--dcr-partly:#df8e1d;--dcr-disagree:#d20f39;
-  --dcr-agree-soft:#d6e6d9;--dcr-partly-soft:#ede5db;--dcr-disagree-soft:#ebd1db;--rec:#d20f39;
+  /* The page: base for what you read, overlay for what frames it */
+  --surface:#faf4ed;--canvas:#f2e9e1;--line:#dfdad9;--ink:#575279;--muted:#797593;--accent:#9e6263;--accent-soft:#f5e3dc;
+  --added:#d1dcda;--removed:#ebd4d4;--note:#ea9d34;--note-bg:#f8e8d3;--yours:#ea9d34;--yours-soft:#f8e8d3;
+  --dcr-ok:#56949f;--dcr-work:#ea9d34;--dcr-off:#9893a5;--dcr-agree:#286983;--dcr-partly:#ea9d34;--dcr-disagree:#b4637a;
+  --dcr-agree-soft:#dde1de;--dcr-partly-soft:#f8e8d3;--dcr-disagree-soft:#f0e0dd;--rec:#b4637a;
   /* Greys straight from the palette, so nothing is an in-between shade */
-  --bg-neutral-1:#eff1f5;--bg-neutral-2:#e6e9ef;--bg-neutral-3:#ccd0da;--bg-neutral-4:#ccd0da;--bg-neutral-5:#bcc0cc;--bg-neutral-6:#9ca0b0;
-  --bg-neutral-7:#4c4f69;--bg-neutral-8:#4c4f69;--bg-neutral-9:#dce0e8;
-  --line-neutral-1:#eff1f5;--line-neutral-2:#ccd0da;--line-neutral-3:#bcc0cc;--line-neutral-4:#acb0be;--line-neutral-5:#9ca0b0;--line-neutral-6:#8c8fa1;
-  --ink-neutral-1:#4c4f69;--ink-neutral-2:#4c4f69;--ink-neutral-3:#5c5f77;--ink-neutral-4:#6c6f85;--ink-neutral-5:#6c6f85;--ink-neutral-6:#7c7f93;
-  --ink-neutral-7:#8c8fa1;--ink-neutral-8:#9ca0b0;--ink-neutral-9:#eff1f5;
-  /* Fills take the palette's own colours; what is written on them is the darkest or lightest tone */
-  --bg-accent-5:#b74b10;--line-accent-8:#fe640b;--bg-green-4:#40a02b;--bg-green-5:#40a02b;--bg-red-2:#d20f39;--bg-red-3:#d20f39;--bg-amber-6:#df8e1d;--bg-amber-7:#fe640b;
-  --terminal-hot:#7287fd;--terminal-fill:#fe640b;--terminal-on-fill:#11111b;--terminal-hover:#ccd0da;
+  --bg-neutral-1:#faf4ed;--bg-neutral-2:#f2e9e1;--bg-neutral-3:#dfdad9;--bg-neutral-4:#dfdad9;--bg-neutral-5:#cecacd;--bg-neutral-6:#9893a5;
+  --bg-neutral-7:#575279;--bg-neutral-8:#575279;--bg-neutral-9:#dfdad9;
+  --line-neutral-1:#faf4ed;--line-neutral-2:#dfdad9;--line-neutral-3:#cecacd;--line-neutral-4:#cecacd;--line-neutral-5:#9893a5;--line-neutral-6:#9893a5;
+  --ink-neutral-1:#575279;--ink-neutral-2:#575279;--ink-neutral-3:#575279;--ink-neutral-4:#797593;--ink-neutral-5:#797593;--ink-neutral-6:#797593;
+  --ink-neutral-7:#9893a5;--ink-neutral-8:#9893a5;--ink-neutral-9:#faf4ed;
+  /* Fills take the palette's own colours; what is written on them is Rosé Pine's darkest tone, its night base */
+  --bg-accent-5:#9e6263;--line-accent-8:#d7827e;--bg-green-4:#56949f;--bg-green-5:#56949f;--bg-red-2:#b4637a;--bg-red-3:#b4637a;--bg-amber-6:#ea9d34;--bg-amber-7:#d7827e;
+  --terminal-hot:#907aa9;--terminal-fill:#d7827e;--terminal-on-fill:#191724;--terminal-hover:#dfdad9;
 }
 
 /* --- the terminal itself: one face, one size, no curves, no depth --------------------------- */
@@ -147,15 +150,15 @@
 /* Fields are filled, not outlined, so a field inside a box never draws a second box. */
 [data-theme^="terminal-"] :is(.select,.input,.textarea,textarea,#search){border:0;background:var(--terminal-hover);box-shadow:none;outline-offset:0;color:var(--ink);caret-color:var(--terminal-hot)}
 [data-theme^="terminal-"] :is(.select,.input,.textarea,textarea,#search)::placeholder{color:var(--terminal-overlay1)}
-[data-theme^="terminal-"] .toggle{border-color:var(--terminal-overlay0);color:var(--terminal-overlay1)}
-[data-theme^="terminal-"] .toggle:checked{background:var(--terminal-fill);border-color:var(--terminal-fill);color:var(--terminal-on-fill)}
-[data-theme^="terminal-"] .checkbox{border-color:var(--terminal-overlay0)}
 /* The app's address bar is one field: the ring is the bar's own line, with no glow and no second box around the text in it. */
 [data-theme^="terminal-"] .dcr-app-address:focus-within{border-color:var(--terminal-hot);box-shadow:none}
 [data-theme^="terminal-"] .dcr-app-address input:focus-visible{outline:0!important}
 /* A spinner is the terminal's own: a bar turning in steps, | / - \. A ring with square corners is a box with one odd side. */
 [data-theme^="terminal-"] :is(.gh-spinner,.dcr-app-prep-spin){border:0;border-radius:0;background:linear-gradient(currentColor,currentColor) center/2px 100% no-repeat;animation-timing-function:steps(8)}
 [data-theme^="terminal-"] .dcr-app-prep-spin{color:var(--accent)}
+[data-theme^="terminal-"] .toggle{border-color:var(--terminal-overlay0);color:var(--terminal-overlay1)}
+[data-theme^="terminal-"] .toggle:checked{background:var(--terminal-fill);border-color:var(--terminal-fill);color:var(--terminal-on-fill)}
+[data-theme^="terminal-"] .checkbox{border-color:var(--terminal-overlay0)}
 [data-theme^="terminal-"] kbd{background:var(--terminal-hover);color:var(--ink);border:0;box-shadow:none}
 
 /* --- the walkthrough: a list with a solid cursor bar ------------------------------------------- */

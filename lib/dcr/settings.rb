@@ -12,8 +12,9 @@ module DCR
     KEY = 'dynamic-review:settings' # where the report page keeps them in the browser
     ALLOWED = {
       'colorMode' => %w[system light dark],
+      'defaults' => %w[terminal-dark], # the defaults this look was saved under; one saved under older ones starts from the new
       'theme' => Dir[File.expand_path('../../assets/themes/*.css', __dir__)].map { |path| File.basename(path, '.css') } - ['base'],
-      'syntaxTheme' => %w[classic catppuccin github one solarized dracula],
+      'syntaxTheme' => %w[classic catppuccin rosepine github one solarized dracula],
       'ignoreWhitespace' => [true, false]
     }.freeze
 

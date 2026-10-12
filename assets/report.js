@@ -60,6 +60,10 @@
   const settingsKey = 'dynamic-review:settings';
   const settings = {colorMode:null, theme:null, syntaxTheme:null, ignoreWhitespace:false};
   try { Object.assign(settings, JSON.parse(localStorage.getItem(settingsKey) || '{}')); } catch { /* defaults apply */ }
+  // The look changed its defaults once, to Terminal in the dark with Catppuccin: a look saved
+  // before that starts from them, and whatever the reviewer picks from then on is kept.
+  const lookDefaults = 'terminal-dark';
+  if (settings.defaults !== lookDefaults) Object.assign(settings, {colorMode:null, theme:null, syntaxTheme:null, defaults:lookDefaults});
   // The themes this page was rendered with are the options of its Theme menu.
   const themes = [...($('theme')?.options || [])].map(option => option.value);
   if (!themes.includes(settings.theme)) settings.theme = themes[0] || 'aida';
@@ -67,14 +71,19 @@
   const themeHint = key => [...($('theme')?.options || [])].find(option => option.value === settings.theme)?.dataset[key];
   // Until the reviewer picks a colour mode, the theme's own; with none, the system's.
   if (!['system', 'light', 'dark'].includes(settings.colorMode)) settings.colorMode = themeHint('mode') || 'system';
-  if (![...($('syntax-theme')?.options || [])].some(option => option.value === settings.syntaxTheme)) settings.syntaxTheme = themeHint('syntax') || 'classic';
-  settings.ignoreWhitespace = settings.ignoreWhitespace === true;
   const darkQuery = matchMedia('(prefers-color-scheme: dark)');
+  const shownMode = () => settings.colorMode === 'system' ? (darkQuery.matches ? 'dark' : 'light') : settings.colorMode;
+  // A theme's own syntax colours can differ by mode: Terminal reads Catppuccin in the dark, Rosé Pine in the light.
+  const ownSyntax = mode => themeHint(mode === 'light' ? 'syntaxLight' : 'syntaxDark') || 'classic';
+  if (![...($('syntax-theme')?.options || [])].some(option => option.value === settings.syntaxTheme)) settings.syntaxTheme = ownSyntax(shownMode());
+  settings.ignoreWhitespace = settings.ignoreWhitespace === true;
+  // Changing mode takes the theme's syntax colours along, unless the reviewer picked others.
+  const changeMode = change => { const own = settings.syntaxTheme === ownSyntax(shownMode()); change(); if (own) settings.syntaxTheme = ownSyntax(shownMode()); };
   const shownRows = (hunk, mode) => ReviewTools.displayRows(hunk.rows[mode], mode, settings.ignoreWhitespace);
   function applySettings() {
     const root = document.documentElement;
     // A theme is a pair of daisyUI themes, NAME-light and NAME-dark; data-mode says which is on.
-    root.dataset.mode = settings.colorMode === 'system' ? (darkQuery.matches ? 'dark' : 'light') : settings.colorMode;
+    root.dataset.mode = shownMode();
     root.dataset.theme = `${settings.theme}-${root.dataset.mode}`;
     root.dataset.syntax = settings.syntaxTheme;
     document.querySelectorAll('[data-color-mode]').forEach(button => button.setAttribute('aria-pressed', button.dataset.colorMode === settings.colorMode));
@@ -2923,17 +2932,21 @@
     const toggle = event.target.closest('[data-preview-toggle]');
     if (toggle) openStage(toggle.dataset.previewPath);
   });
-  document.querySelectorAll('[data-color-mode]').forEach(button => button.onclick = () => { settings.colorMode = button.dataset.colorMode; applySettings(); saveSettings(); });
+  document.querySelectorAll('[data-color-mode]').forEach(button => button.onclick = () => { changeMode(() => { settings.colorMode = button.dataset.colorMode; }); applySettings(); saveSettings(); });
   $('theme').onchange = event => {
     settings.theme = event.target.value;
     // A theme comes in the mode it looks best in, with the syntax colours that suit it; the
     // reviewer can still pick others after.
     if (themeHint('mode')) settings.colorMode = themeHint('mode');
-    if (themeHint('syntax')) settings.syntaxTheme = themeHint('syntax');
+    settings.syntaxTheme = ownSyntax(shownMode());
     applySettings(); saveSettings();
   };
   $('syntax-theme').onchange = event => { settings.syntaxTheme = event.target.value; applySettings(); saveSettings(); };
-  darkQuery.addEventListener('change', () => { if (settings.colorMode === 'system') applySettings(); });
+  darkQuery.addEventListener('change', event => {
+    if (settings.colorMode !== 'system') return;
+    if (settings.syntaxTheme === ownSyntax(event.matches ? 'light' : 'dark')) settings.syntaxTheme = ownSyntax(shownMode());
+    applySettings();
+  });
   $('whitespace-toggle').onchange = event => { const scroll = $('content').scrollTop; settings.ignoreWhitespace = event.target.checked; saveSettings(); render(); $('content').scrollTop = scroll; };
   applySettings();
   $('comments-toggle').onchange = event => { const scroll = $('content').scrollTop; showComments = event.target.checked; render(); $('content').scrollTop = scroll; };

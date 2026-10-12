@@ -247,8 +247,9 @@ References: [review JSON](references/report-schema.md), [incremental reviews](re
   (every corner radius is multiplied by it), `--shade` (the colour of drop shadows), the two font
   tokens and `--status-h` (room for a status line); its own fonts are vendored under
   `assets/vendor/fonts/` and embedded in the page. AIda (`aida.css`) is the look the app was drawn
-  with; Terminal (`terminal.css`) draws it as a terminal app in JetBrains Mono and Catppuccin's
-  colours, and asks for the Catppuccin syntax theme when picked (`@syntax` in its opening comment). Terminal is the default (`@default`). A
+  with; Terminal (`terminal.css`) draws it as a terminal app in JetBrains Mono, in Catppuccin Mocha's
+  colours in the dark and Rosé Pine Dawn's in the light, and asks for the matching syntax theme in each
+  (`@syntax`, and `@syntax-light` for the mode that differs, in its opening comment). Terminal is the default (`@default`). A
   new file in that folder appears in the View menu's Theme list.
 - **State** lives in the series folder: `manifest.json` and the saved pages for revisions, and
   `state.json` for the reviewer's progress and threads (`lib/dcr/state.rb`). The progress (viewed

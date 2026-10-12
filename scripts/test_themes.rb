@@ -62,14 +62,16 @@ assert(!DCR::Page.theme_styles.match?(/url\((?!data:|\))/) && DCR::Page::OFFLINE
 puts 'PASS a theme\'s fonts are vendored and embedded, so the saved page still opens offline'
 
 assert(DCR::Page.theme_syntax('terminal') == 'catppuccin' && DCR::Page.theme_syntax('aida') == 'classic', 'A theme may name the syntax colours that suit it')
+assert(DCR::Page.theme_syntax('terminal', 'light') == 'rosepine' && DCR::Page.theme_syntax('terminal', 'dark') == 'catppuccin' && DCR::Page.theme_syntax('aida', 'light') == 'classic', 'A theme may name other syntax colours for one of its modes')
 assert(DCR::Page.theme_mode('aida') == 'light' && DCR::Page.theme_mode('terminal') == 'dark', 'A theme may name the mode it looks best in')
-assert(DCR::Settings::ALLOWED['syntaxTheme'].include?('catppuccin') && File.read(File.join(ROOT, 'assets/report.css')).include?('html[data-syntax="catppuccin"][data-mode="dark"]'), 'The syntax theme a theme names must exist, in both modes')
+%w[catppuccin rosepine].each { |syntax| assert(DCR::Settings::ALLOWED['syntaxTheme'].include?(syntax) && %w[light dark].all? { |mode| File.read(File.join(ROOT, 'assets/report.css')).include?(%(html[data-syntax="#{syntax}"][data-mode="#{mode}"])) }, "The syntax theme a theme names must exist, in both modes: #{syntax}") }
 
 styles = DCR::Page.theme_styles
 assert(styles.index('Theme contract') < styles.index('[data-theme="aida-light"]'), 'The contract comes before the themes, so a theme\'s values win')
 Dir.mktmpdir('dcr-theme') do |dir|
   settings = DCR::Settings.new(dir)
   assert(settings.write('theme' => 'aida') == {'theme' => 'aida'} && settings.write('theme' => 'nope') == {'theme' => 'aida'}, 'A theme is saved only when it exists')
+  assert(settings.write('colorMode' => 'light', 'defaults' => 'terminal-dark') == {'theme' => 'aida', 'colorMode' => 'light', 'defaults' => 'terminal-dark'}, 'A look is saved with the defaults it was chosen under, or the next visit would reset it again')
 end
 puts 'PASS the page carries the contract and every theme, and the chosen theme is kept with the settings'
 

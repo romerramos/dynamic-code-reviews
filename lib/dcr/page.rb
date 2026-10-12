@@ -60,9 +60,10 @@ module DCR
       names.sort_by { |name| File.read(File.join(ASSETS, 'themes', "#{name}.css"))[%r{\A/\*.*?\*/}m].to_s.include?('@default') ? 0 : 1 }
     end
     # What a theme asks for when it is picked, written in its opening comment: `@syntax NAME`, the
-    # syntax theme that suits it, and `@mode light` or `@mode dark`, the mode it looks best in.
+    # syntax theme that suits it (`@syntax-light NAME` or `@syntax-dark NAME` where one mode has its
+    # own), and `@mode light` or `@mode dark`, the mode it looks best in.
     def theme_hint(name, key) = File.read(File.join(ASSETS, 'themes', "#{name}.css"))[%r{\A/\*.*?@#{key} ([a-z]+).*?\*/}m, 1]
-    def theme_syntax(name) = theme_hint(name, 'syntax')
+    def theme_syntax(name, mode = nil) = (mode && theme_hint(name, "syntax-#{mode}")) || theme_hint(name, 'syntax')
     def theme_mode(name) = theme_hint(name, 'mode')&.then { |mode| mode if %w[light dark].include?(mode) }
     def theme_files = (['base'] + themes).map { |name| File.join(ASSETS, 'themes', "#{name}.css") }
     # A theme's own fonts are embedded, so the saved page still needs nothing from the network.
@@ -97,10 +98,10 @@ module DCR
       def asset(name) = File.read(File.join(ASSETS, name))
       def h(value) = ERB::Util.html_escape(value.to_s)
       def themes = Page.themes
-      def theme_syntax(name) = Page.theme_syntax(name)
+      def theme_syntax(name, mode = nil) = Page.theme_syntax(name, mode)
       def theme_mode(name) = Page.theme_mode(name)
       def theme_modes = themes.to_h { |name| [name, theme_mode(name)] }.compact
-      def theme_syntaxes = themes.to_h { |name| [name, theme_syntax(name)] }.compact
+      def theme_syntaxes = themes.product(%w[light dark]).to_h { |name, mode| ["#{name}-#{mode}", theme_syntax(name, mode)] }.compact
       def icon = @icon ||= asset('icon.svg')
       def favicon = "data:image/svg+xml;base64,#{[icon].pack('m0')}"
       # Text placed inside an inline <script> must not close it early.
