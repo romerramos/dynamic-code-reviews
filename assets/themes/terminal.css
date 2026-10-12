@@ -172,8 +172,12 @@
 [data-theme^="terminal-"] .sidebar nav .menu>li>button[data-view][aria-current="page"],[data-theme^="terminal-"] .sidebar nav .menu>li>button[data-view][aria-current="page"]:hover{background:var(--terminal-fill);color:var(--terminal-on-fill)}
 [data-theme^="terminal-"] .sidebar nav .menu>li>button[data-view][aria-current="page"] *{color:inherit!important}
 [data-theme^="terminal-"] .sidebar nav .menu>li>button[data-view][aria-current="page"] .step-number{background:transparent;box-shadow:none;border:0;font-weight:700}
-[data-theme^="terminal-"] .sidebar nav button.nav-file[aria-current="location"],[data-theme^="terminal-"] .sidebar nav button.nav-file[aria-current="location"]:hover{background:var(--terminal-hover);box-shadow:inset 2px 0 0 var(--terminal-hot)}
-[data-theme^="terminal-"] .sidebar nav button.nav-file[aria-current="location"] .nav-file-name{color:var(--ink)}
+/* The file being read is the list's cursor line, as in a terminal's picker: a pointer in the margin
+   and a bar the width of the row. The pointer says the keyboard is here, so no focus bar joins it. */
+[data-theme^="terminal-"] .sidebar nav button.nav-file{position:relative;overflow:visible}
+[data-theme^="terminal-"] .sidebar nav button.nav-file[aria-current="location"],[data-theme^="terminal-"] .sidebar nav button.nav-file[aria-current="location"]:hover{background:var(--terminal-hover);box-shadow:none!important}
+[data-theme^="terminal-"] .sidebar nav button.nav-file[aria-current="location"]::before{content:">";position:absolute;left:-2ch;top:6px;color:var(--terminal-hot);font:700 12px/1.55 var(--mono)}
+[data-theme^="terminal-"] .sidebar nav button.nav-file[aria-current="location"] .nav-file-name{color:var(--ink);font-weight:700}
 /* Ruby or Template is an either/or switch, so the one being read is a solid block, like the other switches. */
 [data-theme^="terminal-"] .sidebar nav .nav-component-files button[aria-current="location"]{background:var(--terminal-fill);color:var(--terminal-on-fill);border-color:transparent;font-weight:700}
 [data-theme^="terminal-"] .sidebar nav button.nav-match:is(:hover,[aria-current="true"]){background:var(--terminal-hover)}
