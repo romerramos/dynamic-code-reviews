@@ -106,6 +106,9 @@
 [data-theme^="terminal-"]:has(body[data-visual]){--terminal-mode:"VISUAL";--terminal-mode-len:6;--terminal-focus:"";--terminal-focus-len:0}
 [data-theme^="terminal-"] body[data-visual]::before{background:var(--terminal-mauve)}
 [data-theme^="terminal-"]:has(body[data-visual])::after{content:"j/k  d/u  {/} stretch the range  ·  c comment  ·  esc cancel";color:var(--ink)}
+[data-theme^="terminal-"]:has(body[data-resize]){--terminal-mode:"RESIZE";--terminal-mode-len:6;--terminal-focus:"";--terminal-focus-len:0}
+[data-theme^="terminal-"] body[data-resize]::before{background:var(--terminal-mauve)}
+[data-theme^="terminal-"]:has(body[data-resize])::after{content:"h/l move the edge  ·  enter done";color:var(--ink)}
 [data-theme^="terminal-"]:has(body[data-hints]){--terminal-mode:"JUMP";--terminal-mode-len:4;--terminal-focus:"";--terminal-focus-len:0}
 [data-theme^="terminal-"] body[data-hints]::before{background:var(--terminal-hot)}
 [data-theme^="terminal-"]:has(body[data-hints])::after{content:"type a label  ·  esc cancel";color:var(--ink)}

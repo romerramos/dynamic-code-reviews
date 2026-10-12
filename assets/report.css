@@ -774,14 +774,14 @@ body.ledger-open .ledger{display:flex}
 .ledger{position:relative}
 .ledger-resize{position:absolute;z-index:6;top:0;bottom:0;left:-5px;width:10px;cursor:col-resize;touch-action:none}
 .ledger-resize::before{content:"";position:absolute;top:0;bottom:0;left:4px;width:2px;background:transparent;transition:background-color .12s .1s}
-.ledger-resize:hover::before,.ledger-resize:focus-visible::before,body.ledger-resizing .ledger-resize::before{background:var(--accent)}
+.ledger-resize:hover::before,.ledger-resize:focus-visible::before,body.ledger-resizing .ledger-resize::before,body[data-resize] .ledger-resize::before{background:var(--accent)}
 .ledger-resize:focus-visible{outline:0}
 .ledger-resize-tip{position:absolute;top:var(--tip-y,50%);left:14px;display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:calc(8px * var(--round));background:var(--ink);color:var(--surface);font-size:12.5px;font-weight:550;white-space:nowrap;box-shadow:0 6px 18px color-mix(in srgb,var(--shade) 20%,transparent);opacity:0;pointer-events:none;transform:translate(-4px,-50%);transition:opacity .12s,transform .12s}
 .ledger-resize-tip b{font-weight:600}
-.ledger-resize:hover .ledger-resize-tip,.ledger-resize:focus-visible .ledger-resize-tip{opacity:1;transform:translate(0,-50%);transition-delay:.25s}
+.ledger-resize:hover .ledger-resize-tip,.ledger-resize:focus-visible .ledger-resize-tip,body[data-resize] .ledger-resize-tip{opacity:1;transform:translate(0,-50%);transition-delay:.25s}
 body.ledger-resizing .ledger-resize-tip{opacity:0}
 body.ledger-resizing{cursor:col-resize;user-select:none}
-body.ledger-resizing .ledger,body.ledger-resizing .workspace{transition:none;animation:none}
+body.ledger-resizing .ledger,body.ledger-resizing .workspace,body[data-resize] .ledger,body[data-resize] .workspace{transition:none;animation:none}
 body.ledger-resizing iframe{pointer-events:none}
 @media(max-width:740px){.ledger-resize{display:none}}
 @media(prefers-reduced-motion:reduce){.ledger-resize-tip,.ledger-resize::before{transition:none}}

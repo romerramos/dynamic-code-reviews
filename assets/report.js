@@ -2377,6 +2377,7 @@
   document.addEventListener('pointerdown', event => {
     if (leader && !event.target.closest?.('#leader-menu')) endLeader();
     if (hints) endHints();
+    if (resizing) setResizing(false);
     const row = event.target.closest?.('#content tr.code-row');
     if (row) setCursor(row, false);
     if (event.target.closest?.('.ledger')) setPane('ledger', false);
@@ -2478,6 +2479,19 @@
     if (save) try { width == null ? localStorage.removeItem(LEDGER_WIDTH) : localStorage.setItem(LEDGER_WIDTH, String(width)); } catch { /* this visit only */ }
   }
   try { const width = Number(localStorage.getItem(LEDGER_WIDTH)); if (width) setLedgerWidth(width, false); } catch { /* default width */ }
+  // Resize mode, as in a terminal multiplexer: Ctrl+B then R goes in, H and L (or the arrows) move
+  // the edge, Enter or Esc leaves. The other keys wait.
+  let prefix = false; // Ctrl+B was the last key
+  let resizing = false;
+  const resizeTip = ledgerResize?.querySelector('.ledger-resize-tip');
+  const dragTip = resizeTip?.innerHTML;
+  function setResizing(on) {
+    if (on === resizing || !ledgerResize) return;
+    if (on && !ledgerOpen()) setLedger(true);
+    resizing = on;
+    if (on) document.body.dataset.resize = ''; else delete document.body.dataset.resize; // for a theme that shows the mode
+    resizeTip.innerHTML = on ? '<kbd>h</kbd> <kbd>l</kbd> resize · <kbd>enter</kbd> done' : dragTip;
+  }
   if (ledgerResize) {
     const [least, most] = ledgerLimits();
     ledgerResize.setAttribute('aria-valuemin', least);
@@ -2501,6 +2515,7 @@
     ledgerResize.addEventListener('pointermove', event => { if (!document.body.classList.contains('ledger-resizing')) ledgerResize.style.setProperty('--tip-y', `${event.clientY - ledgerResize.getBoundingClientRect().top}px`); });
     ledgerResize.addEventListener('dblclick', () => setLedgerWidth(null));
     ledgerResize.addEventListener('keydown', event => {
+      if (resizing) return; // resize mode has the keys
       const step = event.shiftKey ? 64 : 24;
       const now = $('ledger').getBoundingClientRect().width;
       if (event.key === 'ArrowLeft') setLedgerWidth(now + step);
@@ -3131,6 +3146,16 @@
       }
       return;
     }
+    if (resizing && !event.metaKey) {
+      event.preventDefault(); event.stopImmediatePropagation();
+      const by = {h:1, arrowleft:1, l:-1, arrowright:-1}[event.key.toLowerCase()];
+      if (by) setLedgerWidth($('ledger').getBoundingClientRect().width + by * (event.shiftKey ? 64 : 24));
+      else if (event.key === 'Enter' || event.key === 'Escape') setResizing(false);
+      return;
+    }
+    const inText = textField(event.target) || event.target.tagName === 'SELECT' || event.target.isContentEditable;
+    if (prefix) { prefix = false; if (event.key.toLowerCase() === 'r' && !inText && !openOverlay()) { event.preventDefault(); setResizing(true); return; } }
+    if (event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'b' && !inText) { event.preventDefault(); prefix = true; return; }
     // Only a text or a list being chosen from keeps the keys to itself; a checkbox or a radio button does not.
     if (textField(event.target) || event.target.tagName === 'SELECT' || event.target.isContentEditable || event.metaKey || event.ctrlKey || event.altKey) return;
     // The arrows are H, J, K and L: left, down, up and right mean the same on either set of keys.
