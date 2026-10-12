@@ -3111,6 +3111,8 @@
     // In visual mode the moves stretch the range, C comments on it, and V or Esc leaves it.
     if (visual) {
       event.preventDefault(); event.stopImmediatePropagation();
+      // In focus mode there is one thing on the page, so from it H and L are the file before and the next.
+      else if (pane !== 'ledger' && document.body.classList.contains('zen')) { const by = key === 'l' ? 1 : -1; if (pane !== 'main') setPane('main'); if (!fileReadingActive() || focusOrder[focusIndex + by]) step(by); }
       if (!cursorRow?.isConnected || !visual.anchor.isConnected || key === 'v' || event.key === 'Escape') { endVisual(); return; }
       if (key === 'c') { commentAtCursor(); return; }
       if (event.key === 'K') { readAtCursor(); return; }
