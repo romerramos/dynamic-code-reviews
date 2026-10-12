@@ -175,6 +175,16 @@
 
 /* --- the walkthrough: a list with a solid cursor bar ------------------------------------------- */
 [data-theme^="terminal-"] .sidebar{background:var(--canvas)}
+/* The panes are apart, as a multiplexer's are: each has a line all round it, and the one the keyboard is in has the ring. */
+@media(min-width:1200px){
+  [data-theme^="terminal-"] body:not(.zen) .workspace{gap:6px;padding:6px}
+  [data-theme^="terminal-"] body:not(.zen) :is(.sidebar,.review-area){border:0;outline:1px solid var(--line);outline-offset:-1px}
+  [data-theme^="terminal-"] body:not(.zen)[data-pane="nav"] .sidebar,[data-theme^="terminal-"] body:not(.zen)[data-pane="main"] .review-area{outline-color:var(--pane-ring)}
+}
+@media(min-width:1500px){
+  [data-theme^="terminal-"] body.ledger-open:not(.zen) .ledger{border:0;outline:1px solid var(--line);outline-offset:-1px}
+  [data-theme^="terminal-"] body.ledger-open:not(.zen)[data-pane="ledger"] .ledger{outline-color:var(--pane-ring)}
+}
 [data-theme^="terminal-"] .sidebar-heading strong{text-transform:uppercase;font-weight:700;color:var(--accent)}
 [data-theme^="terminal-"] .sidebar-heading strong::before{content:"▌";color:var(--terminal-hot);margin-right:.5ch}
 [data-theme^="terminal-"] .sidebar nav button{margin:0;padding:6px 1ch;border:0}
