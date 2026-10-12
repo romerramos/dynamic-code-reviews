@@ -44,7 +44,7 @@
   --terminal-rosewater:#d7827e;--terminal-flamingo:#d7827e;--terminal-pink:#d7827e;--terminal-mauve:#907aa9;--terminal-red:#b4637a;--terminal-maroon:#b4637a;--terminal-peach:#d7827e;--terminal-yellow:#ea9d34;--terminal-green:#56949f;--terminal-teal:#56949f;--terminal-sky:#56949f;--terminal-sapphire:#286983;--terminal-blue:#286983;--terminal-lavender:#907aa9;--terminal-text:#575279;--terminal-subtext1:#575279;--terminal-subtext0:#797593;--terminal-overlay2:#797593;--terminal-overlay1:#9893a5;--terminal-overlay0:#9893a5;--terminal-surface2:#cecacd;--terminal-surface1:#cecacd;--terminal-surface0:#dfdad9;--terminal-base:#faf4ed;--terminal-mantle:#f2e9e1;--terminal-crust:#f4ede8;
   /* daisyUI's variables */
   --color-base-100:#faf4ed;--color-base-200:#f2e9e1;--color-base-300:#dfdad9;--color-base-content:#575279;
-  --color-primary:#d7827e;--color-primary-content:#191724;--color-secondary:#907aa9;--color-secondary-content:#191724;
+  --color-primary:#d7827e;--color-primary-content:#faf4ed;--color-secondary:#907aa9;--color-secondary-content:#191724;
   --color-accent:#56949f;--color-accent-content:#191724;--color-neutral:#dfdad9;--color-neutral-content:#575279;
   --color-info:#56949f;--color-info-content:#191724;--color-success:#56949f;--color-success-content:#191724;
   --color-warning:#ea9d34;--color-warning-content:#191724;--color-error:#b4637a;--color-error-content:#191724;
@@ -62,7 +62,7 @@
   --ink-neutral-7:#9893a5;--ink-neutral-8:#9893a5;--ink-neutral-9:#faf4ed;
   /* Fills take the palette's own colours; what is written on them is Rosé Pine's darkest tone, its night base */
   --bg-accent-5:#9e6263;--line-accent-8:#d7827e;--bg-green-4:#56949f;--bg-green-5:#56949f;--bg-red-2:#b4637a;--bg-red-3:#b4637a;--bg-amber-6:#ea9d34;--bg-amber-7:#d7827e;
-  --terminal-hot:#907aa9;--terminal-fill:#d7827e;--terminal-on-fill:#191724;--terminal-hover:#dfdad9;
+  --terminal-hot:#907aa9;--terminal-fill:#d7827e;--terminal-on-fill:#faf4ed;--terminal-hover:#dfdad9;
 }
 
 /* --- the terminal itself: one face, one size, no curves, no depth --------------------------- */
