@@ -23,7 +23,7 @@
   --color-warning:#f9e2af;--color-warning-content:#11111b;--color-error:#f38ba8;--color-error-content:#11111b;
   --radius-selector:0rem;--radius-field:0rem;--radius-box:0rem;--size-selector:.25rem;--size-field:.25rem;--border:1px;--depth:0;--noise:0;
   /* The page: base for what you read, mantle for what frames it */
-  --surface:#1e1e2e;--canvas:#181825;--line:#313244;--ink:#cdd6f4;--muted:#9399b2;--accent:#fab387;--accent-soft:#41363c;
+  --surface:#1e1e2e;--canvas:#1e1e2e;--line:#313244;--ink:#cdd6f4;--muted:#9399b2;--accent:#fab387;--accent-soft:#41363c;
   --added:#394545;--removed:#493446;--note:#f9e2af;--note-bg:#38363d;--yours:#f9e2af;--yours-soft:#38363d;
   --dcr-ok:#a6e3a1;--dcr-work:#f9e2af;--dcr-off:#7f849c;--dcr-agree:#a6e3a1;--dcr-partly:#f9e2af;--dcr-disagree:#f38ba8;
   --dcr-agree-soft:#313a3e;--dcr-partly-soft:#38363d;--dcr-disagree-soft:#3c2d3f;--rec:#f38ba8;
