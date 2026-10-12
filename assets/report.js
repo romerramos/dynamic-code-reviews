@@ -2030,6 +2030,15 @@
   let verdict = null; // JevMyPR's, on the served page once the reviewer turned it on (ReviewVerdict.set)
   const needOf = file => ReviewTools.fileNeed(verdict?.files?.[file.path], riskOf(file.id));
   const needTip = need => `data-tip="${escape(need.lines.join('\n'))}" aria-label="${escape(need.lines.join('. '))}"`;
+  // A path in three parts, which read as the path: the first folder (code or tests), the folders
+  // between, and the file's name. A phone squeezes the middle to keep the line; a tap shows it all.
+  const pathParts = path => {
+    const slash = path.lastIndexOf('/'), first = path.indexOf('/');
+    if (slash < 0) return `<span class="path-name">${escape(path)}</span>`;
+    return `<span class="path-head">${escape(path.slice(0, first + 1))}</span><span class="path-mid"><bdi>${escape(path.slice(first + 1, slash + 1))}</bdi></span><span class="path-name">${escape(path.slice(slash + 1))}</span>`;
+  };
+  // The label beside a file's viewed box; a phone has room for the second word only.
+  const viewedLabel = viewed => viewed ? 'Viewed' : '<span class="focus-step-label">Mark </span>viewed';
   function needMark(file, spelled = false) {
     const need = needOf(file);
     const word = need?.word ? `<span class="need need-${need.tone}" ${needTip(need)}>${need.word}</span>` : '';
@@ -2154,7 +2163,7 @@
     }
     const groupNumber = review.groups.indexOf(entry.layer.group) + 1;
     const stepTitle = entry.layer.title === entry.layer.group.title ? '' : `<span class="crumb-sep" aria-hidden="true">›</span><span class="crumb-step">${escape(entry.layer.title)}</span>`;
-    return `<section class="focus-reader"><header class="focus-file-header"><div class="focus-meta"><span class="focus-group" title="${escape(`Group ${groupNumber} of ${review.groups.length}: ${entry.layer.group.title}`)}"><span class="crumb-number">${groupNumber}/${review.groups.length}</span>${escape(titleWithoutNumber(entry.layer.group.title))}${stepTitle}</span><div class="focus-file-actions" role="group" aria-label="Changed sections"><button class="icon-button" data-change-step="-1" disabled aria-label="Previous changed section" title="Previous changed section">${icon('chevron-left')}</button><span id="change-position">${file.hunks.length} changes</span><button class="icon-button" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} aria-label="Next changed section" title="Next changed section">${icon('chevron-right')}</button></div></div><div class="focus-identity"><div class="current-file"><code>${escape(file.path)}</code><button class="icon-button copy-file-path" data-copy-file title="Copy the full relative file path" aria-label="Copy file path">${icon('copy')}</button>${needMark(file, true)}</div>${componentLinks}${previewToggle(file)}${notVisualNote(file)}<details class="file-about"><summary>${icon('info')}<span>Why this file</span></summary><p>${escape(entry.layer.summary || entry.layer.group.summary)}</p>${items.map(item => item.summary ? `<p>${escape(item.summary)}</p>` : '').join('')}</details><div class="focus-progress-actions"><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" ${fileViewed(file) ? 'checked' : ''}> <span>${fileViewed(file) ? 'Viewed' : 'Mark viewed'}</span></label><button class="btn btn-sm btn-ghost phone-only" data-focus-prev ${focusIndex === 0 ? 'disabled' : ''} aria-label="Previous file">${icon('arrow-left')} Previous</button><button class="btn btn-sm btn-ghost" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file ${icon('arrow-right')}</button><span class="focus-count phone-only">${focusIndex + 1} of ${focusOrder.length}</span></div></div></header>${!full ? '<p class="focus-unavailable">Full source was not captured or exceeds the text limit. Showing the saved diff; no current working files have been substituted.</p>' : ''}${(() => { const code = file.hunks.length || full?.length ? renderDiffTable(file, full || file.hunks, summaries) : `<pre>${escape(file.note || file.patch || 'No text diff available.')}</pre>`; return code; })()}<footer class="focus-end"><span>${focusIndex + 1 === focusOrder.length ? 'End of the review' : `Next: ${escape(files.get(focusOrder[focusIndex + 1].file).path)}`}</span><button class="btn btn-sm btn-ghost phone-only" data-focus-prev ${focusIndex === 0 ? 'disabled' : ''}>← Previous</button><button class="btn btn-sm btn-primary" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></footer></section>`;
+    return `<section class="focus-reader"><header class="focus-file-header"><div class="focus-meta"><span class="focus-group" title="${escape(`Group ${groupNumber} of ${review.groups.length}: ${entry.layer.group.title}`)}"><span class="crumb-number">${groupNumber}/${review.groups.length}</span><span class="crumb-group">${escape(titleWithoutNumber(entry.layer.group.title))}</span>${stepTitle}</span><div class="focus-file-actions" role="group" aria-label="Changed sections"><button class="icon-button" data-change-step="-1" disabled aria-label="Previous changed section" title="Previous changed section">${icon('chevron-left')}</button><span id="change-position">${file.hunks.length} changes</span><button class="icon-button" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} aria-label="Next changed section" title="Next changed section">${icon('chevron-right')}</button></div></div><div class="focus-identity"><div class="current-file"><code data-path-toggle>${pathParts(file.path)}</code><button class="icon-button copy-file-path" data-copy-file title="Copy the full relative file path" aria-label="Copy file path">${icon('copy')}</button>${needMark(file, true)}</div>${componentLinks}${previewToggle(file)}${notVisualNote(file)}<details class="file-about"><summary>${icon('info')}<span>Why this file</span></summary><p>${escape(entry.layer.summary || entry.layer.group.summary)}</p>${items.map(item => item.summary ? `<p>${escape(item.summary)}</p>` : '').join('')}</details><div class="focus-progress-actions"><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" ${fileViewed(file) ? 'checked' : ''}> <span>${viewedLabel(fileViewed(file))}</span></label><button class="btn btn-sm btn-ghost phone-only" data-focus-prev ${focusIndex === 0 ? 'disabled' : ''} aria-label="Previous file">${icon('arrow-left')}<span class="focus-step-label"> Previous</span></button><button class="btn btn-sm btn-ghost" data-focus-next aria-label="Next file" ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}><span class="focus-step-label">Next file </span>${icon('arrow-right')}</button><span class="focus-count phone-only">${focusIndex + 1} of ${focusOrder.length}</span></div></div></header>${!full ? '<p class="focus-unavailable">Full source was not captured or exceeds the text limit. Showing the saved diff; no current working files have been substituted.</p>' : ''}${(() => { const code = file.hunks.length || full?.length ? renderDiffTable(file, full || file.hunks, summaries) : `<pre>${escape(file.note || file.patch || 'No text diff available.')}</pre>`; return code; })()}<footer class="focus-end"><span>${focusIndex + 1 === focusOrder.length ? 'End of the review' : `Next: ${escape(files.get(focusOrder[focusIndex + 1].file).path)}`}</span><button class="btn btn-sm btn-ghost phone-only" data-focus-prev ${focusIndex === 0 ? 'disabled' : ''}>← Previous</button><button class="btn btn-sm btn-primary" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></footer></section>`;
   }
   function focusFile(index) {
     document.body.classList.remove('navigation-open'); $('nav-toggle').setAttribute('aria-expanded', 'false');
@@ -2583,7 +2592,7 @@
     closeComments(); clearSelection();
     document.querySelectorAll(`[data-file-viewed="${file.id}"]`).forEach(control => {
       control.checked = viewed;
-      if (control.closest('.focus-reader')) control.parentElement.querySelector('span').textContent = viewed ? 'Viewed' : 'Mark viewed';
+      if (control.closest('.focus-reader')) control.parentElement.querySelector('span').innerHTML = viewedLabel(viewed);
     });
     document.querySelectorAll('.file-card').forEach(card => {
       if (card.dataset.file !== file.id) return;
@@ -2979,6 +2988,7 @@
     if (event.target.closest('[data-focus-prev]')) step(-1);
     const stepBy = event.target.closest('[data-step-by]');
     if (stepBy) step(Number(stepBy.dataset.stepBy));
+    event.target.closest('[data-path-toggle]')?.classList.toggle('is-whole');
     if (event.target.closest('[data-copy-file]')) copyText(files.get(focusOrder[focusIndex].file).path);
     const button = event.target.closest('[data-change-step]');
     if (button) {
@@ -3101,6 +3111,8 @@
       // In a conversation H goes back to the list first; on a comment L opens it.
       if (pane === 'ledger' && key === 'h' && conversation()) conversation().querySelector('[data-dcr-back]').click();
       else if (pane === 'ledger' && key === 'l') { if (!conversation() && ledgerRows().includes(document.activeElement)) document.activeElement.click(); }
+      // In focus mode there is one thing on the page, so from it H and L are the file before and the next.
+      else if (pane !== 'ledger' && document.body.classList.contains('zen')) { const by = key === 'l' ? 1 : -1; if (pane !== 'main') setPane('main'); if (!fileReadingActive() || focusOrder[focusIndex + by]) step(by); }
       else movePane(key === 'l' ? 1 : -1);
       return;
     }
@@ -3111,8 +3123,6 @@
     // In visual mode the moves stretch the range, C comments on it, and V or Esc leaves it.
     if (visual) {
       event.preventDefault(); event.stopImmediatePropagation();
-      // In focus mode there is one thing on the page, so from it H and L are the file before and the next.
-      else if (pane !== 'ledger' && document.body.classList.contains('zen')) { const by = key === 'l' ? 1 : -1; if (pane !== 'main') setPane('main'); if (!fileReadingActive() || focusOrder[focusIndex + by]) step(by); }
       if (!cursorRow?.isConnected || !visual.anchor.isConnected || key === 'v' || event.key === 'Escape') { endVisual(); return; }
       if (key === 'c') { commentAtCursor(); return; }
       if (event.key === 'K') { readAtCursor(); return; }

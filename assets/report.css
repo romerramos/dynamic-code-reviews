@@ -1129,8 +1129,32 @@ button.risk-path:hover .risk-name{text-decoration:underline}
   .review-toolbar :is(#nav-toggle,#ledger-toggle,#view-toggle,#dcr-presence)[aria-expanded="true"]{color:var(--accent);background:none}
   .review-toolbar #ledger-toggle .ledger-count{position:absolute;top:6px;left:calc(50% + 8px)}
   .phone-only{display:inline-flex}
-  .focus-count{align-items:center;margin-left:auto;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
-  .focus-progress-actions{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+  /* A file's header is three lines, not a third of the screen: the step and where you are in the
+     review, the path, then the component's two files and what a thumb needs (viewed, back, on).
+     What is for a wide screen and a pointer stays there: the pager of changed sections (a swipe
+     scrolls), copying the path, who should review the file, and the template's preview, which the
+     Previews tab at the top opens. Why this file is its icon; it opens under the header. */
+  .focus-file-header{position:relative;padding:8px 0 10px}
+  .focus-meta{padding-right:9ch}
+  .focus-meta .focus-file-actions,.focus-file-header :is(.copy-file-path,.need-set,.preview-toggle,.not-visual-note){display:none}
+  .focus-group{flex-basis:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--muted);font-weight:500}
+  .focus-group :is(.crumb-number,.crumb-sep),.focus-group:has(.crumb-step) .crumb-group{display:none}
+  .focus-count{position:absolute;top:8px;right:0;font-size:11px;line-height:1.5;color:var(--muted);font-variant-numeric:tabular-nums}
+  .focus-identity{gap:6px 8px;margin-top:2px}
+  /* The path keeps one line: its first folder and the file's name whole, the folders between cut
+     from the left (the nearest folder says most). A tap on it shows the whole path, and takes it back. */
+  .focus-file-header .current-file{flex-basis:100%}
+  .focus-file-header .current-file code{display:flex;flex:0 0 100%;min-width:0;white-space:nowrap;overflow-wrap:normal}
+  .current-file .path-head{flex:none;color:var(--muted)}
+  .current-file .path-mid{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;direction:rtl;text-align:left;color:var(--muted)}
+  .current-file .path-name{flex:none;max-width:calc(100% - 6ch);overflow:hidden;text-overflow:ellipsis;font-weight:700}
+  .focus-file-header .current-file code.is-whole{display:block;white-space:normal;overflow-wrap:anywhere}
+  .current-file code.is-whole .path-mid{direction:ltr;overflow:visible}
+  .focus-file-header .file-about{min-width:0}
+  .focus-file-header .file-about:not([open]) summary span{display:none}
+  .focus-progress-actions{display:flex;flex:0 0 auto;flex-wrap:nowrap;align-items:center;gap:4px;margin-left:auto}
+  .focus-file-header .focus-step-label{display:none}
+  .focus-progress-actions .file-viewed span{text-transform:capitalize}
   .step-end{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:24px;padding:16px 0;border-top:1px solid var(--line-neutral-2);font-size:12px;color:var(--muted)}
   /* What floats at the bottom floats above the bar. */
   #toast,.range-actions{bottom:calc(var(--toolbar-h) + 14px + env(safe-area-inset-bottom))}
