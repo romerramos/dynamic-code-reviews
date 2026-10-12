@@ -645,8 +645,9 @@
   const hasConversation = thread => !!thread && (thread.live || thread.delivery !== 'draft' || thread.messages?.length > 0 || weighedIn(thread));
   const whereOf = comment => {
     const found = globalThis.ReviewTools.anchor(snapshot, comment);
-    const lines = comment.general ? 'General comment' : `${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}`;
-    return `${found?.file.path || 'General'} · ${lines}`;
+    const was = globalThis.ReviewTools.outdatedWhere(comment);
+    const lines = was ? `Outdated · ${was.lines}` : comment.general ? 'General comment' : `${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}`;
+    return `${found?.file.path || was?.path || 'General'} · ${lines}`;
   };
   const rowFor = comment => `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-conversation="1"><button type="button" class="ledger-jump" data-ledger-jump="${tools.escape(comment.id)}"><span class="ledger-where">${tools.escape(whereOf(comment))}</span><span class="ledger-subject">${tools.escape(comment.subject)}</span></button><div class="ledger-meta"></div></li>`;
   // The faces of every agent that weighed in, each ringed with what it thinks.
@@ -1280,6 +1281,61 @@
     arrival.hidden = false;
   };
   arrival.addEventListener('click', event => { if (event.target.closest('[data-dcr-open-latest]')) openLatest(); });
+
+  // --- Update: the review follows the code -------------------------------------------------
+  // The code keeps changing while a review is open. Update saves the next revision from the
+  // checkout as it is: comments follow their lines or become outdated, and progress comes along.
+  // The server compares the checkout with this revision when the reader comes back to the tab,
+  // never on a timer, so the button can say how many files moved.
+  const updateButton = Object.assign(document.createElement('button'), {type: 'button', id: 'dcr-update', className: 'header-button', hidden: true});
+  document.getElementById('revision-navigation')?.before(updateButton);
+  const updatedKey = 'dynamic-review:updated';
+  let stale = null, updating = false, staleAt = 0;
+  const renderUpdate = () => {
+    // A newer revision that is already saved has its own button; a series that cannot be updated here has none.
+    set(updateButton, 'hidden', !stale || !!stale.unavailable || (latest || 0) > shownRevision);
+    if (updateButton.hidden) return;
+    const count = updating ? 0 : stale.changed || 0;
+    const files = `${count} ${count === 1 ? 'file' : 'files'}`;
+    const html = `${ico('refresh-cw')}<span>${updating ? 'Updating…' : count ? `Update · ${files}` : 'Update'}</span>`;
+    if (updateButton.innerHTML !== html) updateButton.innerHTML = html;
+    const hint = updating ? 'Updating this review to the code as it is now' : count ? `${files} changed since this review. Update it: your comments and progress are kept.` : 'Check the code again and update this review';
+    set(updateButton, 'title', hint);
+    updateButton.setAttribute('aria-label', hint);
+    set(updateButton, 'disabled', updating);
+    updateButton.classList.toggle('is-stale', count > 0);
+    updateButton.classList.toggle('is-busy', updating);
+  };
+  const checkStale = async () => {
+    if (updating || document.hidden || Date.now() - staleAt < 5000) return;
+    staleAt = Date.now();
+    try { stale = await api('/api/sync'); } catch { return; }
+    renderUpdate();
+  };
+  updateButton.addEventListener('click', async () => {
+    updating = true;
+    renderUpdate();
+    try {
+      const result = await api('/api/sync', {});
+      if (result.status === 'updated') {
+        try { sessionStorage.setItem(updatedKey, result.summary); } catch { /* the Overview says it too */ }
+        location.reload(); // the same place, on the new revision
+        return;
+      }
+      stale = {changed: 0};
+      flash('This review already shows the code as it is.');
+    } catch (error) { flash(error.message); }
+    updating = false;
+    renderUpdate();
+  });
+  document.addEventListener('visibilitychange', checkStale);
+  window.addEventListener('focus', checkStale);
+  checkStale();
+  try {
+    const said = sessionStorage.getItem(updatedKey);
+    sessionStorage.removeItem(updatedKey);
+    if (said) flash(said);
+  } catch { /* nothing to say */ }
   document.addEventListener('visibilitychange', () => { if (document.hidden && latestAtOpen !== null) announceFinished(); });
 
   // Copy for LLMs carries the conversation, and where to read the rest of it.
@@ -1350,6 +1406,7 @@
     decorate(); decorateLedger(); window.ReviewGitHub?.refresh(); renderPanel(); renderUnsent(); renderAgent(); refreshUnread();
     announce(arrived);
     announceFinished();
+    renderUpdate();
     syncPreviews();
   };
   const refresh = async () => apply(await api(`/api/state?key=${encodeURIComponent(key)}`));

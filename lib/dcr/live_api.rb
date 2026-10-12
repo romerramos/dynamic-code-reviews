@@ -66,6 +66,8 @@ module DCR
       when ['POST', '/api/preview'] then (input = json(body); [200, {'entry' => @state.request_preview(input['key'], input['path'])}])
       when ['POST', '/api/send'] then send_items(json(body))
       when ['POST', '/api/message'] then message(json(body))
+      when ['GET', '/api/sync'] then [200, stale]
+      when ['POST', '/api/sync'] then [200, sync]
       when ['POST', '/api/risk-ranking'] then (@state.request_risk_ranking(json(body)['key']); [200, {'requested' => true}])
       when ['GET', '/api/adversaries'] then [200, adversaries]
       when ['GET', '/api/agents'] then [200, adversaries.merge('agents' => @catalog.call(query['fresh'] == '1'))]
@@ -184,6 +186,24 @@ module DCR
       result = @github.review(key, input['event'].to_s, input['body'], items)
       entry = @state.github_posted(key, result['comments'], review: {'url' => result['url'], 'event' => result['event']})
       [200, {'posted' => entry['posted'].slice(*result['comments'].keys), 'review' => result['url']}]
+    end
+
+    # Whether the code moved on since the review's latest revision. A series that cannot be
+    # updated from the page (a pull request's, another branch) says why instead.
+    def stale
+      require_relative '../../scripts/series'
+      ReviewSeries.stale(repo: manifest.fetch('repo'), name: manifest.fetch('name'))
+    rescue ArgumentError, KeyError => error
+      {'unavailable' => error.message}
+    end
+
+    # The reader's Update: the next revision shows the code as it is, and the listening agent is
+    # handed what changed so it can comment on it.
+    def sync
+      require_relative '../../scripts/series'
+      result = ReviewSeries.sync(repo: manifest.fetch('repo'), name: manifest.fetch('name'))
+      @state.code_updated(result['key'], ReviewSeries.sync_brief(result)) if result['status'] == 'updated' && result['unreviewed'].any?
+      result.slice('status', 'revision', 'summary')
     end
 
     def manifest

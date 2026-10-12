@@ -90,6 +90,9 @@ main#content{position:relative;overflow-y:auto;scroll-behavior:smooth;min-width:
 .thread-file{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:13px 18px;background:var(--bg-neutral-2);border-bottom:1px solid var(--line-neutral-2)}
 .thread-file-path{font:600 12px/1.7 var(--mono);overflow-wrap:anywhere;min-width:0;color:var(--ink-neutral-3)}
 .thread-range{font-size:12px;white-space:nowrap;color:var(--ink-neutral-4)}
+.thread-outdated{display:inline-block;margin-right:8px;padding:1px 8px;border:1px solid var(--line-amber-3);border-radius:calc(5px * var(--round));background:var(--bg-amber-1);color:var(--ink-neutral-3);font-size:11px;line-height:1.5;font-weight:650}
+.thread-was{margin:14px 0 0}.thread-was figcaption{margin-bottom:6px;font-size:12px;color:var(--ink-neutral-5)}
+.thread-was pre{margin:0;padding:10px 12px;overflow-x:auto;border:1px solid var(--line-neutral-2);border-radius:calc(6px * var(--round));background:var(--bg-neutral-2);color:var(--ink-neutral-4);font:12px/1.6 var(--mono)}
 .review-thread .thread-details{display:block;margin:0;padding:0;border:0;border-radius:0;background:transparent}
 .review-thread .thread-summary{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:16px 20px;cursor:pointer;list-style:none;background:var(--bg-neutral-1)}
 .thread-summary::-webkit-details-marker{display:none}

@@ -54,7 +54,14 @@ module DCR
       You may read files, search and run read-only commands, and write the JSON to a temporary file outside the project. Do not edit, create or delete anything in the project.
     TEXT
 
+    SYNC_RULE = <<~TEXT.strip
+      CODE UPDATE. The review now shows the code as it is. Review what changed and post what is worth saying.
+      Read each range listed as not reviewed yet, with the code around it, and post a comment for anything a reviewer should know, one at a time, as in a review in progress. No comment is the right answer when nothing stands out. If an outdated comment of yours still applies, post it again on the new lines under a new id.
+      You may read files, search and run read-only commands, and write the comment JSON to a temporary file outside the project. Do not edit, create or delete anything in the project.
+    TEXT
+
     USAGE = {
+      'sync' => 'dcr sync (--repo ROOT --name SERIES | --dir DIR)   (updates the review to the code as it is now: a new revision with the current diff, comments moved to their lines or marked outdated, and the changed ranges printed for you to comment on)',
       'wait' => 'dcr wait (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--model ID] [--effort LEVEL] [--timeout SECONDS] [--json]',
       'comments' => 'dcr comments (--repo ROOT --name SERIES | --dir DIR) [--thread ID] [--json]   (--thread prints that one conversation in full: the comment as sent, then every message)',
       'preview' => 'dcr preview submit (--repo ROOT --name SERIES | --dir DIR) --path <template path> [--file FILE] [--title TITLE] [--css STYLESHEET]... [--page-class CLASSES] [--image-map JSON] | dcr preview fail ... --path <template path> --reason TEXT',
@@ -106,6 +113,7 @@ module DCR
       when 'comments' then comments(state, options)
       when 'reply' then reply(state, options, argv, parser)
       when 'comment' then comment(state, options, directory(options, parser))
+      when 'sync' then sync(options, directory(options, parser))
       when 'risk-ranking' then risk_ranking(state, options, directory(options, parser))
       when 'focus' then focus(directory(options, parser))
       when 'link' then link(directory(options, parser))
@@ -162,19 +170,23 @@ module DCR
       sends = entries.select { |entry| entry['kind'] == 'send' }
       previews = entries.select { |entry| entry['kind'] == 'preview' }
       qas = entries.select { |entry| entry['kind'] == 'qa' }
+      syncs = entries.select { |entry| entry['kind'] == 'sync' }
       risks = entries.select { |entry| entry['kind'] == 'risk' }
       ids = sends.flat_map { |entry| entry['thread_ids'] }.uniq
-      conversation = sends.any? || finish || (previews.empty? && qas.empty? && risks.empty?) # a pure task request is not a conversation
+      conversation = sends.any? || finish || (previews.empty? && qas.empty? && risks.empty? && syncs.empty?) # a pure task request is not a conversation
       out = []
       out << REPLY_ONLY if conversation
       out << PREVIEW_RULE if previews.any?
       out << QA_RULE if qas.any?
       out << RISK_RULE if risks.any?
+      out << SYNC_RULE if syncs.any?
       out << (finish ? 'The reviewer finished this round.' : 'The reviewer sent you the following from the review.') if conversation
       sends.each { |entry| out << "---\nThread: #{entry['thread_ids'].join(', ')}\n\n#{entry['text']}" }
       previews.each { |entry| out << "---\n#{preview_request(entry, flags)}" }
       qas.each { |entry| out << "---\nThread: #{entry['thread_ids'].join(', ')}\n\n#{entry['text']}" }
       out << "---\nPost it with: dcr risk-ranking #{flags} --file <ranking.json>   (or --none '<why, in a few words>')" if risks.any?
+      syncs.each { |entry| out << "---\n#{entry['text']}" }
+      out << "---\nPost each comment with: dcr comment #{flags} --file <comment.json>" if syncs.any?
       out << '---'
       out << "Answer each thread with: dcr reply #{flags} <thread-id> '<your answer: what you found, and what you would change if anything>'" unless ids.empty?
       out << 'Do not resolve threads; the reviewer resolves them.' unless ids.empty? || finish
@@ -183,6 +195,7 @@ module DCR
       out << if conversation then 'Reminder: reply only. No file changes, no commits, no pushes.'
              elsif qas.any? then 'Reminder: record and attach only, with development data you add as needed. No changes to the project\'s files, no commits, no pushes.'
              elsif risks.any? && previews.empty? then 'Reminder: post the risk ranking only; change nothing in the project.'
+             elsif syncs.any? && previews.empty? then 'Reminder: post comments only; change nothing in the project.'
              else 'Reminder: submit HTML only, change nothing in the project.'
              end
       out.join("\n\n")
@@ -326,9 +339,11 @@ module DCR
       history = ReviewSeries.manifest(directory)
       payload = ReviewSeries.latest(directory, history)
       snapshot, review = payload.values_at('snapshot', 'review')
-      raise ArgumentError, 'This review is finished. Comments are posted only while a review is in progress (`dcr series start --in-progress`).' unless review['status'] == 'in_progress'
+      unless review['status'] == 'in_progress' || Array(review['unreviewed']).any?
+        raise ArgumentError, 'This review is finished. Comments are posted while a review is in progress (`dcr series start --in-progress`) or after an update brought in code nobody reviewed (`dcr sync`).'
+      end
       hunks = DynamicReviews.hunk_index(snapshot)
-      ids = Array(review['comments']).map { |existing| existing['id'] }
+      ids = ReviewSeries.with_posted(directory, history, review).map { |existing| existing['id'] }
       comments = comments.map do |entry|
         unknown = entry.keys - COMMENT_FIELDS
         raise ArgumentError, "Unknown comment field(s): #{unknown.join(', ')}" unless unknown.empty?
@@ -347,6 +362,16 @@ module DCR
       state.post_comments(State.review_key(entry['fingerprint'], history['name'], entry['number']), comments)
       puts "Posted #{comments.length == 1 ? "comment #{comments.first['id']}" : "#{comments.length} comments"} to the open review."
       ask_others(directory, comments, author, contexts) unless options[:second_opinion] == false
+    end
+
+    # Brings the review up to the code as it is now and says what changed, so whoever ran it can
+    # comment on the new ranges. No analysis is written here.
+    def sync(options, directory)
+      require_relative '../../scripts/series'
+      history = ReviewSeries.manifest(directory)
+      result = ReviewSeries.sync(repo: history.fetch('repo'), name: history.fetch('name'))
+      return puts("Revision #{result['revision']} already shows the code as it is. Nothing to update.") if result['status'] == 'unchanged'
+      puts [ReviewSeries.sync_brief(result), SYNC_RULE, "Post each comment with: dcr comment #{flags(options)} --file <comment.json>", 'The open page offers the new revision by itself. Comments and progress came along.'].join("\n\n")
     end
 
     # The Risk ranking: the open page shows it at once. While the review is in progress `dcr series
