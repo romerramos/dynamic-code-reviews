@@ -2479,8 +2479,8 @@
     if (save) try { width == null ? localStorage.removeItem(LEDGER_WIDTH) : localStorage.setItem(LEDGER_WIDTH, String(width)); } catch { /* this visit only */ }
   }
   try { const width = Number(localStorage.getItem(LEDGER_WIDTH)); if (width) setLedgerWidth(width, false); } catch { /* default width */ }
-  // Resize mode, as in a terminal multiplexer: Ctrl+B is the prefix and opens its menu, R on it goes
-  // in, H and L (or the arrows) move the edge, Enter or Esc leaves. The other keys wait.
+  // Resize mode, as in a terminal multiplexer: Ctrl+B is the prefix and opens its menu (Z on it is
+  // focus mode, as a multiplexer zooms a pane), R on it goes in, H and L (or the arrows) move the edge, Enter or Esc leaves. The other keys wait.
   let resizing = false;
   const resizeTip = ledgerResize?.querySelector('.ledger-resize-tip');
   const dragTip = resizeTip?.innerHTML;
@@ -3155,7 +3155,10 @@
     const inText = textField(event.target) || event.target.tagName === 'SELECT' || event.target.isContentEditable;
     if (event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'b' && !inText && !openOverlay()) {
       event.preventDefault();
-      if (!event.repeat) openLeader([{key:'r', label:'Resize your review', run: () => setResizing(true)}], null, true);
+      if (!event.repeat) openLeader([
+        {key:'z', label: document.body.classList.contains('zen') ? 'Leave focus mode' : 'Focus mode', run: () => setZen(!document.body.classList.contains('zen'))},
+        {key:'r', label:'Resize your review', run: () => setResizing(true)}
+      ], null, true);
       return;
     }
     // Only a text or a list being chosen from keeps the keys to itself; a checkbox or a radio button does not.
