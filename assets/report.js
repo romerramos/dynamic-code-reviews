@@ -234,14 +234,14 @@
     });
     return commands;
   }
-  function openLeader(commands, overlay = null) {
+  function openLeader(commands, overlay = null, prefix = false) {
     leader = commands;
-    leaderMenu.innerHTML = `<h2>Menu</h2><ul>${leader.map(command => `<li><button type="button" role="menuitem" data-leader="${escape(command.key)}"><kbd>${command.key === ' ' ? 'space' : escape(command.key)}</kbd><span>${escape(command.label)}</span></button></li>`).join('')}</ul><p><kbd>esc</kbd> close</p>`;
+    leaderMenu.innerHTML = `<h2>${prefix ? 'Prefix' : 'Menu'}</h2><ul>${leader.map(command => `<li><button type="button" role="menuitem" data-leader="${escape(command.key)}"><kbd>${command.key === ' ' ? 'space' : escape(command.key)}</kbd><span>${escape(command.label)}</span></button></li>`).join('')}</ul><p><kbd>esc</kbd> close</p>`;
     // Inside an open dialog, so it is drawn over it and its rows can be clicked; then into the top layer.
     (overlay?.tagName === 'DIALOG' ? overlay : document.body).append(leaderMenu);
     leaderMenu.hidden = false;
     try { leaderMenu.showPopover(); } catch { /* shown in place where popovers are not supported */ }
-    document.body.dataset.leader = ''; // for a theme that shows the mode
+    document.body.dataset.leader = prefix ? 'prefix' : ''; // for a theme that shows the mode
   }
   function endLeader() {
     leader = null;
@@ -2479,9 +2479,8 @@
     if (save) try { width == null ? localStorage.removeItem(LEDGER_WIDTH) : localStorage.setItem(LEDGER_WIDTH, String(width)); } catch { /* this visit only */ }
   }
   try { const width = Number(localStorage.getItem(LEDGER_WIDTH)); if (width) setLedgerWidth(width, false); } catch { /* default width */ }
-  // Resize mode, as in a terminal multiplexer: Ctrl+B then R goes in, H and L (or the arrows) move
-  // the edge, Enter or Esc leaves. The other keys wait.
-  let prefix = false; // Ctrl+B was the last key
+  // Resize mode, as in a terminal multiplexer: Ctrl+B is the prefix and opens its menu, R on it goes
+  // in, H and L (or the arrows) move the edge, Enter or Esc leaves. The other keys wait.
   let resizing = false;
   const resizeTip = ledgerResize?.querySelector('.ledger-resize-tip');
   const dragTip = resizeTip?.innerHTML;
@@ -3154,8 +3153,11 @@
       return;
     }
     const inText = textField(event.target) || event.target.tagName === 'SELECT' || event.target.isContentEditable;
-    if (prefix) { prefix = false; if (event.key.toLowerCase() === 'r' && !inText && !openOverlay()) { event.preventDefault(); setResizing(true); return; } }
-    if (event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'b' && !inText) { event.preventDefault(); prefix = true; return; }
+    if (event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'b' && !inText && !openOverlay()) {
+      event.preventDefault();
+      if (!event.repeat) openLeader([{key:'r', label:'Resize your review', run: () => setResizing(true)}], null, true);
+      return;
+    }
     // Only a text or a list being chosen from keeps the keys to itself; a checkbox or a radio button does not.
     if (textField(event.target) || event.target.tagName === 'SELECT' || event.target.isContentEditable || event.metaKey || event.ctrlKey || event.altKey) return;
     // The arrows are H, J, K and L: left, down, up and right mean the same on either set of keys.

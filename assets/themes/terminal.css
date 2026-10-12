@@ -94,6 +94,7 @@
 /* Space opens the menu: while it is open, the line says so. */
 [data-theme^="terminal-"]:has(body[data-leader]){--terminal-mode:"LEADER";--terminal-mode-len:6;--terminal-focus:"";--terminal-focus-len:0}
 [data-theme^="terminal-"] body[data-leader]::before{background:var(--terminal-hot)}
+[data-theme^="terminal-"]:has(body[data-leader="prefix"]){--terminal-mode:"PREFIX"}
 
 [data-theme^="terminal-"] body::after{content:attr(data-position) "  ·  " attr(data-progress);position:fixed;z-index:19;left:0;right:0;bottom:0;height:var(--status-h);padding:0 2ch 0 calc((var(--terminal-mode-len) + var(--terminal-focus-len) + 5) * 1ch);display:flex;align-items:center;border-top:1px solid var(--line);background:var(--canvas);color:var(--ink);font:12px/1 var(--mono);white-space:pre;overflow:hidden}
 [data-theme^="terminal-"]::after{content:"? keys  ·  space menu  ·  h/l " var(--terminal-hl) "  ·  j/k " var(--terminal-jk) "  ·  s jump  ·  m viewed  ·  z " var(--terminal-z) "  ·  f " var(--terminal-f);position:fixed;z-index:20;right:0;bottom:0;height:var(--status-h);padding:0 2ch;display:flex;align-items:center;border-top:1px solid var(--line);background:var(--canvas);color:var(--muted);font:12px/1 var(--mono);white-space:pre}
