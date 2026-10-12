@@ -44,3 +44,8 @@ section#qa-panel #qa-status{background:transparent;border:0;padding:0;font-size:
 section#qa-panel .qa-primary{gap:12px}
 section#qa-panel input,section#qa-panel select,section#qa-panel textarea{background:transparent;color:inherit;border-color:color-mix(in oklab,currentColor 24%,transparent)}
 section#qa-panel #qa-notice{color:inherit;opacity:.85}
+/* On a phone the button goes under the words: beside them it leaves them a column a few letters wide. */
+@media(max-width:650px){
+  section#qa-panel{grid-template-columns:minmax(0,1fr)}
+  section#qa-panel>.qa-primary{grid-column:1;grid-row:auto;margin:10px 0 4px}
+}

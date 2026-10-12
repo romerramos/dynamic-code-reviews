@@ -380,15 +380,17 @@ globalThis.LiveTools = (() => {
       const plural = (number, one, many) => `${number} ${number === 1 ? one : many}`;
       const unread = said.filter(value => !value).length;
       const yours = count('human');
+      // What the reviewer has to do comes marked: a narrow screen keeps that fact and drops the rest.
+      const fact = (html, key = false) => `<span class="dcr-jev-fact${key ? ' is-key' : ''}">${html}</span>`;
       const facts = [
         typeof verdict.confidence === 'number' ? `${Math.round(verdict.confidence * 100)}% confidence` : null,
-        said.length ? (yours ? `<button type="button" class="dcr-jev-yours" popovertarget="dcr-jev-list" title="List them">${plural(yours, 'file needs', 'files need')} you</button>` : '<strong>0 files need you</strong>') : null,
+        said.length ? fact(yours ? `<button type="button" class="dcr-jev-yours" popovertarget="dcr-jev-list" title="List them">${plural(yours, 'file needs', 'files need')} you</button>` : '<strong>0 files need you</strong>', true) : null,
         count('llm') ? `${count('llm')} an LLM can review` : null,
         count('none') ? `${plural(count('none'), 'needs', 'need')} no review` : null,
         unread || verdict.truncated ? `${unread || 'some'} not read` : null
-      ].filter(Boolean);
+      ].filter(Boolean).map(text => text.startsWith('<span class="dcr-jev-fact') ? text : fact(text));
       const link = /^https?:\/\//.test(verdict.url || '') ? `<a class="dcr-jev-link" href="${escape(verdict.url)}" target="_blank" rel="noopener noreferrer">Verdict page</a>` : '';
-      return `${name}<strong class="dcr-jev-verdict is-${escape(verdict.verdict)}">${JEV_WORDS[verdict.verdict] || escape(verdict.verdict)}</strong><p>${facts.join('<i aria-hidden="true"> · </i>')}</p><span class="dcr-jev-actions">${link}</span>`;
+      return `${name}<strong class="dcr-jev-verdict is-${escape(verdict.verdict)}">${JEV_WORDS[verdict.verdict] || escape(verdict.verdict)}</strong><p>${facts.join('')}</p><span class="dcr-jev-actions">${link}</span>`;
     }
     if (verdict?.status === 'error') {
       return `${name}<p class="is-quiet">${escape(verdict.message || 'No verdict.')}</p><span class="dcr-jev-actions"><button type="button" class="btn btn-sm btn-ghost" data-dcr-jev="again">Try again</button></span>`;

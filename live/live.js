@@ -979,7 +979,7 @@
   // The Adversaries section: every agent CLI here, a switch each, and the model and effort of those on.
   const renderAdversaries = () => {
     const html = tools.adversaryPanelHTML({catalog, adversaries, author: listener, error: catalogError});
-    if (advPanel.dataset.html !== html) { advPanel.innerHTML = html; advPanel.dataset.html = html; }
+    if (advPanel.dataset.html !== html) { advPanel.innerHTML = html; advPanel.dataset.html = html; if (!presenceCard.hidden) placePresenceCard(); }
     renderIntro();
   };
   // Lists the agents when the card opens. The server keeps the list a few minutes, so reopening is
@@ -1093,7 +1093,11 @@
     const box = presence.getBoundingClientRect();
     const width = Math.min(360, window.innerWidth - 24);
     presenceCard.style.width = `${width}px`;
-    presenceCard.style.top = `${Math.round(box.bottom + 8)}px`;
+    // Under the chip, or over it when the chip is at the bottom of the screen, as on a phone.
+    presenceCard.style.maxHeight = `${window.innerHeight - 24}px`;
+    const height = presenceCard.offsetHeight;
+    const below = box.bottom + 8 + height <= window.innerHeight - 8;
+    presenceCard.style.top = `${Math.round(below ? box.bottom + 8 : Math.max(8, box.top - 8 - height))}px`;
     presenceCard.style.left = `${Math.round(Math.max(12, Math.min(box.left, window.innerWidth - width - 12)))}px`;
   };
   const togglePresenceCard = open => {

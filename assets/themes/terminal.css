@@ -258,3 +258,12 @@
 [data-theme^="terminal-"] section#qa-panel button{border-radius:0;font-weight:700}
 [data-theme^="terminal-"] section#qa-panel button:not(.secondary){background:var(--terminal-fill);color:var(--terminal-on-fill)}
 [data-theme^="terminal-"] section#qa-panel button:not(.secondary):hover{background:color-mix(in srgb,var(--terminal-fill) 82%,var(--ink))}
+
+/* On a phone JevMyPR's strip wraps: its two cells stay flush on the first line, the rest keeps the page's gutter. */
+@media(max-width:650px){
+  [data-theme^="terminal-"] .dcr-jev{padding:0}
+  [data-theme^="terminal-"] .dcr-jev p{padding:6px 12px}
+  [data-theme^="terminal-"] .dcr-jev:has(.dcr-jev-verdict) p{padding:6px 0}
+  [data-theme^="terminal-"] .dcr-jev-verdict{margin-left:0}
+  [data-theme^="terminal-"] .dcr-jev-actions{padding-right:12px}
+}

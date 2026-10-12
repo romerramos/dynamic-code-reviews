@@ -418,7 +418,7 @@
     const box = content.getBoundingClientRect();
     const line = row.getBoundingClientRect();
     const margin = Math.min(box.height * 0.25, 220);
-    const pinned = document.querySelector('.focus-file-header')?.getBoundingClientRect().bottom || box.top;
+    const pinned = document.querySelector('.focus-file-header') ? readingTop() : box.top;
     const top = Math.max(box.top, pinned) + margin;
     const now = glides.get(content) ? glides.get(content).target : content.scrollTop;
     const shift = now - content.scrollTop; // how far a glide still has to go
@@ -441,7 +441,7 @@
     const tables = diffTables();
     const again = cursorPlace && !cursorRow?.isConnected && tables.find(table => table.getAttribute('aria-label') === cursorPlace.table)?.rows[cursorPlace.index];
     if (isRow(again) && onScreen(again)) { setCursor(again, false); return again; }
-    const pinned = document.querySelector('.focus-file-header')?.getBoundingClientRect().bottom || box.top;
+    const pinned = document.querySelector('.focus-file-header') ? readingTop() : box.top;
     for (const table of tables) {
       const frame = table.getBoundingClientRect();
       if (frame.bottom <= pinned || frame.top >= box.bottom) continue;
@@ -2096,8 +2096,10 @@
     return `<div class="overview-reading"><header class="overview-intro"><p class="eyebrow">Review overview</p><h1>${escape(review.title)}</h1><h2 class="what-changed-title">What changed</h2><p class="overview-scope">${escape(ReviewTools.comparisonText(snapshot, review))}</p><p class="lead">${escape(review.summary)}</p>${revision && revision.revision > 1 ? `<p class="overview-update"><strong>Review revision ${revision.revision}</strong> · ${escape(revision.summary)}</p>` : ''}${historyLinks}${progressBox}</header>${inProgress ? '' : renderVisualOptions()}${pending ? `<p class="overview-notice">${pending} previous finding${pending === 1 ? '' : 's'} still need checking. See Review details.</p>` : ''}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}${renderRiskRanking()}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${generated.map(commentCard).join('')}${unlinkedFlows().filter(({flow}) => flow.result === 'failed').map(({flow,index}) => qaFlow(flow,index)).join('')}</section>${renderOtherChecks()}${renderMyReview()}</div>`;
   }
 
+  // On a phone the bar at the bottom has no pager, so a step ends with the way to the next one.
+  const stepEnd = index => `<footer class="step-end phone-only"><button class="btn btn-sm btn-ghost" data-step-by="-1">← ${index === 0 ? 'Overview' : 'Previous step'}</button><span>Step ${index + 1} of ${layers.length}</span><button class="btn btn-sm btn-primary" data-step-by="1" ${index + 1 === layers.length ? 'disabled' : ''}>Next step →</button></footer>`;
   function renderStep(layer) {
-    return `<div class="step-overview"><div class="page-intro"><div class="eyebrow">${escape(titleWithoutNumber(layer.group.title))} / Step ${layers.indexOf(layer) + 1}</div><h1>${escape(layer.title)}</h1><p class="lead">${escape(layer.summary || layer.group.summary)}</p></div><span class="step-progress badge neutral">${progressText(progress(layer.items))}</span></div><details class="context-details"><summary>Why these files belong together & what to check</summary><p>${escape(layer.group.summary)}</p>${bulletList(layer.checks)}</details>${flow(layer.flow)}${renderWalkthroughFiles(layer)}<details class="local-notes"><summary>Your notes for this step</summary><textarea id="notes" aria-label="Notes for this step" placeholder="Anything to revisit…"></textarea><small>Stored in this browser when available. Export from Review details to keep a copy.</small></details>`;
+    return `<div class="step-overview"><div class="page-intro"><div class="eyebrow">${escape(titleWithoutNumber(layer.group.title))} / Step ${layers.indexOf(layer) + 1}</div><h1>${escape(layer.title)}</h1><p class="lead">${escape(layer.summary || layer.group.summary)}</p></div><span class="step-progress badge neutral">${progressText(progress(layer.items))}</span></div><details class="context-details"><summary>Why these files belong together & what to check</summary><p>${escape(layer.group.summary)}</p>${bulletList(layer.checks)}</details>${flow(layer.flow)}${renderWalkthroughFiles(layer)}<details class="local-notes"><summary>Your notes for this step</summary><textarea id="notes" aria-label="Notes for this step" placeholder="Anything to revisit…"></textarea><small>Stored in this browser when available. Export from Review details to keep a copy.</small></details>${stepEnd(layers.indexOf(layer))}`;
   }
 
   function renderFiles() {
@@ -2141,7 +2143,7 @@
     }
     const groupNumber = review.groups.indexOf(entry.layer.group) + 1;
     const stepTitle = entry.layer.title === entry.layer.group.title ? '' : `<span class="crumb-sep" aria-hidden="true">›</span><span class="crumb-step">${escape(entry.layer.title)}</span>`;
-    return `<section class="focus-reader"><header class="focus-file-header"><div class="focus-meta"><span class="focus-group" title="${escape(`Group ${groupNumber} of ${review.groups.length}: ${entry.layer.group.title}`)}"><span class="crumb-number">${groupNumber}/${review.groups.length}</span>${escape(titleWithoutNumber(entry.layer.group.title))}${stepTitle}</span><div class="focus-file-actions" role="group" aria-label="Changed sections"><button class="icon-button" data-change-step="-1" disabled aria-label="Previous changed section" title="Previous changed section">${icon('chevron-left')}</button><span id="change-position">${file.hunks.length} changes</span><button class="icon-button" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} aria-label="Next changed section" title="Next changed section">${icon('chevron-right')}</button></div></div><div class="focus-identity"><div class="current-file"><code>${escape(file.path)}</code><button class="icon-button copy-file-path" data-copy-file title="Copy the full relative file path" aria-label="Copy file path">${icon('copy')}</button>${needMark(file, true)}</div>${componentLinks}${previewToggle(file)}${notVisualNote(file)}<details class="file-about"><summary>${icon('info')}<span>Why this file</span></summary><p>${escape(entry.layer.summary || entry.layer.group.summary)}</p>${items.map(item => item.summary ? `<p>${escape(item.summary)}</p>` : '').join('')}</details><div class="focus-progress-actions"><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" ${fileViewed(file) ? 'checked' : ''}> <span>${fileViewed(file) ? 'Viewed' : 'Mark viewed'}</span></label><button class="btn btn-sm btn-ghost" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file ${icon('arrow-right')}</button></div></div></header>${!full ? '<p class="focus-unavailable">Full source was not captured or exceeds the text limit. Showing the saved diff; no current working files have been substituted.</p>' : ''}${(() => { const code = file.hunks.length || full?.length ? renderDiffTable(file, full || file.hunks, summaries) : `<pre>${escape(file.note || file.patch || 'No text diff available.')}</pre>`; return code; })()}<footer class="focus-end"><span>${focusIndex + 1 === focusOrder.length ? 'End of the review' : `Next: ${escape(files.get(focusOrder[focusIndex + 1].file).path)}`}</span><button class="btn btn-sm btn-primary" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></footer></section>`;
+    return `<section class="focus-reader"><header class="focus-file-header"><div class="focus-meta"><span class="focus-group" title="${escape(`Group ${groupNumber} of ${review.groups.length}: ${entry.layer.group.title}`)}"><span class="crumb-number">${groupNumber}/${review.groups.length}</span>${escape(titleWithoutNumber(entry.layer.group.title))}${stepTitle}</span><div class="focus-file-actions" role="group" aria-label="Changed sections"><button class="icon-button" data-change-step="-1" disabled aria-label="Previous changed section" title="Previous changed section">${icon('chevron-left')}</button><span id="change-position">${file.hunks.length} changes</span><button class="icon-button" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} aria-label="Next changed section" title="Next changed section">${icon('chevron-right')}</button></div></div><div class="focus-identity"><div class="current-file"><code>${escape(file.path)}</code><button class="icon-button copy-file-path" data-copy-file title="Copy the full relative file path" aria-label="Copy file path">${icon('copy')}</button>${needMark(file, true)}</div>${componentLinks}${previewToggle(file)}${notVisualNote(file)}<details class="file-about"><summary>${icon('info')}<span>Why this file</span></summary><p>${escape(entry.layer.summary || entry.layer.group.summary)}</p>${items.map(item => item.summary ? `<p>${escape(item.summary)}</p>` : '').join('')}</details><div class="focus-progress-actions"><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" ${fileViewed(file) ? 'checked' : ''}> <span>${fileViewed(file) ? 'Viewed' : 'Mark viewed'}</span></label><button class="btn btn-sm btn-ghost phone-only" data-focus-prev ${focusIndex === 0 ? 'disabled' : ''} aria-label="Previous file">${icon('arrow-left')} Previous</button><button class="btn btn-sm btn-ghost" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file ${icon('arrow-right')}</button><span class="focus-count phone-only">${focusIndex + 1} of ${focusOrder.length}</span></div></div></header>${!full ? '<p class="focus-unavailable">Full source was not captured or exceeds the text limit. Showing the saved diff; no current working files have been substituted.</p>' : ''}${(() => { const code = file.hunks.length || full?.length ? renderDiffTable(file, full || file.hunks, summaries) : `<pre>${escape(file.note || file.patch || 'No text diff available.')}</pre>`; return code; })()}<footer class="focus-end"><span>${focusIndex + 1 === focusOrder.length ? 'End of the review' : `Next: ${escape(files.get(focusOrder[focusIndex + 1].file).path)}`}</span><button class="btn btn-sm btn-ghost phone-only" data-focus-prev ${focusIndex === 0 ? 'disabled' : ''}>← Previous</button><button class="btn btn-sm btn-primary" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></footer></section>`;
   }
   function focusFile(index) {
     document.body.classList.remove('navigation-open'); $('nav-toggle').setAttribute('aria-expanded', 'false');
@@ -2207,12 +2209,19 @@
   function reviewScrollTop() {
     return getComputedStyle($('content')).overflowY === 'visible' ? window.scrollY : $('content').scrollTop;
   }
+  // Where reading starts in the viewport: under the file's header while it is pinned, else at the
+  // top of what scrolls (on a phone the header scrolls away with the page).
+  function readingTop() {
+    const header = document.querySelector('.focus-file-header');
+    const floor = getComputedStyle($('content')).overflowY === 'visible' ? 0 : $('content').getBoundingClientRect().top;
+    return header && getComputedStyle(header).position !== 'static' ? Math.max(floor, header.getBoundingClientRect().bottom) : floor;
+  }
   function selectChangedSection(target) {
     if (!target) return;
     // First pin the header, then correct for its final position. Use instant
     // scrolling so a second click never observes an unfinished animation.
     for (let pass = 0; pass < 2; pass++) {
-      const top = document.querySelector('.focus-file-header').getBoundingClientRect().bottom + 8;
+      const top = readingTop() + 8;
       const delta = target.getBoundingClientRect().top - top;
       if (getComputedStyle($('content')).overflowY === 'visible') window.scrollTo({top:window.scrollY + delta, behavior:'instant'});
       else $('content').scrollTo({top:$('content').scrollTop + delta, behavior:'instant'});
@@ -2621,6 +2630,23 @@
     const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
     tabs[next].click(); tabs[next].focus({preventScroll:true});
   });
+  // On a touch screen, a quick swipe across the file goes to the next file (to the left) or the
+  // previous one (to the right), as pages turn. Not while text is selected, and not over a diff
+  // that scrolls sideways itself.
+  let swipe = null;
+  document.addEventListener('touchstart', event => {
+    const touch = event.touches.length === 1 && event.target.closest?.('#content') ? event.touches[0] : null;
+    swipe = touch ? {x: touch.clientX, y: touch.clientY, at: Date.now(), scroller: event.target.closest('.diff-scroll')} : null;
+  }, {passive:true});
+  document.addEventListener('touchend', event => {
+    const from = swipe, touch = event.changedTouches[0];
+    swipe = null;
+    if (!from || !touch || !fileReadingActive() || Date.now() - from.at > 600 || String(getSelection?.() || '')) return;
+    const across = touch.clientX - from.x, down = touch.clientY - from.y;
+    if (Math.abs(across) < 80 || Math.abs(down) > Math.abs(across) / 2) return;
+    if (from.scroller && from.scroller.scrollWidth > from.scroller.clientWidth + 4) return;
+    step(across < 0 ? 1 : -1);
+  }, {passive:true});
   // The ⋯ menus float over the page, since cards clip their overflow: above their button when it fits.
   const closeMenus = (except = null) => document.querySelectorAll('details.more-menu[open]').forEach(open => { if (open !== except) open.open = false; });
   document.addEventListener('toggle', event => {
@@ -2935,6 +2961,9 @@
       document.querySelector(`[data-focus-component-file="${id}"]`)?.focus({preventScroll:true});
     }
     if (event.target.closest('[data-focus-next]')) step(1);
+    if (event.target.closest('[data-focus-prev]')) step(-1);
+    const stepBy = event.target.closest('[data-step-by]');
+    if (stepBy) step(Number(stepBy.dataset.stepBy));
     if (event.target.closest('[data-copy-file]')) copyText(files.get(focusOrder[focusIndex].file).path);
     const button = event.target.closest('[data-change-step]');
     if (button) {
@@ -2959,13 +2988,16 @@
   $('ledger-close').innerHTML = icon('x');
   $('zen-toggle').innerHTML = icon('maximize-2');
   $('zen-exit').innerHTML = `${icon('minimize-2')}<span>Exit focus</span>`;
-  // The View menu is a native popover placed under its button, clamped to the viewport.
+  // The View menu is a native popover placed under its button, or over it when the button is at the
+  // bottom of the screen (as on a phone), clamped to the viewport.
   $('view-menu').addEventListener('toggle', event => {
     $('view-toggle').setAttribute('aria-expanded', event.newState === 'open');
     if (event.newState !== 'open') return;
     const anchor = $('view-toggle').getBoundingClientRect();
     const menu = $('view-menu');
-    menu.style.top = `${Math.round(anchor.bottom + 8)}px`;
+    menu.style.maxHeight = `${innerHeight - 24}px`;
+    const below = anchor.bottom + 8 + menu.offsetHeight <= innerHeight - 8;
+    menu.style.top = `${Math.round(below ? anchor.bottom + 8 : Math.max(8, anchor.top - 8 - menu.offsetHeight))}px`;
     menu.style.left = `${Math.round(Math.max(12, Math.min(anchor.right - menu.offsetWidth, innerWidth - menu.offsetWidth - 12)))}px`;
   });
   $('comment-form').onsubmit = event => {
