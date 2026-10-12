@@ -631,8 +631,11 @@
     done.querySelector('[data-done-report]').innerHTML = report && tools ? tools.markdown(report.body) : '';
     const openButtonDone = done.querySelector('[data-done-open]');
     openButtonDone.textContent = newer ? `See the clips in revision ${latestRevision}` : 'Back to the review';
-    // The address is often already /#overview here, where assigning it would not load anything.
-    openButtonDone.onclick = () => { if (newer) { history.replaceState(null, '', '/#overview'); location.reload(); } else done.close(); };
+    // The clips are in the new revision, so leaving this dialog by any way (the button, Close, Esc)
+    // opens it. The address is often already /#overview, where assigning it would not load anything.
+    done.onclose = newer ? () => { history.replaceState(null, '', '/#overview'); location.reload(); } : null;
+    done.querySelector('[data-done-close]').hidden = !!newer;
+    openButtonDone.onclick = () => done.close();
     done.showModal();
   };
   const evaluateQA = () => {

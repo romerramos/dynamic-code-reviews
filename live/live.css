@@ -70,6 +70,8 @@
 /* An answer arrived somewhere you are not looking. */
 #dcr-arrival{position:fixed;right:24px;bottom:calc(84px + var(--status-h));z-index:18;display:flex;align-items:center;gap:12px;max-width:min(430px,calc(100vw - 32px));padding:12px 10px 12px 14px;border:1px solid var(--line);border-radius:calc(12px * var(--round));background:var(--surface);color:var(--ink);font-size:13.5px;box-shadow:0 8px 30px color-mix(in srgb,var(--shade) 18.8%,transparent)}
 #dcr-arrival[hidden]{display:none}
+#dcr-newer{color:var(--accent);font-weight:650;white-space:nowrap}
+#dcr-newer[hidden]{display:none}
 #dcr-arrival strong{display:block;font-weight:600}
 #dcr-arrival div>span{display:block;max-width:28ch;overflow:hidden;color:var(--muted);text-overflow:ellipsis;white-space:nowrap}
 .dcr-dismiss{padding:4px 6px;border:0;background:transparent;color:var(--muted);font-size:12px}

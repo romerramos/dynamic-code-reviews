@@ -1234,16 +1234,42 @@
     clearTimeout(arrivalTimer);
     arrivalTimer = setTimeout(() => { arrival.hidden = true; }, 12000);
   };
-  // The finished review is a new revision of the same code: progress and conversations come along.
-  let finishedAnnounced = false;
+  // A newer revision of the same code, saved while this page is open: the finished review, or the
+  // recordings of a QA review. Progress and conversations come along, so the page opens it by
+  // itself when that takes nothing from the reader: nothing typed, no dialog open, and either away
+  // from the tab or on Overview. Otherwise a notice says so, and a button in the header stays
+  // until they take it, however the notice went.
+  const openLatest = () => { history.replaceState(null, '', '/#overview'); location.reload(); };
+  const newerButton = Object.assign(document.createElement('button'), {type: 'button', id: 'dcr-newer', className: 'header-button', hidden: true, onclick: openLatest});
+  document.querySelector('.header-actions')?.prepend(newerButton);
+  const shownRevision = review.history?.revision || 0;
+  const inHand = () => 'editing' in document.body.dataset || document.querySelector('dialog[open]') || [...document.querySelectorAll('textarea')].some(field => field.value.trim() && field.offsetParent);
+  const openedKey = 'dynamic-review:opened-latest';
+  let latestAtOpen = null, finishedAnnounced = false;
   const announceFinished = () => {
-    if (finishedAnnounced || !review.status || !latest || latest <= (review.history?.revision || 0)) return;
+    latestAtOpen ??= latest || 0;
+    // An older revision opened on purpose is not news; the review finishing always is.
+    if (!latest || latest <= shownRevision || !(review.status || latest > latestAtOpen)) return;
+    let opened = null;
+    try { opened = sessionStorage.getItem(openedKey); } catch { /* open it once more at worst */ }
+    // Once per revision, so a page that still shows an older one is never reloaded in a loop.
+    if (opened !== String(latest) && !inHand() && (document.hidden || /^(#overview)?$/.test(location.hash))) {
+      try { sessionStorage.setItem(openedKey, String(latest)); } catch { /* as above */ }
+      openLatest();
+      return;
+    }
+    const headline = review.status ? 'Your review is ready' : `Revision ${latest} is ready`;
+    newerButton.textContent = headline;
+    newerButton.title = 'Open it. Your progress is kept.';
+    newerButton.hidden = false;
+    if (finishedAnnounced) return;
     finishedAnnounced = true;
     clearTimeout(arrivalTimer);
-    arrival.innerHTML = `<span class="dcr-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><div><strong>Your review is ready</strong><span>Your progress is kept.</span></div><button type="button" class="btn btn-sm btn-primary" data-dcr-open-latest>Open it</button><button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
+    arrival.innerHTML = `<span class="dcr-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><div><strong>${headline}</strong><span>Your progress is kept.</span></div><button type="button" class="btn btn-sm btn-primary" data-dcr-open-latest>Open it</button><button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
     arrival.hidden = false;
   };
-  arrival.addEventListener('click', event => { if (event.target.closest('[data-dcr-open-latest]')) { history.replaceState(null, '', '/#overview'); location.reload(); } });
+  arrival.addEventListener('click', event => { if (event.target.closest('[data-dcr-open-latest]')) openLatest(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && latestAtOpen !== null) announceFinished(); });
 
   // Copy for LLMs carries the conversation, and where to read the rest of it.
   globalThis.ReviewTools.setConversationSource(id => threads[id]?.messages?.length ? {messages: threads[id].messages, series: review.history?.series} : null);
