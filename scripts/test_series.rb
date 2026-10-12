@@ -292,6 +292,50 @@ module SeriesChecks
         end
       end
     end
+    checks['updates a review to the current code: comments follow their lines or become outdated'] = lambda do
+      require_relative '../lib/dcr/live_cli'
+      ReviewChecks.fixture do |root, _commit|
+        Dir.mktmpdir('review-sync-') do |out|
+          first = ReviewSeries.start(repo: root, name: 'live', report: initial(root))
+          series = File.dirname(File.dirname(first))
+          state = DCR::State.new(series)
+          before = DynamicReviews.extract(first)['snapshot']
+          hid = before['files'].first['hunks'].first['id']
+          old_key = DCR::State.review_key(before['fingerprint'], 'live', 1)
+          mine = ->(id, line) { {'id' => id, 'hunk' => hid, 'side' => 'new', 'start' => line, 'end' => line, 'label' => 'note', 'decoration' => 'non-blocking', 'subject' => id} }
+          state.save_blob(old_key, {'personalComments' => [mine.call('mine-kept', 2), mine.call('mine-gone', 3)], 'viewedFiles' => ['sample.rb'], 'notes' => {'group-1-step-1' => 'Mine'}})
+          state.user_message(old_key, 'mine-kept', 'Why this name?')
+          assert(ReviewSeries.sync(repo: root, name: 'live')['status'] == 'unchanged', 'Unchanged code was saved as an update')
+          assert(ReviewSeries.stale(repo: root, name: 'live') == {'changed' => 0}, 'Unchanged code was reported as moved')
+          File.write(File.join(root, 'sample.rb'), "# frozen_string_literal: true\nclass Sample\n  def value\n    3\n  end\nend\n")
+          File.write(File.join(root, 'extra.rb'), "EXTRA = 1\n")
+          assert(ReviewSeries.stale(repo: root, name: 'live') == {'changed' => 2}, 'Moved code was not noticed')
+          result = ReviewSeries.sync(repo: root, name: 'live')
+          assert(result.values_at('status', 'revision') == ['updated', 2] && result['outdated'] == ['value-note'], 'The update did not save the next revision')
+          assert(result['unreviewed'].map { |range| range['path'] } == ['extra.rb', 'sample.rb'], 'The changed ranges were not handed over')
+          saved = DynamicReviews.extract(File.join(series, 'current.html'))
+          review = saved['review']
+          note = review['comments'].find { |comment| comment['id'] == 'value-note' }
+          assert(note['general'] && !note.key?('hunk') && note['outdated'] == {'side' => 'new', 'start' => 3, 'end' => 3, 'path' => 'sample.rb', 'lines' => ['    2'], 'revision' => 1}, 'A comment on a changed line was not kept as outdated')
+          assert(review['unreviewed'] == %w[f2h1 f1h1] && review['groups'].last['id'] == 'updates', 'New code was not placed unexplained')
+          assert(review['findings'].empty? && review['history']['finding_states'].first['status'] == 'needs-rechecking', 'A finding on changed code stayed open unchecked')
+          new_key = DCR::State.review_key(saved['snapshot']['fingerprint'], 'live', 2)
+          blob = state.read['blobs'][new_key]
+          kept, gone = blob['personalComments']
+          assert(kept.values_at('hunk', 'start', 'end') == ['f2h1', 3, 3], 'A comment on a line that only moved did not follow it')
+          assert(gone['general'] && gone.dig('outdated', 'lines') == ['    2'], 'The reader\'s comment on a changed line was lost')
+          assert(blob['viewedFiles'].empty? && blob['notes'] == {'group-1-step-1' => 'Mine'}, 'Progress did not come along as it should')
+          assert(state.read.dig('threads', new_key, 'mine-kept', 'messages', 0, 'body') == 'Why this name?', 'The conversation did not come along')
+          assert(ReviewSeries.sync(repo: root, name: 'live')['status'] == 'unchanged' && ReviewSeries.manifest(series)['revisions'].length == 2, 'A second update invented a revision')
+          # The agent comments on what came in; the next full review still has to explain it.
+          File.write(File.join(out, 'comment.json'), JSON.generate(mine.call('extra-note', 1).merge('hunk' => 'f1h1')))
+          DCR::LiveCLI.comment(state, {file: File.join(out, 'comment.json'), second_opinion: false}, series)
+          prepared = ReviewSeries.prepare(repo: root, name: 'live', out: out)
+          assert(prepared['status'] == 'changed' && prepared['ranges_to_inspect'].map { |range| range['hunk'] }.sort == %w[f1h1 f2h1], 'Unreviewed ranges were not left to inspect')
+          assert(ReviewSeries.read(File.join(out, 'draft.json'))['comments'].map { |comment| comment['id'] } == ['extra-note'], 'A comment posted after the update was not kept')
+        end
+      end
+    end
     checks['attaches QA and previews in one immutable revision'] = lambda do
       ReviewChecks.fixture do |root, _commit|
         Dir.mktmpdir('review-enrich-check-') do |out|

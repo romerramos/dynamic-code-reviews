@@ -226,6 +226,8 @@ module DynamicReviews
     # A review published while the agent is still reading assigns every range to the walkthrough,
     # but explains them only once it is finished.
     in_progress = review['status'] == 'in_progress'
+    # Ranges an update brought in after the review was written have no explanation either.
+    unreviewed = Array(review['unreviewed'])
     files = snapshot.fetch('files').to_h { |file| [file.fetch('id'), file] }
     hunks = hunk_index(snapshot)
     covered, seen = [], []
@@ -252,7 +254,7 @@ module DynamicReviews
           raise ArgumentError, "Unknown file: #{fid}" unless files.key?(fid)
           covered << fid
           item.fetch('summaries', {}).each do |hid, summary|
-            raise ArgumentError, "Invalid summary: #{hid}" unless hunks.dig(hid, 0) == fid && summary.is_a?(String) && (in_progress || !summary.strip.empty?)
+            raise ArgumentError, "Invalid summary: #{hid}" unless hunks.dig(hid, 0) == fid && summary.is_a?(String) && (in_progress || unreviewed.include?(hid) || !summary.strip.empty?)
             seen << hid
           end
         end
@@ -312,6 +314,7 @@ module DynamicReviews
     raise ArgumentError, 'Invalid Conventional Comments label' unless LABELS.include?(comment['label'])
     raise ArgumentError, 'Comment must explicitly be blocking or non-blocking' unless %w[blocking non-blocking].include?(comment['decoration'])
     raise ArgumentError, 'Comment subject is required' unless comment['subject'].is_a?(String) && !comment['subject'].strip.empty?
+    return if comment['outdated'].is_a?(Hash) && !comment.key?('hunk') # its lines changed in an update; it says where it was
     side = comment.fetch('side')
     raise ArgumentError, 'Comment side must be old or new' unless %w[old new].include?(side)
     hunk = hunks.dig(comment['hunk'], 1)

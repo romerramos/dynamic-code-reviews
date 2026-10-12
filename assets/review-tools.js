@@ -276,10 +276,23 @@ globalThis.ReviewTools = (() => {
     const tail = conversation ? conversationText(snapshot, comment) : '';
     return commentOnly(snapshot, comment, qa) + tail;
   }
+  // A comment whose lines changed in an update (`dcr sync`) says where it was written: the file
+  // and lines as they were, and the code it was about.
+  function outdatedWhere(comment) {
+    const was = comment.outdated;
+    if (!was?.path) return null;
+    return {path: was.path, lines: `${was.side === 'old' ? 'Before' : 'After'} L${was.start}${was.end !== was.start ? `–${was.end}` : ''}`, code: (was.lines || []).join('\n'), revision: was.revision};
+  }
+  function outdatedText(comment) {
+    const was = outdatedWhere(comment);
+    if (!was) return '';
+    const fence = '~'.repeat(Math.max(3, ...[...was.code.matchAll(/~+/g)].map(match => match[0].length + 1)));
+    return `Outdated: these lines changed after the comment was written\nFile: ${was.path}\nRange: ${was.lines}, as it was in revision ${was.revision}\n\n${fence}\n${was.code}\n${fence}\n\n`;
+  }
   function commentOnly(snapshot, comment, qa) {
     const found = anchor(snapshot, comment);
     const body = commentBody(comment, qa);
-    if (comment.general) return `General comment · ${snapshot.head}\nSnapshot: ${snapshot.fingerprint}${comment.resolved ? '\nConversation: resolved locally (not verification that the code was fixed)' : ''}\n\n${postingText(snapshot, comment, qa)}`;
+    if (comment.general) return `${outdatedText(comment)}General comment · ${snapshot.head}\nSnapshot: ${snapshot.fingerprint}${comment.resolved ? '\nConversation: resolved locally (not verification that the code was fixed)' : ''}\n\n${postingText(snapshot, comment, qa)}`;
     if (!found) throw new Error('Comment range is not present in this snapshot.');
     const code = sourceText(snapshot, comment);
     const fence = '~'.repeat(Math.max(3, ...[...code.matchAll(/~+/g)].map(match => match[0].length + 1)));
@@ -517,5 +530,5 @@ globalThis.ReviewTools = (() => {
   // Most risky first; files of equal score keep the agent's order.
   const riskFiles = ranking => [...(ranking?.files || [])].sort((a, b) => b.score - a.score);
 
-  return {modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, scopeLabel, sha256, githubLink, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  return {modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, scopeLabel, sha256, githubLink, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();

@@ -118,6 +118,10 @@ Dir.mktmpdir('dcr-live-test') do |directory|
   agent_state.finish(KEY)
   out, = run.call('wait', '--dir', agent_dir, '--timeout', '2')
   assert(out.include?('finished this round'), 'Finish was not reported')
+  # The reviewer pressed Update: a task to comment on what changed, not a conversation.
+  agent_state.code_updated(KEY, 'CODE UPDATE: 1 file changed.')
+  out, = run.call('wait', '--dir', agent_dir, '--timeout', '2')
+  assert(out.include?('CODE UPDATE: 1 file changed.') && out.include?("dcr comment --dir #{agent_dir} --file") && !out.include?('REPLY ONLY'), 'A code update was not handed over as a task to comment on')
   puts 'PASS dcr wait blocks until the reviewer sends, prints thread and reply command, acknowledges, and dcr reply/comments (and --thread) round-trip'
 
   FileUtils.rm_f(state.path)

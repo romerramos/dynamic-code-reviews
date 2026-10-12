@@ -213,6 +213,10 @@ these; do not add a third row or a floating toolbar.
 - App header (56px): logo mark, then the review title with repo and scope badge on
   a quiet line beneath. On the right, only rare actions: Previews, the revision
   selector and Details. Header buttons are ghost buttons; counts are small pills.
+  A served review puts **Update** before the revision selector: a refresh icon and
+  one word, quiet while the review shows the code as it is; the accent colour and
+  "Update · N files" once the code moved on; the icon turns while it updates; icon
+  only at 740px and below. It is hidden while a newer saved revision is offered.
 - Reading bar (52px): sidebar toggle, then a bordered pager (previous, position,
   next). On the right, one View button whose label names the current settings, for
   example "Unified · File by file". It opens a native popover with Reading mode (a

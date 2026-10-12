@@ -45,6 +45,19 @@ For a PR-origin series, resolve live provider metadata again and pass both
 excluded unless the user explicitly requests PR plus current local edits: add `--working-tree` with the verified base/head. The checkout HEAD must match that PR head; capture the current working files, label the mixed scope, and do not carry previous QA forward as current evidence. If the effective merge base changed, start a new baseline series;
 never present an old-base cumulative review as a current full PR review.
 
+## Update without a review
+
+`<skill>/bin/dcr sync --repo <root> --name <feature>` saves the next revision from the code as
+it is, with no analysis, in seconds. Use it while the reviewer keeps changing the code with the
+review open; the page's **Update** button does the same. Unchanged ranges keep their
+explanations; the others are listed in the review's `unreviewed` and stay unexplained, and new
+files go to a last group, "Added since the review". Comments follow their lines (Git compares
+the file before and after) or become outdated, keeping the code they were written on. A finding
+on a changed range is marked needs-rechecking. Coverage, validation, QA, previews and the risk
+ranking are cleared, as in a draft. Recorded context is left as it was, so the next `prepare`
+still sees a dependency that changed. That `prepare` lists every unreviewed range under
+`ranges_to_inspect`. A pull request's series is not updated this way.
+
 ## Write only the increment
 
 `draft.json` uses stable group and layer IDs. New snapshots still use local file

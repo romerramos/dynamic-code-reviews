@@ -4,6 +4,7 @@
 # Incremental review storage and reuse. Ruby standard library + Git only.
 require_relative 'review'
 require_relative '../lib/dcr/state'
+require_relative '../lib/dcr/anchors'
 require 'securerandom'
 
 module ReviewSeries
@@ -161,7 +162,9 @@ module ReviewSeries
      'removed_hunks' => old['files'].flat_map { |f| f['hunks'].reject { |h| mapping.key?(h['id']) }.map { |h| {'path' => f['path'], 'hunk' => h['id'], 'patch' => h['patch']} }}}
   end
 
-  def draft_review(previous, current, changes)
+  # unexplained: keep the items whose ranges have no carried explanation (an update shows them as
+  # they are); a draft for the agent drops them, so each must be explained again.
+  def draft_review(previous, current, changes, unexplained: false)
     review = normalize(previous)
     mapping = changes['mapping']
     lookup = changes['files'].select { |f| f['previous_file'] && f['file'] }.to_h { |f| [f['previous_file'], f] }
@@ -170,9 +173,11 @@ module ReviewSeries
         layer['items'] = layer['items'].filter_map do |item|
           file = lookup[item['file']]
           next unless file
-          summaries = item.fetch('summaries', {}).filter_map { |hid, prose| [mapping[hid]['hunk'], prose] if mapping[hid] }.to_h
-          next if summaries.empty? && current['files'].find { |f| f['id'] == file['file'] }['hunks'].any?
-          next if file['metadata_recheck']
+          summaries = item.fetch('summaries', {}).filter_map { |hid, prose| [mapping[hid]['hunk'], prose] if mapping[hid] && (unexplained || !prose.strip.empty?) }.to_h
+          unless unexplained
+            next if summaries.empty? && current['files'].find { |f| f['id'] == file['file'] }['hunks'].any?
+            next if file['metadata_recheck']
+          end
           item.merge('file' => file['file'], 'summaries' => summaries)
         end
         if layer.key?('related_tests')
@@ -202,6 +207,7 @@ module ReviewSeries
     review.delete('qa') # Captures prove a particular runtime/snapshot, never an automatic increment.
     review.delete('previews') # Rendered from one snapshot's templates; re-render after code changes.
     review.delete('preview_scope')
+    review.delete('unreviewed')
     review
   end
 
@@ -212,6 +218,37 @@ module ReviewSeries
     raise ArgumentError, 'Branch changed; choose the correct series or start a new one' unless history['branch'] == branch(repo)
     previous = latest(path, history)
     raise ArgumentError, 'The latest revision is still in progress; finish it with `dcr series finish` first' if previous.dig('review', 'status') == 'in_progress'
+    previous['review']['comments'] = with_posted(path, history, previous['review'])
+    current = current_snapshot(repo, history, previous, head: head, base: base, working_tree: working_tree)
+    old_context = previous['review'].fetch('context', {})
+    current_context = contexts(current, old_context.keys)
+    changed_context = old_context.keys.select { |key| old_context[key] != current_context[key] }
+    changes = compare(previous['snapshot'], current, context_changed: changed_context.any?)
+    # Ranges an update brought in were never explained: they are the agent's to inspect, like changed ones.
+    pending = Array(previous['review']['unreviewed']).filter_map { |id| changes['mapping'][id] }
+    paths = current['files'].to_h { |file| [file['id'], file['path']] }
+    ranges = DynamicReviews.hunk_index(current)
+    changes['required_hunks'].concat(pending.map { |match| match.slice('file', 'hunk').merge('path' => paths[match['file']], 'patch' => ranges.dig(match['hunk'], 1, 'patch')) })
+    status = code_key(previous['snapshot']) == code_key(current) && changed_context.empty? && pending.empty? ? 'unchanged' : 'changed'
+    status = 'changed' if changes['files'].any? { |file| file['state'] == 'needs-check' }
+    plan = {'version' => 1, 'repo' => current['repo'], 'series' => name, 'revision' => history['revisions'].last['number'],
+            'status' => status, 'snapshot_key' => code_key(current), 'context' => current_context, 'changed_context' => changed_context,
+            'context_note' => old_context.empty? ? 'No dependency fingerprints recorded; inspect affected callers before trusting reuse.' : 'Tracked context compared; unrecorded dependencies still require judgment.',
+            'changes' => changes, 'previous_findings' => previous['review'].fetch('findings', []),
+            'previous_finding_states' => previous['review'].dig('history', 'finding_states') || [],
+            'comments_to_recheck' => Array(previous['review']['comments']).reject { |c| changes['mapping'].key?(c['hunk']) }}
+    raise ArgumentError, 'Prepare output must be outside the repository' if File.expand_path(out).start_with?("#{current['repo']}/")
+    FileUtils.mkdir_p(out)
+    {'snapshot' => current, 'plan' => plan, 'draft' => draft_review(previous['review'], current, changes)}.each do |label, value|
+      atomic_write(File.join(out, "#{label}.json"), JSON.pretty_generate(value))
+    end
+    { 'status' => status, 'previous_revision' => plan['revision'], 'files' => changes['files'],
+      'ranges_to_inspect' => changes['required_hunks'].map { |h| h.slice('file', 'path', 'hunk') }, 'reusable_ranges' => changes['mapping'].length - pending.length,
+      'changed_context' => changed_context, 'pending_findings' => plan['previous_findings'].map { |f| f['id'] }, 'prepared' => File.expand_path(out) }
+  end
+
+  # The series' code as it is now. Refused when the checkout no longer continues the previous revision.
+  def current_snapshot(repo, history, previous, head: nil, base: nil, working_tree: false)
     if history['origin_mode'] == 'pr'
       raise ArgumentError, 'PR series requires explicitly verified --base and --head refs' unless base && head
       current_base = DynamicReviews.git(repo, 'merge-base', DynamicReviews.sha(repo, base), DynamicReviews.sha(repo, head)).strip
@@ -231,26 +268,7 @@ module ReviewSeries
     else
       raise ArgumentError, 'History was rewritten; start a new baseline series and reassess the full scope' unless common == previous['snapshot']['head']
     end
-    old_context = previous['review'].fetch('context', {})
-    current_context = contexts(current, old_context.keys)
-    changed_context = old_context.keys.select { |key| old_context[key] != current_context[key] }
-    changes = compare(previous['snapshot'], current, context_changed: changed_context.any?)
-    status = code_key(previous['snapshot']) == code_key(current) && changed_context.empty? ? 'unchanged' : 'changed'
-    status = 'changed' if changes['files'].any? { |file| file['state'] == 'needs-check' }
-    plan = {'version' => 1, 'repo' => current['repo'], 'series' => name, 'revision' => history['revisions'].last['number'],
-            'status' => status, 'snapshot_key' => code_key(current), 'context' => current_context, 'changed_context' => changed_context,
-            'context_note' => old_context.empty? ? 'No dependency fingerprints recorded; inspect affected callers before trusting reuse.' : 'Tracked context compared; unrecorded dependencies still require judgment.',
-            'changes' => changes, 'previous_findings' => previous['review'].fetch('findings', []),
-            'previous_finding_states' => previous['review'].dig('history', 'finding_states') || [],
-            'comments_to_recheck' => Array(previous['review']['comments']).reject { |c| changes['mapping'].key?(c['hunk']) }}
-    raise ArgumentError, 'Prepare output must be outside the repository' if File.expand_path(out).start_with?("#{current['repo']}/")
-    FileUtils.mkdir_p(out)
-    {'snapshot' => current, 'plan' => plan, 'draft' => draft_review(previous['review'], current, changes)}.each do |label, value|
-      atomic_write(File.join(out, "#{label}.json"), JSON.pretty_generate(value))
-    end
-    { 'status' => status, 'previous_revision' => plan['revision'], 'files' => changes['files'],
-      'ranges_to_inspect' => changes['required_hunks'].map { |h| h.slice('file', 'path', 'hunk') }, 'reusable_ranges' => changes['mapping'].length,
-      'changed_context' => changed_context, 'pending_findings' => plan['previous_findings'].map { |f| f['id'] }, 'prepared' => File.expand_path(out) }
+    current
   end
 
   def apply_update(draft, update)
@@ -522,11 +540,11 @@ module ReviewSeries
       snapshot = payload.fetch('snapshot')
       raise ArgumentError, 'The latest revision is not in progress; publish increments with `dcr series prepare` and `publish`' unless payload.dig('review', 'status') == 'in_progress'
       fresh = DynamicReviews.collect(repo: repo, mode: 'series', base: snapshot['base'], head: snapshot['mode'] == 'uncommitted' || snapshot['working_tree'] ? nil : snapshot['head'])
-      raise ArgumentError, 'Code changed while reviewing; start a new series from a fresh snapshot' unless code_key(fresh) == code_key(snapshot) && fresh['head'] == snapshot['head']
+      raise ArgumentError, 'Code changed while reviewing; run `dcr sync` to bring the review up to it, then finish with a review of that code' unless code_key(fresh) == code_key(snapshot) && fresh['head'] == snapshot['head']
       review = normalize(read(review))
       %w[history status qa previews preview_scope].each { |field| review.delete(field) }
       entry = history['revisions'].last
-      posted = DCR::State.new(path).read.dig('comments', DCR::State.review_key(entry['fingerprint'], name, entry['number'])) || []
+      posted = with_posted(path, history, payload.fetch('review'))
       own = Array(review['comments']).map { |comment| comment['id'] }
       review['comments'] = Array(review['comments']) + posted.reject { |comment| own.include?(comment['id']) }
       # The Risk ranking the agent posted while reviewing, unless the full review brings its own.
@@ -545,6 +563,124 @@ module ReviewSeries
       DCR::Focus.served(path) rescue nil
     end
     saved
+  end
+
+  # A review's comments with the ones its agent posted to the open page, which only the state has
+  # until a revision saves them.
+  def with_posted(path, history, review)
+    entry = history['revisions'].last
+    saved = Array(review['comments'])
+    posted = DCR::State.new(path).read.dig('comments', DCR::State.review_key(entry['fingerprint'], history['name'], entry['number'])) || []
+    saved + posted.reject { |comment| saved.any? { |own| own['id'] == comment['id'] } }
+  end
+
+  UPDATES = 'updates' # the walkthrough group for files an update brought in
+
+  # Brings the saved review up to the code as it is now, with no new analysis: the next revision
+  # shows the current diff, keeps the explanations of the ranges that did not change and leaves the
+  # others unexplained. Every comment follows its lines or becomes outdated, and the reader's
+  # progress and conversations come along. Returns what changed, for whoever reviews it next.
+  def sync(repo:, name:, **_unused)
+    path = directory(repo, name)
+    locked(path) do
+      history = manifest(path)
+      raise ArgumentError, 'Series belongs to another checkout' unless history['repo'] == File.realpath(repo)
+      raise ArgumentError, 'Branch changed; choose the correct series or start a new one' unless history['branch'] == branch(repo)
+      raise ArgumentError, 'A pull request review follows its verified head: use `dcr series prepare --base <ref> --head <ref>`' if history['origin_mode'] == 'pr'
+      previous = latest(path, history)
+      entry = history['revisions'].last
+      current = current_snapshot(repo, history, previous, working_tree: true)
+      next({'status' => 'unchanged', 'revision' => entry['number']}) if code_key(previous['snapshot']) == code_key(current)
+      changes = compare(previous['snapshot'], current)
+      in_progress = previous.dig('review', 'status') == 'in_progress'
+      review = draft_review(previous['review'], current, changes, unexplained: true)
+      place_unexplained(review, current)
+      ranges = review['groups'].flat_map { |group| group['layers'] }.flat_map { |layer| layer['items'] }.flat_map { |item| item.fetch('summaries', {}).select { |_, prose| prose.strip.empty? }.keys }
+      review['unreviewed'] = ranges unless in_progress || ranges.empty?
+      anchors = DCR::Anchors.new(previous['snapshot'], current, changes['mapping'], entry['number'])
+      review['comments'] = with_posted(path, history, previous['review']).map { |comment| anchors.carry(comment) }
+      # A finding stays open on a range that did not change; on one that did it needs checking again.
+      findings = Array(previous['review']['findings'])
+      review['findings'] = findings.filter_map { |finding| changes['mapping'][finding['hunk']]&.then { |match| finding.merge('hunk' => match['hunk']) } }
+      lost = findings.map { |finding| finding['id'] } - review['findings'].map { |finding| finding['id'] }
+      states = (previous['review'].dig('history', 'finding_states') || []).map do |state|
+        lost.include?(state['id']) ? state.merge('status' => 'needs-rechecking', 'change' => 'needs-rechecking', 'reason' => 'The code it was found in changed in an update. Not checked again.') : state
+      end
+      changed = changes['files'].reject { |file| file['state'] == 'unchanged' }
+      outdated = review['comments'].select { |comment| comment.dig('outdated', 'revision') == entry['number'] }
+      summary = "Updated to the code as it is now: #{count(changed.length, 'file')} changed since revision #{entry['number']}"
+      summary += in_progress || ranges.empty? ? '.' : ", #{count(ranges.length, 'range')} not reviewed yet."
+      summary += " #{count(outdated.length, 'comment')} #{outdated.length == 1 ? 'is' : 'are'} outdated." if outdated.any?
+      key = ->(revision, fingerprint) { DCR::State.review_key(fingerprint, name, revision) }
+      DynamicReviews.validate(current, review)
+      # The reader's side first, so a page that opens the new revision at once finds it there.
+      kept = changes['files'].select { |file| file['state'] == 'unchanged' }.map { |file| file['path'] }
+      DCR::State.new(path).carry_changed(key.call(entry['number'], entry['fingerprint']), key.call(entry['number'] + 1, current['fingerprint']), kept) { |comment| anchors.carry(comment, full: true) }
+      append(path, history, current, review, {'summary' => summary, 'files' => changes['files'], 'reused_ranges' => changes['mapping'].length,
+             'inspected_ranges' => 0, 'changed_context' => [], 'groups' => {}, 'finding_states' => states, 'update' => true})
+      {'status' => 'updated', 'revision' => entry['number'] + 1, 'previous_revision' => entry['number'], 'summary' => summary, 'base' => history['base'],
+       'key' => key.call(entry['number'] + 1, current['fingerprint']),
+       'files' => changed.map { |file| file.slice('path', 'state') }, 'outdated' => outdated.map { |comment| comment['id'] },
+       'unreviewed' => changes['required_hunks'].map { |hunk| hunk.slice('path', 'hunk', 'patch') }}
+    end
+  end
+
+  def count(number, noun) = "#{number} #{noun}#{'s' unless number == 1}"
+
+  BRIEF_LINES = 400 # of changed code handed to the agent; the rest it reads itself
+
+  # What an update changed, for the agent that comments on it: the ranges nobody has reviewed, as patches.
+  def sync_brief(result)
+    out = ["CODE UPDATE: #{result['summary']}", result['files'].map { |file| "#{file['state']}: #{file['path']}" }.join("\n")]
+    out << "Outdated comments (their lines changed or went): #{result['outdated'].join(', ')}" if result['outdated'].any?
+    left = BRIEF_LINES
+    shown = result['unreviewed'].take_while { |range| (left -= range['patch'].lines.length) >= 0 }
+    out << "Not reviewed yet (#{count(result['unreviewed'].length, 'range')}):" if result['unreviewed'].any?
+    shown.each { |range| out << "#{range['path']}  #{range['hunk']}\n#{range['patch'].chomp}" }
+    rest = result['unreviewed'].drop(shown.length)
+    out << "#{count(rest.length, 'more range')} in #{rest.map { |range| range['path'] }.uniq.join(', ')}: read them with `git diff #{result['base']} -- <path>`; their ids are #{rest.map { |range| range['hunk'] }.join(', ')}." if rest.any?
+    out.join("\n\n")
+  end
+
+  # Whether the code moved on since the latest revision, for a page that offers to update itself.
+  def stale(repo:, name:, **_unused)
+    path = directory(repo, name)
+    history = manifest(path)
+    raise ArgumentError, 'Branch changed; choose the correct series or start a new one' unless history['branch'] == branch(repo)
+    raise ArgumentError, 'A pull request review is updated by your agent, from its verified head' if history['origin_mode'] == 'pr'
+    previous = latest(path, history)
+    changes = compare(previous['snapshot'], current_snapshot(repo, history, previous, working_tree: true))
+    {'changed' => changes['files'].count { |file| file['state'] != 'unchanged' }}
+  end
+
+  # Gives every range no item explains to its file's first item, unexplained, and puts the files
+  # the walkthrough does not have yet in one last group, so the whole diff can be read at once.
+  def place_unexplained(review, snapshot)
+    review['groups'].each { |group| group['layers'].reject! { |layer| layer['items'].empty? } }
+    review['groups'].reject! { |group| group['layers'].empty? }
+    items = review['groups'].flat_map { |group| group['layers'] }.flat_map { |layer| layer['items'] }
+    taken = items.flat_map { |item| item.fetch('summaries', {}).keys }
+    added = snapshot['files'].filter_map do |file|
+      free = (file['hunks'].map { |hunk| hunk['id'] } - taken).to_h { |id| [id, ''] }
+      item = items.find { |candidate| candidate['file'] == file['id'] }
+      next({'file' => file['id'], 'summaries' => free}) unless item
+      item['summaries'] = item.fetch('summaries', {}).merge(free) unless free.empty?
+      nil
+    end
+    # A test panel that lost its code or its tests is gone, and its layer's tests read as plain files.
+    review['groups'].flat_map { |group| group['layers'] }.each do |layer|
+      next unless layer.key?('related_tests')
+      tests = layer['items'].map { |item| item['file'] }.select { |id| DynamicReviews.test_path?(snapshot['files'].find { |file| file['id'] == id }['path']) }
+      layer.delete('related_tests') unless (tests - layer['related_tests'].flat_map { |panel| panel['files'] }).empty?
+    end
+    return if added.empty?
+    group = review['groups'].find { |candidate| candidate['id'] == UPDATES }
+    unless group
+      group = {'id' => UPDATES, 'title' => 'Added since the review', 'summary' => 'Files that came in after the review was written. They are not explained yet.',
+               'layers' => [{'id' => "#{UPDATES}-step-1", 'title' => 'New files', 'summary' => 'Files the walkthrough does not place yet.', 'items' => []}]}
+      review['groups'] << group
+    end
+    group['layers'].first['items'].concat(added)
   end
 
   def append(path, history, snapshot, review, increment)
@@ -610,7 +746,7 @@ module ReviewSeries
     command = argv.shift
     options = {}
     parser = OptionParser.new do |p|
-      p.banner = 'ruby series.rb start|prepare|publish|finish|qa|previews|enrich|refresh|list [options]'
+      p.banner = 'ruby series.rb start|prepare|publish|finish|sync|qa|previews|enrich|refresh|list [options]'
       %w[repo name report snapshot review out head base prepared update revision].each { |key| p.on("--#{key} VALUE") { |value| options[key.to_sym] = value } }
       p.on('--working-tree', 'Include current working files with the verified PR head') { options[:working_tree] = true }
       p.on('--record', 'Save an intentional reassessment or a presentation-only refresh revision') { options[:record] = true }
@@ -618,7 +754,7 @@ module ReviewSeries
       p.on('--in-progress', 'start: publish an outline to read while the review is still being written') { options[:in_progress] = true }
     end
     parser.parse!(argv)
-    raise ArgumentError, parser.to_s unless %w[start prepare publish finish qa previews enrich refresh list].include?(command)
+    raise ArgumentError, parser.to_s unless %w[start prepare publish finish sync qa previews enrich refresh list].include?(command)
     result = public_send(command, **options)
     puts result.is_a?(String) ? result : JSON.pretty_generate(result)
   end

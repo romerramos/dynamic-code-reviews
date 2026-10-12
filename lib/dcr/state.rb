@@ -125,8 +125,8 @@ module DCR
     end
 
     # A new revision of the same captured code (evidence or analysis added, nothing moved)
-    # keeps the reviewer's progress and conversations. A different snapshot does not: its
-    # comments are anchored to other ranges, so it starts fresh as it always has.
+    # keeps the reviewer's progress and conversations. A different snapshot keeps them only when
+    # the review was updated to it (carry_changed); otherwise it starts fresh.
     def carry_forward(series, revisions)
       pairs = revisions.sort_by { |revision| revision['number'] }.each_cons(2).select { |old, new| old['fingerprint'] == new['fingerprint'] }
       return if pairs.empty?
@@ -139,6 +139,29 @@ module DCR
           state['previews'][to] ||= Marshal.load(Marshal.dump(state['previews'][from])) if state['previews'][from]
         end
       end
+    end
+
+    # The review was updated to changed code (`dcr sync`): the reader's progress, comments and
+    # conversations go to the new revision. kept: the paths whose diff is the same, which stay
+    # viewed and keep a drawn preview. The block places one of the reader's comments on the new code.
+    def carry_changed(from, to, kept)
+      check_key(to)
+      update do |state|
+        if (blob = state['blobs'][from])
+          state['blobs'][to] = Marshal.load(Marshal.dump(blob)).merge(
+            'personalComments' => Array(blob['personalComments']).map { |comment| yield comment },
+            'viewedFiles' => Array(blob['viewedFiles']) & kept
+          )
+        end
+        %w[threads github].each { |part| state[part][to] = Marshal.load(Marshal.dump(state[part][from])) if state[part][from] }
+        state['previews'][to] = state['previews'][from].slice(*kept) if state['previews'][from]
+      end
+    end
+
+    # The reviewer updated the review from the page: the agent is handed what changed, to comment on it.
+    def code_updated(key, text)
+      check_key(key)
+      update { |state| enqueue(state, 'sync', key, [], text) }
     end
 
     # --- threads ----------------------------------------------------------------------

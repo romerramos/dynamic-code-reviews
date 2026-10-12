@@ -72,6 +72,14 @@
 #dcr-arrival[hidden]{display:none}
 #dcr-newer{color:var(--accent);font-weight:650;white-space:nowrap}
 #dcr-newer[hidden]{display:none}
+/* Update: quiet while the review shows the code as it is, the accent once the code moved on. */
+#dcr-update{white-space:nowrap}
+#dcr-update[hidden]{display:none}
+#dcr-update svg{flex:none;width:15px;height:15px;color:var(--ink-neutral-5)}
+#dcr-update.is-stale{color:var(--accent);font-weight:650}
+#dcr-update.is-stale svg{color:var(--accent)}
+#dcr-update:disabled{cursor:progress}
+@media(prefers-reduced-motion:no-preference){#dcr-update.is-busy svg{animation:gh-spin .9s linear infinite}}
 #dcr-arrival strong{display:block;font-weight:600}
 #dcr-arrival div>span{display:block;max-width:28ch;overflow:hidden;color:var(--muted);text-overflow:ellipsis;white-space:nowrap}
 .dcr-dismiss{padding:4px 6px;border:0;background:transparent;color:var(--muted);font-size:12px}
