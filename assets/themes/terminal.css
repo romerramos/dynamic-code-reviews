@@ -119,6 +119,10 @@
 /* --- the header: a title bar with a cursor --------------------------------------------------- */
 [data-theme^="terminal-"] .app-header{background:var(--canvas);padding:0 2ch}
 [data-theme^="terminal-"] .brand-icon,[data-theme^="terminal-"] .brand-icon svg{width:26px;height:26px;flex-basis:26px}
+/* In the light the mark is Rosé Pine Dawn too: the palette's text for its square, base for its brackets, rose for its dot. */
+[data-theme="terminal-light"] .brand-icon svg rect{fill:var(--terminal-text)}
+[data-theme="terminal-light"] .brand-icon svg path{stroke:var(--surface)}
+[data-theme="terminal-light"] .brand-icon svg circle{fill:var(--terminal-peach)}
 [data-theme^="terminal-"] #title{font-weight:700}
 [data-theme^="terminal-"] #title::after{content:"█";margin-left:.5ch;color:var(--terminal-hot)}
 @media(prefers-reduced-motion:no-preference){[data-theme^="terminal-"] #title::after{animation:terminal-blink 1.1s steps(1) infinite}}
