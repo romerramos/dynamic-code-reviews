@@ -159,6 +159,10 @@
 /* The app's address bar is one field: the ring is the bar's own line, with no glow and no second box around the text in it. */
 [data-theme^="terminal-"] .dcr-app-address:focus-within{border-color:var(--terminal-hot);box-shadow:none}
 [data-theme^="terminal-"] .dcr-app-address input:focus-visible{outline:0!important;box-shadow:none!important}
+/* The reply box is one box: its frame shows the focus, so the text in it has no fill or mark of its own. */
+[data-theme^="terminal-"] .dcr-compose:focus-within{border-color:var(--terminal-hot);box-shadow:none}
+[data-theme^="terminal-"] .dcr-compose textarea{background:transparent}
+[data-theme^="terminal-"] .dcr-compose textarea:focus-visible{box-shadow:none!important}
 /* A spinner is the terminal's own: a bar turning in steps, | / - \. A ring with square corners is a box with one odd side. */
 [data-theme^="terminal-"] :is(.gh-spinner,.dcr-app-prep-spin){border:0;border-radius:0;background:linear-gradient(currentColor,currentColor) center/2px 100% no-repeat;animation-timing-function:steps(8)}
 [data-theme^="terminal-"] .dcr-app-prep-spin{color:var(--accent)}
