@@ -706,7 +706,7 @@
     const scroller = block.querySelector('.dcr-scroll');
     scroller.scrollTop = scroller.scrollHeight; // a conversation opens on its newest message
     if (focus) block.querySelector('textarea:not([disabled])')?.focus({preventScroll: true});
-    else view.querySelector('[data-dcr-back]').focus({preventScroll: true});
+    else if (focus === false) view.querySelector('[data-dcr-back]').focus({preventScroll: true});
     return true;
   };
   const closeConversation = () => {
@@ -1144,6 +1144,11 @@
     // An answer in the conversation open in Your review is already in front of you.
     items = items.filter(item => !(item.thread === current && document.body.classList.contains('ledger-open')));
     if (!items.length) return;
+    // An answer on one comment opens its conversation in Your review, with the keyboard left where it
+    // is. Not while you are writing, in a dialog, or reading another conversation: then it is announced.
+    const busy = document.activeElement?.matches?.('textarea, input, select') || document.querySelector('dialog[open]');
+    const reading = current && document.body.classList.contains('ledger-open');
+    if (new Set(items.map(item => item.thread)).size === 1 && !busy && !reading && openConversation(items[0].thread, {focus: null})) { arrival.hidden = true; return; }
     const first = comments().find(comment => comment.id === items[0].thread);
     const many = new Set(items.map(item => item.thread)).size > 1;
     const message = (threads[items[0].thread]?.messages || []).find(entry => entry.id === items[0].id);
