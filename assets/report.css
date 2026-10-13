@@ -548,6 +548,14 @@ html[data-mode="dark"] .revision-control .select:is(:focus,:open):not(:focus-vis
 .sidebar input{height:36px;min-height:36px;font-size:13px;margin-bottom:12px}
 .sidebar-footer{display:flex;flex-direction:column;gap:6px;padding:14px 6px 2px;border-top:1px solid var(--line);margin-top:12px;font-size:12px;font-variant-numeric:tabular-nums}
 .sidebar-footer progress{height:4px;margin:0}
+.sidebar-settings{flex:none;display:flex;align-items:center;gap:10px;width:100%;margin-top:12px;padding:9px 10px;border:0;border-radius:calc(8px * var(--round));background:transparent;color:var(--ink-neutral-3);font-size:13px;font-weight:550;text-align:left}
+.sidebar-settings:hover,.sidebar-settings:focus-visible{background:var(--bg-neutral-2);color:var(--ink)}
+.sidebar-settings #settings-icon{display:inline-grid;color:var(--ink-neutral-5)}.sidebar-settings .review-icon,.view-all .review-icon{width:16px;height:16px}
+.sidebar-settings+.sidebar-footer{margin-top:6px}
+.view-all{display:inline-flex;align-items:center;gap:8px;font-size:13px}.view-all #view-all-icon{display:inline-grid}
+.settings-box{width:min(440px,calc(100vw - 24px));max-width:none}
+.settings-box header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}.settings-box header h2{margin:0;font-size:17px}
+.settings-body{margin:0 -10px}
 .nav-preview{display:inline-grid;place-items:center;flex:none;position:relative;width:18px;height:18px;margin-top:1px;color:var(--accent)}
 .nav-preview .review-icon{width:13px;height:13px}
 .nav-preview.is-requested{color:var(--ink-amber-4)}
@@ -570,9 +578,9 @@ html[data-mode="dark"] .revision-control .select:is(:focus,:open):not(:focus-vis
 .view-toggle #view-summary{font-weight:500;color:var(--muted)}
 .view-toggle #view-summary:not(:empty)::before{content:"·";margin-right:8px;color:var(--ink-neutral-8)}
 .view-menu[popover]{position:fixed;inset:auto;margin:0;overflow-y:auto;width:300px;max-width:calc(100vw - 24px);padding:6px;border:1px solid var(--line-neutral-2);border-radius:calc(14px * var(--round));background:var(--bg-neutral-1);color:var(--ink);box-shadow:0 18px 50px color-mix(in srgb,var(--shade) 14.9%,transparent),0 2px 6px color-mix(in srgb,var(--shade) 5.9%,transparent)}
-.view-menu section{padding:10px 10px 12px}
-.view-menu section+section{border-top:1px solid var(--line-neutral-2)}
-.view-menu h2{margin:0 0 8px;font-size:11px;font-weight:650;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+:is(.view-menu,.settings-body) section{padding:10px 10px 12px}
+:is(.view-menu,.settings-body) section+section,#settings-view:not(:empty)+section{border-top:1px solid var(--line-neutral-2)}
+:is(.view-menu,.settings-body) h2{margin:0 0 8px;font-size:11px;font-weight:650;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
 .segmented{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:2px;padding:3px;border:0;border-radius:calc(9px * var(--round));background:var(--bg-neutral-3)}
 .segmented button{height:30px;border:0;border-radius:calc(7px * var(--round));background:transparent;color:var(--ink-neutral-5);font-size:12.5px;font-weight:600}
 .segmented button:hover{color:var(--ink)}
@@ -580,7 +588,7 @@ html[data-mode="dark"] .revision-control .select:is(:focus,:open):not(:focus-vis
 .view-hint{margin:8px 2px 0;font-size:12px;line-height:1.5;color:var(--muted)}
 .view-row{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px;color:var(--ink-neutral-3)}
 .view-switch{display:flex;align-items:center;gap:10px;width:100%;margin:0;cursor:pointer}
-.view-menu .font-controls output{min-width:40px;font-size:12px;font-variant-numeric:tabular-nums}
+:is(.view-menu,.settings-body) .font-controls output{min-width:40px;font-size:12px;font-variant-numeric:tabular-nums}
 .view-keys p{margin:0;font-size:12px;line-height:1.9;color:var(--muted)}
 .view-keys kbd{font:600 10.5px/1 var(--mono);padding:2px 5px}
 /* File by file header: orientation row, then the file and its actions. */
@@ -1107,7 +1115,7 @@ button.risk-path:hover .risk-name{text-decoration:underline}
   .header-actions{flex:1 1 auto;min-width:0;justify-content:flex-start;overflow-x:auto;scrollbar-width:none}
   .header-actions>*{flex:none}
   #context-toggle{display:none}
-  .view-menu section.phone-only{display:flex}
+  :is(.view-menu,.settings-body) section.phone-only{display:flex}
   /* The pager and the menus sit at the bottom, under the thumb, and the reading starts at the top. */
   .review-toolbar{position:fixed;top:auto;bottom:0;left:0;right:0;z-index:16;border-top:1px solid var(--line);border-bottom:0;padding-bottom:env(safe-area-inset-bottom)}
   main#content{padding:16px 12px calc(var(--toolbar-h) + 28px + env(safe-area-inset-bottom))}

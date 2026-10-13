@@ -1838,7 +1838,7 @@
   const jevSwitch = document.createElement('section');
   jevSwitch.className = 'view-row';
   jevSwitch.innerHTML = '<label class="view-switch"><input id="dcr-jev-toggle" class="toggle toggle-sm toggle-primary" type="checkbox"><span>JevMyPR verdict <small>sends this diff out</small></span></label>';
-  document.querySelector('#view-menu .view-keys')?.before(jevSwitch);
+  document.querySelector('#settings-dialog .view-keys')?.before(jevSwitch);
   let jev = null; // {enabled, host, verdict}, once the server has said
   // The files that need the reviewer, listed under the strip's count; choosing one opens it.
   const jevList = document.createElement('div');

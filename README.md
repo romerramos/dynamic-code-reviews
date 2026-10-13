@@ -240,7 +240,7 @@ References: [review JSON](references/report-schema.md), [incremental reviews](re
   the files the Risk ranking calls out, and the tip on that word says both. It comes from
   [JevMyPR's open API](https://github.com/romerramos/jevmypr#open-api), an outside service, so it is
   off until the reviewer turns it on in the strip, per repository (kept in
-  `~/.config/dcr/settings.json`; the View menu turns it off again). Turned on, the server sends the
+  `~/.config/dcr/settings.json`; Settings turns it off again). Turned on, the server sends the
   review's title and every changed file's name and patch, once per diff, and keeps the answer in the
   series' `state.json`. When JevMyPR is unreachable or refuses (rate limit, budget, too big), the
   strip shows its message and the review works as usual. Exports never carry it.
@@ -256,7 +256,7 @@ References: [review JSON](references/report-schema.md), [incremental reviews](re
   with; Terminal (`terminal.css`) draws it as a terminal app in JetBrains Mono, in Catppuccin Mocha's
   colours in the dark and Rosé Pine Dawn's in the light, and asks for the matching syntax theme in each
   (`@syntax`, and `@syntax-light` for the mode that differs, in its opening comment). Terminal is the default (`@default`). A
-  new file in that folder appears in the View menu's Theme list.
+  new file in that folder appears in the Theme list under Settings.
 - **State** lives in the series folder: `manifest.json` and the saved pages for revisions, and
   `state.json` for the reviewer's progress and threads (`lib/dcr/state.rb`). The progress (viewed
   files, resolved comments, notes, the reviewer's own comments) is also kept outside the worktree, in

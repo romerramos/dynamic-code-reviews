@@ -220,6 +220,7 @@
       {key:'d', label:'Review details', run: () => $('context-toggle').click()},
       agentChip() && {key:'g', label:'Agents and adversaries', run: openAgentCard},
       {key:'/', label:'Find a file or a line of code', run: findInSidebar},
+      {key:',', label:'Settings', run: () => $('settings-toggle').click()},
       {key:'?', label:'Every key', run: () => $('keys-dialog').showModal()},
       {key:' ', label:'Mark the file viewed, or not', run: markFile}
     ].filter(Boolean);
@@ -3278,8 +3279,25 @@
   $('cancel-comment').onclick = () => $('comment-editor').close();
   $('close-copy').onclick = () => $('copy-dialog').close();
   $('keys-dialog').addEventListener('click', event => { if (event.target.closest('[data-close]')) $('keys-dialog').close(); });
+  // Settings is one dialog, opened by name from the sidebar. What is flipped while reading (the
+  // reading mode, the diff layout, comments, whitespace) is also in the toolbar's View menu:
+  // the same controls, moved into whichever of the two is open.
+  const openSettings = () => {
+    $('view-menu').hidePopover?.();
+    $('settings-view').append(...document.querySelectorAll('#view-menu [data-view-switch]'));
+    $('settings-dialog').showModal();
+  };
+  $('settings-toggle').onclick = openSettings;
+  // On a phone the toolbar's tab is named Settings, so it opens them, with no menu in between.
+  $('view-toggle').addEventListener('click', event => { if (matchMedia('(max-width: 650px)').matches) { event.preventDefault(); openSettings(); } });
+  $('settings-dialog').addEventListener('close', () => $('view-menu').prepend(...document.querySelectorAll('#settings-view [data-view-switch]')));
+  $('settings-dialog').addEventListener('click', event => {
+    if (event.target.closest('[data-close]')) $('settings-dialog').close();
+    if (event.target.closest('[data-open-keys]')) { $('settings-dialog').close(); $('keys-dialog').showModal(); }
+    if (event.target.closest('[data-open-details]')) { $('settings-dialog').close(); context(); }
+  });
   $('view-menu').addEventListener('click', event => {
-    if (event.target.closest('[data-open-keys]')) { $('view-menu').hidePopover?.(); $('keys-dialog').showModal(); }
+    if (event.target.closest('[data-open-settings]')) openSettings();
     // On a phone the header has no room for Details, so it is here.
     if (event.target.closest('[data-open-details]')) { $('view-menu').hidePopover?.(); context(); }
   });
@@ -3289,6 +3307,7 @@
   $('prev').innerHTML = icon('chevron-left');
   $('next').innerHTML = icon('chevron-right');
   $('view-icon').innerHTML = icon('sliders-horizontal');
+  $('settings-icon').innerHTML = $('view-all-icon').innerHTML = icon('settings');
   $('ledger-toggle').innerHTML = `${icon('panel-right')}<span class="ledger-label">Your review</span><b id="ledger-count" class="ledger-count" hidden></b>`;
   $('ledger-close').innerHTML = icon('x');
   $('zen-toggle').innerHTML = icon('maximize-2');

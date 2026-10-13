@@ -499,7 +499,17 @@ must never read today's working files. Label unavailable/oversized context clear
 Context outside saved hunks has plain line numbers rather than misleading comment
 controls that would create invalid anchors.
 
-A−/A+ in the View menu changes code font size from 10–20px (13px default), updating row spacing
+**Settings is found by its name.** A row at the bottom of the sidebar, above the progress, with
+a gear and the word Settings, opens one dialog that holds every preference: reading mode, diff
+layout, comments in the code, whitespace, appearance, code size, the JevMyPR switch and the
+keyboard help. `,` in the space menu opens it. The toolbar's **View** menu is only what is
+flipped while reading (reading mode, diff layout, comments, whitespace) and ends on an
+**All settings** link; the same controls are in Settings, moved into whichever of the two is
+open, never duplicated. On a phone the toolbar's tab is already named Settings, so it opens
+the dialog with no menu in between, and Details is a row in it. Never put a preference behind
+an icon alone or under a label that is not "Settings".
+
+A−/A+ in Settings changes code font size from 10–20px (13px default), updating row spacing
 without changing the surrounding UI. Persist this with revision-local preferences.
 Verify complete old/new line coverage, additions/deletions, no-final-newline files,
 existing comment navigation, file boundaries, viewed state, font limits/reload,

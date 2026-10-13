@@ -233,9 +233,9 @@
 [data-theme^="terminal-"] progress.progress::-moz-progress-bar{background:repeating-linear-gradient(90deg,var(--dcr-ok) 0 6px,transparent 6px 8px)}
 
 /* --- headings: a rule that carries its label --------------------------------------------------- */
-[data-theme^="terminal-"] :is(.eyebrow,.view-menu h2,.leader-menu h2,.keys-list h3,.dcr-opinions-title,.dcr-adv-title){display:flex;align-items:center;gap:1ch;text-transform:uppercase;font-weight:700;color:var(--accent)}
-[data-theme^="terminal-"] :is(.eyebrow,.view-menu h2,.leader-menu h2,.dcr-opinions-title,.dcr-adv-title)::before{content:"──";color:var(--terminal-surface1);font-weight:400}
-[data-theme^="terminal-"] :is(.eyebrow,.view-menu h2,.leader-menu h2)::after{content:"";flex:1;border-top:1px solid var(--line)}
+[data-theme^="terminal-"] :is(.eyebrow,.view-menu h2,.settings-body h2,.leader-menu h2,.keys-list h3,.dcr-opinions-title,.dcr-adv-title){display:flex;align-items:center;gap:1ch;text-transform:uppercase;font-weight:700;color:var(--accent)}
+[data-theme^="terminal-"] :is(.eyebrow,.view-menu h2,.settings-body h2,.leader-menu h2,.dcr-opinions-title,.dcr-adv-title)::before{content:"──";color:var(--terminal-surface1);font-weight:400}
+[data-theme^="terminal-"] :is(.eyebrow,.view-menu h2,.settings-body h2,.leader-menu h2)::after{content:"";flex:1;border-top:1px solid var(--line)}
 [data-theme^="terminal-"] :is(h1,h2,h3){font-weight:700}
 [data-theme^="terminal-"] main h1::before{content:"# ";color:var(--terminal-hot)}
 [data-theme^="terminal-"] main h2::before{content:"## ";color:var(--terminal-overlay0)}

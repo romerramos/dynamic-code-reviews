@@ -28,6 +28,7 @@
       <div class="sidebar-heading"><strong>Walkthrough</strong><span id="file-total" class="badge neutral"></span></div>
       <input id="search" class="input input-bordered" type="search" placeholder="Find a file or code…" aria-label="Find a file or a line of code">
       <nav id="navigation" aria-label="Review navigation"></nav>
+      <button type="button" id="settings-toggle" class="sidebar-settings" data-open-settings aria-haspopup="dialog"><span id="settings-icon" aria-hidden="true"></span><span>Settings</span></button>
       <div class="sidebar-footer"><span id="progress" role="status"></span><progress id="progress-bar" class="progress progress-primary" value="0" max="1" aria-label="Review progress"></progress></div>
     </aside>
     <div class="review-area">
@@ -48,16 +49,20 @@
       <footer id="ledger-footer" class="ledger-footer"></footer>
     </aside>
   </div>
-  <div id="view-menu" class="view-menu" popover="auto" role="dialog" aria-label="Display settings">
-    <section><h2>Reading</h2><fieldset class="segmented reading-modes" aria-label="Reading mode"><button id="focus" aria-pressed="true">File by file</button><button id="walkthrough" aria-pressed="false">Walkthrough</button></fieldset><p id="reading-hint" class="view-hint"></p></section>
-    <section><h2>Diff</h2><fieldset class="segmented" role="group" aria-label="Diff layout"><button id="unified">Unified</button><button id="split">Split</button></fieldset></section>
-    <section class="view-row"><label class="view-switch"><input id="comments-toggle" class="toggle toggle-sm toggle-primary" type="checkbox" checked><span>Review comments in the code</span></label></section>
-    <section class="view-row"><label class="view-switch"><input id="whitespace-toggle" class="toggle toggle-sm toggle-primary" type="checkbox"><span>Ignore whitespace changes</span></label></section>
+  <div id="view-menu" class="view-menu" popover="auto" role="dialog" aria-label="View">
+    <section data-view-switch><h2>Reading</h2><fieldset class="segmented reading-modes" aria-label="Reading mode"><button id="focus" aria-pressed="true">File by file</button><button id="walkthrough" aria-pressed="false">Walkthrough</button></fieldset><p id="reading-hint" class="view-hint"></p></section>
+    <section data-view-switch><h2>Diff</h2><fieldset class="segmented" role="group" aria-label="Diff layout"><button id="unified">Unified</button><button id="split">Split</button></fieldset></section>
+    <section data-view-switch class="view-row"><label class="view-switch"><input id="comments-toggle" class="toggle toggle-sm toggle-primary" type="checkbox" checked><span>Review comments in the code</span></label></section>
+    <section data-view-switch class="view-row"><label class="view-switch"><input id="whitespace-toggle" class="toggle toggle-sm toggle-primary" type="checkbox"><span>Ignore whitespace changes</span></label></section>
+    <section class="view-row phone-only" data-view-switch><span>This review</span><button type="button" class="btn btn-sm" data-open-details>Details</button></section>
+    <section class="view-row"><button type="button" class="link-button view-all" data-open-settings><span id="view-all-icon" aria-hidden="true"></span>All settings</button></section>
+  </div>
+  <dialog id="settings-dialog" class="modal" aria-labelledby="settings-title"><div class="modal-box settings-box"><header><h2 id="settings-title">Settings</h2><button type="button" class="btn btn-sm btn-circle btn-ghost" data-close aria-label="Close settings">✕</button></header><div class="settings-body">
+    <div id="settings-view"></div>
     <section><h2>Appearance</h2><fieldset class="segmented" role="group" aria-label="Colour mode"><button id="mode-system" data-color-mode="system">System</button><button id="mode-light" data-color-mode="light">Light</button><button id="mode-dark" data-color-mode="dark">Dark</button></fieldset><label class="view-select"><span>Theme</span><select id="theme" class="select select-sm select-bordered" aria-label="Theme"><%- themes.each do |name| -%><option value="<%= h name %>"<%- %w[light dark].each do |mode| -%><%- if (suited = theme_syntax(name, mode)) -%> data-syntax-<%= mode %>="<%= h suited %>"<%- end -%><%- end -%><%- if (best = theme_mode(name)) -%> data-mode="<%= h best %>"<%- end -%>><%= h(name == 'aida' ? 'AIda' : name.capitalize) %></option><%- end -%></select></label><label class="view-select"><span>Syntax theme</span><select id="syntax-theme" class="select select-sm select-bordered" aria-label="Syntax theme"><option value="classic">Classic</option><option value="catppuccin">Catppuccin</option><option value="rosepine">Rosé Pine</option><option value="github">GitHub</option><option value="one">One</option><option value="solarized">Solarized</option><option value="dracula">Dracula</option></select></label></section>
     <section class="view-row"><span>Code size</span><div class="font-controls" role="group" aria-label="Code font size"><button id="font-smaller" class="icon-button" aria-label="Decrease code font size">A−</button><output id="font-size" aria-live="polite"></output><button id="font-larger" class="icon-button" aria-label="Increase code font size">A+</button></div></section>
-    <section class="view-row phone-only"><span>This review</span><button type="button" class="btn btn-sm" data-open-details>Details</button></section>
     <section class="view-keys"><h2>Keyboard</h2><p><kbd>space</kbd> opens a menu of commands · <button type="button" class="link-button" data-open-keys><kbd>?</kbd> shows every key</button></p></section>
-  </div>
+  </div></div></dialog>
   <dialog id="details-dialog" class="modal" aria-labelledby="details-title"><article class="modal-box"><header><button aria-label="Close review details" rel="prev" class="btn btn-sm btn-circle btn-ghost" id="close-details">✕</button><h2 id="details-title">Review details</h2></header><div id="review-details"></div><footer><button id="export" class="btn btn-sm btn-ghost">Export local notes</button><button class="btn btn-sm btn-primary" id="done-details">Done</button></footer></article></dialog>
   <div id="comment-popover" class="comment-popover" popover="auto" role="dialog" aria-labelledby="comment-popover-title"></div>
   <div id="range-actions" class="range-actions" hidden><div><strong id="range-label"></strong><small>Select another line to extend the range.</small></div><button id="write-comment" class="btn btn-sm btn-primary">Comment</button><button id="clear-range" class="btn btn-sm btn-ghost" aria-label="Clear selected range">✕</button></div>
