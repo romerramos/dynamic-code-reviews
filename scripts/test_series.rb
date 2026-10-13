@@ -244,6 +244,35 @@ module SeriesChecks
         end
       end
     end
+    checks['a branch that took in its base branch is updated from where it starts now, without what the base gained'] = lambda do
+      ReviewChecks.fixture do |root, first|
+        original = DynamicReviews.extract(initial(root))
+        git = ->(*args) { DynamicReviews.git(root, *args).strip }
+        git.call('add', 'sample.rb')
+        second = git.call('commit-tree', git.call('write-tree'), '-p', first, '-m', 'test: the branch')
+        git.call('update-ref', 'HEAD', second)
+        git.call('update-ref', 'refs/heads/trunk', first)
+        snapshot = DynamicReviews.collect(repo: root, mode: 'pr', base: first, head: second)
+        review = original['review'].merge('comparison' => {'base' => snapshot['base'], 'head' => second, 'base_label' => 'trunk', 'pr_url' => 'https://github.com/acme/app/pull/7'})
+        ReviewSeries.start(repo: root, name: 'merged', report: DynamicReviews.render(snapshot: snapshot, review: review, name: 'merged'))
+        # trunk gains a change of its own, and the branch merges it in.
+        File.write(File.join(root, 'delete.txt'), "newer\n")
+        git.call('read-tree', first)
+        git.call('add', 'delete.txt')
+        trunk = git.call('commit-tree', git.call('write-tree'), '-p', first, '-m', 'test: trunk moves on')
+        git.call('update-ref', 'refs/heads/trunk', trunk)
+        git.call('add', 'sample.rb')
+        git.call('update-ref', 'HEAD', git.call('commit-tree', git.call('write-tree'), '-p', second, '-p', trunk, '-m', 'test: merge trunk'))
+        assert(ReviewSeries.stale(repo: root, name: 'merged') == {'changed' => 0, 'pinned' => true}, "What the base branch gained counts as the branch's change: #{ReviewSeries.stale(repo: root, name: 'merged')}")
+        File.write(File.join(root, 'extra.rb'), "EXTRA = 1\n")
+        result = ReviewSeries.sync(repo: root, name: 'merged', follow: true)
+        assert(result['files'] == [{'path' => 'extra.rb', 'state' => 'added'}] && ReviewSeries.manifest(File.join(root, '.reviews/merged'))['base'] == trunk, "The update did not go on from where the branch starts now: #{result['files']}")
+        assert(DynamicReviews.extract(File.join(root, '.reviews/merged/current.html'))['snapshot']['files'].map { |file| file['path'] } == %w[extra.rb sample.rb], 'The review shows code the branch did not change')
+        # A base branch that was rewritten (here: put back) is not somewhere to go on from: the reader is told.
+        git.call('update-ref', 'refs/heads/trunk', first)
+        assert(ReviewSeries.stale(repo: root, name: 'merged')['warning'].to_s.include?('Ask your agent for a new review'), 'A rewritten base branch was not reported')
+      end
+    end
     checks['attaches offline QA to the revision of its code without rewriting findings; rejects stale inputs'] = lambda do
       ReviewChecks.fixture do |root, _commit|
         Dir.mktmpdir('review-qa-check-') do |out|

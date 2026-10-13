@@ -262,7 +262,10 @@ module ReviewSeries
     if working_tree && head && DynamicReviews.sha(repo, 'HEAD') != DynamicReviews.sha(repo, head)
       raise ArgumentError, 'Working-tree PR review requires the checkout HEAD to match the verified PR head'
     end
-    current = DynamicReviews.collect(repo: repo, mode: 'series', base: history.fetch('base'), head: working_tree ? nil : head)
+    # A checkout whose branch took in its base branch (a merge or a rebase) is compared from
+    # where it starts now, so the review shows its own change and not what the base gained.
+    start = head || base ? nil : moved_start(repo, history, previous)
+    current = DynamicReviews.collect(repo: repo, mode: 'series', base: start || history.fetch('base'), head: working_tree ? nil : head)
     common = DynamicReviews.git(repo, 'merge-base', previous['snapshot']['head'], current['head'], allowed: [0, 1]).strip
     if history['origin_mode'] == 'pr'
       # An amended or force-pushed PR keeps the verified base, and the comparison is by content against it.
@@ -679,6 +682,7 @@ module ReviewSeries
       current = current_snapshot(repo, history, previous, working_tree: true, checkout: pr)
       next({'status' => 'unchanged', 'revision' => entry['number']}) if code_key(previous['snapshot']) == code_key(current)
       changes = compare(previous['snapshot'], current)
+      history['base'] = current['base'] # where the branch starts now, when it took in its base branch
       in_progress = previous.dig('review', 'status') == 'in_progress'
       review = draft_review(previous['review'], current, changes, unexplained: true)
       place_unexplained(review, current)
@@ -780,15 +784,29 @@ module ReviewSeries
     result.compact
   end
 
-  # Says so when the branch was rebased or merged onto a newer base than the review starts from:
-  # an update would then show what the base branch gained too. Known only when the review named it.
-  def rebased(repo, history, previous)
+  # Where the branch starts from its base branch now, when that is not where the review starts.
+  # Known only when the review named its base branch.
+  def branch_start(repo, history, previous)
     label = previous.dig('review', 'comparison', 'base_label').to_s
     return if label.empty? || label.start_with?('-')
     ref = ["origin/#{label}", label].find { |name| !DynamicReviews.git(repo, 'rev-parse', '--verify', '--quiet', '--end-of-options', "#{name}^{commit}", allowed: [0, 1, 128]).strip.empty? }
     return unless ref
     start = DynamicReviews.git(repo, 'merge-base', ref, 'HEAD', allowed: [0, 1]).strip
-    "This branch now starts from a newer #{label} than the review does, so an update would also show what #{label} gained since. Ask your agent for a new review instead." unless start.empty? || start == history['base']
+    start unless start.empty? || start == history['base']
+  end
+
+  # That start, when the base branch only moved forward: the branch merged it in or was rebased
+  # onto it, and the review goes on from there.
+  def moved_start(repo, history, previous)
+    start = branch_start(repo, history, previous)
+    start if start && DynamicReviews.git(repo, 'merge-base', history['base'], start, allowed: [0, 1]).strip == history['base']
+  end
+
+  # Says so when the branch starts somewhere the review cannot simply go on from (its base
+  # branch was rewritten, or it was moved to another one): an update would show other code too.
+  def rebased(repo, history, previous)
+    return unless branch_start(repo, history, previous) && !moved_start(repo, history, previous)
+    "This branch no longer starts from the #{previous.dig('review', 'comparison', 'base_label')} the review was made on, so an update would also show code that is not its own. Ask your agent for a new review instead."
   end
 
   # Gives every range no item explains to its file's first item, unexplained, and puts the files
