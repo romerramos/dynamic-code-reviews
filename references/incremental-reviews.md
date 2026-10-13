@@ -1,6 +1,9 @@
 # Incremental review workflow
 
-A series belongs to one checkout, branch and fixed comparison base. Each revision
+A series belongs to one checkout, branch and fixed comparison base. A revision is
+one diff: a new one is saved only when the code changes. What is learned about the
+same code later (the full review of an outline, QA, previews, a reassessment) is
+saved into its revision and listed on it in the index. Each revision
 stores the complete cumulative diff and analysis in one standalone HTML file.
 The index and manifest track history; `current.html` is a refreshable view of the
 latest saved review. Each HTML embeds its captured data. Rebuilding HTML is cheap. Reusing supported
@@ -149,32 +152,35 @@ hunks and renames receive fresh inspection rather than guessed anchors.
 
 The command merges the update, validates complete coverage and comment ranges,
 checks current source/context against preparation, and refuses a stale parent
-revision. `publish` is a local filesystem operation. It saves the next immutable
-`revisions/NNN.html`, refreshes `current.html`, updates `index.html` and atomically advances `manifest.json`.
+revision. `publish` is a local filesystem operation. For changed code it saves the next
+`revisions/NNN.html`; for the same code (ranges an update left unexplained, or `--record`)
+it saves into the latest one, keeping its QA, previews and screenshots. Either way it
+refreshes `current.html`, updates `index.html` and atomically advances `manifest.json`.
 If interrupted after creating a revision but before the manifest advances,
 preserve the orphaned report and inspect the files; never overwrite it blindly.
 
 No changes: return the existing latest report. If the user requested an explicit
 reassessment (new test evidence or refreshed external context, for example),
-provide fresh conclusions and use `--record`. Never manufacture a code increment
+provide fresh conclusions and use `--record`: they are saved into the existing
+revision, not as a new one. Never manufacture a code increment
 just to demonstrate history. Browser notes and viewed marks are revision-local;
 they are not silently copied as approval of changed code.
 
 The revision selector opens refreshable `revision-NNN.html` browsing pages.
 Every publish or refresh rebuilds these pages with all known revisions, so an
 older review can navigate forward again. Its captured code, analysis, and local
-notes identity remain tied to that revision. `revisions/NNN.html` preserves the
-immutable original HTML, available through Original saved snapshot. Older
-original snapshots may have the old UI; use the index or current view to browse.
+notes identity remain tied to that revision. `revisions/NNN.html` holds the
+revision as last saved, available through Saved snapshot. Older
+saved snapshots may have the old UI; use the index or current view to browse.
 The whole series folder preserves navigation when copied; an individual HTML
 still renders independently, but sibling history links then need those files.
 
 For UI-only changes, `dcr series refresh --repo <root> --name <feature>` rebuilds
 `current.html` and every revision browsing page from their saved snapshots and
 analysis, with the complete revision selector. This does not create
-a revision, change historical HTML, or claim to review current working files.
+a revision, change a saved revision, or claim to review current working files.
 The index's Latest review link uses the refreshed current view; Saved snapshot
-opens the immutable original rendering.
+opens the rendering as it was saved.
 
 ## Start or import
 

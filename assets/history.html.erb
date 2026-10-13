@@ -13,13 +13,16 @@
     <div class="brand"><span class="brand-icon" aria-hidden="true"><%= icon %></span><strong>Dynamic Code Reviews</strong></div>
     <h1 style="margin-top:30px"><%= h name %></h1>
     <p class="lead"><%= revisions.length %> saved revisions · <%= h @history['branch'] %></p>
-    <p class="muted">Each revision preserves its original review and test results. Continue from the latest review to inspect the next increment.</p>
+    <p class="muted">A revision is saved when the code changes. What is added to the same code later (the full review, QA, previews) is saved into its revision.</p>
 <%- revisions.reverse_each do |entry| -%>
     <article class="section-card card">
       <span class="badge neutral">Revision <%= entry['number'] %></span>
       <h2><%= h entry['title'] %></h2>
       <p><%= h entry['summary'] %></p>
       <p class="muted">Saved <%= h entry['created'] %> · code <%= h entry['head'].to_s[0, 8] %></p>
+<%- if Array(entry['saves']).any? -%>
+      <details><summary class="muted">Saved into <%= entry['saves'].length == 1 ? 'once' : "#{entry['saves'].length} times" %> since</summary><ul><% entry['saves'].each do |save| %><li class="muted"><%= h save['at'] %> · <%= h save['summary'] %></li><% end %></ul></details>
+<%- end -%>
       <a class="btn btn-sm btn-primary" href="<%= target(entry) %>"><%= latest?(entry) ? 'Latest review' : 'Open revision' %></a> <a class="btn btn-sm btn-ghost" href="<%= snapshot(entry) %>">Saved snapshot</a>
     </article>
 <%- end -%>

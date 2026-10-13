@@ -202,9 +202,9 @@ Dir.mktmpdir('dcr-live-test') do |directory|
     follow = json.call(request.call('POST', '/api/message', JSON.generate(key: KEY, id: 'c1', body: 'thanks, also check B')))
     assert(follow.dig('message', 'author') == 'user' && state.pending.last['text'].include?('also check B'), 'Live follow-up was not queued')
     assert(request.call('POST', '/api/finish', JSON.generate(key: KEY)).start_with?('HTTP/1.1 200') && state.pending.last['kind'] == 'finish', 'Finish was not queued')
-    File.write(File.join(series, 'manifest.json'), JSON.generate(revisions: [{number: 1}, {number: 3}]))
-    assert(json.call(request.call('GET', "/api/state?key=#{KEY}"))['latest_revision'] == 3, 'The newest saved revision is not reported to the page')
-    puts 'PASS a sent comment is queued, an agent reply wakes the page, follow-ups and Finish reach the queue, and a newer revision is reported'
+    File.write(File.join(series, 'manifest.json'), JSON.generate(revisions: [{number: 1, saves: [{}]}, {number: 3, saves: [{}, {}]}]))
+    assert(json.call(request.call('GET', "/api/state?key=#{KEY}")).values_at('latest_revision', 'latest_save') == [3, 2], 'The newest saved revision, and how often it was saved into, is not reported to the page')
+    puts 'PASS a sent comment is queued, an agent reply wakes the page, follow-ups and Finish reach the queue, and a newer revision or save is reported'
   ensure
     server.close
   end

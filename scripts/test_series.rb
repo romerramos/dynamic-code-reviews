@@ -122,6 +122,18 @@ module SeriesChecks
           unchanged = ReviewSeries.prepare(repo: root, name: 'values', out: out)
           assert(unchanged['status'] == 'unchanged', 'Committing alone created a fresh change')
           rejects('No-op revision created by default') { ReviewSeries.publish(prepared: out, update: update) }
+          # The same code reviewed again on purpose is the same revision, although the commit gave
+          # it another fingerprint: what the reader has on it goes with it.
+          state = DCR::State.new(series_path)
+          key = ->(page) { DCR::State.review_key(DynamicReviews.extract(page)['snapshot']['fingerprint'], 'values', 2) }
+          was = key.call(second)
+          state.save_blob(was, {'viewedFiles' => ['aaa.rb']})
+          again = ReviewSeries.publish(prepared: out, update: increment(out).merge('since_previous' => 'Checked again after committing.'), record: true)
+          account = DynamicReviews.extract(again)['review']['history']
+          entries = ReviewSeries.manifest(series_path)['revisions']
+          assert(again == second && entries.length == 2 && entries.last['saves'].map { |save| save['summary'] } == ['Checked again after committing.'] && account.values_at('revision', 'save') == [2, 1], 'A review of unchanged code became a new revision')
+          assert(account['files'].any? { |file| file['state'] != 'unchanged' }, 'The revision forgot which files it changed')
+          assert(key.call(again) != was && state.read['blobs'] == {key.call(again) => {'viewedFiles' => ['aaa.rb']}}, 'The reader\'s progress did not follow the revision to its committed code')
           File.write(File.join(root, 'delete.txt'), "dependency changed\n")
           changed = ReviewSeries.prepare(repo: root, name: 'values', out: out)
           assert(changed['changed_context'] == ['delete.txt'] && changed['reusable_ranges'].zero?, 'Dependency edit did not invalidate reuse')
@@ -225,11 +237,10 @@ module SeriesChecks
         end
       end
     end
-    checks['attaches offline QA without rewriting findings or old revisions; rejects stale inputs'] = lambda do
+    checks['attaches offline QA to the revision of its code without rewriting findings; rejects stale inputs'] = lambda do
       ReviewChecks.fixture do |root, _commit|
         Dir.mktmpdir('review-qa-check-') do |out|
           first = ReviewSeries.start(repo: root, name: 'qa-check', report: initial(root))
-          before = File.binread(first)
           payload = DynamicReviews.extract(first)
           png = Base64.strict_decode64('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jWZkAAAAASUVORK5CYII=')
           File.binwrite(File.join(out, 'state.png'), png)
@@ -246,25 +257,30 @@ module SeriesChecks
           second = ReviewSeries.qa(repo: root, name: 'qa-check', revision: 1, update: input)
           after = DynamicReviews.extract(second)
           assert(File.read(second).include?('media-src data:;'), 'Offline media blocked by report CSP')
-          assert(File.binread(first) == before, 'QA overwrote the first review')
+          entry = ReviewSeries.manifest(File.dirname(File.dirname(first)))['revisions'].last
+          assert(second == first && entry['number'] == 1 && entry['saves'].map { |save| save['summary'] } == ['QA evidence updated: A synthetic state was captured.'], 'QA of the same code is not a save into its revision')
+          assert(after['review']['history'].values_at('revision', 'save', 'summary') == [1, 1, payload['review']['history']['summary']], 'The page does not say it is the same revision, saved once more')
           assert(after['snapshot'] == payload['snapshot'] && after['review']['findings'] == payload['review']['findings'], 'QA changed code conclusions')
           assert(after['review']['qa']['flows'][0]['assets'][0]['data_uri'].start_with?('data:image/png;base64,'), 'Media not embedded')
           assert(after['review']['qa']['flows'][0]['assets'][1]['data_uri'].start_with?('data:image/gif;base64,'), 'GIF not embedded')
           assert(after['review']['qa']['flows'][0]['motion_preview']['data_uri'].start_with?('data:video/webm;base64,'), 'Motion preview not embedded')
           assert(!after['review']['qa']['flows'][0]['assets'][0].key?('path'), 'Scratch path leaked into report')
-          rejects('Stale revision accepted') { ReviewSeries.qa(repo: root, name: 'qa-check', revision: 1, update: input) }
+          rejects('The same QA saved twice') { ReviewSeries.qa(repo: root, name: 'qa-check', revision: 1, update: input) }
+          qa['summary'] = 'New evidence'; File.write(input, JSON.generate(qa))
+          rejects('QA for another revision accepted') { ReviewSeries.qa(repo: root, name: 'qa-check', revision: 2, update: input) }
           qa['fingerprint'] = 'wrong'; File.write(input, JSON.generate(qa))
-          rejects('Wrong snapshot accepted') { ReviewSeries.qa(repo: root, name: 'qa-check', revision: 2, update: input) }
-          qa['fingerprint'] = payload['snapshot']['fingerprint']; qa['summary'] = 'New evidence'; File.write(input, JSON.generate(qa))
+          rejects('Wrong snapshot accepted') { ReviewSeries.qa(repo: root, name: 'qa-check', revision: 1, update: input) }
+          qa['fingerprint'] = payload['snapshot']['fingerprint']; File.write(input, JSON.generate(qa))
           File.write(File.join(root, 'sample.rb'), "changed after capture\n")
-          rejects('Changed source accepted') { ReviewSeries.qa(repo: root, name: 'qa-check', revision: 2, update: input) }
+          rejects('Changed source accepted') { ReviewSeries.qa(repo: root, name: 'qa-check', revision: 1, update: input) }
           draft = ReviewSeries.draft_review(after['review'], after['snapshot'], ReviewSeries.compare(after['snapshot'], after['snapshot']))
           assert(!draft.key?('qa'), 'An increment silently reused historical QA')
-          assert(ReviewSeries.manifest(File.dirname(File.dirname(first)))['revisions'].length == 2, 'Rejected QA wrote a revision')
+          saved = ReviewSeries.manifest(File.dirname(File.dirname(first)))['revisions']
+          assert(saved.length == 1 && saved.last['saves'].length == 1, 'Rejected QA was saved')
         end
       end
     end
-    checks['opens an outline in progress, keeps posted comments and finishes as the next revision'] = lambda do
+    checks['opens an outline in progress, keeps posted comments and finishes in the same revision'] = lambda do
       require_relative '../lib/dcr/live_cli'
       ReviewChecks.fixture do |root, _commit|
         Dir.mktmpdir('review-in-progress-') do |out|
@@ -315,14 +331,15 @@ module SeriesChecks
           File.write(File.join(out, 'full.json'), JSON.generate(full))
           second = ReviewSeries.finish(repo: root, name: 'live-check', review: File.join(out, 'full.json'))
           finished = DynamicReviews.extract(second)['review']
-          assert(!finished.key?('status') && finished['history']['revision'] == 2, 'Finishing did not save a complete next revision')
+          assert(second == first && !finished.key?('status') && finished['history'].values_at('revision', 'save', 'summary') == [1, 1, 'Full review ready: walkthrough explanations, findings and validation.'], 'Finishing did not complete the revision the outline opened')
+          assert(ReviewSeries.manifest(series)['revisions'].map { |entry| entry.values_at('number', 'summary') } == [[1, finished['history']['summary']]], 'The same code became a second revision')
           assert(finished['comments'].map { |entry| entry['id'] } == ['value-two'], 'Finishing lost the comment posted while in progress')
           assert(finished['risk_ranking'] == risk, 'Finishing lost the risk ranking posted while in progress')
           assert(finished['screenshots'].map { |shot| shot['id'] } == ['two'], 'Finishing lost the screenshot posted while in progress')
           rejects('A finished review was finished again') { ReviewSeries.finish(repo: root, name: 'live-check', review: File.join(out, 'full.json')) }
           rejects('A comment was posted to a finished review') { post.call(comment.merge('id' => 'late')) }
           # Rank again, on the finished review: the page shows it ranking and dcr wait hands the agent the task.
-          done_key = DCR::State.review_key(snapshot['fingerprint'], 'live-check', 2)
+          done_key = key # the same code, so the same review: what the reader has on it stays
           state.request_risk_ranking(done_key)
           assert(state.read.dig('risk_rankings', done_key, 'requested'), 'A requested risk ranking does not show as being ranked')
           printed = DCR::LiveCLI.render(state.pending.last(1), '--repo r --name s')
@@ -415,7 +432,7 @@ module SeriesChecks
           rejects('A file that is not an image was posted') { post.call(shown.merge('id' => 'text', 'path' => 'notes.txt')) }
           rejects('More screenshots than UI changes shows were posted') { post.call((1..6).map { |number| shown.merge('id' => "more-#{number}") }) }
           post.call(shown.merge('title' => 'The home page'))
-          # A QA clip of what a screenshot shows takes its place; the revision it saves keeps both.
+          # A QA clip of what a screenshot shows takes its place; the revision it is saved into keeps both.
           File.binwrite(File.join(out, 'clip.png'), png)
           DCR::Evidence.attach(series_dir: series, capture_dir: out, input: {'path' => File.join(out, 'clip.png'), 'title' => 'The value changes', 'observed' => 'It shows two.', 'result' => 'failed', 'comment_id' => 'value-note'})
           second = DynamicReviews.extract(File.join(series, 'current.html'))
@@ -475,11 +492,10 @@ module SeriesChecks
         end
       end
     end
-    checks['attaches QA and previews in one immutable revision'] = lambda do
+    checks['attaches QA and previews to the revision of their code in one save'] = lambda do
       ReviewChecks.fixture do |root, _commit|
         Dir.mktmpdir('review-enrich-check-') do |out|
           first = ReviewSeries.start(repo: root, name: 'enrich-check', report: initial(root))
-          before = File.binread(first)
           payload = DynamicReviews.extract(first)
           png = Base64.strict_decode64('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jWZkAAAAASUVORK5CYII=')
           File.binwrite(File.join(out, 'state.png'), png)
@@ -494,14 +510,15 @@ module SeriesChecks
           File.write(input, JSON.generate({'qa' => qa, 'previews' => [preview], 'validation' => ['Synthetic visual state checked.']}))
           second = ReviewSeries.enrich(repo: root, name: 'enrich-check', revision: 1, update: input)
           after = DynamicReviews.extract(second)
-          assert(after['review']['history']['revision'] == 2, 'Combined evidence created more than one revision')
+          assert(second == first && after['review']['history'].values_at('revision', 'save') == [1, 1], 'Combined evidence was not one save into its revision')
           assert(after['review']['qa']['flows'][0]['assets'][0]['data_uri'].start_with?('data:image/png;base64,'), 'QA media was not embedded')
           assert(after['review']['previews'] == [preview], 'Template preview was not embedded')
           assert(after['review']['validation'] == ['Synthetic visual state checked.'], 'Enrichment did not update validation')
           assert(after['review']['findings'] == payload['review']['findings'], 'Enrichment changed code conclusions')
-          assert(File.binread(first) == before, 'Enrichment overwrote the original revision')
-          rejects('Stale enrichment revision accepted') { ReviewSeries.enrich(repo: root, name: 'enrich-check', revision: 1, update: input) }
-          assert(ReviewSeries.manifest(File.dirname(File.dirname(first)))['revisions'].length == 2, 'Rejected enrichment wrote a revision')
+          rejects('The same evidence saved twice') { ReviewSeries.enrich(repo: root, name: 'enrich-check', revision: 1, update: input) }
+          rejects('Evidence for another revision accepted') { ReviewSeries.enrich(repo: root, name: 'enrich-check', revision: 2, update: input) }
+          saved = ReviewSeries.manifest(File.dirname(File.dirname(first)))['revisions']
+          assert(saved.length == 1 && saved.last['saves'].length == 1, 'Rejected enrichment was saved')
         end
       end
     end
@@ -520,7 +537,6 @@ module SeriesChecks
           File.write(File.join(out, 'snapshot.json'), JSON.generate(snapshot))
           File.write(File.join(out, 'review.json'), JSON.generate(review))
           first = ReviewSeries.start(repo: root, name: 'targeted-previews', snapshot: File.join(out, 'snapshot.json'), review: File.join(out, 'review.json'))
-          before = File.binread(first)
           entry = lambda do |id|
             {'id' => id, 'files' => ["app/views/#{id}.html.erb"], 'status' => 'rendered', 'source' => 'example', 'title' => id,
              'html' => "<!doctype html><html><body><p>#{id}</p></body></html>"}
@@ -534,34 +550,33 @@ module SeriesChecks
           qa = {'status' => 'complete', 'fingerprint' => snapshot['fingerprint'], 'summary' => 'Selected flow checked.',
                 'environment' => 'Synthetic test fixture.', 'flows' => [{'title' => 'Selected flow', 'steps' => ['Open fixture'], 'expected' => 'Visible', 'observed' => 'Visible', 'result' => 'passed', 'assets' => [{'caption' => 'Fixture', 'data_uri' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jWZkAAAAASUVORK5CYII='}]}]}
           File.write(input, JSON.generate('previews' => [entry.call('beta')], 'qa' => qa))
-          combined = ReviewSeries.enrich(repo: root, name: 'targeted-previews', revision: 2, update: input, targeted: true)
+          combined = ReviewSeries.enrich(repo: root, name: 'targeted-previews', revision: 1, update: input, targeted: true)
           enriched = DynamicReviews.extract(combined)['review']
           assert(enriched['previews'].map { |p| p['id'] } == %w[alpha beta], 'Combined targeted update lost an existing preview')
           assert(enriched['qa']['summary'] == qa['summary'], 'Combined targeted update lost QA')
-          assert(enriched['history']['revision'] == 3, 'Combined targeted batch created extra revisions')
+          assert(enriched['history'].values_at('revision', 'save') == [1, 2], 'Combined targeted batch was not one more save into the revision')
           File.write(input, JSON.generate('previews' => [entry.call('alpha'), entry.call('beta'), entry.call('gamma')]))
-          third = ReviewSeries.previews(repo: root, name: 'targeted-previews', revision: 3, update: input)
+          third = ReviewSeries.previews(repo: root, name: 'targeted-previews', revision: 1, update: input)
           full = DynamicReviews.extract(third)['review']
           assert(!full.key?('preview_scope') && full['previews'].length == 3, 'Full pass did not replace the targeted set')
-          assert(File.binread(first) == before, 'Targeted preview modified the original revision')
+          assert(third == first && ReviewSeries.manifest(File.dirname(File.dirname(first)))['revisions'].length == 1, 'Previews of the same code became revisions')
         end
       end
     end
-    checks['recorded presentation refresh preserves captured code, evidence and immutable history'] = lambda do
+    checks['a presentation refresh keeps the captured code and evidence, and saves nothing'] = lambda do
       ReviewChecks.fixture do |root, _commit|
         first = ReviewSeries.start(repo: root, name: 'presentation', report: initial(root))
         before = File.binread(first)
         original = DynamicReviews.extract(first)
-        # A presentation revision must not silently collect newer working code.
+        # A refresh must not silently collect newer working code.
         File.write(File.join(root, 'sample.rb'), "unreviewed local change\n")
-        current = ReviewSeries.refresh(repo: root, name: 'presentation', record: true)
+        current = ReviewSeries.refresh(repo: root, name: 'presentation')
         after = DynamicReviews.extract(current)
         assert(after['snapshot'] == original['snapshot'], 'Presentation refresh recollected code')
         assert(after['review'].reject { |k, _| k == 'history' } == original['review'].reject { |k, _| k == 'history' }, 'Presentation refresh changed analysis or evidence')
-        assert(File.binread(first) == before, 'Presentation refresh rewrote original snapshot')
-        assert(after['review']['history']['revision'] == 2, 'Presentation revision not recorded')
-        assert(after['review']['history']['finding_states'] == original['review']['history']['finding_states'], 'Finding state was lost')
-        assert(ReviewSeries.manifest(File.dirname(current))['revisions'].length == 2, 'Presentation history missing')
+        assert(File.binread(first) == before, 'Presentation refresh rewrote the saved revision')
+        saved = ReviewSeries.manifest(File.dirname(current))['revisions']
+        assert(saved.length == 1 && !saved.last.key?('saves'), 'Presentation refresh was recorded as a revision or a save')
       end
     end
     checks.each { |description, check| check.call; puts "PASS #{description}" }

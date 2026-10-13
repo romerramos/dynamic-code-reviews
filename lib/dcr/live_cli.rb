@@ -244,8 +244,8 @@ module DCR
       require_relative 'evidence'
       result = Evidence.attach_all(series_dir: directory, capture_dir: folders.first, inputs: items, source: 'agent', replace: options[:replace])
       replaced = result['replaced'].to_i.positive? ? ", replacing #{result['replaced']} #{options[:replace] == :all ? 'earlier recording(s)' : 'from the previous QA review'}" : ''
-      puts "Attached #{result['attached']} recording(s)#{replaced} as revision #{result['revision']}: #{result['path']}"
-      puts 'The open review offers the new revision; reply to the QA thread with what you recorded and what you skipped.'
+      puts "Attached #{result['attached']} recording(s)#{replaced} to revision #{result['revision']}: #{result['path']}"
+      puts 'The open review offers to show them; reply to the QA thread with what you recorded and what you skipped.'
     end
 
     def comments(state, options)
@@ -403,7 +403,7 @@ module DCR
       where = []
       where << "#{shown.length} in Seen in the app" if shown.any?
       where << "#{on_comments.length} on #{on_comments.map { |shot| shot['comment_id'] }.uniq.join(', ')}" if on_comments.any?
-      puts "Posted #{shots.length == 1 ? 'the screenshot' : "#{shots.length} screenshots"} to the open review (#{where.join(', ')}); the next saved revision keeps #{shots.length == 1 ? 'it' : 'them'}."
+      puts "Posted #{shots.length == 1 ? 'the screenshot' : "#{shots.length} screenshots"} to the open review (#{where.join(', ')}); the next save of the review keeps #{shots.length == 1 ? 'it' : 'them'}."
       # Two different captures of one page are shown as two items; the same file posted twice is one.
       fresh = ReviewScreenshots.embedded(directory, shots)
       all = existing.reject { |shot| fresh.any? { |own| own['id'] == shot['id'] } } + fresh

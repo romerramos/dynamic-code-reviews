@@ -550,7 +550,7 @@
     try {
       const saved = await api('/api/evidence', {items: queued.map(entry => ({path: entry.path, page: entry.page, title: entry.draft.title, result: entry.draft.result, observed: entry.draft.observed, comment_id: entry.draft.comment_id}))});
       queued.forEach(entry => { entry.state = 'saved'; entry.revision = saved.revision; });
-      status('ok', `Saved ${queued.length === 1 ? 'the recording' : `${queued.length} recordings`} to the review as revision ${saved.revision}.`);
+      status('ok', `Saved ${queued.length === 1 ? 'the recording' : `${queued.length} recordings`} to the review.`);
       renderList();
     } catch (error) { status('off', error.message); }
   });
@@ -559,7 +559,7 @@
     if (!key) return;
     try {
       const state = await api(`/api/state?key=${encodeURIComponent(key)}`);
-      latestRevision = state.latest_revision || latestRevision;
+      latestRevision = state.latest_revision || latestRevision; latestSave = state.latest_save ?? latestSave;
       const signature = JSON.stringify([state.threads, state.listening, state.agent]);
       if (signature !== refresh.last) {
         refresh.last = signature;
@@ -582,8 +582,8 @@
   const qaDone = () => new Set(read(qaDoneKey, []));
   const markQaDone = id => write(qaDoneKey, [...qaDone(), id].slice(-50));
   const banner = $('.dcr-qa-banner');
-  let qaFirstLook = true, qaActive = null, latestRevision = null;
-  const currentRevision = data?.review?.history?.revision || null;
+  let qaFirstLook = true, qaActive = null, latestRevision = null, latestSave = 0;
+  const currentRevision = data?.review?.history?.revision || null, currentSave = data?.review?.history?.save || 0;
   const qaRequests = () => Object.entries(threads).filter(([, thread]) => thread.anchor?.kind === 'request');
   const clipsSince = at => recs.filter(item => item.at >= at && item.driver === 'agent').length;
   // Between recordings the agent signs in, makes data and finds its way: a band across the top of
@@ -635,14 +635,15 @@
     try { if (recorder()?.status()?.ready) await recorder().end(); } catch { /* already stopped */ }
     if (dialog.open) dialog.close();
     const report = [...thread.messages].reverse().find(message => message.author === 'agent');
-    const newer = latestRevision && currentRevision && latestRevision > currentRevision;
+    // The recordings are saved into the revision this page shows, which is then newer than the page.
+    const newer = latestRevision && currentRevision && (latestRevision > currentRevision || (latestRevision === currentRevision && latestSave > currentSave));
     done.querySelector('[data-done-summary]').textContent = newer
-      ? `Your agent recorded ${clips || 'its'} ${clips === 1 ? 'recording' : 'recordings'} and saved them as revision ${latestRevision}, each on the comment it shows. They replace the previous QA review's recordings.`
-      : 'Your agent finished. Its report is below; no new revision was saved.';
+      ? `Your agent recorded ${clips || 'its'} ${clips === 1 ? 'recording' : 'recordings'} and saved them to this review, each on the comment it shows. They replace the previous QA review's recordings.`
+      : 'Your agent finished. Its report is below; nothing new was saved to the review.';
     done.querySelector('[data-done-report]').innerHTML = report && tools ? tools.markdown(report.body) : '';
     const openButtonDone = done.querySelector('[data-done-open]');
-    openButtonDone.textContent = newer ? `See the clips in revision ${latestRevision}` : 'Back to the review';
-    // The clips are in the new revision, so leaving this dialog by any way (the button, Close, Esc)
+    openButtonDone.textContent = newer ? 'See the clips' : 'Back to the review';
+    // The clips are in the saved review, not in this page, so leaving this dialog by any way (the button, Close, Esc)
     // opens it. The address is often already /#overview, where assigning it would not load anything.
     done.onclose = newer ? () => { history.replaceState(null, '', '/#overview'); location.reload(); } : null;
     done.querySelector('[data-done-close]').hidden = !!newer;

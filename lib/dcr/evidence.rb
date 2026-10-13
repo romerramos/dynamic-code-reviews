@@ -7,8 +7,8 @@ require_relative '../../scripts/series'
 module DCR
   # Attaches a clip or still the reviewer recorded in the served review to its series, through
   # the same `series qa` path an agent uses, so the same checks apply (unchanged code, size
-  # budget, media type). It saves a new revision of the same code, which keeps the reviewer's
-  # comments and threads (see State#carry_forward).
+  # budget, media type). It saves them into the revision of that code, so the reviewer's
+  # comments and threads stay where they are.
   module Evidence
     module_function
 
@@ -80,7 +80,7 @@ module DCR
       begin
         number = manifest['revisions'].last['number']
         saved = ReviewSeries.qa(repo: manifest.fetch('repo'), name: manifest.fetch('name'), revision: number, update: update)
-        {'revision' => number + 1, 'path' => saved, 'attached' => flows.length, 'replaced' => replaced}
+        {'revision' => number, 'path' => saved, 'attached' => flows.length, 'replaced' => replaced}
       ensure
         File.unlink(update) if File.file?(update)
       end

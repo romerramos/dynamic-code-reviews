@@ -43,40 +43,39 @@ ReviewChecks.fixture do |root, _commit|
     rejected('non-media file') { DCR::Evidence.attach(series_dir: series_dir, capture_dir: captures, input: base.merge('path' => File.join(captures, 'notes.txt'))) }
     File.symlink('/etc/hosts', File.join(captures, 'link.png'))
     rejected('symlink') { DCR::Evidence.attach(series_dir: series_dir, capture_dir: captures, input: base.merge('path' => File.join(captures, 'link.png'))) }
-    assert(ReviewSeries.manifest(series_dir)['revisions'].length == 1, 'A rejected attachment saved a revision')
+    assert(ReviewSeries.manifest(series_dir)['revisions'].last['saves'].nil?, 'A rejected attachment was saved')
     puts 'PASS attaching refuses missing, foreign, symlinked and non-media files, blank text and unknown comments, saving nothing'
 
     result = DCR::Evidence.attach(series_dir: series_dir, capture_dir: captures, input: base.merge('comment_id' => 'value-note'))
-    assert(result['revision'] == 2, 'Attaching did not save the next revision')
-    saved = DynamicReviews.extract(File.join(series_dir, 'revisions', '002.html'))
+    captured = DynamicReviews.extract(series)['snapshot']
+    assert(result['revision'] == 1, 'A recording of the same code was not saved into its revision')
+    saved = DynamicReviews.extract(File.join(series_dir, 'revisions', '001.html'))
     flow = saved['review']['qa']['flows'].last
     assert(flow['result'] == 'failed' && flow['comment_id'] == 'value-note' && flow['assets'][0]['data_uri'].start_with?('data:image/png;base64,'), 'The recording is not embedded in the revision')
     assert(saved['review']['qa']['status'] == 'partial' && saved['review']['qa']['environment'].include?('not verified'), 'Reviewer evidence must not claim a verified build')
-    assert(saved['snapshot'] == DynamicReviews.extract(File.join(series_dir, 'revisions', '001.html'))['snapshot'], 'Attaching changed the captured code')
+    assert(saved['snapshot'] == captured, 'Attaching changed the captured code')
     assert(Dir.children(captures).none? { |name| name.start_with?('attach-') }, 'The temporary update file was left behind')
     second = DCR::Evidence.attach(series_dir: series_dir, capture_dir: captures, input: base.merge('title' => 'Again'))
-    assert(second['revision'] == 3 && DynamicReviews.extract(File.join(series_dir, 'revisions', '003.html'))['review']['qa']['flows'].length == 2, 'A second recording must be added, not replace the first')
-    puts 'PASS a reviewer recording becomes a new revision of the same code with its evidence embedded, and later ones add to it'
+    assert(second['revision'] == 1 && DynamicReviews.extract(File.join(series_dir, 'revisions', '001.html'))['review']['qa']['flows'].length == 2, 'A second recording must be added, not replace the first')
+    puts 'PASS a reviewer recording is saved into the revision of its code with its evidence embedded, and later ones add to it'
 
     rejected('a batch with one bad item') { DCR::Evidence.attach_all(series_dir: series_dir, capture_dir: captures, inputs: [base, base.merge('observed' => '')]) }
-    assert(ReviewSeries.manifest(series_dir)['revisions'].length == 3, 'A rejected batch must save nothing')
-    batch = DCR::Evidence.attach_all(series_dir: series_dir, capture_dir: captures, inputs: [base.merge('title' => 'One', 'page' => '/inbox?status=closed'), base.merge('title' => 'Two', 'result' => 'passed')])
-    flows = DynamicReviews.extract(File.join(series_dir, 'revisions', '004.html'))['review']['qa']['flows']
-    assert(batch.values_at('revision', 'attached') == [4, 2] && flows.map { |item| item['title'] } == ['Value page', 'Again', 'One', 'Two'], 'A session of recordings must become one revision')
-    assert(flows[2]['steps'] == ['Recorded by the reviewer on /inbox?status=closed.'], 'The page a recording was made on must be kept')
-    puts 'PASS several recordings from one session save as one revision, and a bad one saves none'
-
-    # The conversation survives: same code, so the new revision inherits progress and threads.
-    manifest = ReviewSeries.manifest(series_dir)
-    first, latest = manifest['revisions'].first, manifest['revisions'].last
+    assert(ReviewSeries.manifest(series_dir)['revisions'].last['saves'].length == 2, 'A rejected batch must save nothing')
     state = DCR::State.new(series_dir)
-    old_key = "dynamic-review:#{first['fingerprint']}:evidence:#{first['number']}"
-    state.save_blob(old_key, {'resolvedComments' => ['value-note']})
-    state.send_items(old_key, [{'id' => 'value-note', 'text' => 'q'}])
-    state.carry_forward('evidence', manifest['revisions'])
-    new_key = "dynamic-review:#{latest['fingerprint']}:evidence:#{latest['number']}"
-    assert(first['fingerprint'] == latest['fingerprint'] && state.read['threads'][new_key]['value-note']['live'], 'Attaching evidence must not lose the conversation')
-    puts 'PASS the conversation carries to the revision that holds the new evidence'
+    new_key = "dynamic-review:#{captured['fingerprint']}:evidence:1"
+    state.save_blob(new_key, {'resolvedComments' => ['value-note']})
+    state.send_items(new_key, [{'id' => 'value-note', 'text' => 'q'}])
+    batch = DCR::Evidence.attach_all(series_dir: series_dir, capture_dir: captures, inputs: [base.merge('title' => 'One', 'page' => '/inbox?status=closed'), base.merge('title' => 'Two', 'result' => 'passed')])
+    flows = DynamicReviews.extract(File.join(series_dir, 'revisions', '001.html'))['review']['qa']['flows']
+    entries = ReviewSeries.manifest(series_dir)['revisions']
+    assert(batch.values_at('revision', 'attached') == [1, 2] && entries.length == 1 && entries.last['saves'].length == 3 && flows.map { |item| item['title'] } == ['Value page', 'Again', 'One', 'Two'], 'A session of recordings must be one save into the revision')
+    assert(flows[2]['steps'] == ['Recorded by the reviewer on /inbox?status=closed.'], 'The page a recording was made on must be kept')
+    puts 'PASS several recordings from one session are one save, and a bad one saves none'
+
+    # The conversation survives: the evidence is in the same revision, so nothing has to move.
+    latest = ReviewSeries.manifest(series_dir)['revisions'].last
+    assert(latest.values_at('number', 'fingerprint') == [1, captured['fingerprint']] && state.read['threads'][new_key]['value-note']['live'], 'Attaching evidence must not lose the conversation')
+    puts 'PASS the conversation stays with the revision that takes the new evidence'
 
     # Export: one offline file with the conversation baked in.
     state.agent_reply('value-note', 'Checked: no caller passes nil', key: new_key)
@@ -169,13 +168,13 @@ ReviewChecks.fixture do |root, _commit|
     server.close
     puts 'PASS Start QA review queues a task for the agent with the recorder folder, the comments and its thread'
 
-    # The agent attaches what it recorded: one revision, each recording on its comment.
+    # The agent attaches what it recorded: one save into the revision, each recording on its comment.
     items = File.join(captures, 'items.json')
     File.write(items, JSON.generate([{'path' => png, 'comment_id' => 'value-note', 'title' => 'Value page, recorded by the agent', 'result' => 'passed', 'observed' => 'The value shows 3.', 'page' => '/values'}]))
-    before = ReviewSeries.manifest(series_dir)['revisions'].length
+    before = ReviewSeries.manifest(series_dir)['revisions'].last['saves'].length
     out, err, status = Open3.capture3(RbConfig.ruby, File.expand_path('../bin/dcr', __dir__), 'evidence', 'attach', '--dir', series_dir, '--file', items)
     flows = DynamicReviews.extract(File.join(series_dir, 'current.html'))['review']['qa']['flows']
-    assert(status.success? && out.include?('Attached 1 recording') && ReviewSeries.manifest(series_dir)['revisions'].length == before + 1, "dcr evidence attach failed: #{err}")
+    assert(status.success? && out.include?('Attached 1 recording') && ReviewSeries.manifest(series_dir)['revisions'].map { |entry| Array(entry['saves']).length } == [before + 1], "dcr evidence attach failed: #{err}")
     assert(flows.last.values_at('title', 'comment_id') == ['Value page, recorded by the agent', 'value-note'], 'The agent recording must land on its comment')
     assert(flows.last['steps'] == ['Recorded by the agent on /values.'], 'Agent evidence must say the agent recorded it, not the reviewer')
     assert(DynamicReviews.extract(File.join(series_dir, 'current.html'))['review']['qa']['status'] == 'complete', 'A finished QA review must be complete, so the Overview shows no partial-evidence note')
@@ -197,6 +196,6 @@ ReviewChecks.fixture do |root, _commit|
     File.write(items, JSON.generate([{'path' => '/etc/hosts', 'title' => 'x', 'result' => 'passed', 'observed' => 'x'}]))
     _, err, status = Open3.capture3(RbConfig.ruby, File.expand_path('../bin/dcr', __dir__), 'evidence', 'attach', '--dir', series_dir, '--file', items)
     assert(!status.success? && err.include?('not a recorder folder'), 'Only files from a recorder folder can be attached')
-    puts 'PASS dcr evidence attach puts the agent recordings on their comments as one revision, from a recorder folder only'
+    puts 'PASS dcr evidence attach puts the agent recordings on their comments in one save, from a recorder folder only'
   end
 end

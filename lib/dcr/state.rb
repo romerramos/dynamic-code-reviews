@@ -124,9 +124,9 @@ module DCR
       update { |state| state['blobs'][key] ||= blob }
     end
 
-    # A new revision of the same captured code (evidence or analysis added, nothing moved)
-    # keeps the reviewer's progress and conversations. A different snapshot keeps them only when
-    # the review was updated to it (carry_changed); otherwise it starts fresh.
+    # A series saved when evidence or analysis of the same code still added a revision: such a
+    # revision keeps the reviewer's progress and conversations. A different snapshot keeps them
+    # only when the review was updated to it (carry_changed); otherwise it starts fresh.
     def carry_forward(series, revisions)
       pairs = revisions.sort_by { |revision| revision['number'] }.each_cons(2).select { |old, new| old['fingerprint'] == new['fingerprint'] }
       return if pairs.empty?
@@ -155,6 +155,16 @@ module DCR
         end
         %w[threads github].each { |part| state[part][to] = Marshal.load(Marshal.dump(state[part][from])) if state[part][from] }
         state['previews'][to] = state['previews'][from].slice(*kept) if state['previews'][from]
+      end
+    end
+
+    # A revision saved again for the same code under another commit: everything kept for it,
+    # and what is still on its way to the agent, follows it to its new key.
+    def rekey(from, to)
+      check_key(to)
+      update do |state|
+        state.each_value { |part| part[to] = part.delete(from) if part.is_a?(Hash) && part.key?(from) }
+        state['outbox'].each { |entry| entry['key'] = to if entry['key'] == from }
       end
     end
 

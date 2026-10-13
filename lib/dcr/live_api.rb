@@ -332,22 +332,26 @@ module DCR
     def snapshot(key)
       raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
       state = @state.read
-      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'github' => (state['github'][key] || {}).merge('voice' => GitHubDraft.version(voice, emojis)), 'comments' => state['comments'][key] || [], 'screenshots' => Array(state['screenshots'][key]).map { |shot| shot.except('file') }, 'no_screenshots' => state['no_screenshots'][key], 'risk_ranking' => state['risk_rankings'][key], 'verdict' => state['verdicts'][key.split(':')[1].to_s],'previews' => preview_status(state['previews'][key]), 'latest_revision' => latest_revision, 'listening' => @state.listening?, 'agent' => @state.listener, 'agent_model' => @state.listener_model,
+      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'github' => (state['github'][key] || {}).merge('voice' => GitHubDraft.version(voice, emojis)), 'comments' => state['comments'][key] || [], 'screenshots' => Array(state['screenshots'][key]).map { |shot| shot.except('file') }, 'no_screenshots' => state['no_screenshots'][key], 'risk_ranking' => state['risk_rankings'][key], 'verdict' => state['verdicts'][key.split(':')[1].to_s],'previews' => preview_status(state['previews'][key]), 'latest_revision' => latest_revision, 'latest_save' => latest_save, 'listening' => @state.listening?, 'agent' => @state.listener, 'agent_model' => @state.listener_model,
        'pending' => state['outbox'].count { |entry| entry['seq'] > state['acked'] && entry['key'] == key }}
     end
 
     # The newest saved revision number, so an open page can offer it after the agent publishes one.
     def latest_revision = manifest['revisions']&.map { |revision| revision['number'] }&.max
 
+    # How many times that revision was saved into since (the full review, QA, previews): the page
+    # it shows is then newer than an open one, under the same number.
+    def latest_save = Array(manifest['revisions']&.max_by { |revision| revision['number'] }&.dig('saves')).length
+
     # Long poll: answers as soon as anything changes, or with the unchanged state after a
     # window so a hidden tab's throttled timers do not matter.
     def poll(key, since)
       deadline = Time.now + POLL_SECONDS
-      last_latest = latest_revision
+      last_latest = [latest_revision, latest_save]
       last_listening = [@state.listening?, @state.listener, @state.listener_model]
       loop do
         current = snapshot(key)
-        return current if current['rev'] != since || current['latest_revision'] != last_latest || current.values_at('listening', 'agent', 'agent_model') != last_listening || Time.now >= deadline
+        return current if current['rev'] != since || current.values_at('latest_revision', 'latest_save') != last_latest || current.values_at('listening', 'agent', 'agent_model') != last_listening || Time.now >= deadline
         sleep 0.4
       end
     end

@@ -12,7 +12,11 @@
   let threads = {};
   let rev = -1;
   let online = true;
-  let latest = null;
+  let latest = null, latestSave = 0;
+  // The saved review is ahead of this page: a later revision, or this one saved into since (the
+  // full review, QA, previews). mark names what is saved now.
+  const newer = () => { const shown = review.history || {}; return !!latest && !!shown.revision && (latest > shown.revision || (latest === shown.revision && latestSave > (shown.save || 0))); };
+  const mark = () => `${latest || 0}.${latestSave}`;
   let listening; // is an agent waiting for messages? undefined: an older server that cannot say
   let listener = null; // which agent is listening (claude, codex, ...), when it said
   let listenerModel = null; // {model, effort} it said it runs on
@@ -398,7 +402,7 @@
     panel.querySelector('.dcr-foot-status .dcr-dot').dataset.tone = !online ? 'off' : summary.drafts ? 'work' : 'ok';
     const current = review.history?.revision;
     const note = panel.querySelector('.dcr-note');
-    if (latest && current && latest > current) set(note, 'innerHTML', `A newer revision (${latest}) was saved. <a href="/">Open it</a>`);
+    if (newer()) set(note, 'innerHTML', latest > current ? `A newer revision (${latest}) was saved. <a href="/">Open it</a>` : 'This revision was saved again. <a href="/">Open it</a>');
     // One main action at a time: send what is unsent; with nothing to send, finishing is the next step.
     const send = panel.querySelector('[data-open-send]');
     const finish = panel.querySelector('[data-dcr-finish]');
@@ -771,7 +775,7 @@
 
   // --- recordings -----------------------------------------------------------------------------
   // The recorder lists what it saved. Each PNG or WebM can be attached to the review here, as
-  // a new revision of the same code that keeps your comments and threads.
+  // saved into this revision, so your comments and threads stay where they are.
   const field = (label, control) => { const wrap = document.createElement('label'); wrap.textContent = label; wrap.append(control); return wrap; };
   const attachForm = (item, path) => {
     const form = document.createElement('form');
@@ -783,7 +787,7 @@
     const owner = document.createElement('select');
     owner.innerHTML = '<option value="">Not tied to a comment</option>';
     comments().filter(comment => !comment.general).forEach(comment => owner.append(Object.assign(document.createElement('option'), {value: comment.id, textContent: comment.subject})));
-    const submit = Object.assign(document.createElement('button'), {type: 'submit', textContent: 'Attach and open revision'});
+    const submit = Object.assign(document.createElement('button'), {type: 'submit', textContent: 'Attach and open it'});
     const status = Object.assign(document.createElement('span'), {className: 'dcr-status'});
     form.append(field('Title', title), field('Result', result), field('What you saw', observed), field('Expected', expected), field('About comment', owner), submit, status);
     form.addEventListener('submit', async event => {
@@ -792,7 +796,7 @@
       status.textContent = 'Attaching…';
       try {
         const saved = await api('/api/evidence', {path, title: title.value, result: result.value, observed: observed.value, expected: expected.value, comment_id: owner.value});
-        status.textContent = `Saved as revision ${saved.revision}. Opening it…`;
+        status.textContent = 'Saved to the review. Opening it…';
         setTimeout(() => location.reload(), 600);
       } catch (error) { status.textContent = error.message; submit.disabled = false; }
     });
@@ -1454,8 +1458,8 @@
       shotsKnown = true;
     } catch { shotsMark = before; } // asked again with the next state
   };
-  // A newer revision of the same code, saved while this page is open: the finished review, or the
-  // recordings of a QA review. Progress and conversations come along, so the page opens it by
+  // The review saved again while this page is open: the finished review or a QA review's recordings
+  // in this revision, or a newer revision. Progress and conversations are kept, so the page opens it by
   // itself when that takes nothing from the reader: nothing typed, no dialog open, and either away
   // from the tab or on Overview. Otherwise a notice says so, and a button in the header stays
   // until they take it, however the notice went.
@@ -1467,18 +1471,18 @@
   const openedKey = 'dynamic-review:opened-latest';
   let latestAtOpen = null, finishedAnnounced = false;
   const announceFinished = () => {
-    latestAtOpen ??= latest || 0;
+    latestAtOpen ??= mark();
     // An older revision opened on purpose is not news; the review finishing always is.
-    if (!latest || latest <= shownRevision || !(review.status || latest > latestAtOpen)) return;
+    if (!newer() || !(review.status || mark() !== latestAtOpen)) return;
     let opened = null;
     try { opened = sessionStorage.getItem(openedKey); } catch { /* open it once more at worst */ }
-    // Once per revision, so a page that still shows an older one is never reloaded in a loop.
-    if (opened !== String(latest) && !inHand() && (document.hidden || /^(#overview)?$/.test(location.hash))) {
-      try { sessionStorage.setItem(openedKey, String(latest)); } catch { /* as above */ }
+    // Once per save, so a page that still shows an older one is never reloaded in a loop.
+    if (opened !== mark() && !inHand() && (document.hidden || /^(#overview)?$/.test(location.hash))) {
+      try { sessionStorage.setItem(openedKey, mark()); } catch { /* as above */ }
       openLatest();
       return;
     }
-    const headline = review.status ? 'Your review is ready' : `Revision ${latest} is ready`;
+    const headline = review.status ? 'Your review is ready' : latest > shownRevision ? `Revision ${latest} is ready` : 'This revision was saved again';
     newerButton.textContent = headline;
     newerButton.title = 'Open it. Your progress is kept.';
     newerButton.hidden = false;
@@ -1500,8 +1504,8 @@
   const updatedKey = 'dynamic-review:updated';
   let stale = null, updating = false, staleAt = 0;
   const renderUpdate = () => {
-    // A newer revision that is already saved has its own button.
-    set(updateButton, 'hidden', !stale || (latest || 0) > shownRevision);
+    // A newer save of the review has its own button.
+    set(updateButton, 'hidden', !stale || newer());
     if (updateButton.hidden) return;
     // A review that cannot be updated right now says why, rather than losing its button.
     if (stale.unavailable) {
@@ -1717,7 +1721,7 @@
 
   // --- sync ----------------------------------------------------------------------------------
   const apply = data => {
-    threads = data.threads; rev = data.rev; latest = data.latest_revision; listening = data.listening; listener = data.agent || listener; listenerModel = data.agent_model || (data.agent ? null : listenerModel); online = true; previews = data.previews || {};
+    threads = data.threads; rev = data.rev; latest = data.latest_revision; latestSave = data.latest_save || 0; listening = data.listening; listener = data.agent || listener; listenerModel = data.agent_model || (data.agent ? null : listenerModel); online = true; previews = data.previews || {};
     const ghNext = {pending: data.github?.pending || {}, posted: data.github?.posted || {}, bodies: data.github?.bodies || {}, drafts: data.github?.drafts || {}, voice: data.github?.voice};
     if (JSON.stringify(ghNext) !== JSON.stringify({pending: ghData.pending, posted: ghData.posted, bodies: ghData.bodies, drafts: ghData.drafts, voice: ghData.voice})) { ghData = ghNext; settleDraft(); }
     receiveComments(data.comments || []);

@@ -45,7 +45,7 @@ widths, **Record** and a side panel with Recordings and Comments on the app.
 - **Start QA review** (on the Overview and in the panel header): the reader shares this
   tab once, and the agent gets a QA request through `dcr wait` naming the recorder
   folder, the comments and the rules. It records each flow with `dcr record`, attaches
-  them with `dcr evidence attach` (one revision, each clip on its comment) and reports
+  them with `dcr evidence attach` (one save into the revision, each clip on its comment) and reports
   in the QA thread. While it runs, a banner in the App view tells the reader to leave the
   tab alone; the agent's reply ends it, stops sharing and shows **QA review ready**. Each
   QA review replaces the previous one's recordings; the reader's own recordings stay.

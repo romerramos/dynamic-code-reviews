@@ -74,7 +74,7 @@ from its original snapshot and analysis when refreshing presentation only.
   behavior affects the UI. Keep diff cards collapsible, initially expanded for unread files;
   do not reduce this view to links back to walkthrough steps.
 - Series revisions also show a compact revision selector, a one-sentence revision update. Detailed updated/reused group labels and finding lifecycle states belong in Review details. Unanchored concerns needing rechecking must not receive a
-  green clean-review verdict. Original snapshot HTML stays immutable.
+  green clean-review verdict.
   Refreshable revision browsing pages
   offer every known revision, including newer ones when viewing an older review.
   Keep Latest review and All revisions links visible, and distinguish the original
@@ -216,7 +216,7 @@ these; do not add a third row or a floating toolbar.
   A served review puts **Update** before the revision selector: a refresh icon and
   one word, quiet while the review shows the code as it is; the accent colour and
   "Update · N files" once the code moved on; the icon turns while it updates; icon
-  only at 740px and below. It is hidden while a newer saved revision is offered.
+  only at 740px and below. It is hidden while a newer save of the review is offered.
 - Reading bar (52px): sidebar toggle, then a bordered pager (previous, position,
   next). On the right, one View button whose label names the current settings, for
   example "Unified · File by file". It opens a native popover with Reading mode (a
@@ -428,9 +428,8 @@ once overall; related tests remain reachable through sidebar file links. Finding
 navigation must reveal collapsed files without clearing their viewed mark. Use
 keyboard controls and check narrow-width wrapping and checkbox focus.
 
-`dcr series refresh --record` creates an explicitly requested presentation revision
-without collecting source or altering conclusions or QA evidence. The default
-refresh still updates browsing pages only; original snapshots stay immutable.
+`dcr series refresh` updates browsing pages only: it collects no source, alters no
+conclusions or QA evidence, and never creates a revision.
 
 ## File-by-file reading
 

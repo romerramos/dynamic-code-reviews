@@ -115,7 +115,7 @@ Text-only copy does not carry image bytes; share the offline report for evidence
 ```
 
 The helper checks the expected revision, snapshot, unchanged code/context, media
-type and total size; embeds media; saves a new revision; and refreshes the current
+type and total size; embeds media; saves it into that revision; and refreshes the current
 report. PNG/JPEG/WebP/GIF and MP4/WebM are accepted, with a 24 MiB total input budget.
 Prefer shorter clips and fewer duplicate stills to stay within the budget;
 do not add external media URLs, SVG/HTML images or unbounded full-session video.

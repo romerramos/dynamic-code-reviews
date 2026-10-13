@@ -31,7 +31,7 @@ files that open offline.
   record a clip, or press Start QA review and the agent records the flows behind its comments.
 - **On your other devices**, with Tailscale: open the same live review from your phone or a laptop in
   a remote session. See [Open reviews from your other devices](#open-reviews-from-your-other-devices).
-- **History.** Each run saves a revision; a follow-up review reuses the explanations of code that did
+- **History.** Each change to the code saves a revision; a follow-up review reuses the explanations of code that did
   not change.
 
 ## Install
@@ -155,7 +155,7 @@ Reviews live in the reviewed repository:
 .reviews/task-export/
   current.html        # the latest review, opens offline
   index.html          # every revision
-  revisions/001.html  # each saved revision, never rewritten
+  revisions/001.html  # one per diff: saved when the code changes, and saved into for what is added later
   state.json          # your progress and the conversation, while served
 ```
 
@@ -175,7 +175,7 @@ commands. Everything runs as `<skill>/bin/dcr <command>`, with Ruby 3.1+ (under 
 | Command | What it does |
 | --- | --- |
 | `collect` | Snapshot uncommitted changes, a commit or a PR range. |
-| `series start --in-progress` / `series finish` | Open the review from an outline, then save the full review as the next revision. |
+| `series start --in-progress` / `series finish` | Open the review from an outline, then save the full review into the same revision. |
 | `series prepare` / `series publish` | Continue a saved series incrementally. |
 | `screenshot` | Post screenshots of the running app to the review: in the Overview's Seen in the app, or on a comment. A later QA clip of the same thing takes a screenshot's place. |
 | `log` | What the agent's commands did to a review, one line each: what ran, what was refused and why, who ran it and with which copy of the skill. |

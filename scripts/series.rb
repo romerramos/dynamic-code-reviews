@@ -361,7 +361,7 @@ module ReviewSeries
     snapshot = read(File.join(prepared, 'snapshot.json'))
     draft = read(File.join(prepared, 'draft.json'))
     update = read(update) if update.is_a?(String)
-    raise ArgumentError, 'No code/context changes; use existing revision, or --record for an intentional reassessment' if plan['status'] == 'unchanged' && !record
+    raise ArgumentError, 'No code/context changes; the revision stands, or use --record to save an intentional reassessment into it' if plan['status'] == 'unchanged' && !record
     raise ArgumentError, 'Explain this increment in since_previous' if update.fetch('since_previous', '').strip.empty?
     raise ArgumentError, 'Provide current coverage and validation (previous results are historical)' if update.dig('review', 'coverage').to_s.strip.empty? || !update.dig('review', 'validation').is_a?(Array) || update['review']['validation'].empty?
     path = directory(plan.fetch('repo'), plan.fetch('series'))
@@ -378,6 +378,14 @@ module ReviewSeries
       review['findings'], states = finding_states(plan, update)
       paths = (plan['context'].keys + Array(update['context_paths'])).uniq
       review['context'] = contexts(snapshot, paths)
+      # The same code reviewed again stays one revision, with the evidence it already has.
+      previous = latest(path, history)
+      same = code_key(previous['snapshot']) == plan['snapshot_key']
+      if same
+        %w[qa previews preview_scope no_screenshots].each { |field| review[field] = previous['review'][field] if previous['review'].key?(field) && !review.key?(field) }
+        shots = with_screenshots(path, history, previous['review'])
+        review['screenshots'] = shots if shots.any? && !review.key?('screenshots')
+      end
       DynamicReviews.validate(snapshot, review)
       changes = plan['changes']['files']
       group_states = review['groups'].to_h do |group|
@@ -388,13 +396,16 @@ module ReviewSeries
         explicitly_updated = Array(update['groups']).any? { |g| g['id'] == group['id'] } || Array(update['items']).any? { |i| i['group'] == group['id'] }
         [group['id'], reused && !explicitly_updated ? 'reused' : 'updated']
       end
-      append(path, history, snapshot, review, {'summary' => update['since_previous'], 'files' => changes,
-             'reused_ranges' => plan['changes']['mapping'].length, 'inspected_ranges' => plan['changes']['required_hunks'].length,
-             'changed_context' => plan['changed_context'], 'groups' => group_states, 'finding_states' => states})
+      increment = {'summary' => update['since_previous'], 'files' => changes,
+                   'reused_ranges' => plan['changes']['mapping'].length, 'inspected_ranges' => plan['changes']['required_hunks'].length,
+                   'changed_context' => plan['changed_context'], 'groups' => group_states, 'finding_states' => states}
+      next append(path, history, snapshot, review, increment) unless same
+      # Its files are still what the revision changed, not this comparison of the code with itself.
+      amend(path, history, snapshot, review, update['since_previous'], increment.except('files'), was: previous['review']['history'])
     end
   end
 
-  # Attach evidence to the exact reviewed snapshot without rewriting analysis/history.
+  # Attach evidence to the exact reviewed snapshot, in its revision, without rewriting the analysis.
   def qa(repo:, name:, update:, revision:, **_unused)
     update_path = File.expand_path(update)
     evidence = ReviewQA.pack(read(update_path), directory: File.dirname(update_path))
@@ -413,9 +424,7 @@ module ReviewSeries
       raise ArgumentError, 'Context changed; reassess before attaching QA' unless contexts(fresh, recorded_context.keys) == recorded_context
       raise ArgumentError, 'QA evidence is unchanged' if review['qa'] == evidence
       review['qa'] = evidence
-      increment = {'summary' => "QA evidence updated: #{evidence['summary']}", 'files' => [], 'groups' => {},
-                   'finding_states' => review.dig('history', 'finding_states') || []}
-      append(path, history, snapshot, review, increment)
+      amend(path, history, snapshot, review, "QA evidence updated: #{evidence['summary']}", was: review['history'])
     end
   end
 
@@ -445,13 +454,11 @@ module ReviewSeries
       raise ArgumentError, 'Previews are unchanged' if review['previews'] == rendered
       review['previews'] = rendered
       shown = rendered.count { |preview| preview['status'] == 'rendered' }
-      increment = {'summary' => "Template previews updated: #{shown} rendered of #{rendered.count { |preview| preview['status'] != 'not_visual' }} visual templates.", 'files' => [], 'groups' => {},
-                   'finding_states' => review.dig('history', 'finding_states') || []}
-      append(path, history, snapshot, review, increment)
+      amend(path, history, snapshot, review, "Template previews updated: #{shown} rendered of #{rendered.count { |preview| preview['status'] != 'not_visual' }} visual templates.", was: review['history'])
     end
   end
 
-  # Attach finished QA and either selected or all template previews in one revision.
+  # Attach finished QA and either selected or all template previews in one save.
   def enrich(repo:, name:, update:, revision:, targeted: false, **_unused)
     update_path = File.expand_path(update)
     input = read(update_path)
@@ -489,9 +496,7 @@ module ReviewSeries
       review['previews'] = rendered
       review['validation'] = input['validation'] if input.key?('validation')
       shown = rendered.count { |preview| preview['status'] == 'rendered' }
-      increment = {'summary' => "Visual evidence updated: #{evidence['summary']} #{shown} template previews rendered.", 'files' => [], 'groups' => {},
-                   'finding_states' => review.dig('history', 'finding_states') || []}
-      append(path, history, snapshot, review, increment)
+      amend(path, history, snapshot, review, "Visual evidence updated: #{evidence['summary']} #{shown} template previews rendered.", was: review['history'])
     end
   end
 
@@ -542,8 +547,8 @@ module ReviewSeries
     end
   end
 
-  # Completes a series started --in-progress: the full review replaces the outline as a new
-  # revision of the same code, so the open page keeps the reader's progress and conversations.
+  # Completes a series started --in-progress: the full review replaces the outline in the same
+  # revision, since the code is the same, so the open page keeps the reader's progress and conversations.
   # Comments the agent posted to the open page are kept; one with the same id in the review wins.
   def finish(repo:, name:, review:, **_unused)
     path = directory(repo, name)
@@ -579,9 +584,10 @@ module ReviewSeries
       review['comments'].each { |comment| comment['agent'] ||= author } if author
       review['context'] = contexts(snapshot, review.delete('context_paths')) if review['context_paths']
       states = Array(review['findings']).map { |f| {'id' => f['id'], 'status' => 'open', 'change' => 'new', 'title' => f['title'], 'reason' => 'Recorded in the full review.'} }
-      append(path, history, snapshot, review, {'summary' => 'Full review ready: walkthrough explanations, findings and validation.', 'groups' => {}, 'files' => [], 'finding_states' => states})
+      summary = 'Full review ready: walkthrough explanations, findings and validation.'
+      amend(path, history, snapshot, review, summary, {'summary' => summary, 'finding_states' => states}, was: payload.dig('review', 'history'))
     end
-    # The full review is ready: bring the open page forward, where it offers the new revision.
+    # The full review is ready: bring the open page forward, where it offers to show it.
     if ENV['DCR_FOCUS'] != '0' && File.file?(File.join(path, '.serve.json'))
       require_relative '../lib/dcr/focus'
       DCR::Focus.served(path) rescue nil
@@ -607,8 +613,8 @@ module ReviewSeries
     Array(review['screenshots']).reject { |shot| posted.any? { |own| own['id'] == shot['id'] } } + posted
   end
 
-  # A new revision of the same code is made from the saved review: what the agent posted to the
-  # open page since (comments after an update, screenshots) goes into it, or it would be left behind.
+  # A save into a revision is made from the saved review: what the agent posted to the open page
+  # since (comments after an update, screenshots) goes into it, or it would be left behind.
   def keep_posted(path, history, review)
     review['comments'] = with_posted(path, history, review)
     shots = with_screenshots(path, history, review)
@@ -753,24 +759,45 @@ module ReviewSeries
     group['layers'].first['items'].concat(added)
   end
 
+  # A revision is one diff: it is saved when the series starts and when the code changes
+  # (`publish`, `sync`), never for anything else.
   def append(path, history, snapshot, review, increment)
     number = (history['revisions'].last || {}).fetch('number', 0) + 1
-    output = revision_path(path, number)
-    raise ArgumentError, 'Revision already exists; preserved rather than overwritten' if File.exist?(output)
-    entry = {'number' => number, 'created' => Time.now.utc.iso8601, 'captured' => snapshot['created'], 'head' => snapshot['head'], 'fingerprint' => snapshot['fingerprint'], 'title' => review['title'], 'summary' => increment['summary']}
-    history['revisions'] << entry
+    raise ArgumentError, 'Revision already exists; preserved rather than overwritten' if File.exist?(revision_path(path, number))
+    history['revisions'] << {'number' => number, 'created' => Time.now.utc.iso8601, 'captured' => snapshot['created'], 'head' => snapshot['head'], 'fingerprint' => snapshot['fingerprint'], 'title' => review['title'], 'summary' => increment['summary']}
+    write(path, history, snapshot, review, increment)
+  end
+
+  # What is learned later about the same code (the full review, QA, previews, a reassessment) is
+  # saved into its revision and listed on it, newest last.
+  # note: the save in a sentence. increment: what it changes in the revision's own account (a
+  # 'summary' becomes the revision's). was: that account as saved, the review's `history`.
+  def amend(path, history, snapshot, review, note, increment = {}, was:)
+    entry = history['revisions'].last
+    key = -> { DCR::State.review_key(entry['fingerprint'], history['name'], entry['number']) }
+    before = key.call
+    (entry['saves'] ||= []) << {'at' => Time.now.utc.iso8601, 'summary' => note}
+    entry.merge!({'captured' => snapshot['created'], 'head' => snapshot['head'], 'fingerprint' => snapshot['fingerprint'], 'title' => review['title'], 'summary' => increment['summary']}.compact)
+    # The same code under another commit: what the reader has on it goes with it.
+    DCR::State.new(path).rekey(before, key.call) unless key.call == before
+    write(path, history, snapshot, review, was.except('series', 'revision', 'save', 'entries', 'preview', 'origin_mode', 'local').merge(increment))
+  end
+
+  def write(path, history, snapshot, review, increment)
+    entry = history['revisions'].last
+    output = revision_path(path, entry['number'])
     # A pull request's review that shows the checkout says so: its code may not be on the pull request.
     increment = increment.merge('local' => true) if history['origin_mode'] == 'pr' && history['follows'] == 'checkout' && snapshot['working_tree']
-    review['history'] = increment.merge('series' => history['name'], 'revision' => number, 'entries' => history['revisions'], 'origin_mode' => history['origin_mode'])
+    review['history'] = increment.merge('series' => history['name'], 'revision' => entry['number'], 'save' => Array(entry['saves']).length, 'entries' => history['revisions'], 'origin_mode' => history['origin_mode'])
     html = DynamicReviews.review_html(snapshot, review)
-    # Revision is durable first; manifest is the commit point. Old HTML is never rewritten.
+    # The revision's page is durable first; the manifest is the commit point.
     atomic_write(output, html)
     refresh_views(path, history)
     atomic_write(File.join(path, 'manifest.json'), JSON.pretty_generate(history))
     output
   end
 
-  # Browsing pages may refresh their navigation/UI; saved snapshots remain immutable.
+  # Browsing pages may refresh their navigation/UI; the saved revisions are not touched.
   def refresh_views(path, history)
     history.fetch('revisions').each do |entry|
       payload = DynamicReviews.extract(revision_path(path, entry.fetch('number')))
@@ -796,20 +823,10 @@ module ReviewSeries
     end
   end
 
-  def refresh(repo:, name:, record: false, **_unused)
+  def refresh(repo:, name:, **_unused)
     path = directory(repo, name)
     locked(path) do
-      history = manifest(path)
-      if record
-        payload = latest(path, history)
-        review = payload.fetch('review')
-        increment = copy(review.fetch('history')).except('series', 'revision', 'entries', 'preview', 'origin_mode')
-        increment.merge!('summary' => 'Presentation refreshed; captured code, review conclusions and original validation evidence are unchanged.',
-                         'files' => [], 'groups' => {}, 'changed_context' => [], 'inspected_ranges' => 0)
-        append(path, history, payload.fetch('snapshot'), review, increment)
-      else
-        refresh_views(path, history)
-      end
+      refresh_views(path, manifest(path))
       File.join(path, 'current.html')
     end
   end
@@ -821,7 +838,7 @@ module ReviewSeries
       p.banner = 'ruby series.rb start|prepare|publish|finish|sync|qa|previews|enrich|refresh|list [options]'
       %w[repo name report snapshot review out head base prepared update revision].each { |key| p.on("--#{key} VALUE") { |value| options[key.to_sym] = value } }
       p.on('--working-tree', 'Include current working files with the verified PR head') { options[:working_tree] = true }
-      p.on('--record', 'Save an intentional reassessment or a presentation-only refresh revision') { options[:record] = true }
+      p.on('--record', 'publish: save an intentional reassessment of unchanged code into its revision') { options[:record] = true }
       p.on('--targeted', 'Attach only requested preview files, preserving existing examples') { options[:targeted] = true }
       p.on('--in-progress', 'start: publish an outline to read while the review is still being written') { options[:in_progress] = true }
     end
