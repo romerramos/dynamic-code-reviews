@@ -68,12 +68,13 @@ module DCR
       'export' => 'dcr export (--repo ROOT --name SERIES | --dir DIR) [--out FILE]',
       'risk-ranking' => 'dcr risk-ranking (--repo ROOT --name SERIES | --dir DIR) (--file RANKING.json | --none REASON)   (the Overview\'s Risk ranking: {summary, files: [{file, score, tags, reason, line}]}, as in the review JSON\'s risk_ranking; --none when no file stands out)',
       'comment' => 'dcr comment (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--model ID] [--effort LEVEL] [--no-second-opinion] [--file COMMENTS.json]   (one review comment or an array, as in the review JSON: id, label, decoration, subject, discussion, hunk, side, start, end, plus an optional context: one or two plain sentences on what the change tries to do, for the second opinion; stdin when --file is omitted)',
+      'screenshot' => 'dcr screenshot (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--file SCREENSHOTS.json]   (one screenshot of the running app or an array: path (a PNG, JPEG or WebP you saved), title, paths (the changed files it shows), and optionally caption, page (the app path), comment_id (it then sits on that comment, not under UI changes) and id (post one again under its id to replace it); stdin when --file is omitted)',
       'stop' => 'dcr stop (--repo ROOT --name SERIES | --dir DIR | --all)   (stops the served review and its `dcr wait`; --all stops every review served on this computer)',
       'link' => 'dcr link (--repo ROOT --name SERIES | --dir DIR)   (the served review\'s addresses: on this computer, and on your tailnet when shared)',
       'focus' => 'dcr focus (--repo ROOT --name SERIES | --dir DIR)   (brings the browser tab showing the served review to the front)',
       'reply' => 'dcr reply (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--model ID] [--effort LEVEL] [--key KEY] [--json] <thread-id> <text>',
       'second-opinion' => 'dcr second-opinion (--repo ROOT --name SERIES | --dir DIR) --comment ID [--comment ID]... [--agent AUTHOR] [--context TEXT]   (asks the reviewer\'s adversaries to check a posted comment; `dcr comment` does this by itself)',
-      'evidence' => 'dcr evidence attach (--repo ROOT --name SERIES | --dir DIR) --file ITEMS.json [--replace previous-qa|all]   (ITEMS: [{"path", "title", "result": "passed|failed", "observed", "comment_id"?, "page"?}]; previous-qa, the default, replaces the last QA review; all replaces every recording, only when the reviewer asks to start over)'
+      'evidence' => 'dcr evidence attach (--repo ROOT --name SERIES | --dir DIR) --file ITEMS.json [--replace previous-qa|all]   (ITEMS: [{"path", "title", "result": "passed|failed", "observed", "comment_id"?, "screenshot_id"?, "page"?}]; screenshot_id: the review screenshot this clip shows in motion, which it then replaces, keeping it as its thumbnail; previous-qa, the default, replaces the last QA review; all replaces every recording, only when the reviewer asks to start over)'
     }.freeze
 
     def run(command, argv)
@@ -113,6 +114,7 @@ module DCR
       when 'comments' then comments(state, options)
       when 'reply' then reply(state, options, argv, parser)
       when 'comment' then comment(state, options, directory(options, parser))
+      when 'screenshot' then screenshot(state, options, directory(options, parser))
       when 'sync' then sync(options, directory(options, parser))
       when 'risk-ranking' then risk_ranking(state, options, directory(options, parser))
       when 'focus' then focus(directory(options, parser))
@@ -362,6 +364,29 @@ module DCR
       state.post_comments(State.review_key(entry['fingerprint'], history['name'], entry['number']), comments)
       puts "Posted #{comments.length == 1 ? "comment #{comments.first['id']}" : "#{comments.length} comments"} to the open review."
       ask_others(directory, comments, author, contexts) unless options[:second_opinion] == false
+    end
+
+    # What the change looks like in the running app, as the agent saw it in a tab of its own. The
+    # open page shows each one at once: under UI changes, or on the comment it belongs to. The next
+    # saved revision keeps them.
+    def screenshot(state, options, directory)
+      require_relative '../../scripts/series'
+      file = options[:file] && File.expand_path(options[:file])
+      raw = file ? File.read(file) : ($stdin.tty? ? raise(ArgumentError, 'Give the screenshot JSON with --file or on stdin') : $stdin.read)
+      input = JSON.parse(raw)
+      history = ReviewSeries.manifest(directory)
+      payload = ReviewSeries.latest(directory, history)
+      review = payload.fetch('review')
+      author = agent(options, state)
+      shots = ReviewScreenshots.store(input.is_a?(Array) ? input : [input], snapshot: payload.fetch('snapshot'), comments: ReviewSeries.with_posted(directory, history, review),
+                                      existing: ReviewSeries.with_screenshots(directory, history, review), directory: directory, base: file ? File.dirname(file) : Dir.pwd)
+      entry = history['revisions'].last
+      state.post_screenshots(State.review_key(entry['fingerprint'], history['name'], entry['number']), shots.map { |shot| shot.merge({'agent' => author}.compact) })
+      on_comments, shown = shots.partition { |shot| shot['comment_id'] }
+      where = []
+      where << "#{shown.length} under UI changes" if shown.any?
+      where << "#{on_comments.length} on #{on_comments.map { |shot| shot['comment_id'] }.uniq.join(', ')}" if on_comments.any?
+      puts "Posted #{shots.length == 1 ? 'the screenshot' : "#{shots.length} screenshots"} to the open review (#{where.join(', ')}); the next saved revision keeps #{shots.length == 1 ? 'it' : 'them'}."
     end
 
     # Brings the review up to the code as it is now and says what changed, so whoever ran it can

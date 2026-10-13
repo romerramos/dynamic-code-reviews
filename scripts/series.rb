@@ -207,6 +207,7 @@ module ReviewSeries
     review.delete('qa') # Captures prove a particular runtime/snapshot, never an automatic increment.
     review.delete('previews') # Rendered from one snapshot's templates; re-render after code changes.
     review.delete('preview_scope')
+    review.delete('screenshots') # of the app as that code drew it; an update keeps those whose files did not change
     review.delete('unreviewed')
     review
   end
@@ -394,7 +395,8 @@ module ReviewSeries
       raise ArgumentError, 'Branch changed; use the original review checkout' unless history['branch'] == branch(repo)
       payload = latest(path, history)
       snapshot, review = payload.values_at('snapshot', 'review')
-      ReviewQA.validate(evidence, snapshot)
+      keep_posted(path, history, review)
+      ReviewQA.validate(evidence, snapshot, review)
       fresh = DynamicReviews.collect(repo: repo, mode: 'series', base: snapshot['base'], head: snapshot['mode'] == 'uncommitted' || snapshot['working_tree'] ? nil : snapshot['head'])
       raise ArgumentError, 'Code changed; review the new snapshot before attaching QA' unless code_key(fresh) == code_key(snapshot) && fresh['head'] == snapshot['head']
       recorded_context = review.fetch('context', {})
@@ -417,6 +419,7 @@ module ReviewSeries
       raise ArgumentError, 'Branch changed; use the original review checkout' unless history['branch'] == branch(repo)
       payload = latest(path, history)
       snapshot, review = payload.values_at('snapshot', 'review')
+      keep_posted(path, history, review)
       ReviewPreviews.validate(rendered, snapshot, full: !targeted)
       fresh = DynamicReviews.collect(repo: repo, mode: 'series', base: snapshot['base'], head: snapshot['mode'] == 'uncommitted' || snapshot['working_tree'] ? nil : snapshot['head'])
       raise ArgumentError, 'Code changed; review the new snapshot before attaching previews' unless code_key(fresh) == code_key(snapshot) && fresh['head'] == snapshot['head']
@@ -455,6 +458,7 @@ module ReviewSeries
       raise ArgumentError, 'Branch changed; use the original review checkout' unless history['branch'] == branch(repo)
       payload = latest(path, history)
       snapshot, review = payload.values_at('snapshot', 'review')
+      keep_posted(path, history, review)
       ReviewQA.validate(evidence, snapshot, review)
       ReviewPreviews.validate(rendered, snapshot, full: !targeted)
       if targeted
@@ -542,11 +546,13 @@ module ReviewSeries
       fresh = DynamicReviews.collect(repo: repo, mode: 'series', base: snapshot['base'], head: snapshot['mode'] == 'uncommitted' || snapshot['working_tree'] ? nil : snapshot['head'])
       raise ArgumentError, 'Code changed while reviewing; run `dcr sync` to bring the review up to it, then finish with a review of that code' unless code_key(fresh) == code_key(snapshot) && fresh['head'] == snapshot['head']
       review = normalize(read(review))
-      %w[history status qa previews preview_scope].each { |field| review.delete(field) }
+      %w[history status qa previews preview_scope screenshots].each { |field| review.delete(field) }
       entry = history['revisions'].last
       posted = with_posted(path, history, payload.fetch('review'))
       own = Array(review['comments']).map { |comment| comment['id'] }
       review['comments'] = Array(review['comments']) + posted.reject { |comment| own.include?(comment['id']) }
+      shots = with_screenshots(path, history, payload.fetch('review'))
+      review['screenshots'] = shots if shots.any?
       # The Risk ranking the agent posted while reviewing, unless the full review brings its own.
       ranked = DCR::State.new(path).read.dig('risk_rankings', DCR::State.review_key(entry['fingerprint'], name, entry['number']))
       review['risk_ranking'] = ranked.except('posted_at') if ranked&.key?('files') && !review.key?('risk_ranking')
@@ -572,6 +578,23 @@ module ReviewSeries
     saved = Array(review['comments'])
     posted = DCR::State.new(path).read.dig('comments', DCR::State.review_key(entry['fingerprint'], history['name'], entry['number'])) || []
     saved + posted.reject { |comment| saved.any? { |own| own['id'] == comment['id'] } }
+  end
+
+  # A review's screenshots with the ones its agent posted to the open page, images embedded. One
+  # posted again under its id replaces the saved one.
+  def with_screenshots(path, history, review)
+    entry = history['revisions'].last
+    records = DCR::State.new(path).read.dig('screenshots', DCR::State.review_key(entry['fingerprint'], history['name'], entry['number'])) || []
+    posted = ReviewScreenshots.embedded(path, records)
+    Array(review['screenshots']).reject { |shot| posted.any? { |own| own['id'] == shot['id'] } } + posted
+  end
+
+  # A new revision of the same code is made from the saved review: what the agent posted to the
+  # open page since (comments after an update, screenshots) goes into it, or it would be left behind.
+  def keep_posted(path, history, review)
+    review['comments'] = with_posted(path, history, review)
+    shots = with_screenshots(path, history, review)
+    review['screenshots'] = shots if shots.any?
   end
 
   UPDATES = 'updates' # the walkthrough group for files an update brought in
@@ -608,19 +631,25 @@ module ReviewSeries
       end
       changed = changes['files'].reject { |file| file['state'] == 'unchanged' }
       outdated = review['comments'].select { |comment| comment.dig('outdated', 'revision') == entry['number'] }
+      kept = changes['files'].select { |file| file['state'] == 'unchanged' }.map { |file| file['path'] }
+      # A screenshot still shows the app as it is when none of its files changed; the others go.
+      placed = review['comments'].reject { |comment| comment['outdated'] }.map { |comment| comment['id'] }
+      shots, dropped = with_screenshots(path, history, previous['review']).partition { |shot| (shot['paths'] - kept).empty? && (!shot['comment_id'] || placed.include?(shot['comment_id'])) }
+      review['screenshots'] = shots if shots.any?
       summary = "Updated to the code as it is now: #{count(changed.length, 'file')} changed since revision #{entry['number']}"
       summary += in_progress || ranges.empty? ? '.' : ", #{count(ranges.length, 'range')} not reviewed yet."
       summary += " #{count(outdated.length, 'comment')} #{outdated.length == 1 ? 'is' : 'are'} outdated." if outdated.any?
+      summary += " #{count(dropped.length, 'screenshot')} of changed files #{dropped.length == 1 ? 'was' : 'were'} dropped." if dropped.any?
       key = ->(revision, fingerprint) { DCR::State.review_key(fingerprint, name, revision) }
       DynamicReviews.validate(current, review)
       # The reader's side first, so a page that opens the new revision at once finds it there.
-      kept = changes['files'].select { |file| file['state'] == 'unchanged' }.map { |file| file['path'] }
       DCR::State.new(path).carry_changed(key.call(entry['number'], entry['fingerprint']), key.call(entry['number'] + 1, current['fingerprint']), kept) { |comment| anchors.carry(comment, full: true) }
       append(path, history, current, review, {'summary' => summary, 'files' => changes['files'], 'reused_ranges' => changes['mapping'].length,
              'inspected_ranges' => 0, 'changed_context' => [], 'groups' => {}, 'finding_states' => states, 'update' => true})
       {'status' => 'updated', 'revision' => entry['number'] + 1, 'previous_revision' => entry['number'], 'summary' => summary, 'base' => history['base'],
        'key' => key.call(entry['number'] + 1, current['fingerprint']),
        'files' => changed.map { |file| file.slice('path', 'state') }, 'outdated' => outdated.map { |comment| comment['id'] },
+       'screenshots_dropped' => dropped.map { |shot| shot.slice('id', 'title', 'page', 'comment_id') },
        'unreviewed' => changes['required_hunks'].map { |hunk| hunk.slice('path', 'hunk', 'patch') }}
     end
   end
@@ -633,6 +662,8 @@ module ReviewSeries
   def sync_brief(result)
     out = ["CODE UPDATE: #{result['summary']}", result['files'].map { |file| "#{file['state']}: #{file['path']}" }.join("\n")]
     out << "Outdated comments (their lines changed or went): #{result['outdated'].join(', ')}" if result['outdated'].any?
+    gone = Array(result['screenshots_dropped'])
+    out << "Screenshots dropped because their files changed; take the ones still worth showing again and post them with `dcr screenshot`:\n#{gone.map { |shot| "- #{shot['id']}: #{shot['title']}#{" (#{shot['page']})" if shot['page']}" }.join("\n")}" if gone.any?
     left = BRIEF_LINES
     shown = result['unreviewed'].take_while { |range| (left -= range['patch'].lines.length) >= 0 }
     out << "Not reviewed yet (#{count(result['unreviewed'].length, 'range')}):" if result['unreviewed'].any?

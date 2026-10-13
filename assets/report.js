@@ -1855,7 +1855,7 @@
     // Its lines changed in an update: it says where it was, and shows the code it was written on.
     const was = ReviewTools.outdatedWhere(comment);
     const wasCode = was?.code ? `<figure class="thread-was"><figcaption>The code this was written on, in revision ${escape(was.revision)}</figcaption><pre><code>${escape(was.code)}</code></pre></figure>` : '';
-    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${escape(found?.file.path || was?.path || 'General comment')}</span><span class="thread-range">${found ? range : was ? `<span class="thread-outdated" title="These lines changed after the comment was written">Outdated</span>${escape(was.lines)}` : ''}</span></div><details class="thread-details" ${comment.resolved ? '' : 'open'}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}"><span class="thread-badges">${threadBadges(comment)}</span><strong>${escape(comment.subject)}</strong><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${comment.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(comment.discussion)}</div>` : ''}${wasCode}${commentEvidence(comment)}</div>${found ? found.fullFile ? `<button class="thread-source btn btn-sm btn-ghost" type="button" data-comment="${id}">View in file · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : `<button class="thread-source btn btn-sm btn-ghost" type="button" data-open-code="${id}" aria-haspopup="dialog" aria-label="${escape(`View code for ${found.file.path}, ${range}: ${comment.subject}`)}">View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : ''}</details><div class="thread-footer"><div class="comment-actions">${commentActions(comment)}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
+    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${escape(found?.file.path || was?.path || 'General comment')}</span><span class="thread-range">${found ? range : was ? `<span class="thread-outdated" title="These lines changed after the comment was written">Outdated</span>${escape(was.lines)}` : ''}</span></div><details class="thread-details" ${comment.resolved ? '' : 'open'}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}"><span class="thread-badges">${threadBadges(comment)}</span><strong>${escape(comment.subject)}</strong><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${comment.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(comment.discussion)}</div>` : ''}${wasCode}${commentShots(comment)}${commentEvidence(comment)}</div>${found ? found.fullFile ? `<button class="thread-source btn btn-sm btn-ghost" type="button" data-comment="${id}">View in file · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : `<button class="thread-source btn btn-sm btn-ghost" type="button" data-open-code="${id}" aria-haspopup="dialog" aria-label="${escape(`View code for ${found.file.path}, ${range}: ${comment.subject}`)}">View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : ''}</details><div class="thread-footer"><div class="comment-actions">${commentActions(comment)}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
   }
   function toggleResolved(id) {
     const comment = comments.find(comment => comment.id === id);
@@ -1903,7 +1903,7 @@
   }
   function qaPreview(flow, index, compact = false) {
     const assets = flow.assets || [];
-    const poster = assets.filter(asset => asset.data_uri.startsWith('data:image/')).at(-1) || null;
+    const poster = shotOf(flow) || assets.filter(asset => asset.data_uri.startsWith('data:image/')).at(-1) || null;
     const isGif = poster?.data_uri.startsWith('data:image/gif;');
     const motion = flow.motion_preview?.data_uri || assets.find(asset => asset.data_uri.startsWith('data:video/'))?.data_uri || (isGif ? poster.data_uri : null);
     const video = motion?.startsWith('data:video/');
@@ -2033,8 +2033,46 @@
   function unlinkedFlows() {
     return (review.qa?.flows || []).map((flow,index) => ({flow,index})).filter(({flow}) => !generatedComments.some(comment => ReviewTools.flowOwner(flow) === comment.id));
   }
+  // --- UI changes ------------------------------------------------------------------------------
+  // Screenshots of the running app the agent took while it reviewed. Those on no comment show what
+  // the change looks like, under What changed; the others sit on their comment. A QA clip of the
+  // same thing takes a screenshot's place and keeps it as its thumbnail.
+  let screenshots = review.screenshots || [];
+  const shotOf = flow => flow.screenshot_id ? screenshots.find(shot => shot.id === flow.screenshot_id) || null : null;
+  function shotFigure(shot, withFiles = true) {
+    const clip = (review.qa?.flows || []).findIndex(flow => flow.screenshot_id === shot.id);
+    const media = clip < 0
+      ? `<button type="button" class="shot-image" data-expand-image aria-label="${escape(`Enlarge: ${shot.title}`)}"><img loading="lazy" alt="${escape(shot.title)}" src="${escape(shot.data_uri)}"></button>`
+      : `<button type="button" class="shot-image" data-open-evidence="${clip}" aria-haspopup="dialog" aria-label="${escape(`Watch video: ${shot.title}`)}"><img loading="lazy" alt="" src="${escape(shot.data_uri)}"><span class="qa-preview-play" aria-hidden="true">▶</span></button>`;
+    const links = withFiles ? shot.paths.map(path => {
+      const file = snapshot.files.find(candidate => candidate.path === path);
+      const layer = file && layers.find(candidate => candidate.items.some(item => item.file === file.id));
+      return layer ? `<button type="button" class="shot-file" data-file-link="${escape(file.id)}" data-file-layer="${escape(layer.id)}" title="Open ${escape(path)}">${escape(path.slice(path.lastIndexOf('/') + 1))}</button>` : '';
+    }).join('') : '';
+    return `<figure class="shot">${media}<figcaption><strong>${escape(shot.title)}</strong>${shot.caption ? `<span>${escape(shot.caption)}</span>` : ''}${shot.page || links ? `<span class="shot-meta">${shot.page ? `<code>${escape(shot.page)}</code>` : ''}${links}</span>` : ''}</figcaption></figure>`;
+  }
+  function renderUIChanges() {
+    const shown = screenshots.filter(shot => !shot.comment_id);
+    return shown.length ? `<section class="ui-changes" aria-labelledby="ui-changes-title"><header><h2 id="ui-changes-title">UI changes</h2><p>The running app as your agent saw it${shown.some(shot => (review.qa?.flows || []).some(flow => flow.screenshot_id === shot.id)) ? '. ▶ plays the recording' : ''}.</p></header><div class="shot-grid">${shown.map(shot => shotFigure(shot)).join('')}</div></section>` : '';
+  }
+  // A comment's screenshots that no clip has replaced; its clips are its evidence.
+  function commentShots(comment) {
+    const own = screenshots.filter(shot => shot.comment_id === comment.id && !(review.qa?.flows || []).some(flow => flow.screenshot_id === shot.id));
+    return own.length ? `<div class="shot-grid shot-grid-comment">${own.map(shot => shotFigure(shot, false)).join('')}</div>` : '';
+  }
+  window.ReviewScreenshots = {
+    // posted: what the agent sent to the open page, images loaded.
+    set(posted) {
+      const next = [...(review.screenshots || []).filter(shot => !posted.some(own => own.id === shot.id)), ...posted];
+      const mark = list => JSON.stringify(list.map(shot => [shot.id, shot.posted_at, shot.title, shot.data_uri.length]));
+      if (mark(next) === mark(screenshots)) return;
+      screenshots = next;
+      const scroll = $('content').scrollTop;
+      render(); $('content').scrollTop = scroll;
+    }
+  };
   function renderOtherChecks() {
-    const other = unlinkedFlows().filter(({flow}) => flow.result !== 'failed');
+    const other = unlinkedFlows().filter(({flow}) => flow.result !== 'failed' && !(shotOf(flow) && !shotOf(flow).comment_id));
     const visible = other.slice(0, 4);
     const more = other.slice(4);
     return other.length ? `<section class="other-checks" aria-label="Other flows checked"><h2>Other flows checked <span class="badge neutral">${other.length}</span></h2><div class="qa-check-list">${visible.map(({flow,index}) => qaPreview(flow,index,true)).join('')}</div>${more.length ? `<details class="qa-more-checks"><summary>Show ${more.length} more check${more.length === 1 ? '' : 's'}</summary><div class="qa-check-list">${more.map(({flow,index}) => qaPreview(flow,index,true)).join('')}</div></details>` : ''}</section>` : '';
@@ -2063,7 +2101,7 @@
     viewerLabel = `Visual evidence: ${flow.title}`;
     const content = document.createElement('section');
     content.className = 'qa-evidence-modal';
-    const media = flow.motion_preview ? `${renderQAAsset(flow.motion_preview, (flow.assets || []).filter(asset => asset.data_uri.startsWith('data:image/')).at(-1))}${flow.assets?.length ? `<details class="qa-original-frames"><summary>Inspect ${flow.assets.length} original frame${flow.assets.length === 1 ? '' : 's'}</summary>${flow.assets.map(renderQAAsset).join('')}</details>` : ''}` : flow.presentation === 'sequence' ? renderQASequence(flow,index) : (flow.assets || []).map(renderQAAsset).join('');
+    const media = flow.motion_preview ? `${renderQAAsset(flow.motion_preview, shotOf(flow) || (flow.assets || []).filter(asset => asset.data_uri.startsWith('data:image/')).at(-1))}${flow.assets?.length ? `<details class="qa-original-frames"><summary>Inspect ${flow.assets.length} original frame${flow.assets.length === 1 ? '' : 's'}</summary>${flow.assets.map(renderQAAsset).join('')}</details>` : ''}` : flow.presentation === 'sequence' ? renderQASequence(flow,index) : (flow.assets || []).map(renderQAAsset).join('');
     content.innerHTML = `<header><span class="qa-preview-status ${escape(flow.result)}">${escape(flow.result)}</span><h2>${escape(flow.title)}</h2><p>${(flow.journey || []).map(escape).join(' → ')}</p></header><div class="qa-evidence-scroll">${media}<div class="qa-evidence-explanation"><p><strong>Actual:</strong> ${escape(flow.observed)}</p><p><strong>Expected:</strong> ${escape(flow.expected)}</p><h3>Steps checked</h3><ol>${flow.steps.map(step => `<li>${escape(step)}</li>`).join('')}</ol></div></div>`;
     expandedViewer.setElements([{type:'inline', content, width:'min(96vw, 1080px)', height:'92vh', draggable:false}]);
     expandedViewer.open();
@@ -2186,7 +2224,7 @@
     const historyLinks = revision ? `<nav class="overview-history" aria-label="Review history"><a href="${revision.preview ? '' : '../'}current.html">Latest review</a><a href="${revision.preview ? '' : '../'}index.html">All revisions</a></nav>` : '';
     const empty = !generated.length && !feedback.findings.length && !pending && !unlinkedFlows().some(({flow}) => flow.result === 'failed') ? `<p class="review-empty">${inProgress ? 'No comments yet. They appear here as your agent writes them.' : 'No issues found in this review.'}</p>` : '';
     const progressBox = inProgress ? `<div class="review-progress" role="status"><span class="review-progress-dot" aria-hidden="true"></span><div><h3>Your review is in progress</h3><p>Start reading now. Your agent's comments appear here and beside the code as it writes them, with a notice when one arrives, even on a file you already read. Explanations, test results and the finished walkthrough follow. Template previews and QA open once it is done.</p><p class="review-progress-count">${generated.length ? `${generated.length} comment${generated.length === 1 ? '' : 's'} so far` : 'No comments yet'}</p></div><button type="button" class="btn btn-sm btn-primary" data-start-reading>Start reading ${icon('arrow-right')}</button></div>` : '';
-    return `<div class="overview-reading"><header class="overview-intro"><p class="eyebrow">Review overview</p><h1>${escape(review.title)}</h1><h2 class="what-changed-title">What changed</h2><p class="overview-scope">${escape(ReviewTools.comparisonText(snapshot, review))}</p><p class="lead">${escape(review.summary)}</p>${revision && revision.revision > 1 ? `<p class="overview-update"><strong>Review revision ${revision.revision}</strong> · ${escape(revision.summary)}</p>` : ''}${historyLinks}${progressBox}</header>${inProgress ? '' : renderVisualOptions()}${pending ? `<p class="overview-notice">${pending} previous finding${pending === 1 ? '' : 's'} still need checking. See Review details.</p>` : ''}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}${renderRiskRanking()}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${generated.map(commentCard).join('')}${unlinkedFlows().filter(({flow}) => flow.result === 'failed').map(({flow,index}) => qaFlow(flow,index)).join('')}</section>${renderOtherChecks()}${renderMyReview()}</div>`;
+    return `<div class="overview-reading"><header class="overview-intro"><p class="eyebrow">Review overview</p><h1>${escape(review.title)}</h1><h2 class="what-changed-title">What changed</h2><p class="overview-scope">${escape(ReviewTools.comparisonText(snapshot, review))}</p><p class="lead">${escape(review.summary)}</p>${revision && revision.revision > 1 ? `<p class="overview-update"><strong>Review revision ${revision.revision}</strong> · ${escape(revision.summary)}</p>` : ''}${historyLinks}${renderUIChanges()}${progressBox}</header>${inProgress ? '' : renderVisualOptions()}${pending ? `<p class="overview-notice">${pending} previous finding${pending === 1 ? '' : 's'} still need checking. See Review details.</p>` : ''}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}${renderRiskRanking()}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${generated.map(commentCard).join('')}${unlinkedFlows().filter(({flow}) => flow.result === 'failed').map(({flow,index}) => qaFlow(flow,index)).join('')}</section>${renderOtherChecks()}${renderMyReview()}</div>`;
   }
 
   // On a phone the bar at the bottom has no pager, so a step ends with the way to the next one.

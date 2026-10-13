@@ -3,6 +3,7 @@
 require 'json'
 require_relative 'page'
 require_relative 'state'
+require_relative '../../scripts/screenshots'
 
 module DCR
   # One self-contained HTML file: the series' current review with the reviewer's comments,
@@ -26,7 +27,12 @@ module DCR
       built = (saved['previews'][key] || {}).select { |_, preview| preview['status'] == 'ready' }.map { |path, preview| {'path' => path, 'title' => preview['title'], 'mocks' => preview['mocks'], 'html' => preview['html']} }
       data = {'key' => key, 'progress' => saved['blobs'][key], 'threads' => saved['threads'][key] || {}, 'previews' => built}
 
-      result = Page.review(Page.payload(page), export: data)
+      # Screenshots posted since that revision was saved go in with their images.
+      payload = Page.payload(page)
+      posted = ReviewScreenshots.embedded(series_dir, Array(saved['screenshots'][key]))
+      payload['review']['screenshots'] = Array(payload['review']['screenshots']).reject { |shot| posted.any? { |own| own['id'] == shot['id'] } } + posted if posted.any?
+
+      result = Page.review(payload, export: data)
       warnings = []
       warnings << "The export is #{(result.bytesize / 1024.0 / 1024).round(1)} MiB because of embedded media; it is complete, but large to share." if result.bytesize > LIMIT
       [result, warnings]

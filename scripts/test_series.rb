@@ -269,6 +269,9 @@ module SeriesChecks
           rejects('A reason with a line break was posted') { map.call(risk.merge('files' => [risk['files'][0].merge('reason' => "One\nTwo")])) }
           DCR::LiveCLI.risk_ranking(state, {none: 'Only copy changed'}, series)
           assert(state.read.dig('risk_rankings', key, 'none') == 'Only copy changed', 'Saying no file stands out was not kept')
+          File.binwrite(File.join(out, 'screen.png'), "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==".unpack1('m'))
+          File.write(File.join(out, 'shot.json'), JSON.generate('id' => 'two', 'path' => 'screen.png', 'title' => 'The value shows two', 'paths' => ['sample.rb']))
+          DCR::LiveCLI.screenshot(state, {file: File.join(out, 'shot.json')}, series)
           map.call(risk)
           assert(state.read.dig('risk_rankings', key, 'files').length == 1, 'The posted risk ranking is not on the open review')
           rejects('An increment built on an unfinished review') { ReviewSeries.prepare(repo: root, name: 'live-check', out: File.join(out, 'prepared')) }
@@ -279,6 +282,7 @@ module SeriesChecks
           assert(!finished.key?('status') && finished['history']['revision'] == 2, 'Finishing did not save a complete next revision')
           assert(finished['comments'].map { |entry| entry['id'] } == ['value-two'], 'Finishing lost the comment posted while in progress')
           assert(finished['risk_ranking'] == risk, 'Finishing lost the risk ranking posted while in progress')
+          assert(finished['screenshots'].map { |shot| shot['id'] } == ['two'], 'Finishing lost the screenshot posted while in progress')
           rejects('A finished review was finished again') { ReviewSeries.finish(repo: root, name: 'live-check', review: File.join(out, 'full.json')) }
           rejects('A comment was posted to a finished review') { post.call(comment.merge('id' => 'late')) }
           # Rank again, on the finished review: the page shows it ranking and dcr wait hands the agent the task.
@@ -333,6 +337,63 @@ module SeriesChecks
           prepared = ReviewSeries.prepare(repo: root, name: 'live', out: out)
           assert(prepared['status'] == 'changed' && prepared['ranges_to_inspect'].map { |range| range['hunk'] }.sort == %w[f1h1 f2h1], 'Unreviewed ranges were not left to inspect')
           assert(ReviewSeries.read(File.join(out, 'draft.json'))['comments'].map { |comment| comment['id'] } == ['extra-note'], 'A comment posted after the update was not kept')
+        end
+      end
+    end
+    checks['keeps the agent\'s screenshots: on the open page, in saved revisions, through an update while their files hold'] = lambda do
+      require_relative '../lib/dcr/live_cli'
+      require_relative '../lib/dcr/evidence'
+      ReviewChecks.fixture do |root, _commit|
+        Dir.mktmpdir('review-screenshots-') do |out|
+          first = ReviewSeries.start(repo: root, name: 'shots', report: initial(root))
+          series = File.dirname(File.dirname(first))
+          state = DCR::State.new(series)
+          png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==".unpack1('m')
+          File.binwrite(File.join(out, 'screen.png'), png)
+          File.write(File.join(out, 'notes.txt'), 'not an image')
+          post = lambda do |value|
+            File.write(File.join(out, 'shots.json'), JSON.generate(value))
+            DCR::LiveCLI.screenshot(state, {file: File.join(out, 'shots.json')}, series)
+          end
+          shown = {'id' => 'home', 'path' => 'screen.png', 'title' => 'The value on the home page', 'page' => '/', 'paths' => ['sample.rb']}
+          post.call([shown, {'id' => 'on-note', 'path' => 'screen.png', 'title' => 'The value, wrong', 'comment_id' => 'value-note'}])
+          key = ->(number, saved) { DCR::State.review_key(saved['snapshot']['fingerprint'], 'shots', number) }
+          posted = state.read.dig('screenshots', key.call(1, DynamicReviews.extract(first)))
+          assert(posted.map { |shot| shot.values_at('id', 'paths', 'comment_id') } == [['home', ['sample.rb'], nil], ['on-note', ['sample.rb'], 'value-note']], 'The screenshots are not on the open review, each with its files')
+          # The page gets the records with its state and each image once, on its own.
+          require_relative '../lib/dcr/live_api'
+          require_relative '../lib/dcr/qa_request'
+          api = DCR::LiveAPI.new(series)
+          first_key = key.call(1, DynamicReviews.extract(first))
+          listed = api.call('GET', "/api/state?key=#{first_key}", nil)[1]['screenshots']
+          assert(listed.map { |shot| shot['id'] } == %w[home on-note] && listed.none? { |shot| shot.key?('file') || shot.key?('data_uri') }, 'The page was not told of the screenshots')
+          assert(api.call('GET', "/api/screenshot?key=#{first_key}&id=home", nil)[1]['data_uri'].start_with?('data:image/png;base64,'), 'The page cannot fetch a screenshot')
+          assert(api.call('GET', "/api/screenshot?key=#{first_key}&id=nope", nil)[0] == 400, 'An unknown screenshot was served')
+          # Start QA review hands them over, so a clip can take a screenshot's place.
+          DCR::QARequest.call(series_dir: series, state: state, key: first_key, route: '/', origin: 'http://127.0.0.1:1', app: nil, capture_dir: out)
+          asked = state.read['outbox'].last['text']
+          assert(asked.include?('- home: The value on the home page on / (UI changes)') && asked.include?('- on-note: The value, wrong (on comment value-note)'), 'The QA request did not list the screenshots')
+          rejects('A screenshot of a file outside the review was posted') { post.call(shown.merge('id' => 'far', 'paths' => ['nope.rb'])) }
+          rejects('A screenshot with no files was posted') { post.call(shown.except('paths').merge('id' => 'loose')) }
+          rejects('A screenshot on an unknown comment was posted') { post.call(shown.merge('id' => 'lost', 'comment_id' => 'nobody')) }
+          rejects('A file that is not an image was posted') { post.call(shown.merge('id' => 'text', 'path' => 'notes.txt')) }
+          rejects('More screenshots than UI changes shows were posted') { post.call((1..6).map { |number| shown.merge('id' => "more-#{number}") }) }
+          post.call(shown.merge('title' => 'The home page'))
+          assert(state.read.dig('screenshots', key.call(1, DynamicReviews.extract(first))).map { |shot| shot['title'] } == ['The value, wrong', 'The home page'], 'A screenshot posted again did not replace the earlier one')
+          # A QA clip of what a screenshot shows takes its place; the revision it saves keeps both.
+          File.binwrite(File.join(out, 'clip.png'), png)
+          DCR::Evidence.attach(series_dir: series, capture_dir: out, input: {'path' => File.join(out, 'clip.png'), 'title' => 'The value changes', 'observed' => 'It shows two.', 'result' => 'failed', 'comment_id' => 'value-note'})
+          second = DynamicReviews.extract(File.join(series, 'current.html'))
+          assert(second['review']['screenshots'].map { |shot| shot['id'] } == %w[on-note home] && second['review']['screenshots'].all? { |shot| shot['data_uri'].start_with?('data:image/png;base64,') && !shot.key?('file') }, 'The revision did not embed the screenshots')
+          assert(second['review']['qa']['flows'].first['screenshot_id'] == 'on-note', 'The clip did not take the place of its comment\'s screenshot')
+          # An update keeps a screenshot while none of its files changed.
+          File.write(File.join(root, 'extra.rb'), "EXTRA = 1\n")
+          assert(ReviewSeries.sync(repo: root, name: 'shots')['screenshots_dropped'].empty?, 'An update dropped screenshots of files that did not change')
+          assert(DynamicReviews.extract(File.join(series, 'current.html'))['review']['screenshots'].map { |shot| shot['id'] } == %w[on-note home], 'An update lost screenshots of files that did not change')
+          File.write(File.join(root, 'sample.rb'), "class Sample\n  def value\n    3\n  end\nend\n")
+          result = ReviewSeries.sync(repo: root, name: 'shots')
+          assert(result['screenshots_dropped'].map { |shot| shot['id'] } == %w[on-note home] && result['summary'].include?('2 screenshots of changed files were dropped'), 'An update kept screenshots of code that changed')
+          assert(!DynamicReviews.extract(File.join(series, 'current.html'))['review'].key?('screenshots') && ReviewSeries.sync_brief(result).include?('- home: The home page (/)'), 'The dropped screenshots were not handed over')
         end
       end
     end

@@ -1189,3 +1189,24 @@ button.risk-path:hover .risk-name{text-decoration:underline}
   .focus-progress-actions{flex:0 0 auto;margin-left:0}
   .focus-progress-actions .file-viewed span{text-transform:capitalize}
 }
+
+/* UI changes: the agent's screenshots of the running app, and the same figures on a comment. */
+.ui-changes{margin:26px 0 22px}
+.ui-changes>header{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.ui-changes h2{margin:0;font-size:18px;letter-spacing:-.01em}
+.ui-changes>header p{margin:0;color:var(--muted);font-size:13px}
+.shot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:16px}
+.shot-grid-comment{margin-top:18px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+.shot{margin:0;min-width:0;display:flex;flex-direction:column;gap:8px}
+.shot-image{position:relative;display:block;width:100%;aspect-ratio:16 / 10;padding:0;overflow:hidden;cursor:zoom-in;border:1px solid var(--line-neutral-2);border-radius:calc(10px * var(--round));background:var(--bg-neutral-3)}
+.shot-image[data-open-evidence]{cursor:pointer}
+.shot-image img{display:block;width:100%;height:100%;object-fit:cover;object-position:top center}
+.shot-image:hover{border-color:var(--line-accent-4)}
+.shot-image:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.shot figcaption{display:flex;flex-direction:column;gap:3px;min-width:0;font-size:13px;line-height:1.45;color:var(--ink-neutral-5)}
+.shot figcaption strong{font-size:14px;font-weight:600;color:var(--ink-neutral-2)}
+.shot-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-top:2px;font-size:12px}
+.shot-meta code{font-size:12px;color:var(--ink-neutral-5);background:none;padding:0;overflow-wrap:anywhere}
+.shot-file{padding:0;border:0;background:none;font:inherit;color:var(--ink-accent-3);cursor:pointer;overflow-wrap:anywhere;text-align:left}
+.shot-file:hover{text-decoration:underline}
+@media(max-width:520px){.shot-grid,.shot-grid-comment{grid-template-columns:1fr}}

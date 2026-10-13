@@ -19,7 +19,7 @@ module DCR
     KEY = /\A[A-Za-z0-9_.:-]{1,300}\z/
     AUTHORS = %w[user agent].freeze
 
-    def self.empty = {'version' => 1, 'rev' => 0, 'blobs' => {}, 'threads' => {}, 'previews' => {}, 'comments' => {}, 'risk_rankings' => {}, 'verdicts' => {}, 'github' => {}, 'outbox' => [], 'acked' => 0, 'seq' => 0}
+    def self.empty = {'version' => 1, 'rev' => 0, 'blobs' => {}, 'threads' => {}, 'previews' => {}, 'comments' => {}, 'screenshots' => {}, 'risk_rankings' => {}, 'verdicts' => {}, 'github' => {}, 'outbox' => [], 'acked' => 0, 'seq' => 0}
 
     # The key the page saves a revision's progress under (see LiveTools.progressKey).
     def self.review_key(fingerprint, series, number) = "dynamic-review:#{fingerprint}:#{series}:#{number}"
@@ -409,6 +409,21 @@ module DCR
         stamp = Time.now.utc.iso8601
         posted.concat(comments.map { |comment| comment.merge('posted_at' => stamp) })
         comments
+      end
+    end
+
+    # The agent's screenshots of the running app, by id: one posted again replaces the earlier one.
+    # Like its comments they belong to this revision, until a saved one embeds them.
+    def post_screenshots(key, shots)
+      check_key(key)
+      update do |state|
+        posted = (state['screenshots'][key] ||= [])
+        stamp = Time.now.utc.iso8601
+        shots.each do |shot|
+          posted.reject! { |earlier| earlier['id'] == shot['id'] }
+          posted << shot.merge('posted_at' => stamp)
+        end
+        posted
       end
     end
 

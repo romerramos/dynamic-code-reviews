@@ -34,7 +34,8 @@ module DCR
       manifest = JSON.parse(File.read(File.join(series_dir, 'manifest.json')))
       payload = ReviewSeries.latest(series_dir, ReviewSeries.manifest(series_dir))
       snapshot = payload['snapshot']
-      review = payload['review']
+      # With what the agent posted to the open page since that revision: a clip may belong to it.
+      review = payload['review'].merge('comments' => ReviewSeries.with_posted(series_dir, manifest, payload['review']), 'screenshots' => ReviewSeries.with_screenshots(series_dir, manifest, payload['review']))
       flows = inputs.map { |input| flow(capture_dir, review, input, who[:who]).merge('source' => source) }
 
       qa = Marshal.load(Marshal.dump(review['qa'] || {}))
@@ -99,9 +100,17 @@ module DCR
         raise ArgumentError, 'That comment is not part of this review'
       end
 
+      # A clip of what a screenshot shows takes its place, on the same comment; the still stays as
+      # its thumbnail. A comment with one screenshot needs no id.
+      shots = Array(review['screenshots'])
+      shot = input['screenshot_id'].to_s.empty? ? (shots.select { |entry| entry['comment_id'] == comment_id }.then { |own| own.first if own.length == 1 } unless comment_id.empty?) : shots.find { |entry| entry['id'] == input['screenshot_id'] }
+      raise ArgumentError, 'That screenshot is not part of this review' unless shot || input['screenshot_id'].to_s.empty?
+      comment_id = shot['comment_id'].to_s if shot && comment_id.empty?
+
       steps = input['page'].to_s.strip.empty? ? ["Recorded by #{who} in the served review."] : ["Recorded by #{who} on #{input['page'].to_s.strip[0, 500]}."]
       flow = {'title' => title, 'result' => input['result'], 'expected' => expected, 'observed' => observed, 'steps' => steps}
       flow['comment_id'] = comment_id unless comment_id.empty?
+      flow['screenshot_id'] = shot['id'] if shot
       media = {'path' => File.basename(file), 'caption' => title}
       media['comment_id'] = comment_id unless comment_id.empty?
       if file.end_with?('.webm')

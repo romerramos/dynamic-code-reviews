@@ -1168,7 +1168,7 @@
   arrival.addEventListener('click', event => {
     const show = event.target.closest('[data-dcr-show-convo]');
     if (show) { arrival.hidden = true; showConversation(show.dataset.dcrShowConvo); return; }
-    if (event.target.closest('[data-ledger-jump], .dcr-dismiss')) arrival.hidden = true;
+    if (event.target.closest('[data-ledger-jump], [data-view], .dcr-dismiss')) arrival.hidden = true;
   });
 
   // "5 min ago" stays true while the page is open, and so does a wait that has since gone quiet.
@@ -1245,6 +1245,35 @@
     arrival.hidden = false;
     clearTimeout(arrivalTimer);
     arrivalTimer = setTimeout(() => { arrival.hidden = true; }, 12000);
+  };
+  // Screenshots the agent posts while it reviews: their images are fetched once each, then the
+  // review shows them under UI changes or on their comment. Those there when the page opens are not news.
+  const shotImages = new Map();
+  let shotsMark = '[]', shotsKnown = false;
+  const receiveScreenshots = async list => {
+    const mark = JSON.stringify(list.map(shot => [shot.id, shot.posted_at]));
+    if (mark === shotsMark) { shotsKnown = true; return; }
+    const before = shotsMark;
+    shotsMark = mark;
+    try {
+      const loaded = await Promise.all(list.map(async shot => {
+        const name = `${shot.id}:${shot.posted_at}`;
+        if (!shotImages.has(name)) shotImages.set(name, (await api(`/api/screenshot?key=${encodeURIComponent(key)}&id=${encodeURIComponent(shot.id)}`)).data_uri);
+        return {...shot, data_uri: shotImages.get(name)};
+      }));
+      if (shotsMark !== mark) return; // a newer list is on its way
+      window.ReviewScreenshots?.set(loaded);
+      const had = new Set(JSON.parse(before).map(entry => entry.join(':')));
+      const fresh = list.filter(shot => !had.has(`${shot.id}:${shot.posted_at}`));
+      if (shotsKnown && fresh.length) {
+        const name = fresh[0].agent ? tools.agentInfo(fresh[0].agent).name : 'Your agent';
+        arrival.innerHTML = `${tools.avatarHTML(fresh[0].agent || null)}<div><strong>${tools.escape(name)} added ${fresh.length === 1 ? 'a screenshot' : `${fresh.length} screenshots`}</strong><span>${tools.escape(fresh[0].title)}</span></div>${fresh[0].comment_id ? `<button type="button" class="btn btn-sm btn-primary" data-ledger-jump="${tools.escape(fresh[0].comment_id)}">View</button>` : '<button type="button" class="btn btn-sm btn-primary" data-view="overview">View</button>'}<button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
+        arrival.hidden = false;
+        clearTimeout(arrivalTimer);
+        arrivalTimer = setTimeout(() => { arrival.hidden = true; }, 12000);
+      }
+      shotsKnown = true;
+    } catch { shotsMark = before; } // asked again with the next state
   };
   // A newer revision of the same code, saved while this page is open: the finished review, or the
   // recordings of a QA review. Progress and conversations come along, so the page opens it by
@@ -1396,6 +1425,7 @@
     const ghNext = {pending: data.github?.pending || {}, posted: data.github?.posted || {}};
     if (JSON.stringify(ghNext) !== JSON.stringify({pending: ghData.pending, posted: ghData.posted})) ghData = ghNext;
     receiveComments(data.comments || []);
+    receiveScreenshots(data.screenshots || []);
     // The Risk ranking the agent posts while the reader is already on the diff; until then, a placeholder.
     if ('risk_ranking' in data) window.ReviewRisk?.set(data.risk_ranking);
     if ('verdict' in data) showVerdict(data.verdict);

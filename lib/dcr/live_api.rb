@@ -66,6 +66,7 @@ module DCR
       when ['POST', '/api/preview'] then (input = json(body); [200, {'entry' => @state.request_preview(input['key'], input['path'])}])
       when ['POST', '/api/send'] then send_items(json(body))
       when ['POST', '/api/message'] then message(json(body))
+      when ['GET', '/api/screenshot'] then [200, screenshot(key, query['id'])]
       when ['GET', '/api/sync'] then [200, stale]
       when ['POST', '/api/sync'] then [200, sync]
       when ['POST', '/api/risk-ranking'] then (@state.request_risk_ranking(json(body)['key']); [200, {'requested' => true}])
@@ -263,6 +264,16 @@ module DCR
       {'html' => preview['html'], 'ready_at' => preview['ready_at']}
     end
 
+    # A posted screenshot's image, fetched once on its own like a preview's markup.
+    def screenshot(key, id)
+      require_relative '../../scripts/screenshots'
+      raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
+      record = Array(@state.read.dig('screenshots', key)).find { |shot| shot['id'] == id.to_s }
+      uri = record && ReviewScreenshots.data_uri(File.dirname(@state.path), record)
+      raise ArgumentError, 'No such screenshot' unless uri
+      {'data_uri' => uri}
+    end
+
     def json(body)
       value = JSON.parse(body.call)
       raise ArgumentError, 'Expected a JSON object' unless value.is_a?(Hash)
@@ -272,7 +283,7 @@ module DCR
     def snapshot(key)
       raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
       state = @state.read
-      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'github' => state['github'][key] || {}, 'comments' => state['comments'][key] || [], 'risk_ranking' => state['risk_rankings'][key], 'verdict' => state['verdicts'][key.split(':')[1].to_s],'previews' => preview_status(state['previews'][key]), 'latest_revision' => latest_revision, 'listening' => @state.listening?, 'agent' => @state.listener, 'agent_model' => @state.listener_model,
+      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'github' => state['github'][key] || {}, 'comments' => state['comments'][key] || [], 'screenshots' => Array(state['screenshots'][key]).map { |shot| shot.except('file') }, 'risk_ranking' => state['risk_rankings'][key], 'verdict' => state['verdicts'][key.split(':')[1].to_s],'previews' => preview_status(state['previews'][key]), 'latest_revision' => latest_revision, 'listening' => @state.listening?, 'agent' => @state.listener, 'agent_model' => @state.listener_model,
        'pending' => state['outbox'].count { |entry| entry['seq'] > state['acked'] && entry['key'] == key }}
     end
 

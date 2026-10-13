@@ -7,7 +7,9 @@ states and a short flow; avoid exhaustive screenshots or full-session recordings
 
 The Copy video QA prompt button copies a complete request. Derive the QA plan from saved
 findings, walkthroughs and changed user flows. Attach finding evidence with its
-comment_id; retain relevant successful flows in Other flows checked.
+comment_id; retain relevant successful flows in Other flows checked. A review may
+already hold screenshots from its first round (`dcr screenshot`): give a clip that
+shows the same thing that screenshot's id as `screenshot_id`, and it replaces the still.
 
 ## Publish first; capture only useful evidence
 

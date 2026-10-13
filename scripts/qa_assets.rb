@@ -55,6 +55,9 @@ module ReviewQA
       if flow['comment_id'] && review && !Array(review['comments']).any? { |comment| comment['id'] == flow['comment_id'] }
         raise ArgumentError, 'QA flow refers to an unknown review comment'
       end
+      if flow['screenshot_id'] && review && !Array(review['screenshots']).any? { |shot| shot['id'] == flow['screenshot_id'] }
+        raise ArgumentError, 'QA flow refers to an unknown screenshot'
+      end
       %w[title expected observed].each { |key| raise ArgumentError, "QA flow needs #{key}" if flow[key].to_s.strip.empty? }
       raise ArgumentError, 'Invalid QA result' unless %w[passed failed blocked not-run].include?(flow['result'])
       raise ArgumentError, 'QA steps must be text' unless flow['steps'].is_a?(Array) && flow['steps'].all? { |step| step.is_a?(String) }

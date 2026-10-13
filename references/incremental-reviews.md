@@ -53,7 +53,8 @@ review open; the page's **Update** button does the same. Unchanged ranges keep t
 explanations; the others are listed in the review's `unreviewed` and stay unexplained, and new
 files go to a last group, "Added since the review". Comments follow their lines (Git compares
 the file before and after) or become outdated, keeping the code they were written on. A finding
-on a changed range is marked needs-rechecking. Coverage, validation, QA, previews and the risk
+on a changed range is marked needs-rechecking. A screenshot is kept while none of the files it
+shows changed and dropped otherwise; the command lists the dropped ones. Coverage, validation, QA, previews and the risk
 ranking are cleared, as in a draft. Recorded context is left as it was, so the next `prepare`
 still sees a dependency that changed. That `prepare` lists every unreviewed range under
 `ranges_to_inspect`. A pull request's series is not updated this way.

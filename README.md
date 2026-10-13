@@ -177,6 +177,7 @@ commands. Everything runs as `<skill>/bin/dcr <command>`, with Ruby 3.1+ (under 
 | `collect` | Snapshot uncommitted changes, a commit or a PR range. |
 | `series start --in-progress` / `series finish` | Open the review from an outline, then save the full review as the next revision. |
 | `series prepare` / `series publish` | Continue a saved series incrementally. |
+| `screenshot` | Post screenshots of the running app to the review: under UI changes in the Overview, or on a comment. A later QA clip of the same thing takes a screenshot's place. |
 | `sync` | Update a review to the code as it is now, with no new analysis: comments follow their lines or become outdated. The served page's Update button does the same. |
 | `serve [--share] [--app <url>]` | Serve a review live: conversation, previews, the running app, tailnet sharing. |
 | `focus` / `link` | Bring the review's browser tab to the front; print its local and tailnet addresses. |

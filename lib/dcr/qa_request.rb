@@ -22,11 +22,15 @@ module DCR
       manifest = JSON.parse(File.read(File.join(series_dir, 'manifest.json')))
       payload = ReviewSeries.latest(series_dir, ReviewSeries.manifest(series_dir))
       review = payload['review']
+      posted = ReviewSeries.with_posted(series_dir, ReviewSeries.manifest(series_dir), review)
+      shots = ReviewSeries.with_screenshots(series_dir, ReviewSeries.manifest(series_dir), review).map do |shot|
+        "- #{shot['id']}: #{shot['title']}#{" on #{shot['page']}" if shot['page']} (#{shot['comment_id'] ? "on comment #{shot['comment_id']}" : 'UI changes'})"
+      end
       flags = "--repo #{Shellwords.escape(manifest.fetch('repo'))} --name #{Shellwords.escape(manifest.fetch('name'))}"
       dcr = Shellwords.escape(DCR_BIN)
       out = Shellwords.escape(capture_dir)
       paths = Array(payload.dig('snapshot', 'files')).flat_map { |file| Array(file['hunks']).map { |hunk| [hunk['id'], file['path']] } }.to_h
-      comments = Array(review['comments']).map do |comment|
+      comments = posted.map do |comment|
         where = paths[comment['hunk']] ? " (#{paths[comment['hunk']]}, lines #{comment['start']}-#{comment['end']})" : ''
         "- #{comment['id']}: #{comment['label']}, #{comment['decoration']}: #{comment['subject']}#{where}"
       end
@@ -67,11 +71,15 @@ module DCR
         Comments on the app:
         #{app_comments.empty? ? '- (none)' : app_comments.join("\n")}
 
+        Screenshots already in the review (stills taken while reviewing):
+        #{shots.empty? ? '- (none)' : shots.join("\n")}
+        A clip of what a screenshot shows takes the still's place and keeps it as its thumbnail: give that item the screenshot's id as screenshot_id. Record one for each screenshot whose change moves or is used, starting with those under UI changes.
+
         Also record any changed user flow that has no comment, if seeing it helps.
 
         Attach everything in one go, which saves one revision the open review offers to the reviewer. This QA review replaces the clips of any previous QA review (the reviewer's own recordings stay), so record every item worth showing now, not only what is new:
         #{dcr} evidence attach #{flags} --file <items.json>
-        items.json: [{"path": "<saved file>", "comment_id": "<review comment id, or omit>", "title": "<what the clip shows>", "result": "passed or failed", "observed": "<one sentence on what you saw>", "page": "<app path>"}]
+        items.json: [{"path": "<saved file>", "comment_id": "<review comment id, or omit>", "screenshot_id": "<screenshot id, or omit>", "title": "<what the clip shows>", "result": "passed or failed", "observed": "<one sentence on what you saw>", "page": "<app path>"}]
         Use a review comment's id as comment_id so the clip appears on that comment. For a comment on the app, put its id in the title and reply in that thread with what you saw.
 
         Then reply to this thread: #{dcr} reply #{flags} #{id} '<what you recorded, what you skipped and why, and the data you created>'
