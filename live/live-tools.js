@@ -398,7 +398,28 @@ globalThis.LiveTools = (() => {
     return `${name}<p class="is-quiet" role="status">Asking for a verdict on this diff…</p>`;
   }
 
-  return {escape, progressKey, allComments, sendText, drafts, statusText, statusModel, actionLabel, markdown, snippet, relativeTime, messagesHTML, unseen, agentModel, summary,
+  // --- emoji names between colons ---------------------------------------------------------------
+  // What is being typed just before the caret, when it could be an emoji's name: {start, query,
+  // closed}. start is where its first colon sits; closed, that the second colon was just typed.
+  // Nothing inside backticks on that line (code), nor after a letter or a digit (10:30, a::b).
+  function emojiToken(text, caret) {
+    const line = text.slice(text.lastIndexOf('\n', caret - 1) + 1, caret);
+    const match = line.match(/(?:^|[^\w:`]):([a-z0-9_+-]{2,})(:?)$/i);
+    if (!match) return null;
+    const start = caret - match[1].length - match[2].length - 1;
+    const before = text.slice(text.lastIndexOf('\n', caret - 1) + 1, start);
+    if ((before.match(/`/g) || []).length % 2) return null;
+    return {start, query: match[1].toLowerCase(), closed: match[2] === ':'};
+  }
+  // The names to offer for what was typed: those that start with it, then those that hold it,
+  // shortest first so the plain one (thinking) comes before its relatives.
+  function emojiMatches(emojis, query, limit = 6) {
+    const rank = name => (name.startsWith(query) ? 0 : 1);
+    return Object.keys(emojis).filter(name => name.includes(query))
+      .sort((a, b) => rank(a) - rank(b) || a.length - b.length || a.localeCompare(b)).slice(0, limit).map(name => ({name, emoji: emojis[name]}));
+  }
+
+  return {emojiToken, emojiMatches, escape, progressKey, allComments, sendText, drafts, statusText, statusModel, actionLabel, markdown, snippet, relativeTime, messagesHTML, unseen, agentModel, summary,
     agentInfo, avatarHTML, modelHTML, verdictHTML, verdicts, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
     activeAdversaries, facesHTML, agentStatus, modelOptionsHTML, effortLevels, effortOptionsHTML, chosenModel, chosenEffort, settle, adversaryPanelHTML, adversaryIntroHTML, jevBannerHTML};
 })();

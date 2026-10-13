@@ -292,3 +292,22 @@ assert.equal(need('none', {score: 20, reason: 'r'}).word, null, 'a LOW file has 
 assert.equal(need(null, {score: 20, reason: 'r'}), null);
 assert.equal(need(undefined, null), null);
 console.log('PASS a file row keeps who reads it apart from how risky it is');
+
+// Emoji names between colons: what is being typed, and what to offer for it.
+{
+  const at = text => tools.emojiToken(text, text.length);
+  assert.deepEqual(at('nice :thi'), {start: 5, query: 'thi', closed: false});
+  assert.deepEqual(at(':thinking:'), {start: 0, query: 'thinking', closed: true});
+  assert.deepEqual(at('first line\n(:+1'), {start: 12, query: '+1', closed: false});
+  assert.equal(at('at 10:30'), null, 'a time is not an emoji');
+  assert.equal(at('Foo::Bar'), null, 'a constant path is not an emoji');
+  assert.equal(at('`role: :admin'), null, 'nothing is offered inside code');
+  assert.equal(at('`done` :adm').query, 'adm', 'after a closed code span it is offered again');
+  assert.equal(at(':t'), null, 'two letters open the list, not one');
+  assert.equal(tools.emojiToken('a :thi b', 6).query, 'thi', 'it reads what is before the caret, not the end of the text');
+  const emojis = {thinking: '🤔', thinking_face: '🤔', bath: '🛁', thumbsup: '👍', pathing: 'x'};
+  assert.deepEqual(tools.emojiMatches(emojis, 'th').map(item => item.name), ['thinking', 'thumbsup', 'thinking_face', 'bath', 'pathing']);
+  assert.deepEqual(tools.emojiMatches(emojis, 'thi', 1), [{name: 'thinking', emoji: '🤔'}]);
+  assert.deepEqual(tools.emojiMatches(emojis, 'zz'), []);
+  console.log('PASS emoji names are read before the caret, never in code, and offered best match first');
+}

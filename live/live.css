@@ -542,3 +542,9 @@ body.dcr-has-app #qa-panel{display:none}
 .dcr-voice-link{display:block;width:100%;margin-top:10px;padding:9px 0 0;border:0;border-top:1px solid var(--line);background:none;color:var(--muted);font-size:12.5px;text-align:left;cursor:pointer}
 .dcr-voice-link:hover{color:var(--ink);text-decoration:underline}
 @media(max-width:520px){.gh-preview-from{display:none}.gh-preview-actions{flex-wrap:wrap}}
+
+/* Emojis by name: a short list hanging from the field being typed in. */
+#dcr-emoji{position:fixed;inset:auto;margin:0;min-width:210px;max-width:320px;padding:4px;list-style:none;border:1px solid var(--line);border-radius:calc(8px * var(--round));background:var(--surface);color:var(--ink);box-shadow:0 10px 28px color-mix(in srgb,var(--shade) 22%,transparent);font-size:13px}
+#dcr-emoji li{display:flex;align-items:center;gap:10px;padding:6px 9px;border-radius:calc(5px * var(--round));color:var(--muted);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#dcr-emoji li span{flex:none;width:20px;font-size:16px;line-height:1;text-align:center}
+#dcr-emoji li[aria-selected="true"]{background:var(--accent-soft);color:var(--ink)}

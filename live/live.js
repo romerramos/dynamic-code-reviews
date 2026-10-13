@@ -1581,6 +1581,88 @@
   } catch { /* nothing to say */ }
   document.addEventListener('visibilitychange', () => { if (document.hidden && latestAtOpen !== null) announceFinished(); });
 
+  // --- emojis by name ---------------------------------------------------------------------------
+  // In any text field of the review, a colon and two letters open a short list of the emojis whose
+  // name fits (GitHub's names, which the server fetches): the arrows move, Enter or Tab takes one,
+  // Esc puts the list away and leaves the text. Typing the second colon of a whole name takes it
+  // without the list. The list hangs from the field's edge, not from the caret, and while it is
+  // open its keys are its own; once it is gone they are the field's again. It is inserted as
+  // typing is, so undo gives the name back.
+  const emojiList = document.createElement('ul');
+  emojiList.id = 'dcr-emoji';
+  emojiList.setAttribute('role', 'listbox');
+  emojiList.setAttribute('aria-label', 'Emojis');
+  emojiList.popover = 'manual'; // above an open dialog, which a plain element would sit behind
+  document.body.append(emojiList);
+  let emojis = null, emojisAsked = false, emojiPick = null; // emojiPick: {field, start, items, at}
+  const textual = node => node?.matches?.('textarea, input[type="text"], input:not([type])') && !node.readOnly && !node.disabled;
+  const closeEmojis = () => { if (emojiPick) { emojiPick = null; emojiList.hidePopover(); } };
+  const putEmoji = (field, start, emoji) => {
+    field.setSelectionRange(start, field.selectionStart);
+    // As typing, so the field's own undo holds it; setRangeText for a browser without it.
+    if (!document.execCommand('insertText', false, emoji)) { field.setRangeText(emoji, start, field.selectionEnd, 'end'); field.dispatchEvent(new Event('input', {bubbles: true})); }
+  };
+  const showEmojis = () => {
+    const {field, items, at} = emojiPick;
+    emojiList.innerHTML = items.map((item, index) => `<li role="option" data-emoji="${index}" aria-selected="${index === at}"><span aria-hidden="true">${item.emoji}</span>:${tools.escape(item.name)}:</li>`).join('');
+    // Inside the dialog the field is in: everything outside a modal dialog takes no clicks.
+    const home = field.closest('dialog') || document.body;
+    if (emojiList.parentNode !== home) { if (emojiList.matches(':popover-open')) emojiList.hidePopover(); home.append(emojiList); }
+    if (!emojiList.matches(':popover-open')) emojiList.showPopover();
+    const box = field.getBoundingClientRect(), height = emojiList.offsetHeight;
+    const below = box.bottom + 4 + height <= innerHeight || box.top - 4 - height < 0;
+    emojiList.style.left = `${Math.max(8, Math.min(box.left, innerWidth - emojiList.offsetWidth - 8))}px`;
+    emojiList.style.top = `${below ? box.bottom + 4 : box.top - 4 - height}px`;
+  };
+  document.addEventListener('input', async event => {
+    const field = event.target;
+    // Only what is typed or deleted by hand: an undo brings a name back to stay, and pasted text is left as it is.
+    const typed = event.inputType === 'insertText' || event.inputType === 'deleteContentBackward';
+    // An undo leaves the name selected, where the next key would wipe it: the caret goes after it.
+    if (event.inputType === 'historyUndo' && textual(field) && /^:[a-z0-9_+-]+:$/.test(field.value.slice(field.selectionStart, field.selectionEnd))) field.setSelectionRange(field.selectionEnd, field.selectionEnd);
+    if (!typed || !textual(field) || field.selectionStart !== field.selectionEnd) return closeEmojis();
+    const token = tools.emojiToken(field.value, field.selectionStart);
+    if (!token) return closeEmojis();
+    if (!emojis && !emojisAsked) { emojisAsked = true; try { emojis = (await api('/api/emojis')).emojis; } catch { emojis = {}; } }
+    if (!emojis || document.activeElement !== field) return;
+    const now = tools.emojiToken(field.value, field.selectionStart); // the list may have arrived a few letters later
+    if (!now) return closeEmojis();
+    if (now.closed) {
+      closeEmojis();
+      // After this keystroke has finished, as a step of its own: put in from inside it, the
+      // browser's undo would not know of it.
+      if (event.data === ':' && emojis[now.query]) setTimeout(() => { const still = tools.emojiToken(field.value, field.selectionStart); if (document.activeElement === field && still?.closed && still.query === now.query) putEmoji(field, still.start, emojis[now.query]); }, 0);
+      return;
+    }
+    const items = tools.emojiMatches(emojis, now.query);
+    if (!items.length) return closeEmojis();
+    emojiPick = {field, start: now.start, items, at: 0};
+    showEmojis();
+  });
+  // Before every other key handler: while the list is open these four keys are its own.
+  window.addEventListener('keydown', event => {
+    if (!emojiPick) return;
+    const {items} = emojiPick;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') emojiPick.at = (emojiPick.at + (event.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length;
+    else if ((event.key === 'Enter' || event.key === 'Tab') && !event.metaKey && !event.ctrlKey) { const {field, start, at} = emojiPick; closeEmojis(); putEmoji(field, start, items[at].emoji); }
+    else if (event.key === 'Escape') closeEmojis();
+    else return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (emojiPick) showEmojis();
+  }, true);
+  emojiList.addEventListener('mousedown', event => {
+    const row = event.target.closest('[data-emoji]');
+    event.preventDefault(); // the field keeps the focus
+    if (!row || !emojiPick) return;
+    const {field, start, items} = emojiPick;
+    closeEmojis();
+    putEmoji(field, start, items[Number(row.dataset.emoji)].emoji);
+  });
+  document.addEventListener('focusout', event => { if (emojiPick?.field === event.target) closeEmojis(); });
+  window.addEventListener('scroll', closeEmojis, true);
+  window.addEventListener('resize', closeEmojis);
+
   // Copy for LLMs carries the conversation, and where to read the rest of it.
   globalThis.ReviewTools.setConversationSource(id => threads[id]?.messages?.length ? {messages: threads[id].messages, series: review.history?.series} : null);
 

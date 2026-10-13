@@ -348,3 +348,23 @@ Dir.mktmpdir('dcr-model') do |series|
   end
 end
 puts 'model: the listener, replies and comments say which model and effort they come from'
+
+# Emoji names: GitHub's list, kept for a week, and the last copy when it cannot be fetched.
+require_relative '../lib/dcr/emojis'
+Dir.mktmpdir('dcr-emojis-') do |config|
+  calls = 0
+  entries = [{'emoji' => '🤔', 'aliases' => ['thinking']}, {'emoji' => '🙋‍♂️', 'aliases' => %w[raising_hand_man man_raising], 'tags' => []}, {'emoji' => '', 'aliases' => ['empty']}, {'aliases' => ['octocat']}]
+  fetch = -> { calls += 1; entries }
+  start = Time.utc(2026, 10, 1)
+  first = DCR::Emojis.list(directory: config, fetch: fetch, now: start)
+  assert(first == {'thinking' => '🤔', 'raising_hand_man' => '🙋‍♂️', 'man_raising' => '🙋‍♂️'}, "Emoji names were not read from GitHub's list: #{first}")
+  DCR::Emojis.list(directory: config, fetch: fetch, now: start + 3600)
+  assert(calls == 1, 'A fresh copy was fetched again')
+  entries = []
+  assert(DCR::Emojis.list(directory: config, fetch: fetch, now: start + 8 * 86_400) == first && calls == 2, 'A failed refresh must fall back to the last copy')
+  entries = [{'emoji' => '🫠', 'aliases' => ['melting_face']}]
+  assert(DCR::Emojis.list(directory: config, fetch: fetch, now: start + 8 * 86_400) == {'melting_face' => '🫠'}, 'A stale copy was not replaced')
+  assert(DCR::Emojis.list(directory: File.join(config, 'none'), fetch: -> { raise 'offline' }) == {}, 'No network and no copy must mean no emojis, not an error')
+  assert(DCR::LiveAPI.new(config).call('GET', '/api/emojis', nil)[1].key?('emojis'), 'The page cannot ask for the emoji names')
+end
+puts 'emojis: names come from GitHub\'s list, are kept for a week and survive being offline'

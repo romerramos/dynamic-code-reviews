@@ -3,6 +3,7 @@
 require 'json'
 require 'uri'
 require_relative 'agent_catalog'
+require_relative 'emojis'
 require_relative 'github'
 require_relative 'github_draft'
 require_relative 'jevmypr'
@@ -61,6 +62,7 @@ module DCR
         @state.save_blob(input['key'], input['blob'])
         archive&.save(input['key'], input['blob'])
         [200, {'ok' => true}]
+      when ['GET', '/api/emojis'] then [200, {'emojis' => Emojis.list}]
       when ['GET', '/api/settings'] then [200, @settings.read]
       when ['POST', '/api/settings'] then [200, @settings.write(json(body))]
       when ['POST', '/api/evidence']
