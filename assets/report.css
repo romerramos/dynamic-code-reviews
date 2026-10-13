@@ -592,8 +592,6 @@ html[data-mode="dark"] .revision-control .select:is(:focus,:open):not(:focus-vis
 .view-toggle{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 12px 0 10px;border:1px solid var(--line);border-radius:calc(10px * var(--round));background:var(--bg-neutral-1);color:var(--ink-neutral-3);font-size:12.5px;font-weight:600}
 .view-toggle:hover,.view-toggle[aria-expanded="true"]{border-color:var(--line-neutral-3);background:var(--bg-neutral-2)}
 .view-toggle #view-icon{display:inline-grid;color:var(--ink-neutral-5)}.view-toggle .review-icon{width:16px;height:16px}
-.view-toggle #view-summary{font-weight:500;color:var(--muted)}
-.view-toggle #view-summary:not(:empty)::before{content:"·";margin-right:8px;color:var(--ink-neutral-8)}
 .view-menu[popover]{position:fixed;inset:auto;margin:0;overflow-y:auto;width:300px;max-width:calc(100vw - 24px);padding:6px;border:1px solid var(--line-neutral-2);border-radius:calc(14px * var(--round));background:var(--bg-neutral-1);color:var(--ink);box-shadow:0 18px 50px color-mix(in srgb,var(--shade) 14.9%,transparent),0 2px 6px color-mix(in srgb,var(--shade) 5.9%,transparent)}
 :is(.view-menu,.settings-body) section{padding:10px 10px 12px}
 :is(.view-menu,.settings-body) section+section,#settings-view:not(:empty)+section{border-top:1px solid var(--line-neutral-2)}
@@ -703,7 +701,7 @@ html[data-mode="dark"] .revision-control .select:is(:focus,:open):not(:focus-vis
   .revision-control{display:flex}
   .workspace{height:auto}
   .review-toolbar{position:sticky;top:0;z-index:6}
-  .view-toggle .view-label,.view-toggle #view-summary{display:none}
+  .view-toggle .view-label{display:none}
   .toolbar-navigation .pager span{min-width:0;padding:0 4px;font-size:12px}
   .focus-progress-actions{margin-left:0;flex-basis:100%}
   .evidence-request{grid-template-columns:20px minmax(0,1fr)}

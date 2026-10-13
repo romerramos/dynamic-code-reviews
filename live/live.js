@@ -1402,7 +1402,6 @@
   // Who is here: a chip before Your review with the agent's mark (a presence dot on its corner, as
   // chat apps show someone online) and what it is doing in words. On a narrow screen only the mark
   // and its dot remain. A click opens a small card: who, what, and how to connect one when none is.
-  const ledgerButton = document.getElementById('ledger-toggle');
   const presence = document.createElement('button');
   presence.type = 'button';
   presence.id = 'dcr-presence';
@@ -1411,8 +1410,9 @@
   presence.setAttribute('aria-expanded', 'false');
   presence.innerHTML = '<span class="dcr-presence-face"></span><span class="dcr-presence-text" role="status"></span><span class="dcr-presence-adv" hidden></span>';
   const optionsBar = document.querySelector('.toolbar-options');
-  if (ledgerButton) ledgerButton.before(presence);
-  else optionsBar?.prepend(presence);
+  // The bar's right side reads outwards: who is listening, then how the page is read (focus, View),
+  // then your review at the edge, where its panel opens.
+  optionsBar?.prepend(presence);
   const presenceCard = document.createElement('div');
   presenceCard.id = 'dcr-presence-card';
   presenceCard.hidden = true;

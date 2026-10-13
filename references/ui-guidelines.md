@@ -593,7 +593,9 @@ a gear and the word Settings, opens one dialog that holds every preference: read
 layout, comments in the code, whitespace, appearance, code size, the JevMyPR switch and the
 keyboard help. `,` in the space menu opens it. The toolbar's **View** menu is only what is
 flipped while reading (reading mode, diff layout, comments, whitespace) and ends on an
-**All settings** link; the same controls are in Settings, moved into whichever of the two is
+**All settings** link; its button is the one word View, with the current setup in its tip. The
+toolbar mirrors the screen: the sidebar's toggle at its left edge, **Your review** at its right
+edge with its panel icon outermost, and between them the agent, focus and View. The same controls are in Settings, moved into whichever of the two is
 open, never duplicated. On a phone Settings is that same last row of the sidebar, not a tab: the
 bar is Menu, Agent and Review, in the order of the screen (the menu is the sidebar, with the
 search first and no heading over it; it opens from the left, your

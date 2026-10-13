@@ -2756,8 +2756,8 @@
     $('prev').disabled = !layer;
     $('next').disabled = !!layer && layers.indexOf(layer) === layers.length - 1;
     ['unified','split'].forEach(mode => { $(mode).setAttribute('aria-pressed', layoutChoice === mode); });
-    // The View button names the current setup, so nobody has to open it to know.
-    $('view-summary').textContent = [layoutChoice === 'split' ? 'Split' : 'Unified', focusMode ? 'File by file' : 'Walkthrough', !showComments && 'comments hidden', settings.ignoreWhitespace && 'whitespace hidden'].filter(Boolean).join(' · ');
+    // The View button is one word; its tip names the current setup, for whoever wants it without opening the menu.
+    $('view-toggle').title = [layoutChoice === 'split' ? 'Split' : 'Unified', focusMode ? 'File by file' : 'Walkthrough', !showComments && 'comments hidden', settings.ignoreWhitespace && 'whitespace hidden'].filter(Boolean).join(' · ');
     $('reading-hint').textContent = focusMode ? 'One file at a time, in walkthrough order. J and K move between files.' : 'Each step shows its files together under its explanation. J and K move between steps.';
     if (fileReadingActive()) {
       $('position').textContent = `File ${focusIndex + 1} of ${focusOrder.length}`;
@@ -3350,7 +3350,7 @@
   $('next').innerHTML = icon('chevron-right');
   $('view-icon').innerHTML = icon('sliders-horizontal');
   $('settings-icon').innerHTML = $('view-all-icon').innerHTML = icon('settings');
-  $('ledger-toggle').innerHTML = `${icon('panel-right')}<span class="ledger-label">Your review</span><b id="ledger-count" class="ledger-count" hidden></b>`;
+  $('ledger-toggle').innerHTML = `<span class="ledger-label">Your review</span><b id="ledger-count" class="ledger-count" hidden></b>${icon('panel-right')}`;
   $('ledger-close').innerHTML = icon('x');
   $('zen-toggle').innerHTML = icon('maximize-2');
   $('zen-exit').innerHTML = `${icon('minimize-2')}<span>Exit focus</span>`;
