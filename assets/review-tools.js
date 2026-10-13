@@ -458,6 +458,17 @@ globalThis.ReviewTools = (() => {
     return {comments, findings:remaining};
   }
   const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[char]));
+  // A path in three parts, which read as the path: the first folder (code or tests), the folders
+  // between, and the file's name. A phone squeezes the middle to keep the line; a tap shows it all.
+  const pathParts = path => {
+    const slash = path.lastIndexOf('/'), first = path.indexOf('/');
+    if (slash < 0) return `<span class="path-name">${escapeHTML(path)}</span>`;
+    return `<span class="path-head">${escapeHTML(path.slice(0, first + 1))}</span><span class="path-mid"><bdi>${escapeHTML(path.slice(first + 1, slash + 1))}</bdi></span><span class="path-name">${escapeHTML(path.slice(slash + 1))}</span>`;
+  };
+  // A path that keeps one line on a phone or a tablet, wherever it is shown: its parts, then what
+  // follows it and is never cut (the lines a comment is on). Where a tap does nothing else, it
+  // shows the whole path (toggle).
+  const pathFit = (path, rest = '', toggle = false) => `<span class="path-fit" title="${escapeHTML(path + rest)}"${toggle ? ' data-path-toggle' : ''}><span class="path-parts">${pathParts(path)}</span>${rest ? `<span class="path-rest">${escapeHTML(rest)}</span>` : ''}</span>`;
   // Agent-written text (comments, findings, answers) as a small, safe subset of Markdown: paragraphs,
   // lists, fenced code, `code`, **bold**, *italic* and https links. Everything is escaped first, so
   // nothing a message contains can become markup.
@@ -536,5 +547,5 @@ globalThis.ReviewTools = (() => {
   // Most risky first; files of equal score keep the agent's order.
   const riskFiles = ranking => [...(ranking?.files || [])].sort((a, b) => b.score - a.score);
 
-  return {modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, scopeLabel, sha256, githubLink, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  return {pathParts, pathFit, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, scopeLabel, sha256, githubLink, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();

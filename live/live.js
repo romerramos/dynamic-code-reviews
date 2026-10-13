@@ -1085,11 +1085,11 @@
     const found = globalThis.ReviewTools.anchor(snapshot, comment);
     const was = globalThis.ReviewTools.outdatedWhere(comment);
     const lines = was ? `Outdated · ${was.lines}` : comment.general ? 'General comment' : `${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}`;
-    return `${found?.file.path || was?.path || 'General'} · ${lines}`;
+    return globalThis.ReviewTools.pathFit(found?.file.path || was?.path || 'General', ` · ${lines}`);
   };
   // A row from an earlier revision says where the comment was, as its folded card does.
-  const wasWhere = comment => { const was = globalThis.ReviewTools.outdatedWhere(comment); return `${was.path} · ${was.lines}${was.revision ? ` in revision ${was.revision}` : ''}`; };
-  const rowFor = (comment, earlier = false) => `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-conversation="1"${earlier ? ' data-earlier="1"' : ''}><button type="button" class="ledger-jump" data-ledger-jump="${tools.escape(comment.id)}"><span class="ledger-where">${tools.escape(earlier ? wasWhere(comment) : whereOf(comment))}</span><span class="ledger-subject">${tools.escape(comment.subject)}</span></button><div class="ledger-meta"></div></li>`;
+  const wasWhere = comment => { const was = globalThis.ReviewTools.outdatedWhere(comment); return globalThis.ReviewTools.pathFit(was.path, ` · ${was.lines}${was.revision ? ` in revision ${was.revision}` : ''}`); };
+  const rowFor = (comment, earlier = false) => `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-conversation="1"${earlier ? ' data-earlier="1"' : ''}><button type="button" class="ledger-jump" data-ledger-jump="${tools.escape(comment.id)}"><span class="ledger-where">${earlier ? wasWhere(comment) : whereOf(comment)}</span><span class="ledger-subject">${tools.escape(comment.subject)}</span></button><div class="ledger-meta"></div></li>`;
   // The faces of every agent that weighed in, each ringed with what it thinks.
   // The other agents that weighed in, beside the one already named: small marks, the tally on hover.
   const facesHTML = (thread, named) => {
@@ -1145,7 +1145,7 @@
     if (!comment || !hasConversation(threads[id]) || !ledgerPanel) return false;
     if (!document.body.classList.contains('ledger-open')) document.getElementById('ledger-toggle')?.click();
     current = id;
-    view.querySelector('.dcr-detail-title .ledger-where').textContent = whereOf(comment);
+    view.querySelector('.dcr-detail-title .ledger-where').innerHTML = whereOf(comment);
     view.querySelector('.dcr-detail-title strong').textContent = comment.subject;
     view.querySelector('[data-ledger-jump]').dataset.ledgerJump = id;
     const block = cardBlock(id, 'ledger', comment);
@@ -1218,7 +1218,7 @@
     if (!onGitHub.length) ghGroup?.remove();
     else {
       if (!ghGroup) { ghGroup = document.createElement('section'); ghGroup.className = 'ledger-group dcr-gh-group'; section ? section.after(ghGroup) : body.prepend(ghGroup); }
-      const html = `<h3>On GitHub</h3><ul class="ledger-list">${onGitHub.map(comment => `<li class="ledger-item" data-gh-row data-state="${ghData.posted?.[comment.id] ? 'posted' : 'pending'}"><button type="button" class="ledger-jump" data-ledger-jump="${tools.escape(comment.id)}"><span class="ledger-where">${tools.escape(whereOf(comment))}</span><span class="ledger-subject">${tools.escape(comment.subject)}</span></button><div class="ledger-meta"><span class="gh-slot" data-gh-badge="${tools.escape(comment.id)}"></span></div></li>`).join('')}</ul>`;
+      const html = `<h3>On GitHub</h3><ul class="ledger-list">${onGitHub.map(comment => `<li class="ledger-item" data-gh-row data-state="${ghData.posted?.[comment.id] ? 'posted' : 'pending'}"><button type="button" class="ledger-jump" data-ledger-jump="${tools.escape(comment.id)}"><span class="ledger-where">${whereOf(comment)}</span><span class="ledger-subject">${tools.escape(comment.subject)}</span></button><div class="ledger-meta"><span class="gh-slot" data-gh-badge="${tools.escape(comment.id)}"></span></div></li>`).join('')}</ul>`;
       if (ghGroup.dataset.html !== html) { ghGroup.innerHTML = html; ghGroup.dataset.html = html; window.ReviewGitHub?.refresh(); }
     }
     const byId = new Map(comments().map(comment => [comment.id, comment]));

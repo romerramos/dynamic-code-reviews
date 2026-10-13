@@ -4,6 +4,7 @@
   const {snapshot, review} = JSON.parse(document.getElementById('data').textContent);
   const $ = id => document.getElementById(id);
   const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const pathFit = ReviewTools.pathFit;
   const icon = name => (window.ReviewIcons[name] || '').replace('class="lucide', 'class="review-icon lucide').replace('<svg', '<svg aria-hidden="true" focusable="false"');
   const files = new Map(snapshot.files.map(file => [file.id, file]));
   const filesByPath = new Map(snapshot.files.map(file => [file.path, file]));
@@ -727,7 +728,7 @@
       const slash = file.path.lastIndexOf('/');
       const filename = file.path.slice(slash + 1);
       const directory = slash < 0 ? '' : file.path.slice(0, slash);
-      return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" aria-current="${state.navFile === id && state.view === layer.id ? 'location' : 'false'}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}"><span class="file-status" aria-hidden="true" title="${fileViewed(file) ? 'Viewed. Click to unmark' : 'Mark as viewed'}">${fileViewed(file) ? icon('check') : ''}</span><span class="nav-file-label"><span class="nav-file-name">${escape(filename)}</span>${directory ? `<small class="nav-file-directory">${escape(directory)}</small>` : ''}</span>${needMark(file)}${navPreviewMark(file)}</button></li>${query ? matchList(id, layer, query) : ''}`;
+      return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" aria-current="${state.navFile === id && state.view === layer.id ? 'location' : 'false'}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}"><span class="file-status" aria-hidden="true" title="${fileViewed(file) ? 'Viewed. Click to unmark' : 'Mark as viewed'}">${fileViewed(file) ? icon('check') : ''}</span><span class="nav-file-label"><span class="nav-file-name">${escape(filename)}</span>${directory ? `<small class="nav-file-directory">${pathFit(directory)}</small>` : ''}</span>${needMark(file)}${navPreviewMark(file)}</button></li>${query ? matchList(id, layer, query) : ''}`;
     };
     // With something typed the sidebar is what search found, not the walkthrough: first the files
     // whose name has it (the file's own name before its folders'), then the files with it in their
@@ -1147,7 +1148,7 @@
     editorRange = range.general ? {general:true} : {hunk:range.hunk, side:range.side, start:range.start, end:range.end};
     editingID = comment?.id || null;
     $('editor-title').textContent = comment ? 'Edit your comment' : 'Add your comment';
-    $('editor-location').textContent = range.general ? 'General comment on this review' : `${hunkFiles.get(range.hunk).path} · ${range.side === 'new' ? 'After' : 'Before'} L${range.start}–${range.end}`;
+    $('editor-location').innerHTML = range.general ? 'General comment on this review' : pathFit(hunkFiles.get(range.hunk).path, ` · ${range.side === 'new' ? 'After' : 'Before'} L${range.start}–${range.end}`, true);
     $('editor-snippet').hidden = !!range.general;
     $('editor-snippet').textContent = range.general ? '' : ReviewTools.sourceText(snapshot, range);
     $('editor-label').value = comment?.label || 'note';
@@ -1170,7 +1171,7 @@
   }
 
   function commentHTML(comment) {
-    return `<section class="popover-comment" data-comment-id="${escape(comment.id)}"><p class="comment-location">${escape(ReviewTools.anchor(snapshot, comment)?.file.path || '')}</p><div class="thread-badges">${threadBadges(comment)}</div><p class="comment-location">${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}</p><h4>${escape(comment.subject)}</h4>${ReviewTools.commentBody(comment, review.qa) ? `<div class="comment-discussion">${ReviewTools.markdown(ReviewTools.commentBody(comment, review.qa))}</div>` : ''}${ReviewTools.evidenceFlows(review.qa, comment).length ? `<button class="btn btn-xs btn-soft" data-evidence="${escape(comment.id)}">See visual evidence</button>` : ''}<div class="comment-actions">${commentActions(comment, 'xs')}</div></section>`;
+    return `<section class="popover-comment" data-comment-id="${escape(comment.id)}"><p class="comment-location">${pathFit(ReviewTools.anchor(snapshot, comment)?.file.path || '', '', true)}</p><div class="thread-badges">${threadBadges(comment)}</div><p class="comment-location">${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}</p><h4>${escape(comment.subject)}</h4>${ReviewTools.commentBody(comment, review.qa) ? `<div class="comment-discussion">${ReviewTools.markdown(ReviewTools.commentBody(comment, review.qa))}</div>` : ''}${ReviewTools.evidenceFlows(review.qa, comment).length ? `<button class="btn btn-xs btn-soft" data-evidence="${escape(comment.id)}">See visual evidence</button>` : ''}<div class="comment-actions">${commentActions(comment, 'xs')}</div></section>`;
   }
 
   function commentTrigger(hunk, side, number, comment = null, path) {
@@ -1345,7 +1346,7 @@
   }
   function hubRow(path, meta, actions) {
     const slash = path.lastIndexOf('/');
-    return `<li><div class="hub-file"><strong>${escape(path.slice(slash + 1))}</strong><small>${escape(slash < 0 ? '' : path.slice(0, slash))}</small>${meta ? `<span class="hub-meta">${meta}</span>` : ''}</div><div class="hub-actions">${actions}</div></li>`;
+    return `<li><div class="hub-file"><strong>${escape(path.slice(slash + 1))}</strong><small>${pathFit(slash < 0 ? '' : path.slice(0, slash), '', true)}</small>${meta ? `<span class="hub-meta">${meta}</span>` : ''}</div><div class="hub-actions">${actions}</div></li>`;
   }
   function renderPreviewHub() {
     const hub = lifecycle();
@@ -1430,7 +1431,7 @@
     stageEl.querySelectorAll('[data-stage-width]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.stageWidth) === String(stageState.width)));
     stageEl.querySelectorAll('[data-stage-height]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.stageHeight === stageState.height)));
     $('stage-title').textContent = file ? file.path.slice(file.path.lastIndexOf('/') + 1) : 'Previews';
-    $('stage-sub').textContent = file ? file.path.slice(0, file.path.lastIndexOf('/')) : '';
+    $('stage-sub').innerHTML = file ? pathFit(file.path.slice(0, file.path.lastIndexOf('/')), '', true) : '';
     stageEl.querySelector('[data-stage-code]').hidden = !file;
     const rebuild = stageEl.querySelector('[data-stage-rebuild]');
     rebuild.hidden = true;
@@ -1753,7 +1754,7 @@
     const summary = [!repeated && item.summary, file.note].filter(Boolean).map(escape).join(' · ');
     // A rendered preview is its own disclosure; only the request control sits in the card.
     const request = previewToggle(file);
-    return `<details class="file-card ${fileViewed(file) ? 'is-viewed' : ''}" data-file="${file.id}" ${fileOpen(file) ? 'open' : ''}><summary><span class="file-icon" aria-hidden="true">&lt;/&gt;</span><span class="filename">${escape(file.path)}</span><span class="badge success">+${added}</span><span class="badge blocking">−${removed}</span><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" aria-label="${escape(`Mark ${file.path} as viewed`)}" ${fileViewed(file) ? 'checked' : ''}> Viewed</label></summary>${summary || request || notVisualNote(file) ? `<div class="file-summary">${summary ? `<span>${summary}</span>` : ''}${request}${notVisualNote(file)}</div>` : ''}${hunks.length ? table : `<div class="file-summary"><pre>${escape(file.patch || 'No text diff available.')}</pre></div>`}</details>`;
+    return `<details class="file-card ${fileViewed(file) ? 'is-viewed' : ''}" data-file="${file.id}" ${fileOpen(file) ? 'open' : ''}><summary><span class="file-icon" aria-hidden="true">&lt;/&gt;</span><span class="filename">${pathFit(file.path)}</span><span class="badge success">+${added}</span><span class="badge blocking">−${removed}</span><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" aria-label="${escape(`Mark ${file.path} as viewed`)}" ${fileViewed(file) ? 'checked' : ''}> Viewed</label></summary>${summary || request || notVisualNote(file) ? `<div class="file-summary">${summary ? `<span>${summary}</span>` : ''}${request}${notVisualNote(file)}</div>` : ''}${hunks.length ? table : `<div class="file-summary"><pre>${escape(file.patch || 'No text diff available.')}</pre></div>`}</details>`;
   }
 
   const commentTypes = {
@@ -1887,7 +1888,7 @@
     const earlier = comment.follows && comments.find(other => other.id === comment.follows);
     const earlierWas = earlier && ReviewTools.outdatedWhere(earlier);
     const follows = earlier ? `<details class="thread-follows"><summary>Follows up on “${escape(earlier.subject)}”${earlierWas?.revision ? `, from revision ${escape(earlierWas.revision)}` : ''}</summary>${earlier.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(earlier.discussion)}</div>` : ''}${earlierWas?.code ? `<figure class="thread-was"><figcaption>The code it was written on</figcaption><pre><code>${escape(earlierWas.code)}</code></pre></figure>` : ''}</details>` : '';
-    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''} ${closed ? 'is-earlier' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${escape(found?.file.path || was?.path || 'General comment')}</span><span class="thread-range">${found ? range : was ? `<span class="thread-outdated" title="These lines changed after the comment was written">Outdated</span>${escape(was.lines)}${closed && was.revision ? ` in revision ${escape(was.revision)}` : ''}` : ''}</span></div><details class="thread-details" ${comment.resolved || closed ? '' : 'open'}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}"><span class="thread-badges">${threadBadges(comment)}</span><strong>${escape(comment.subject)}</strong><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${comment.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(comment.discussion)}</div>` : ''}${wasCode}${follows}${commentShots(comment)}${commentEvidence(comment)}</div>${found ? found.fullFile ? `<button class="thread-source btn btn-sm btn-ghost" type="button" data-comment="${id}">View in file · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : `<button class="thread-source btn btn-sm btn-ghost" type="button" data-open-code="${id}" aria-haspopup="dialog" aria-label="${escape(`View code for ${found.file.path}, ${range}: ${comment.subject}`)}">View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : ''}</details><div class="thread-footer"><div class="comment-actions">${commentActions(comment)}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
+    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''} ${closed ? 'is-earlier' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${pathFit(found?.file.path || was?.path || 'General comment', '', true)}</span><span class="thread-range">${found ? range : was ? `<span class="thread-outdated" title="These lines changed after the comment was written">Outdated</span>${escape(was.lines)}${closed && was.revision ? ` in revision ${escape(was.revision)}` : ''}` : ''}</span></div><details class="thread-details" ${comment.resolved || closed ? '' : 'open'}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}"><span class="thread-badges">${threadBadges(comment)}</span><strong>${escape(comment.subject)}</strong><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${comment.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(comment.discussion)}</div>` : ''}${wasCode}${follows}${commentShots(comment)}${commentEvidence(comment)}</div>${found ? found.fullFile ? `<button class="thread-source btn btn-sm btn-ghost" type="button" data-comment="${id}">View in file · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : `<button class="thread-source btn btn-sm btn-ghost" type="button" data-open-code="${id}" aria-haspopup="dialog" aria-label="${escape(`View code for ${found.file.path}, ${range}: ${comment.subject}`)}">View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : ''}</details><div class="thread-footer"><div class="comment-actions">${commentActions(comment)}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
   }
   function toggleResolved(id) {
     const comment = comments.find(comment => comment.id === id);
@@ -1921,7 +1922,7 @@
       discussion:`${finding.body}\n\nThe snippet covers the related diff hunk; the finding may concern only part of it.`};
   }
   function findingCard(finding, index) {
-    return `<article class="review-comment"><span class="badge blocking">${escape(finding.severity)}</span><p class="comment-location">${escape(hunkFiles.get(finding.hunk).path)}</p><h3>${escape(finding.title)}</h3><div class="comment-discussion">${ReviewTools.markdown(finding.body)}</div><div class="comment-actions">${githubAction(findingComment(finding), {copy: `data-post-finding="${index}"`, github: `data-github-finding="${index}"`})}<button class="btn btn-sm btn-ghost" data-hunk="${escape(finding.hunk)}">See changed code →</button>${moreMenu([ReviewTools.githubLink(snapshot, review, findingComment(finding)) ? menuItem(`data-post-finding="${index}"`, 'Copy for comment', 'copy') : '', menuItem(`data-copy-finding="${index}"`, 'Copy for LLMs', 'copy')])}</div></article>`;
+    return `<article class="review-comment"><span class="badge blocking">${escape(finding.severity)}</span><p class="comment-location">${pathFit(hunkFiles.get(finding.hunk).path, '', true)}</p><h3>${escape(finding.title)}</h3><div class="comment-discussion">${ReviewTools.markdown(finding.body)}</div><div class="comment-actions">${githubAction(findingComment(finding), {copy: `data-post-finding="${index}"`, github: `data-github-finding="${index}"`})}<button class="btn btn-sm btn-ghost" data-hunk="${escape(finding.hunk)}">See changed code →</button>${moreMenu([ReviewTools.githubLink(snapshot, review, findingComment(finding)) ? menuItem(`data-post-finding="${index}"`, 'Copy for comment', 'copy') : '', menuItem(`data-copy-finding="${index}"`, 'Copy for LLMs', 'copy')])}</div></article>`;
   }
   function renderQAAsset(asset, poster = null) {
     const media = asset.data_uri.startsWith('data:video/')
@@ -2031,7 +2032,7 @@
     viewerCode = {...found, comment};
     const content = document.createElement('section');
     content.className = 'expanded-diff';
-    content.innerHTML = `<header class="expanded-diff-header"><p class="eyebrow">Comment context</p><h2>${escape(found.file.path)}</h2><p>${escape(comment.subject)} · ${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}</p><div class="join" role="group" aria-label="Expanded diff layout">${['auto','unified','split'].map(mode => `<button class="btn btn-sm join-item" type="button" data-viewer-layout="${mode}" aria-pressed="${mode === 'auto'}">${mode === 'auto' ? 'Auto' : mode === 'split' ? 'Split' : 'Unified'}</button>`).join('')}</div></header><div id="expanded-diff-body" class="expanded-diff-body" tabindex="0" role="region" aria-label="Comment context diff"></div>`;
+    content.innerHTML = `<header class="expanded-diff-header"><p class="eyebrow">Comment context</p><h2>${pathFit(found.file.path, '', true)}</h2><p>${escape(comment.subject)} · ${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}</p><div class="join" role="group" aria-label="Expanded diff layout">${['auto','unified','split'].map(mode => `<button class="btn btn-sm join-item" type="button" data-viewer-layout="${mode}" aria-pressed="${mode === 'auto'}">${mode === 'auto' ? 'Auto' : mode === 'split' ? 'Split' : 'Unified'}</button>`).join('')}</div></header><div id="expanded-diff-body" class="expanded-diff-body" tabindex="0" role="region" aria-label="Comment context diff"></div>`;
     expandedViewer.setElements([{type:'inline', content, width:'96vw', height:'92vh', draggable:false}]);
     expandedViewer.open();
     renderExpandedCode();
@@ -2039,7 +2040,7 @@
   const expandedTests = new Set();
   function renderComponent(layer, component) {
     const active = activeComponentFile(layer, component);
-    return `<section class="component-card" data-component="${escape(component.key)}"><header class="component-header" tabindex="-1"><strong>${escape([component.namespace, component.name].filter(Boolean).join('::'))}</strong><small>${escape(component.directory)}</small><small class="component-progress">${progressText(progress(component.items))}</small><div class="component-tabs" role="tablist" aria-label="${escape(component.name)} files">${component.items.map(item => `<button role="tab" id="tab-${layer.id}-${item.file}" aria-controls="panel-${layer.id}-${item.file}" aria-selected="${item.file === active}" tabindex="${item.file === active ? 0 : -1}" data-component-tab="${item.file}" title="${escape(files.get(item.file).path)}">${escape(files.get(item.file).path.split('/').pop())}</button>`).join('')}</div></header>${component.items.map(item => `<div role="tabpanel" id="panel-${layer.id}-${item.file}" aria-labelledby="tab-${layer.id}-${item.file}" ${item.file === active ? '' : 'hidden'}>${renderFile(item)}</div>`).join('')}</section>`;
+    return `<section class="component-card" data-component="${escape(component.key)}"><header class="component-header" tabindex="-1"><strong>${escape([component.namespace, component.name].filter(Boolean).join('::'))}</strong><small>${pathFit(component.directory, '', true)}</small><small class="component-progress">${progressText(progress(component.items))}</small><div class="component-tabs" role="tablist" aria-label="${escape(component.name)} files">${component.items.map(item => `<button role="tab" id="tab-${layer.id}-${item.file}" aria-controls="panel-${layer.id}-${item.file}" aria-selected="${item.file === active}" tabindex="${item.file === active ? 0 : -1}" data-component-tab="${item.file}" title="${escape(files.get(item.file).path)}">${escape(files.get(item.file).path.split('/').pop())}</button>`).join('')}</div></header>${component.items.map(item => `<div role="tabpanel" id="panel-${layer.id}-${item.file}" aria-labelledby="tab-${layer.id}-${item.file}" ${item.file === active ? '' : 'hidden'}>${renderFile(item)}</div>`).join('')}</section>`;
   }
   function renderWalkthroughFiles(layer) {
     const pairs = components(layer);
@@ -2249,13 +2250,6 @@
   let verdict = null; // JevMyPR's, on the served page once the reviewer turned it on (ReviewVerdict.set)
   const needOf = file => ReviewTools.fileNeed(verdict?.files?.[file.path], riskOf(file.id));
   const needTip = need => `data-tip="${escape(need.lines.join('\n'))}" aria-label="${escape(need.lines.join('. '))}"`;
-  // A path in three parts, which read as the path: the first folder (code or tests), the folders
-  // between, and the file's name. A phone squeezes the middle to keep the line; a tap shows it all.
-  const pathParts = path => {
-    const slash = path.lastIndexOf('/'), first = path.indexOf('/');
-    if (slash < 0) return `<span class="path-name">${escape(path)}</span>`;
-    return `<span class="path-head">${escape(path.slice(0, first + 1))}</span><span class="path-mid"><bdi>${escape(path.slice(first + 1, slash + 1))}</bdi></span><span class="path-name">${escape(path.slice(slash + 1))}</span>`;
-  };
   // The label beside a file's viewed box; a phone has room for the second word only.
   const viewedLabel = viewed => viewed ? 'Viewed' : '<span class="focus-step-label">Mark </span>viewed';
   function needMark(file, spelled = false) {
@@ -2293,9 +2287,8 @@
     const rows = ranked.map(entry => {
       const file = files.get(entry.file);
       const level = ReviewTools.riskLevel(entry.score);
-      const slash = file.path.lastIndexOf('/');
       const layer = layerOf(entry.file);
-      const name = `<span class="risk-dir">${escape(slash < 0 ? '' : file.path.slice(0, slash + 1))}</span><span class="risk-name">${escape(file.path.slice(slash + 1))}</span>${entry.line ? `<span class="risk-line">:${entry.line}</span>` : ''}`;
+      const name = pathFit(file.path, entry.line ? `:${entry.line}` : '');
       const path = layer ? `<button type="button" class="risk-path" data-file-link="${escape(entry.file)}" data-file-layer="${escape(layer.id)}" title="Open ${escape(file.path)}">${name}</button>` : `<span class="risk-path">${name}</span>`;
       return `<li class="risk-row risk-${level.key}"><span class="risk-score"><span class="risk-bar" aria-hidden="true"><i style="width:${Math.max(4, entry.score)}%"></i></span><b>${entry.score}% · ${level.label}</b></span><div class="risk-what"><div class="risk-top">${path}<span class="risk-tags">${entry.tags.map(tag => `<span class="risk-tag">${escape(ReviewTools.riskTag(tag))}</span>`).join('')}</span></div><p class="risk-reason">${escape(entry.reason)}</p></div></li>`;
     }).join('');
@@ -2368,7 +2361,7 @@
     const cards = sinceView.files.map(file => {
       const rows = file.hunks.flatMap(hunk => hunk.rows.unified);
       const gone = comments.filter(comment => comment.outdated?.revision === sinceView.revision && comment.outdated.path === file.path);
-      return `<details class="file-card since-card" open><summary><span class="file-icon" aria-hidden="true">&lt;/&gt;</span><span class="filename">${escape(file.path)}</span>${words[file.state] ? `<span class="badge neutral">${words[file.state]}</span>` : ''}<span class="badge success">+${rows.filter(line => line.kind === 'add').length}</span><span class="badge blocking">−${rows.filter(line => line.kind === 'del').length}</span></summary>${file.note ? `<p class="muted since-note">${escape(file.note)}</p>` : renderDiffTable(file, file.hunks, {}, layout, null, sides)}${gone.length ? `<section class="since-outdated"><h3>${plural(gone.length, 'comment')} on lines this revision changed</h3>${gone.map(commentCard).join('')}</section>` : ''}</details>`;
+      return `<details class="file-card since-card" open><summary><span class="file-icon" aria-hidden="true">&lt;/&gt;</span><span class="filename">${pathFit(file.path)}</span>${words[file.state] ? `<span class="badge neutral">${words[file.state]}</span>` : ''}<span class="badge success">+${rows.filter(line => line.kind === 'add').length}</span><span class="badge blocking">−${rows.filter(line => line.kind === 'del').length}</span></summary>${file.note ? `<p class="muted since-note">${escape(file.note)}</p>` : renderDiffTable(file, file.hunks, {}, layout, null, sides)}${gone.length ? `<section class="since-outdated"><h3>${plural(gone.length, 'comment')} on lines this revision changed</h3>${gone.map(commentCard).join('')}</section>` : ''}</details>`;
     }).join('');
     return `<div class="page-intro"><div class="eyebrow">Revision ${escape(review.history.revision)}</div><h1>Since revision ${escape(sinceView.revision)}</h1><p class="lead">Only what changed after revision ${escape(sinceView.revision)}. The whole change, as it will be merged, is in All changes.</p><p class="muted">Select an after line number to comment. Comments are the same ones in both views.</p></div>${cards}`;
   }
@@ -2414,7 +2407,7 @@
     }
     const groupNumber = review.groups.indexOf(entry.layer.group) + 1;
     const stepTitle = entry.layer.title === entry.layer.group.title ? '' : `<span class="crumb-sep" aria-hidden="true">›</span><span class="crumb-step">${escape(entry.layer.title)}</span>`;
-    return `<section class="focus-reader"><header class="focus-file-header"><div class="focus-meta"><span class="focus-group" title="${escape(`Group ${groupNumber} of ${review.groups.length}: ${entry.layer.group.title}`)}"><span class="crumb-number">${groupNumber}/${review.groups.length}</span><span class="crumb-group">${escape(titleWithoutNumber(entry.layer.group.title))}</span>${stepTitle}</span><div class="focus-file-actions" role="group" aria-label="Changed sections"><button class="icon-button" data-change-step="-1" disabled aria-label="Previous changed section" title="Previous changed section">${icon('chevron-left')}</button><span id="change-position">${file.hunks.length} changes</span><button class="icon-button" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} aria-label="Next changed section" title="Next changed section">${icon('chevron-right')}</button></div></div><div class="focus-identity"><div class="current-file"><code data-path-toggle>${pathParts(file.path)}</code><button class="icon-button copy-file-path" data-copy-file title="Copy the full relative file path" aria-label="Copy file path">${icon('copy')}</button>${needMark(file, true)}</div>${componentLinks}${previewToggle(file)}${notVisualNote(file)}<details class="file-about"><summary>${icon('info')}<span>Why this file</span></summary><p>${escape(entry.layer.summary || entry.layer.group.summary)}</p>${items.map(item => item.summary ? `<p>${escape(item.summary)}</p>` : '').join('')}</details><div class="focus-progress-actions"><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" ${fileViewed(file) ? 'checked' : ''}> <span>${viewedLabel(fileViewed(file))}</span></label><button class="btn btn-sm btn-ghost phone-only" data-focus-prev ${focusIndex === 0 ? 'disabled' : ''} aria-label="Previous file">${icon('arrow-left')}<span class="focus-step-label"> Previous</span></button><button class="btn btn-sm btn-ghost" data-focus-next aria-label="Next file" ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}><span class="focus-step-label">Next file </span>${icon('arrow-right')}</button><span class="focus-count phone-only">${focusIndex + 1} of ${focusOrder.length}</span></div></div></header>${!full ? '<p class="focus-unavailable">Full source was not captured or exceeds the text limit. Showing the saved diff; no current working files have been substituted.</p>' : ''}${(() => { const code = file.hunks.length || full?.length ? renderDiffTable(file, full || file.hunks, summaries) : `<pre>${escape(file.note || file.patch || 'No text diff available.')}</pre>`; return code; })()}<footer class="focus-end"><span>${focusIndex + 1 === focusOrder.length ? 'End of the review' : `Next: ${escape(files.get(focusOrder[focusIndex + 1].file).path)}`}</span><button class="btn btn-sm btn-ghost phone-only" data-focus-prev ${focusIndex === 0 ? 'disabled' : ''}>← Previous</button><button class="btn btn-sm btn-primary" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></footer></section>`;
+    return `<section class="focus-reader"><header class="focus-file-header"><div class="focus-meta"><span class="focus-group" title="${escape(`Group ${groupNumber} of ${review.groups.length}: ${entry.layer.group.title}`)}"><span class="crumb-number">${groupNumber}/${review.groups.length}</span><span class="crumb-group">${escape(titleWithoutNumber(entry.layer.group.title))}</span>${stepTitle}</span><div class="focus-file-actions" role="group" aria-label="Changed sections"><button class="icon-button" data-change-step="-1" disabled aria-label="Previous changed section" title="Previous changed section">${icon('chevron-left')}</button><span id="change-position">${file.hunks.length} changes</span><button class="icon-button" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} aria-label="Next changed section" title="Next changed section">${icon('chevron-right')}</button></div></div><div class="focus-identity"><div class="current-file"><code data-path-toggle>${ReviewTools.pathParts(file.path)}</code><button class="icon-button copy-file-path" data-copy-file title="Copy the full relative file path" aria-label="Copy file path">${icon('copy')}</button>${needMark(file, true)}</div>${componentLinks}${previewToggle(file)}${notVisualNote(file)}<details class="file-about"><summary>${icon('info')}<span>Why this file</span></summary><p>${escape(entry.layer.summary || entry.layer.group.summary)}</p>${items.map(item => item.summary ? `<p>${escape(item.summary)}</p>` : '').join('')}</details><div class="focus-progress-actions"><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" ${fileViewed(file) ? 'checked' : ''}> <span>${viewedLabel(fileViewed(file))}</span></label><button class="btn btn-sm btn-ghost phone-only" data-focus-prev ${focusIndex === 0 ? 'disabled' : ''} aria-label="Previous file">${icon('arrow-left')}<span class="focus-step-label"> Previous</span></button><button class="btn btn-sm btn-ghost" data-focus-next aria-label="Next file" ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}><span class="focus-step-label">Next file </span>${icon('arrow-right')}</button><span class="focus-count phone-only">${focusIndex + 1} of ${focusOrder.length}</span></div></div></header>${!full ? '<p class="focus-unavailable">Full source was not captured or exceeds the text limit. Showing the saved diff; no current working files have been substituted.</p>' : ''}${(() => { const code = file.hunks.length || full?.length ? renderDiffTable(file, full || file.hunks, summaries) : `<pre>${escape(file.note || file.patch || 'No text diff available.')}</pre>`; return code; })()}<footer class="focus-end"><span>${focusIndex + 1 === focusOrder.length ? 'End of the review' : `Next: ${escape(files.get(focusOrder[focusIndex + 1].file).path)}`}</span><button class="btn btn-sm btn-ghost phone-only" data-focus-prev ${focusIndex === 0 ? 'disabled' : ''}>← Previous</button><button class="btn btn-sm btn-primary" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></footer></section>`;
   }
   function focusFile(index) {
     document.body.classList.remove('navigation-open'); $('nav-toggle').setAttribute('aria-expanded', 'false');
@@ -2610,7 +2603,7 @@
     const groups = new Map();
     entries.forEach(entry => { if (!groups.has(entry.path)) groups.set(entry.path, []); groups.get(entry.path).push(entry); });
     const row = entry => `<li class="ledger-item" data-ledger="${escape(entry.id)}" data-state="${entry.resolved ? 'resolved' : 'draft'}"><button type="button" class="ledger-jump" data-ledger-jump="${escape(entry.id)}"><span class="ledger-where">${escape(entry.where)}</span><span class="ledger-subject">${escape(entry.subject)}</span></button><div class="ledger-meta">${ghBadgeSlot(comments.find(comment => comment.id === entry.id) || {})}<button type="button" data-resolve="${escape(entry.id)}">${entry.resolved ? 'Reopen' : 'Resolve'}</button><button type="button" data-copy="${escape(entry.id)}">Copy for LLMs</button></div></li>`;
-    const byFile = [...groups].map(([path, list]) => `<section class="ledger-group"><h3>${escape(path)}</h3><ul class="ledger-list">${list.map(row).join('')}</ul></section>`).join('');
+    const byFile = [...groups].map(([path, list]) => `<section class="ledger-group"><h3>${pathFit(path, '', true)}</h3><ul class="ledger-list">${list.map(row).join('')}</ul></section>`).join('');
     const stepNotes = notes.length ? `<section class="ledger-group"><h3>Step notes</h3><ul class="ledger-list">${notes.map(note => `<li class="ledger-item" data-state="draft"><button type="button" class="ledger-jump" data-ledger-step="${escape(note.id)}"><span class="ledger-where">${escape(note.title)}</span><span class="ledger-subject">${escape(note.text)}</span></button></li>`).join('')}</ul></section>` : '';
     const empty = !entries.length && !notes.length ? '<p class="ledger-note">Select lines in a diff and write a comment. What you say, and what your agent answers, collects here.</p>' : '';
     const previews = previewsPossible ? `<section class="ledger-previews"><strong>Template previews</strong><p data-preview-summary>${previewSummary(lifecycle())}</p><button type="button" class="btn btn-sm btn-soft" data-open-previews>Open previews</button></section>` : '';
@@ -2632,8 +2625,8 @@
     const rows = sendRows();
     $('send-list').innerHTML = rows.length ? rows.map(comment => {
       const found = comment.general ? null : ReviewTools.anchor(snapshot, comment);
-      const where = comment.general ? 'General comment' : `${found?.file.path || ''} · ${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}`;
-      return `<li><label><input type="checkbox" value="${escape(comment.id)}" checked><span class="send-text"><span class="send-where">${escape(where)}</span><span class="send-subject">${escape(comment.subject)}</span></span></label></li>`;
+      const where = comment.general ? 'General comment' : pathFit(found?.file.path || '', ` · ${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}`);
+      return `<li><label><input type="checkbox" value="${escape(comment.id)}" checked><span class="send-text"><span class="send-where">${where}</span><span class="send-subject">${escape(comment.subject)}</span></span></label></li>`;
     }).join('') : '<li class="send-empty">Nothing to send yet. Select lines in a diff and write a comment.</li>';
     $('send-dialog').showModal();
     $('send-dialog').dispatchEvent(new CustomEvent('send-open'));
@@ -2950,6 +2943,8 @@
   }, true);
   document.addEventListener('scroll', () => closeMenus(), true);
   document.addEventListener('click', async event => {
+    // A path cut to keep its line shows whole on a tap, and takes it back, wherever it is on the page.
+    event.target.closest('[data-path-toggle]')?.classList.toggle('is-whole');
     // Posting goes through the served review's provider, which shows its own progress.
     const ghAct = event.target.closest('[data-gh-open], [data-gh-post], [data-gh-pend], [data-gh-unpend]');
     if (ghAct && github.provider) {
@@ -3288,7 +3283,6 @@
     if (event.target.closest('[data-focus-prev]')) step(-1);
     const stepBy = event.target.closest('[data-step-by]');
     if (stepBy) step(Number(stepBy.dataset.stepBy));
-    event.target.closest('[data-path-toggle]')?.classList.toggle('is-whole');
     if (event.target.closest('[data-copy-file]')) copyText(files.get(focusOrder[focusIndex].file).path);
     const button = event.target.closest('[data-change-step]');
     if (button) {

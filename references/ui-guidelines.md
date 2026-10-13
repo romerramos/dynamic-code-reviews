@@ -37,7 +37,10 @@ from its original snapshot and analysis when refreshing presentation only.
   Search the code from two characters; one searches names only. Ordinary
   files retain actual filenames and a smaller directory subtitle (omit for root
   files). Wrap names and subtitles without ellipsis. Expose full paths in tooltips
-  and accessible labels. Component rows use one name, one namespace line, compact
+  and accessible labels. On phones and tablets (under 1200px) a path keeps one line
+  wherever it is shown (`ReviewTools.pathFit`): the first folder and the file's name
+  whole, the folders between cut from the left, and what follows the path (a comment's
+  lines) never cut. Where a tap does nothing else, it shows the whole path. Component rows use one name, one namespace line, compact
   per-file Ruby/Template shortcuts and a viewed count; do not nest another file list
   or repeat the same namespace as a directory. File links reveal containing test
   disclosures. Component links and their file shortcuts focus and scroll to the

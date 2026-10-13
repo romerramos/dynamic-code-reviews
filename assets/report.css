@@ -1077,10 +1077,9 @@ dialog.stage::backdrop{background:color-mix(in srgb,var(--bg-neutral-8) 40%,tran
 .risk-low .risk-score b,.risk-medium .risk-score b{color:var(--muted)}
 .risk-top{display:flex;align-items:baseline;gap:8px 10px;flex-wrap:wrap;min-width:0}
 .risk-path{min-width:0;padding:0;border:0;background:none;color:var(--ink);font:12.5px/1.5 var(--mono);text-align:left;white-space:normal;overflow-wrap:anywhere;cursor:pointer}
-button.risk-path:hover .risk-name{text-decoration:underline}
-.risk-dir{color:var(--muted)}
-.risk-name{font-weight:600}
-.risk-line{color:var(--muted)}
+button.risk-path:hover .path-name{text-decoration:underline}
+.risk-path :is(.path-head,.path-mid,.path-rest){color:var(--muted)}
+.risk-path .path-name{font-weight:600}
 .risk-tags{display:inline-flex;flex-wrap:wrap;gap:4px}
 .risk-tag{padding:0 7px;border:1px solid var(--line);border-radius:calc(999px * var(--round));color:var(--muted);font-size:11px;line-height:18px;white-space:nowrap}
 .risk-reason{margin:3px 0 0;color:var(--ink);font-size:13.5px;line-height:1.5}
@@ -1224,6 +1223,27 @@ button.risk-path:hover .risk-name{text-decoration:underline}
   .focus-file-header .file-about:not([open]) summary span,.focus-file-header .focus-step-label{display:none}
   .focus-progress-actions{flex:0 0 auto;margin-left:0}
   .focus-progress-actions .file-viewed span{text-transform:capitalize}
+}
+/* Phones and tablets: a path keeps one line wherever it is shown (ReviewTools.pathFit), cut as the
+   file's header cuts its own: the first folder and the file's name whole, the folders between cut
+   from the left. What follows the path (the lines a comment is on) is never cut. Where a tap does
+   nothing else, it shows the whole path, and takes it back. */
+@media(max-width:1199px){
+  .path-fit{display:flex;min-width:0;max-width:100%;overflow:hidden;white-space:nowrap}
+  .path-parts{display:flex;flex:0 1 auto;min-width:0;overflow:hidden}
+  .path-fit .path-head,.path-rest{flex:none}
+  .path-rest{white-space:pre}
+  .path-fit .path-mid{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;direction:rtl;text-align:left}
+  .path-fit .path-name{flex:none;max-width:calc(100% - 6ch);overflow:hidden;text-overflow:ellipsis}
+  .path-fit.is-whole,.path-fit.is-whole .path-parts{display:block;white-space:normal;overflow-wrap:anywhere}
+  .path-fit.is-whole .path-parts,.path-fit.is-whole .path-rest{display:inline;white-space:normal}
+  .path-fit.is-whole .path-mid{direction:ltr;overflow:visible}
+  .path-fit[data-path-toggle]{cursor:pointer}
+  /* The name beside a path that keeps its line keeps its own. */
+  .nav-file-name,.hub-file strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .send-where{display:flex;min-width:0}
+  .send-tag{flex:none}
+  .thread-file-path,.risk-path{max-width:100%}
 }
 
 /* UI changes: the agent's screenshots of the running app, as one pile that opens them one at a time. */
