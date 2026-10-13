@@ -68,7 +68,7 @@ module DCR
       when ['POST', '/api/message'] then message(json(body))
       when ['GET', '/api/screenshot'] then [200, screenshot(key, query['id'])]
       when ['GET', '/api/sync'] then [200, stale]
-      when ['POST', '/api/sync'] then [200, sync]
+      when ['POST', '/api/sync'] then [200, sync(json(body))]
       when ['POST', '/api/risk-ranking'] then (@state.request_risk_ranking(json(body)['key']); [200, {'requested' => true}])
       when ['GET', '/api/adversaries'] then [200, adversaries]
       when ['GET', '/api/agents'] then [200, adversaries.merge('agents' => @catalog.call(query['fresh'] == '1'))]
@@ -200,9 +200,10 @@ module DCR
 
     # The reader's Update: the next revision shows the code as it is, and the listening agent is
     # handed what changed so it can comment on it.
-    def sync
+    # follow: the reader chose Follow my checkout for a pull request's review.
+    def sync(input)
       require_relative '../../scripts/series'
-      result = ReviewSeries.sync(repo: manifest.fetch('repo'), name: manifest.fetch('name'))
+      result = ReviewSeries.sync(repo: manifest.fetch('repo'), name: manifest.fetch('name'), follow: input['follow'] == true)
       @state.code_updated(result['key'], ReviewSeries.sync_brief(result)) if result['status'] == 'updated' && result['unreviewed'].any?
       result.slice('status', 'revision', 'summary')
     end
@@ -283,7 +284,7 @@ module DCR
     def snapshot(key)
       raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
       state = @state.read
-      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'github' => state['github'][key] || {}, 'comments' => state['comments'][key] || [], 'screenshots' => Array(state['screenshots'][key]).map { |shot| shot.except('file') }, 'risk_ranking' => state['risk_rankings'][key], 'verdict' => state['verdicts'][key.split(':')[1].to_s],'previews' => preview_status(state['previews'][key]), 'latest_revision' => latest_revision, 'listening' => @state.listening?, 'agent' => @state.listener, 'agent_model' => @state.listener_model,
+      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'github' => state['github'][key] || {}, 'comments' => state['comments'][key] || [], 'screenshots' => Array(state['screenshots'][key]).map { |shot| shot.except('file') }, 'no_screenshots' => state['no_screenshots'][key], 'risk_ranking' => state['risk_rankings'][key], 'verdict' => state['verdicts'][key.split(':')[1].to_s],'previews' => preview_status(state['previews'][key]), 'latest_revision' => latest_revision, 'listening' => @state.listening?, 'agent' => @state.listener, 'agent_model' => @state.listener_model,
        'pending' => state['outbox'].count { |entry| entry['seq'] > state['acked'] && entry['key'] == key }}
     end
 

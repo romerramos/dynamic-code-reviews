@@ -36,6 +36,10 @@ end
 options.delete(:repo)
 options[:directory] ||= Dir.mktmpdir('dcr-capture-')
 server = DCR::Server.new(**options)
+if options[:report] && File.basename(options[:report]) == 'current.html'
+  require_relative '../lib/dcr/activity'
+  DCR::Activity.record(File.dirname(options[:report]), 'serve', 'ok', options[:app] ? 'with the app' : 'without an app')
+end
 $stdout.sync = true
 puts options[:report] ? "Review with QA panel: #{server.url}/#overview" : "QA recorder: #{server.url}"
 puts "App inside the review: #{server.url}/?app#overview (proxying #{options[:app]} through #{server.app_url})" if server.app_url

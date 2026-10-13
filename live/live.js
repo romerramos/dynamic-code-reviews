@@ -1247,11 +1247,11 @@
     arrivalTimer = setTimeout(() => { arrival.hidden = true; }, 12000);
   };
   // Screenshots the agent posts while it reviews: their images are fetched once each, then the
-  // review shows them under UI changes or on their comment. Those there when the page opens are not news.
+  // review shows them in Seen in the app or on their comment. Those there when the page opens are not news.
   const shotImages = new Map();
-  let shotsMark = '[]', shotsKnown = false;
-  const receiveScreenshots = async list => {
-    const mark = JSON.stringify(list.map(shot => [shot.id, shot.posted_at]));
+  let shotsMark = '[""]', shotsKnown = false;
+  const receiveScreenshots = async (list, none) => {
+    const mark = JSON.stringify([...list.map(shot => [shot.id, shot.posted_at]), none || '']);
     if (mark === shotsMark) { shotsKnown = true; return; }
     const before = shotsMark;
     shotsMark = mark;
@@ -1262,8 +1262,8 @@
         return {...shot, data_uri: shotImages.get(name)};
       }));
       if (shotsMark !== mark) return; // a newer list is on its way
-      window.ReviewScreenshots?.set(loaded);
-      const had = new Set(JSON.parse(before).map(entry => entry.join(':')));
+      window.ReviewScreenshots?.set(loaded, none);
+      const had = new Set(JSON.parse(before).filter(Array.isArray).map(entry => entry.join(':')));
       const fresh = list.filter(shot => !had.has(`${shot.id}:${shot.posted_at}`));
       if (shotsKnown && fresh.length) {
         const name = fresh[0].agent ? tools.agentInfo(fresh[0].agent).name : 'Your agent';
@@ -1321,14 +1321,24 @@
   const updatedKey = 'dynamic-review:updated';
   let stale = null, updating = false, staleAt = 0;
   const renderUpdate = () => {
-    // A newer revision that is already saved has its own button; a series that cannot be updated here has none.
-    set(updateButton, 'hidden', !stale || !!stale.unavailable || (latest || 0) > shownRevision);
+    // A newer revision that is already saved has its own button.
+    set(updateButton, 'hidden', !stale || (latest || 0) > shownRevision);
     if (updateButton.hidden) return;
+    // A review that cannot be updated right now says why, rather than losing its button.
+    if (stale.unavailable) {
+      const html = `${ico('refresh-cw')}<span>Update</span>`;
+      if (updateButton.innerHTML !== html) updateButton.innerHTML = html;
+      set(updateButton, 'title', stale.unavailable);
+      updateButton.setAttribute('aria-label', `Update is not available: ${stale.unavailable}`);
+      set(updateButton, 'disabled', true);
+      updateButton.classList.remove('is-stale', 'is-busy');
+      return;
+    }
     const count = updating ? 0 : stale.changed || 0;
     const files = `${count} ${count === 1 ? 'file' : 'files'}`;
     const html = `${ico('refresh-cw')}<span>${updating ? 'Updating…' : count ? `Update · ${files}` : 'Update'}</span>`;
     if (updateButton.innerHTML !== html) updateButton.innerHTML = html;
-    const hint = updating ? 'Updating this review to the code as it is now' : count ? `${files} changed since this review. Update it: your comments and progress are kept.` : 'Check the code again and update this review';
+    const hint = stale.pinned ? 'This review follows the pull request, not your checkout. Click to choose.' : updating ? 'Updating this review to the code as it is now' : count ? `${files} changed since this review. Update it: your comments and progress are kept.` : 'Check the code again and update this review';
     set(updateButton, 'title', hint);
     updateButton.setAttribute('aria-label', hint);
     set(updateButton, 'disabled', updating);
@@ -1341,22 +1351,47 @@
     try { stale = await api('/api/sync'); } catch { return; }
     renderUpdate();
   };
-  updateButton.addEventListener('click', async () => {
+  // A pull request's review shows the pull request's head. The first Update says so and lets the
+  // reader have it follow the checkout instead; after that Update works as on any review.
+  const followDialog = document.createElement('dialog');
+  followDialog.id = 'dcr-follow';
+  followDialog.className = 'modal';
+  followDialog.setAttribute('aria-labelledby', 'dcr-follow-title');
+  document.body.append(followDialog);
+  const askFollow = () => {
+    const count = stale.changed || 0;
+    const differs = count ? `Your checkout differs in ${count} ${count === 1 ? 'file' : 'files'}.` : 'Your checkout has the same code right now.';
+    const body = stale.pinned
+      ? `<p>This review shows the pull request as it was pushed, not your checkout. ${differs}</p><p><b>Follow my checkout</b> makes Update show your files as they are, pushed or not. Comments and progress are kept; Comment on GitHub then works only on files that match the pull request.</p><p class="muted">To go back, ask your agent to review the pull request again.</p>`
+      : '<p>Update shows your checkout as it is. Comments and progress are kept.</p>';
+    followDialog.innerHTML = `<form method="dialog" class="modal-box dcr-gh-box">
+      <header><div><h2 id="dcr-follow-title">${stale.pinned ? 'This review follows the pull request' : 'Update this review'}</h2></div><button type="button" class="act act-quiet act-icon" data-follow-close aria-label="Close" title="Close (Esc)">${ico('x')}</button></header>
+      <div class="dcr-follow-text">${body}${stale.warning ? `<p class="dcr-follow-warning" role="alert">${tools.escape(stale.warning)}</p>` : ''}</div>
+      <footer class="dcr-gh-actions"><button type="button" class="act act-quiet" data-follow-close>Cancel</button><button type="button" class="act act-primary" data-follow-go>${stale.pinned ? 'Follow my checkout' : 'Update anyway'}</button></footer></form>`;
+    followDialog.showModal();
+    followDialog.querySelector('[data-follow-close]:not(.act-icon)').focus();
+  };
+  followDialog.addEventListener('click', event => {
+    if (event.target.closest('[data-follow-close]')) followDialog.close();
+    else if (event.target.closest('[data-follow-go]')) { followDialog.close(); runUpdate(true); }
+  });
+  updateButton.addEventListener('click', () => (stale?.pinned || stale?.warning ? askFollow() : runUpdate(false)));
+  const runUpdate = async follow => {
     updating = true;
     renderUpdate();
     try {
-      const result = await api('/api/sync', {});
+      const result = await api('/api/sync', {follow});
       if (result.status === 'updated') {
         try { sessionStorage.setItem(updatedKey, result.summary); } catch { /* the Overview says it too */ }
         location.reload(); // the same place, on the new revision
         return;
       }
       stale = {changed: 0};
-      flash('This review already shows the code as it is.');
+      flash(follow ? 'This review now follows your checkout, which has the same code right now.' : 'This review already shows the code as it is.');
     } catch (error) { flash(error.message); }
     updating = false;
     renderUpdate();
-  });
+  };
   document.addEventListener('visibilitychange', checkStale);
   window.addEventListener('focus', checkStale);
   checkStale();
@@ -1425,7 +1460,7 @@
     const ghNext = {pending: data.github?.pending || {}, posted: data.github?.posted || {}};
     if (JSON.stringify(ghNext) !== JSON.stringify({pending: ghData.pending, posted: ghData.posted})) ghData = ghNext;
     receiveComments(data.comments || []);
-    receiveScreenshots(data.screenshots || []);
+    receiveScreenshots(data.screenshots || [], data.no_screenshots);
     // The Risk ranking the agent posts while the reader is already on the diff; until then, a placeholder.
     if ('risk_ranking' in data) window.ReviewRisk?.set(data.risk_ranking);
     if ('verdict' in data) showVerdict(data.verdict);

@@ -224,6 +224,7 @@ module DynamicReviews
     ReviewQA.validate(review['qa'], snapshot, review)
     ReviewPreviews.validate(review['previews'], snapshot, full: review['preview_scope'] != 'targeted')
     ReviewScreenshots.validate(review['screenshots'], snapshot, review)
+    raise ArgumentError, 'no_screenshots is a short reason' if review.key?('no_screenshots') && !(review['no_screenshots'].is_a?(String) && review['no_screenshots'].length.between?(1, 200))
     raise ArgumentError, 'Review status can only be in_progress' if review.key?('status') && review['status'] != 'in_progress'
     # A review published while the agent is still reading assigns every range to the walkthrough,
     # but explains them only once it is finished.

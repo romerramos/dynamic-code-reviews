@@ -24,7 +24,7 @@ module DCR
       review = payload['review']
       posted = ReviewSeries.with_posted(series_dir, ReviewSeries.manifest(series_dir), review)
       shots = ReviewSeries.with_screenshots(series_dir, ReviewSeries.manifest(series_dir), review).map do |shot|
-        "- #{shot['id']}: #{shot['title']}#{" on #{shot['page']}" if shot['page']} (#{shot['comment_id'] ? "on comment #{shot['comment_id']}" : 'UI changes'})"
+        "- #{shot['id']}: #{shot['title']}#{" on #{shot['page']}" if shot['page']} (#{shot['comment_id'] ? "on comment #{shot['comment_id']}" : 'Seen in the app'})"
       end
       flags = "--repo #{Shellwords.escape(manifest.fetch('repo'))} --name #{Shellwords.escape(manifest.fetch('name'))}"
       dcr = Shellwords.escape(DCR_BIN)
@@ -73,7 +73,7 @@ module DCR
 
         Screenshots already in the review (stills taken while reviewing):
         #{shots.empty? ? '- (none)' : shots.join("\n")}
-        A clip of what a screenshot shows takes the still's place and keeps it as its thumbnail: give that item the screenshot's id as screenshot_id. Record one for each screenshot whose change moves or is used, starting with those under UI changes.
+        A clip of what a screenshot shows takes the still's place and keeps it as its thumbnail: give that item the screenshot's id as screenshot_id. Record one for each screenshot whose change moves or is used, starting with those in Seen in the app.
 
         Also record any changed user flow that has no comment, if seeing it helps.
 

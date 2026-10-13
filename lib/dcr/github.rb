@@ -93,22 +93,31 @@ module DCR
     def target(key)
       number = key.to_s[/:(\d+)\z/, 1] or raise Error, 'Posting needs a saved review revision.'
       @lock.synchronize { @targets[number] } || begin
-        path = File.join(@series_dir, 'revisions', format('%03d.html', number.to_i))
-        raise Error, 'This review revision is not saved.' unless File.file?(path)
-        html = File.read(path)
-        json = html[/<script\b(?=[^>]*\bid=["']data["'])[^>]*>(.*?)<\/script>/m, 1] or raise Error, 'This review has no data.'
-        data = JSON.parse(json)
-        snapshot, review = data.values_at('snapshot', 'review')
+        snapshot, review = saved(number.to_i)
+        raise Error, 'This review revision is not saved.' unless snapshot
         comparison = review['comparison'] || {}
         pr = snapshot['mode'] == 'pr' || review.dig('history', 'origin_mode') == 'pr'
         match = comparison['pr_url'].to_s.match(PR_URL)
-        unless pr && match && comparison['base'] == snapshot['base'] && comparison['head'] == snapshot['head']
+        # A revision that shows the reviewer's checkout is posted against the last one that showed
+        # the pull request's own head, and only on files whose diff is the same in both.
+        pushed = review.dig('history', 'local') ? (number.to_i - 1).downto(1).lazy.filter_map { |earlier| saved(earlier) }.find { |_, was| !was.dig('history', 'local') }&.first : snapshot
+        unless pr && match && pushed && comparison['base'] == pushed['base'] && comparison['head'] == pushed['head']
           raise Error, 'This review has no verified GitHub pull request.'
         end
-        hunks = snapshot['files'].to_h { |file| [file['path'], file['hunks'].map { |hunk| hunk.slice('old_start', 'old_count', 'new_start', 'new_count') }] }
-        value = {repo: "#{match[1]}/#{match[2]}", number: match[3].to_i, url: comparison['pr_url'], commit: snapshot['head'], hunks: hunks}
+        patches = ->(from) { from['files'].to_h { |file| [file['path'], file['hunks'].map { |hunk| hunk['patch'] }] } }
+        same = patches.call(snapshot).select { |path, diff| patches.call(pushed)[path] == diff }.keys
+        hunks = snapshot['files'].select { |file| same.include?(file['path']) }.to_h { |file| [file['path'], file['hunks'].map { |hunk| hunk.slice('old_start', 'old_count', 'new_start', 'new_count') }] }
+        value = {repo: "#{match[1]}/#{match[2]}", number: match[3].to_i, url: comparison['pr_url'], commit: pushed['head'], hunks: hunks, unpushed: snapshot['files'].map { |file| file['path'] } - same}
         @lock.synchronize { @targets[number] = value }
       end
+    end
+
+    # [snapshot, review] of a saved revision, or nil.
+    def saved(number)
+      path = File.join(@series_dir, 'revisions', format('%03d.html', number))
+      return unless File.file?(path)
+      json = File.read(path)[/<script\b(?=[^>]*\bid=["']data["'])[^>]*>(.*?)<\/script>/m, 1] or raise Error, 'This review has no data.'
+      JSON.parse(json).values_at('snapshot', 'review')
     end
 
     def clean(item, target)
@@ -120,6 +129,7 @@ module DCR
       raise ArgumentError, 'Invalid comment id' unless id.match?(/\A[\w:.-]{1,200}\z/)
       return {'id' => id, 'body' => body, 'general' => true} if item['general'] == true
 
+      raise ArgumentError, 'This file has changes that are not on the pull request yet. Push them and ask your agent to review the pull request again.' if target[:unpushed].include?(item['path'])
       raise ArgumentError, 'That file is not part of this review' unless target[:hunks].key?(item['path'])
       side = item['side']
       raise ArgumentError, 'Side must be LEFT or RIGHT' unless %w[LEFT RIGHT].include?(side)

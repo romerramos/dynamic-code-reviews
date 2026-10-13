@@ -7,14 +7,14 @@ require 'securerandom'
 require_relative 'qa_assets'
 
 # Screenshots the review's agent takes of the running app while it reviews: what the change looks
-# like (the Overview's UI changes) or what a comment is about. Each names the changed files it
+# like (the Overview's Seen in the app) or what a comment is about. Each names the changed files it
 # shows, so an update can tell which ones still hold. Posted ones keep their image in the series
 # folder until a saved revision embeds it.
 module ReviewScreenshots
   FOLDER = 'screenshots'
   LIMIT = 4 * 1024 * 1024 # each
   TOTAL = 24 * 1024 * 1024
-  SHOWN = 6        # under UI changes
+  SHOWN = 6        # on no comment, in Seen in the app
   PER_COMMENT = 3
   TYPES = {'image/png' => 'png', 'image/jpeg' => 'jpg', 'image/webp' => 'webp'}.freeze
   FIELDS = %w[id path title caption page paths comment_id].freeze
@@ -53,7 +53,7 @@ module ReviewScreenshots
     ids = records.map { |record, _| record['id'] }
     raise ArgumentError, 'A screenshot id is used twice' unless ids.uniq.length == ids.length
     all = existing.reject { |shot| ids.include?(shot['id']) } + records.map(&:first)
-    raise ArgumentError, "UI changes shows at most #{SHOWN} screenshots: choose the screens that say most, or post one again under its id to replace it" if all.count { |shot| !shot['comment_id'] } > SHOWN
+    raise ArgumentError, "Seen in the app takes at most #{SHOWN} screenshots that are on no comment: choose the screens that say most, or post one again under its id to replace it" if all.count { |shot| !shot['comment_id'] } > SHOWN
     raise ArgumentError, "A comment takes at most #{PER_COMMENT} screenshots" if all.select { |shot| shot['comment_id'] }.group_by { |shot| shot['comment_id'] }.values.any? { |own| own.length > PER_COMMENT }
     folder = File.join(directory, FOLDER)
     FileUtils.mkdir_p(folder, mode: 0o700)

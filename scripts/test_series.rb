@@ -189,6 +189,42 @@ module SeriesChecks
         end
       end
     end
+    checks['a pull request review follows the checkout only once its reviewer says so, and returns to the verified head'] = lambda do
+      require_relative '../lib/dcr/github'
+      ReviewChecks.fixture do |root, first|
+        Dir.mktmpdir('review-pr-follow-') do |out|
+          original = DynamicReviews.extract(initial(root))
+          DynamicReviews.git(root, 'add', 'sample.rb')
+          second = DynamicReviews.git(root, 'commit-tree', DynamicReviews.git(root, 'write-tree').strip, '-p', first, '-m', 'test: create PR snapshot').strip
+          DynamicReviews.git(root, 'update-ref', 'HEAD', second)
+          snapshot = DynamicReviews.collect(repo: root, mode: 'pr', base: first, head: second)
+          review = original['review'].merge('comparison' => {'base' => snapshot['base'], 'head' => second, 'pr_url' => 'https://github.com/acme/app/pull/7'})
+          ReviewSeries.start(repo: root, name: 'pr-follow', report: DynamicReviews.render(snapshot: snapshot, review: review, name: 'pr-follow'))
+          series = File.join(root, '.reviews/pr-follow')
+          assert(ReviewSeries.stale(repo: root, name: 'pr-follow') == {'changed' => 0, 'pinned' => true}, 'A pull request review did not say it follows the pull request')
+          File.write(File.join(root, 'extra.rb'), "EXTRA = 1\n")
+          assert(ReviewSeries.stale(repo: root, name: 'pr-follow') == {'changed' => 1, 'pinned' => true}, 'The checkout was not compared with the pull request')
+          rejects('A pull request review took the checkout unasked') { ReviewSeries.sync(repo: root, name: 'pr-follow') }
+          result = ReviewSeries.sync(repo: root, name: 'pr-follow', follow: true)
+          assert(result.values_at('status', 'revision') == ['updated', 2], 'Following the checkout did not save it')
+          assert(ReviewSeries.manifest(series).values_at('follows', 'pinned_head') == ['checkout', second], 'The choice to follow the checkout was not kept')
+          local = DynamicReviews.extract(File.join(series, 'current.html'))
+          assert(local['review']['history']['local'] == true && local['snapshot']['working_tree'], 'The revision does not say it shows the checkout')
+          assert(ReviewSeries.stale(repo: root, name: 'pr-follow') == {'changed' => 0}, 'A review that follows the checkout still asks')
+          # GitHub takes comments only where the checkout shows what the pull request has.
+          target = DCR::GitHub.new(series).send(:target, DCR::State.review_key(local['snapshot']['fingerprint'], 'pr-follow', 2))
+          assert(target.values_at(:commit, :unpushed) == [second, ['extra.rb']] && target[:hunks].keys == ['sample.rb'], 'Comments could reach GitHub on code that is not pushed')
+          File.write(File.join(root, 'extra.rb'), "EXTRA = 2\n")
+          assert(ReviewSeries.sync(repo: root, name: 'pr-follow')['revision'] == 3, 'A later update asked again')
+          # A review of the verified head again ends it, although local revisions came in between.
+          File.unlink(File.join(root, 'extra.rb'))
+          ReviewSeries.prepare(repo: root, name: 'pr-follow', out: out, base: first, head: second)
+          ReviewSeries.publish(prepared: out, update: increment(out).merge('items' => []))
+          assert(!ReviewSeries.manifest(series).key?('follows') && !DynamicReviews.extract(File.join(series, 'current.html'))['review']['history'].key?('local'), 'A review of the pull request did not end following the checkout')
+          assert(ReviewSeries.stale(repo: root, name: 'pr-follow')['pinned'] == true, 'The review does not follow the pull request again')
+        end
+      end
+    end
     checks['attaches offline QA without rewriting findings or old revisions; rejects stale inputs'] = lambda do
       ReviewChecks.fixture do |root, _commit|
         Dir.mktmpdir('review-qa-check-') do |out|
@@ -372,14 +408,13 @@ module SeriesChecks
           # Start QA review hands them over, so a clip can take a screenshot's place.
           DCR::QARequest.call(series_dir: series, state: state, key: first_key, route: '/', origin: 'http://127.0.0.1:1', app: nil, capture_dir: out)
           asked = state.read['outbox'].last['text']
-          assert(asked.include?('- home: The value on the home page on / (UI changes)') && asked.include?('- on-note: The value, wrong (on comment value-note)'), 'The QA request did not list the screenshots')
+          assert(asked.include?('- home: The value on the home page on / (Seen in the app)') && asked.include?('- on-note: The value, wrong (on comment value-note)'), 'The QA request did not list the screenshots')
           rejects('A screenshot of a file outside the review was posted') { post.call(shown.merge('id' => 'far', 'paths' => ['nope.rb'])) }
           rejects('A screenshot with no files was posted') { post.call(shown.except('paths').merge('id' => 'loose')) }
           rejects('A screenshot on an unknown comment was posted') { post.call(shown.merge('id' => 'lost', 'comment_id' => 'nobody')) }
           rejects('A file that is not an image was posted') { post.call(shown.merge('id' => 'text', 'path' => 'notes.txt')) }
           rejects('More screenshots than UI changes shows were posted') { post.call((1..6).map { |number| shown.merge('id' => "more-#{number}") }) }
           post.call(shown.merge('title' => 'The home page'))
-          assert(state.read.dig('screenshots', key.call(1, DynamicReviews.extract(first))).map { |shot| shot['title'] } == ['The value, wrong', 'The home page'], 'A screenshot posted again did not replace the earlier one')
           # A QA clip of what a screenshot shows takes its place; the revision it saves keeps both.
           File.binwrite(File.join(out, 'clip.png'), png)
           DCR::Evidence.attach(series_dir: series, capture_dir: out, input: {'path' => File.join(out, 'clip.png'), 'title' => 'The value changes', 'observed' => 'It shows two.', 'result' => 'failed', 'comment_id' => 'value-note'})
@@ -394,6 +429,49 @@ module SeriesChecks
           result = ReviewSeries.sync(repo: root, name: 'shots')
           assert(result['screenshots_dropped'].map { |shot| shot['id'] } == %w[on-note home] && result['summary'].include?('2 screenshots of changed files were dropped'), 'An update kept screenshots of code that changed')
           assert(!DynamicReviews.extract(File.join(series, 'current.html'))['review'].key?('screenshots') && ReviewSeries.sync_brief(result).include?('- home: The home page (/)'), 'The dropped screenshots were not handed over')
+          # A second, different capture of a page it already shows gets a heads-up; the same file again does not.
+          File.binwrite(File.join(out, 'other.png'), "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jWZkAAAAASUVORK5CYII=".unpack1('m'))
+          require 'stringio'
+          said = lambda do |value|
+            original = $stdout
+            $stdout = StringIO.new
+            post.call(shown.merge('page' => '/x').merge(value))
+            $stdout.string
+          ensure
+            $stdout = original
+          end
+          said.call('id' => 'p1')
+          assert(!said.call('id' => 'p2').include?('Heads up'), 'Reusing an image was warned about')
+          assert(said.call('id' => 'p3', 'path' => 'other.png').include?('Heads up: p3 is a second capture of /x, which p1, p2 already show'), 'A retake of a page already shown got no heads-up')
+        end
+      end
+    end
+    checks['a review served with the app is not finished without its screenshots or the reason, and the log says what ran'] = lambda do
+      require_relative '../lib/dcr/live_cli'
+      ReviewChecks.fixture do |root, _commit|
+        Dir.mktmpdir('review-served-') do |out|
+          File.write(File.join(root, 'sample.rb'), "class Sample\n  def value\n    2\n  end\nend\n")
+          snapshot = DynamicReviews.collect(repo: root)
+          file = snapshot['files'].first
+          outline = {'title' => 'Sample review', 'summary' => 'Return two.', 'groups' => [{'title' => 'Values', 'summary' => 'Values.', 'layers' => [{'title' => 'Return a value', 'items' => [{'file' => file['id'], 'summaries' => {file['hunks'].first['id'] => 'Return two.'}}]}]}]}
+          File.write(File.join(out, 'snapshot.json'), JSON.generate(snapshot))
+          File.write(File.join(out, 'outline.json'), JSON.generate(outline))
+          first = ReviewSeries.start(repo: root, name: 'served', snapshot: File.join(out, 'snapshot.json'), review: File.join(out, 'outline.json'), in_progress: true)
+          series = File.dirname(File.dirname(first))
+          File.write(File.join(series, '.serve.json'), JSON.generate('port' => 1, 'app_port' => 2))
+          finish = -> { ReviewSeries.run(['finish', '--repo', root, '--name', 'served', '--review', File.join(out, 'outline.json')]) }
+          rejects('A review served with the app was finished with no screenshot and no reason') { finish.call }
+          begin
+            DCR::LiveCLI.run('screenshot', ['--dir', series, '--none', ' '])
+          rescue SystemExit
+            nil
+          end
+          DCR::LiveCLI.run('screenshot', ['--dir', series, '--none', 'Only a constant changed'])
+          finish.call
+          assert(DynamicReviews.extract(File.join(series, 'current.html'))['review']['no_screenshots'] == 'Only a constant changed', 'The reason for no screenshots was not kept')
+          log = DCR::Activity.entries(series).map { |row| row.values_at('command', 'outcome') }
+          assert(log == [['series finish', 'failed'], ['screenshot --none', 'failed'], ['screenshot --none', 'ok'], ['series finish', 'ok']], "The log does not say what ran: #{log.inspect}")
+          assert(DCR::Activity.entries(series).first['detail'].include?('shows no screenshot of it') && DCR::Activity.text(series).lines.length == 4, 'The log does not say why a command was refused')
         end
       end
     end

@@ -6,6 +6,7 @@ require 'optparse'
 require 'rbconfig'
 require 'shellwords'
 require 'uri'
+require_relative 'activity'
 require_relative 'export'
 require_relative 'agents'
 require_relative 'previews'
@@ -61,14 +62,15 @@ module DCR
     TEXT
 
     USAGE = {
-      'sync' => 'dcr sync (--repo ROOT --name SERIES | --dir DIR)   (updates the review to the code as it is now: a new revision with the current diff, comments moved to their lines or marked outdated, and the changed ranges printed for you to comment on)',
+      'sync' => 'dcr sync (--repo ROOT --name SERIES | --dir DIR) [--follow-checkout]   (--follow-checkout: a pull request\'s review shows its pushed head; with this, only when the reviewer asks, it shows the checkout from now on) (updates the review to the code as it is now: a new revision with the current diff, comments moved to their lines or marked outdated, and the changed ranges printed for you to comment on)',
       'wait' => 'dcr wait (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--model ID] [--effort LEVEL] [--timeout SECONDS] [--json]',
       'comments' => 'dcr comments (--repo ROOT --name SERIES | --dir DIR) [--thread ID] [--json]   (--thread prints that one conversation in full: the comment as sent, then every message)',
       'preview' => 'dcr preview submit (--repo ROOT --name SERIES | --dir DIR) --path <template path> [--file FILE] [--title TITLE] [--css STYLESHEET]... [--page-class CLASSES] [--image-map JSON] | dcr preview fail ... --path <template path> --reason TEXT',
       'export' => 'dcr export (--repo ROOT --name SERIES | --dir DIR) [--out FILE]',
       'risk-ranking' => 'dcr risk-ranking (--repo ROOT --name SERIES | --dir DIR) (--file RANKING.json | --none REASON)   (the Overview\'s Risk ranking: {summary, files: [{file, score, tags, reason, line}]}, as in the review JSON\'s risk_ranking; --none when no file stands out)',
       'comment' => 'dcr comment (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--model ID] [--effort LEVEL] [--no-second-opinion] [--file COMMENTS.json]   (one review comment or an array, as in the review JSON: id, label, decoration, subject, discussion, hunk, side, start, end, plus an optional context: one or two plain sentences on what the change tries to do, for the second opinion; stdin when --file is omitted)',
-      'screenshot' => 'dcr screenshot (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--file SCREENSHOTS.json]   (one screenshot of the running app or an array: path (a PNG, JPEG or WebP you saved), title, paths (the changed files it shows), and optionally caption, page (the app path), comment_id (it then sits on that comment, not under UI changes) and id (post one again under its id to replace it); stdin when --file is omitted)',
+      'log' => 'dcr log (--repo ROOT --name SERIES | --dir DIR) [--json]   (what the agent\'s commands did to this review, oldest first: the command, ok or the sentence it failed with, who ran it and which copy of the skill)',
+      'screenshot' => 'dcr screenshot (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] (--file SCREENSHOTS.json | --none REASON)   (--none: say in a few words why this review has no screenshot of the app, when it is served with one; one screenshot of the running app or an array: path (a PNG, JPEG or WebP you saved), title, paths (the changed files it shows), and optionally caption, page (the app path), comment_id (it then sits on that comment) and id (post one again under its id to replace it); stdin when --file is omitted)',
       'stop' => 'dcr stop (--repo ROOT --name SERIES | --dir DIR | --all)   (stops the served review and its `dcr wait`; --all stops every review served on this computer)',
       'link' => 'dcr link (--repo ROOT --name SERIES | --dir DIR)   (the served review\'s addresses: on this computer, and on your tailnet when shared)',
       'focus' => 'dcr focus (--repo ROOT --name SERIES | --dir DIR)   (brings the browser tab showing the served review to the front)',
@@ -97,6 +99,7 @@ module DCR
         p.on('--timeout SECONDS', Integer) { |v| options[:timeout] = v }
         p.on('--json') { options[:json] = true }
         p.on('--all') { options[:all] = true }
+        p.on('--follow-checkout') { options[:follow] = true }
         p.on('--replace MODE', %w[previous-qa all]) { |v| options[:replace] = v.tr('-', '_').to_sym }
         p.on('--agent NAME', 'Who you are: claude, codex, gemini, grok... (detected when omitted)') { |v| options[:agent] = Agents.check(v) }
         p.on('--model ID', 'The model you run on, as you know it (claude-opus-5-5, gpt-6.1-sol...)') { |v| options[:model] = model_option(v, 'model') }
@@ -108,7 +111,12 @@ module DCR
       end
       parser.parse!(argv)
       return stop(options, parser) if command == 'stop'
-      state = State.new(directory(options, parser))
+      # What ran, for `dcr log`: the command with its sub-command and flags, never what was said.
+      said = [command, (argv.first if %w[preview evidence].include?(command)), *options.except(:repo, :name, :dir, :file, :key, :thread, :out, :path, :title, :reason, :image_map, :css, :page_class, :context, :comments, :none, :agent, :model, :effort, :timeout).keys.map { |name| "--#{name.to_s.tr('_', '-')}" }, ('--none' if options[:none])].compact.join(' ')
+      series = directory(options, parser)
+      return puts(options[:json] ? JSON.pretty_generate(Activity.entries(series)) : Activity.text(series)) if command == 'log'
+      state = State.new(series)
+      Activity.record(series, said, 'ok', 'listening') if command == 'wait'
       case command
       when 'wait' then wait(state, options)
       when 'comments' then comments(state, options)
@@ -124,7 +132,9 @@ module DCR
       when 'evidence' then evidence(options, directory(options, parser), argv, parser)
       when 'second-opinion' then second_opinion(options, directory(options, parser), parser)
       end
+      Activity.record(series, said, 'ok', (options[:none] if command == 'screenshot')) unless %w[comments link].include?(command)
     rescue ArgumentError, KeyError, SystemCallError, JSON::ParserError => error
+      Activity.record(series, said, 'failed', error.message) if series
       abort error.message
     end
 
@@ -367,26 +377,43 @@ module DCR
     end
 
     # What the change looks like in the running app, as the agent saw it in a tab of its own. The
-    # open page shows each one at once: under UI changes, or on the comment it belongs to. The next
+    # open page shows each one at once: in Seen in the app, or on the comment it belongs to. The next
     # saved revision keeps them.
     def screenshot(state, options, directory)
       require_relative '../../scripts/series'
-      file = options[:file] && File.expand_path(options[:file])
-      raw = file ? File.read(file) : ($stdin.tty? ? raise(ArgumentError, 'Give the screenshot JSON with --file or on stdin') : $stdin.read)
-      input = JSON.parse(raw)
       history = ReviewSeries.manifest(directory)
+      if options[:none]
+        raise ArgumentError, 'Say in a few words why this review has no screenshot of the app' if options[:none].strip.empty? || options[:none].length > 200
+        entry = history['revisions'].last
+        state.no_screenshots(State.review_key(entry['fingerprint'], history['name'], entry['number']), options[:none].strip)
+        return puts('Noted why there are no screenshots; the open page says so under What changed.')
+      end
+      file = options[:file] && File.expand_path(options[:file])
+      raw = file ? File.read(file) : ($stdin.tty? ? raise(ArgumentError, 'Give the screenshot JSON with --file or on stdin, or --none REASON') : $stdin.read)
+      input = JSON.parse(raw)
       payload = ReviewSeries.latest(directory, history)
       review = payload.fetch('review')
       author = agent(options, state)
+      existing = ReviewSeries.with_screenshots(directory, history, review)
       shots = ReviewScreenshots.store(input.is_a?(Array) ? input : [input], snapshot: payload.fetch('snapshot'), comments: ReviewSeries.with_posted(directory, history, review),
-                                      existing: ReviewSeries.with_screenshots(directory, history, review), directory: directory, base: file ? File.dirname(file) : Dir.pwd)
+                                      existing: existing, directory: directory, base: file ? File.dirname(file) : Dir.pwd)
       entry = history['revisions'].last
       state.post_screenshots(State.review_key(entry['fingerprint'], history['name'], entry['number']), shots.map { |shot| shot.merge({'agent' => author}.compact) })
       on_comments, shown = shots.partition { |shot| shot['comment_id'] }
       where = []
-      where << "#{shown.length} under UI changes" if shown.any?
+      where << "#{shown.length} in Seen in the app" if shown.any?
       where << "#{on_comments.length} on #{on_comments.map { |shot| shot['comment_id'] }.uniq.join(', ')}" if on_comments.any?
       puts "Posted #{shots.length == 1 ? 'the screenshot' : "#{shots.length} screenshots"} to the open review (#{where.join(', ')}); the next saved revision keeps #{shots.length == 1 ? 'it' : 'them'}."
+      # Two different captures of one page are shown as two items; the same file posted twice is one.
+      fresh = ReviewScreenshots.embedded(directory, shots)
+      all = existing.reject { |shot| fresh.any? { |own| own['id'] == shot['id'] } } + fresh
+      told = [] # a pair in one batch is said once
+      fresh.select { |shot| shot['page'] }.each do |shot|
+        retaken = all.select { |other| other['id'] != shot['id'] && other['page'] == shot['page'] && other['data_uri'] != shot['data_uri'] }.map { |other| other['id'] } - told
+        next if retaken.empty?
+        told << shot['id']
+        puts "Heads up: #{shot['id']} is a second capture of #{shot['page']}, which #{retaken.join(', ')} already #{retaken.length == 1 ? 'shows' : 'show'}. If it shows the same state, post that same image file again instead of this retake (one image posted twice appears once, with both its links); keep it only when the state differs."
+      end
     end
 
     # Brings the review up to the code as it is now and says what changed, so whoever ran it can
@@ -394,7 +421,7 @@ module DCR
     def sync(options, directory)
       require_relative '../../scripts/series'
       history = ReviewSeries.manifest(directory)
-      result = ReviewSeries.sync(repo: history.fetch('repo'), name: history.fetch('name'))
+      result = ReviewSeries.sync(repo: history.fetch('repo'), name: history.fetch('name'), follow: options[:follow] == true)
       return puts("Revision #{result['revision']} already shows the code as it is. Nothing to update.") if result['status'] == 'unchanged'
       puts [ReviewSeries.sync_brief(result), SYNC_RULE, "Post each comment with: dcr comment #{flags(options)} --file <comment.json>", 'The open page offers the new revision by itself. Comments and progress came along.'].join("\n\n")
     end

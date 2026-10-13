@@ -25,6 +25,7 @@ USAGE = <<~TEXT
     sync                           Update a review to the code as it is now: comments follow their lines or become outdated,
                                    and the changed ranges are printed for you to comment on
     screenshot                     Post screenshots of the running app to the review: under UI changes, or on a comment
+    log                            What the agent's commands did to a review, one line each: what ran, what was refused and why
     risk-ranking                   Post the Overview's Risk ranking of the changed files (or --none)
     second-opinion                 Ask the reviewer's adversaries to check a posted comment
     focus                          Bring the browser tab showing the served review to the front
@@ -52,7 +53,7 @@ when 'series'
 when 'previews'
   abort USAGE unless ARGV.first == 'render'
   run_script('previews.rb', *ARGV)
-when 'wait', 'comments', 'comment', 'screenshot', 'sync', 'risk-ranking', 'focus', 'link', 'stop', 'reply', 'export', 'preview', 'evidence', 'second-opinion'
+when 'wait', 'comments', 'comment', 'screenshot', 'log', 'sync', 'risk-ranking', 'focus', 'link', 'stop', 'reply', 'export', 'preview', 'evidence', 'second-opinion'
   require_relative '../lib/dcr/live_cli'
   DCR::LiveCLI.run(command, ARGV)
 when 'serve' then load File.join(SCRIPTS, 'serve.rb') # in this process, so `dcr stop` finds it as `bin/dcr serve`

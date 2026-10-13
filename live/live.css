@@ -78,7 +78,11 @@
 #dcr-update svg{flex:none;width:15px;height:15px;color:var(--ink-neutral-5)}
 #dcr-update.is-stale{color:var(--accent);font-weight:650}
 #dcr-update.is-stale svg{color:var(--accent)}
-#dcr-update:disabled{cursor:progress}
+#dcr-update.is-busy:disabled{cursor:progress}
+#dcr-update:disabled:not(.is-busy){opacity:.55;cursor:not-allowed}
+.dcr-follow-text{display:grid;gap:10px;font-size:14px;line-height:1.55}
+.dcr-follow-text p{margin:0}
+.dcr-follow-warning{padding:9px 12px;border:1px solid var(--line-amber-3);border-radius:calc(8px * var(--round));background:var(--bg-amber-1);color:var(--ink-neutral-2)}
 @media(prefers-reduced-motion:no-preference){#dcr-update.is-busy svg{animation:gh-spin .9s linear infinite}}
 #dcr-arrival strong{display:block;font-weight:600}
 #dcr-arrival div>span{display:block;max-width:28ch;overflow:hidden;color:var(--muted);text-overflow:ellipsis;white-space:nowrap}

@@ -5,6 +5,7 @@
 require_relative 'review'
 require_relative '../lib/dcr/state'
 require_relative '../lib/dcr/anchors'
+require_relative '../lib/dcr/activity'
 require 'securerandom'
 
 module ReviewSeries
@@ -207,6 +208,7 @@ module ReviewSeries
     review.delete('qa') # Captures prove a particular runtime/snapshot, never an automatic increment.
     review.delete('previews') # Rendered from one snapshot's templates; re-render after code changes.
     review.delete('preview_scope')
+    review.delete('no_screenshots')
     review.delete('screenshots') # of the app as that code drew it; an update keeps those whose files did not change
     review.delete('unreviewed')
     review
@@ -249,8 +251,10 @@ module ReviewSeries
   end
 
   # The series' code as it is now. Refused when the checkout no longer continues the previous revision.
-  def current_snapshot(repo, history, previous, head: nil, base: nil, working_tree: false)
-    if history['origin_mode'] == 'pr'
+  # checkout: a pull request's series read from the checkout as it is, which its reviewer chose
+  # (Follow my checkout), instead of from a verified head.
+  def current_snapshot(repo, history, previous, head: nil, base: nil, working_tree: false, checkout: false)
+    if history['origin_mode'] == 'pr' && !checkout
       raise ArgumentError, 'PR series requires explicitly verified --base and --head refs' unless base && head
       current_base = DynamicReviews.git(repo, 'merge-base', DynamicReviews.sha(repo, base), DynamicReviews.sha(repo, head)).strip
       raise ArgumentError, 'PR base changed; start a new baseline series' unless current_base == history['base']
@@ -263,8 +267,12 @@ module ReviewSeries
     if history['origin_mode'] == 'pr'
       # An amended or force-pushed PR keeps the verified base, and the comparison is by content against it.
       # Only a head moved back to an ancestor of the previous revision is refused.
-      if common == current['head'] && common != previous['snapshot']['head']
-        raise ArgumentError, 'PR head moved back to an ancestor of the previous revision; start a new baseline series'
+      # A verified head is compared with the last one verified, not with local commits a followed
+      # checkout showed in between.
+      last = checkout ? previous['snapshot']['head'] : history['pinned_head'] || previous['snapshot']['head']
+      back = DynamicReviews.git(repo, 'merge-base', last, current['head'], allowed: [0, 1]).strip
+      if back == current['head'] && back != last
+        raise ArgumentError, checkout ? 'This checkout is behind the code the review shows: pull the branch first, or ask your agent for a new review' : 'PR head moved back to an ancestor of the previous revision; start a new baseline series'
       end
     else
       raise ArgumentError, 'History was rewritten; start a new baseline series and reassess the full scope' unless common == previous['snapshot']['head']
@@ -364,6 +372,8 @@ module ReviewSeries
       fresh = DynamicReviews.collect(repo: plan['repo'], mode: 'series', base: history['base'], head: snapshot['working_tree'] ? nil : snapshot['head'])
       raise ArgumentError, 'Code moved since preparation; prepare again' unless code_key(fresh) == plan['snapshot_key'] && code_key(snapshot) == plan['snapshot_key'] && fresh['head'] == snapshot['head']
       raise ArgumentError, 'Context moved since preparation; prepare again' unless contexts(fresh, plan['context'].keys) == plan['context']
+      # A review of the verified head again ends following the checkout.
+      %w[follows pinned_head].each { |field| history.delete(field) } if history['origin_mode'] == 'pr' && !snapshot['working_tree']
       review = apply_update(draft, update)
       review['findings'], states = finding_states(plan, update)
       paths = (plan['context'].keys + Array(update['context_paths'])).uniq
@@ -546,13 +556,21 @@ module ReviewSeries
       fresh = DynamicReviews.collect(repo: repo, mode: 'series', base: snapshot['base'], head: snapshot['mode'] == 'uncommitted' || snapshot['working_tree'] ? nil : snapshot['head'])
       raise ArgumentError, 'Code changed while reviewing; run `dcr sync` to bring the review up to it, then finish with a review of that code' unless code_key(fresh) == code_key(snapshot) && fresh['head'] == snapshot['head']
       review = normalize(read(review))
-      %w[history status qa previews preview_scope screenshots].each { |field| review.delete(field) }
+      %w[history status qa previews preview_scope screenshots no_screenshots].each { |field| review.delete(field) }
       entry = history['revisions'].last
       posted = with_posted(path, history, payload.fetch('review'))
       own = Array(review['comments']).map { |comment| comment['id'] }
       review['comments'] = Array(review['comments']) + posted.reject { |comment| own.include?(comment['id']) }
       shots = with_screenshots(path, history, payload.fetch('review'))
       review['screenshots'] = shots if shots.any?
+      # A review served with the running app shows what the change looks like, or says why not:
+      # an agent that skipped the screenshots is told here, where it cannot miss it.
+      why = DCR::State.new(path).read.dig('no_screenshots', DCR::State.review_key(entry['fingerprint'], name, entry['number']))
+      served = (JSON.parse(File.read(File.join(path, '.serve.json'))) rescue {})
+      if served['app_port'] && shots.empty? && why.to_s.empty?
+        raise ArgumentError, "This review is served with the running app, but shows no screenshot of it. Do \"Show the UI changes\" in SKILL.md now: take the screenshots in a tab of your own and post them with `dcr screenshot --repo #{repo} --name #{name} --file <screenshots.json>`. If there is nothing to show (no UI in this change, or no tool here that saves an image), say why instead: `dcr screenshot --repo #{repo} --name #{name} --none '<why, in a few words>'`. Then run this finish again."
+      end
+      review['no_screenshots'] = why if shots.empty? && !why.to_s.empty?
       # The Risk ranking the agent posted while reviewing, unless the full review brings its own.
       ranked = DCR::State.new(path).read.dig('risk_rankings', DCR::State.review_key(entry['fingerprint'], name, entry['number']))
       review['risk_ranking'] = ranked.except('posted_at') if ranked&.key?('files') && !review.key?('risk_ranking')
@@ -603,16 +621,22 @@ module ReviewSeries
   # shows the current diff, keeps the explanations of the ranges that did not change and leaves the
   # others unexplained. Every comment follows its lines or becomes outdated, and the reader's
   # progress and conversations come along. Returns what changed, for whoever reviews it next.
-  def sync(repo:, name:, **_unused)
+  def sync(repo:, name:, follow: false, **_unused)
     path = directory(repo, name)
     locked(path) do
       history = manifest(path)
       raise ArgumentError, 'Series belongs to another checkout' unless history['repo'] == File.realpath(repo)
       raise ArgumentError, 'Branch changed; choose the correct series or start a new one' unless history['branch'] == branch(repo)
-      raise ArgumentError, 'A pull request review follows its verified head: use `dcr series prepare --base <ref> --head <ref>`' if history['origin_mode'] == 'pr'
       previous = latest(path, history)
       entry = history['revisions'].last
-      current = current_snapshot(repo, history, previous, working_tree: true)
+      pr = history['origin_mode'] == 'pr'
+      # A pull request's review shows its pushed head until the reviewer has it follow the checkout.
+      if pr && history['follows'] != 'checkout'
+        raise ArgumentError, 'This review follows its pull request, not your checkout. The reviewer chooses Follow my checkout in the page (Update), or you run `dcr sync --follow-checkout` when they ask for it.' unless follow
+        history.merge!('follows' => 'checkout', 'pinned_head' => previous['snapshot']['head'])
+        atomic_write(File.join(path, 'manifest.json'), JSON.pretty_generate(history))
+      end
+      current = current_snapshot(repo, history, previous, working_tree: true, checkout: pr)
       next({'status' => 'unchanged', 'revision' => entry['number']}) if code_key(previous['snapshot']) == code_key(current)
       changes = compare(previous['snapshot'], current)
       in_progress = previous.dig('review', 'status') == 'in_progress'
@@ -678,10 +702,25 @@ module ReviewSeries
     path = directory(repo, name)
     history = manifest(path)
     raise ArgumentError, 'Branch changed; choose the correct series or start a new one' unless history['branch'] == branch(repo)
-    raise ArgumentError, 'A pull request review is updated by your agent, from its verified head' if history['origin_mode'] == 'pr'
     previous = latest(path, history)
-    changes = compare(previous['snapshot'], current_snapshot(repo, history, previous, working_tree: true))
-    {'changed' => changes['files'].count { |file| file['state'] != 'unchanged' }}
+    pr = history['origin_mode'] == 'pr'
+    changes = compare(previous['snapshot'], current_snapshot(repo, history, previous, working_tree: true, checkout: pr))
+    result = {'changed' => changes['files'].count { |file| file['state'] != 'unchanged' }}
+    # pinned: it shows the pull request's head, and the reader has not chosen the checkout yet.
+    result['pinned'] = true if pr && history['follows'] != 'checkout'
+    result['warning'] = rebased(repo, history, previous) if pr
+    result.compact
+  end
+
+  # Says so when the branch was rebased or merged onto a newer base than the review starts from:
+  # an update would then show what the base branch gained too. Known only when the review named it.
+  def rebased(repo, history, previous)
+    label = previous.dig('review', 'comparison', 'base_label').to_s
+    return if label.empty? || label.start_with?('-')
+    ref = ["origin/#{label}", label].find { |name| !DynamicReviews.git(repo, 'rev-parse', '--verify', '--quiet', '--end-of-options', "#{name}^{commit}", allowed: [0, 1, 128]).strip.empty? }
+    return unless ref
+    start = DynamicReviews.git(repo, 'merge-base', ref, 'HEAD', allowed: [0, 1]).strip
+    "This branch now starts from a newer #{label} than the review does, so an update would also show what #{label} gained since. Ask your agent for a new review instead." unless start.empty? || start == history['base']
   end
 
   # Gives every range no item explains to its file's first item, unexplained, and puts the files
@@ -720,6 +759,8 @@ module ReviewSeries
     raise ArgumentError, 'Revision already exists; preserved rather than overwritten' if File.exist?(output)
     entry = {'number' => number, 'created' => Time.now.utc.iso8601, 'captured' => snapshot['created'], 'head' => snapshot['head'], 'fingerprint' => snapshot['fingerprint'], 'title' => review['title'], 'summary' => increment['summary']}
     history['revisions'] << entry
+    # A pull request's review that shows the checkout says so: its code may not be on the pull request.
+    increment = increment.merge('local' => true) if history['origin_mode'] == 'pr' && history['follows'] == 'checkout' && snapshot['working_tree']
     review['history'] = increment.merge('series' => history['name'], 'revision' => number, 'entries' => history['revisions'], 'origin_mode' => history['origin_mode'])
     html = DynamicReviews.review_html(snapshot, review)
     # Revision is durable first; manifest is the commit point. Old HTML is never rewritten.
@@ -786,7 +827,16 @@ module ReviewSeries
     end
     parser.parse!(argv)
     raise ArgumentError, parser.to_s unless %w[start prepare publish finish sync qa previews enrich refresh list].include?(command)
-    result = public_send(command, **options)
+    # For `dcr log`: what ran on the series, and what it was refused with.
+    series = options[:repo] && options[:name].to_s.match?(/\A[a-z0-9]+(?:-[a-z0-9]+)*\z/) ? File.join(File.expand_path(options[:repo]), '.reviews', options[:name]) : nil
+    said = ["series #{command}", *%i[working_tree record targeted in_progress].select { |flag| options[flag] }.map { |flag| "--#{flag.to_s.tr('_', '-')}" }].join(' ')
+    begin
+      result = public_send(command, **options)
+    rescue ArgumentError, KeyError, SystemCallError, JSON::ParserError => error
+      DCR::Activity.record(series, said, 'failed', error.message)
+      raise
+    end
+    DCR::Activity.record(series, said, 'ok')
     puts result.is_a?(String) ? result : JSON.pretty_generate(result)
   end
 end

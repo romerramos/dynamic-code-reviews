@@ -2033,40 +2033,116 @@
   function unlinkedFlows() {
     return (review.qa?.flows || []).map((flow,index) => ({flow,index})).filter(({flow}) => !generatedComments.some(comment => ReviewTools.flowOwner(flow) === comment.id));
   }
-  // --- UI changes ------------------------------------------------------------------------------
+  // --- Seen in the app ------------------------------------------------------------------------------
   // Screenshots of the running app the agent took while it reviewed. Those on no comment show what
   // the change looks like, under What changed; the others sit on their comment. A QA clip of the
   // same thing takes a screenshot's place and keeps it as its thumbnail.
   let screenshots = review.screenshots || [];
   const shotOf = flow => flow.screenshot_id ? screenshots.find(shot => shot.id === flow.screenshot_id) || null : null;
-  function shotFigure(shot, withFiles = true) {
-    const clip = (review.qa?.flows || []).findIndex(flow => flow.screenshot_id === shot.id);
-    const media = clip < 0
-      ? `<button type="button" class="shot-image" data-expand-image aria-label="${escape(`Enlarge: ${shot.title}`)}"><img loading="lazy" alt="${escape(shot.title)}" src="${escape(shot.data_uri)}"></button>`
-      : `<button type="button" class="shot-image" data-open-evidence="${clip}" aria-haspopup="dialog" aria-label="${escape(`Watch video: ${shot.title}`)}"><img loading="lazy" alt="" src="${escape(shot.data_uri)}"><span class="qa-preview-play" aria-hidden="true">▶</span></button>`;
-    const links = withFiles ? shot.paths.map(path => {
-      const file = snapshot.files.find(candidate => candidate.path === path);
-      const layer = file && layers.find(candidate => candidate.items.some(item => item.file === file.id));
-      return layer ? `<button type="button" class="shot-file" data-file-link="${escape(file.id)}" data-file-layer="${escape(layer.id)}" title="Open ${escape(path)}">${escape(path.slice(path.lastIndexOf('/') + 1))}</button>` : '';
-    }).join('') : '';
-    return `<figure class="shot">${media}<figcaption><strong>${escape(shot.title)}</strong>${shot.caption ? `<span>${escape(shot.caption)}</span>` : ''}${shot.page || links ? `<span class="shot-meta">${shot.page ? `<code>${escape(shot.page)}</code>` : ''}${links}</span>` : ''}</figcaption></figure>`;
+  const shotClip = shot => (review.qa?.flows || []).findIndex(flow => flow.screenshot_id === shot.id);
+  const shotLinks = shot => shot.paths.map(path => {
+    const file = snapshot.files.find(candidate => candidate.path === path);
+    const layer = file && layers.find(candidate => candidate.items.some(item => item.file === file.id));
+    return layer ? `<button type="button" class="shot-file" data-file-link="${escape(file.id)}" data-file-layer="${escape(layer.id)}" title="Open ${escape(path)}">${escape(path.slice(path.lastIndexOf('/') + 1))}</button>` : '';
+  }).join('');
+  let noScreenshots = review.no_screenshots || null; // why there are none, in the agent's words
+  // Everything there is to see of the running app, in one list: the screenshots, then what the QA
+  // review recorded. A clip that replaced a screenshot stands where the screenshot stood. With a
+  // scope (a comment's id) it is that comment's screenshots only.
+  function seenItems(scope) {
+    if (scope) return screenshots.filter(shot => shot.comment_id === scope && shotClip(shot) < 0).map(shot => ({shot}));
+    const flows = review.qa?.flows || [];
+    const placed = new Set();
+    const items = [];
+    [...screenshots.filter(shot => !shot.comment_id), ...screenshots.filter(shot => shot.comment_id)].forEach(shot => {
+      const clip = shotClip(shot);
+      // The same image posted twice (once for the change, once on a comment) is one thing to look at.
+      const twin = clip < 0 && items.find(item => !item.flow && item.shot.data_uri === shot.data_uri);
+      if (twin) { twin.also.push(shot); return; }
+      if (clip >= 0) placed.add(clip);
+      items.push(clip < 0 ? {shot, also: []} : {shot, flow: flows[clip], index: clip, also: []});
+    });
+    flows.forEach((flow, index) => { if (!placed.has(index) && (flow.motion_preview || flow.assets?.length)) items.push({flow, index}); });
+    return items;
   }
+  const seenVideo = item => [item.flow?.motion_preview, ...(item.flow?.assets || [])].find(asset => asset?.data_uri.startsWith('data:video/'))?.data_uri || null;
+  const seenImage = item => item.shot?.data_uri || (item.flow?.assets || []).filter(asset => asset.data_uri.startsWith('data:image/')).at(-1)?.data_uri || item.flow?.motion_preview?.data_uri.match(/^data:image\//)?.input || null;
+  const seenComment = item => comments.find(comment => comment.id === (item.shot?.comment_id || (item.flow && ReviewTools.flowOwner(item.flow)))) || null;
+  const seenThumb = (item, extra = '') => seenImage(item) ? `<img loading="lazy" alt="" src="${escape(seenImage(item))}"${extra}>` : `<video muted playsinline preload="metadata" tabindex="-1" aria-hidden="true" src="${escape(seenVideo(item))}#t=0.5"${extra}></video>`;
+  const seenCount = items => {
+    const recordings = items.filter(item => item.flow).length;
+    const stills = items.length - recordings;
+    return [stills ? `${stills} ${stills === 1 ? 'screenshot' : 'screenshots'}` : '', recordings ? `${recordings} ${recordings === 1 ? 'recording' : 'recordings'}` : ''].filter(Boolean).join(' and ');
+  };
+  // The Overview keeps it out of the way: one pile of the first three, which opens them all, one
+  // at a time with room to read (openShots).
   function renderUIChanges() {
-    const shown = screenshots.filter(shot => !shot.comment_id);
-    return shown.length ? `<section class="ui-changes" aria-labelledby="ui-changes-title"><header><h2 id="ui-changes-title">UI changes</h2><p>The running app as your agent saw it${shown.some(shot => (review.qa?.flows || []).some(flow => flow.screenshot_id === shot.id)) ? '. ▶ plays the recording' : ''}.</p></header><div class="shot-grid">${shown.map(shot => shotFigure(shot)).join('')}</div></section>` : '';
+    const items = seenItems('');
+    if (!items.length) return noScreenshots ? `<p class="ui-changes-none"><strong>Seen in the app</strong> No screenshots: ${escape(noScreenshots)}</p>` : '';
+    const pile = items.slice(0, 3).map((item, index) => seenThumb(item, ` style="--i:${index}"`)).reverse().join('');
+    const recorded = items.some(item => item.flow);
+    return `<section class="ui-changes"><button type="button" class="shot-stack" data-open-shots="" aria-haspopup="dialog" aria-label="${escape(`Seen in the app: view ${seenCount(items)}`)}"><span class="shot-pile" aria-hidden="true">${pile}${recorded ? '<span class="qa-preview-play">▶</span>' : ''}</span><span class="shot-stack-text"><strong>Seen in the app</strong><span>${seenCount(items)}. ${recorded ? 'What this change looks like, and what the QA review recorded.' : 'See what this change looks like.'}</span></span><span class="shot-stack-action">View ${icon('arrow-right')}</span></button></section>`;
   }
   // A comment's screenshots that no clip has replaced; its clips are its evidence.
   function commentShots(comment) {
-    const own = screenshots.filter(shot => shot.comment_id === comment.id && !(review.qa?.flows || []).some(flow => flow.screenshot_id === shot.id));
-    return own.length ? `<div class="shot-grid shot-grid-comment">${own.map(shot => shotFigure(shot, false)).join('')}</div>` : '';
+    const own = seenItems(comment.id);
+    return own.length ? `<div class="shot-thumbs">${own.map(({shot}) => `<button type="button" class="shot-thumb" data-open-shots="${escape(comment.id)}" data-shot="${escape(shot.id)}" aria-haspopup="dialog" aria-label="${escape(`View screenshot: ${shot.title}`)}"><img loading="lazy" alt="" src="${escape(shot.data_uri)}"><span>${escape(shot.title)}</span></button>`).join('')}</div>` : '';
   }
+  // One at a time, large, with its title and what it shows; the arrows or the strip below move
+  // through them, and each says where it belongs: its comment, or the files it shows.
+  let shotShow = null;
+  const shotShowNode = () => document.querySelector('.gslide.current .shot-show');
+  function drawShot() {
+    const node = shotShowNode();
+    if (!node || !shotShow) return;
+    const {list, at} = shotShow;
+    const item = list[at];
+    const {shot, flow} = item;
+    const comment = seenComment(item);
+    const results = {passed: 'Passed', failed: 'Failed', blocked: 'Blocked', 'not-run': 'Not run'};
+    const text = flow ? `<p><span class="qa-preview-status ${escape(flow.result)}">${results[flow.result]}</span> ${escape(flow.observed)}</p>` : shot.caption ? `<p>${escape(shot.caption)}</p>` : '';
+    // Every comment it is evidence for (the same image may sit on one and also show the change).
+    const on = [comment, ...(item.also || []).map(other => seenComment({shot: other}))].filter((entry, index, all) => entry && all.indexOf(entry) === index);
+    const meta = `${shot?.page ? `<code>${escape(shot.page)}</code>` : ''}${shot && !shot.comment_id ? shotLinks(shot) : ''}${on.map(entry => `<button type="button" class="shot-file" data-shot-comment="${escape(entry.id)}">On the comment: ${escape(entry.subject)} →</button>`).join('')}${flow ? `<button type="button" class="shot-file" data-open-evidence="${item.index}">Steps and details →</button>` : ''}`;
+    const video = seenVideo(item);
+    const media = video ? `<video controls playsinline preload="metadata"${seenImage(item) ? ` poster="${escape(seenImage(item))}"` : ''} aria-label="${escape(flow.title)}" src="${escape(video)}"></video>` : `<img alt="${escape((flow || shot).title)}" src="${escape(seenImage(item))}" title="Click for its real size">`;
+    const strip = list.length > 1 ? `<footer><button type="button" class="btn btn-sm btn-ghost" data-shot-step="-1" aria-label="Previous">← Previous</button><span class="shot-show-strip">${list.map((other, index) => `<button type="button" data-shot-at="${index}" aria-label="${escape((other.flow || other.shot).title)}" aria-current="${index === at}">${seenThumb(other)}${other.flow ? '<i aria-hidden="true">▶</i>' : ''}</button>`).join('')}</span><button type="button" class="btn btn-sm btn-ghost" data-shot-step="1" aria-label="Next">Next →</button></footer>` : '';
+    node.innerHTML = `<header><p class="shot-show-count">${shotShow.scope ? 'Screenshot' : `Seen in the app · ${flow ? 'Recording' : 'Screenshot'}`} · ${at + 1} of ${list.length}</p><h2>${escape((flow || shot).title)}</h2>${text}${meta ? `<p class="shot-meta">${meta}</p>` : ''}</header><div class="shot-show-stage">${media}</div>${strip}`;
+    node.focus({preventScroll: true});
+  }
+  function stepShot(by) {
+    shotShow.at = (shotShow.at + by + shotShow.list.length) % shotShow.list.length;
+    drawShot();
+  }
+  function openShots(scope, id, anchor) {
+    const list = seenItems(scope);
+    if (!list.length) return;
+    shotShow = {scope, list, at: id ? Math.max(0, list.findIndex(item => item.shot?.id === id)) : 0};
+    viewerAnchor = anchor;
+    viewerCode = null;
+    viewerLabel = 'Seen in the app';
+    const content = document.createElement('section');
+    content.className = 'shot-show';
+    content.tabIndex = -1;
+    expandedViewer.setElements([{type:'inline', content, width:'min(96vw, 1320px)', height:'92vh', draggable:false}]);
+    expandedViewer.open();
+    drawShot();
+  }
+  document.addEventListener('keydown', event => {
+    if (!shotShow || !shotShowNode() || !['ArrowLeft', 'ArrowRight'].includes(event.key) || shotShow.list.length < 2) return;
+    event.preventDefault();
+    event.stopPropagation();
+    stepShot(event.key === 'ArrowRight' ? 1 : -1);
+  }, true);
   window.ReviewScreenshots = {
     // posted: what the agent sent to the open page, images loaded.
-    set(posted) {
+    set(posted, none = null) {
       const next = [...(review.screenshots || []).filter(shot => !posted.some(own => own.id === shot.id)), ...posted];
       const mark = list => JSON.stringify(list.map(shot => [shot.id, shot.posted_at, shot.title, shot.data_uri.length]));
-      if (mark(next) === mark(screenshots)) return;
+      none ||= review.no_screenshots || null;
+      if (mark(next) === mark(screenshots) && none === noScreenshots) return;
       screenshots = next;
+      noScreenshots = none;
       const scroll = $('content').scrollTop;
       render(); $('content').scrollTop = scroll;
     }
@@ -2224,7 +2300,7 @@
     const historyLinks = revision ? `<nav class="overview-history" aria-label="Review history"><a href="${revision.preview ? '' : '../'}current.html">Latest review</a><a href="${revision.preview ? '' : '../'}index.html">All revisions</a></nav>` : '';
     const empty = !generated.length && !feedback.findings.length && !pending && !unlinkedFlows().some(({flow}) => flow.result === 'failed') ? `<p class="review-empty">${inProgress ? 'No comments yet. They appear here as your agent writes them.' : 'No issues found in this review.'}</p>` : '';
     const progressBox = inProgress ? `<div class="review-progress" role="status"><span class="review-progress-dot" aria-hidden="true"></span><div><h3>Your review is in progress</h3><p>Start reading now. Your agent's comments appear here and beside the code as it writes them, with a notice when one arrives, even on a file you already read. Explanations, test results and the finished walkthrough follow. Template previews and QA open once it is done.</p><p class="review-progress-count">${generated.length ? `${generated.length} comment${generated.length === 1 ? '' : 's'} so far` : 'No comments yet'}</p></div><button type="button" class="btn btn-sm btn-primary" data-start-reading>Start reading ${icon('arrow-right')}</button></div>` : '';
-    return `<div class="overview-reading"><header class="overview-intro"><p class="eyebrow">Review overview</p><h1>${escape(review.title)}</h1><h2 class="what-changed-title">What changed</h2><p class="overview-scope">${escape(ReviewTools.comparisonText(snapshot, review))}</p><p class="lead">${escape(review.summary)}</p>${revision && revision.revision > 1 ? `<p class="overview-update"><strong>Review revision ${revision.revision}</strong> · ${escape(revision.summary)}</p>` : ''}${historyLinks}${renderUIChanges()}${progressBox}</header>${inProgress ? '' : renderVisualOptions()}${pending ? `<p class="overview-notice">${pending} previous finding${pending === 1 ? '' : 's'} still need checking. See Review details.</p>` : ''}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}${renderRiskRanking()}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${generated.map(commentCard).join('')}${unlinkedFlows().filter(({flow}) => flow.result === 'failed').map(({flow,index}) => qaFlow(flow,index)).join('')}</section>${renderOtherChecks()}${renderMyReview()}</div>`;
+    return `<div class="overview-reading"><header class="overview-intro"><p class="eyebrow">Review overview</p><h1>${escape(review.title)}</h1><h2 class="what-changed-title">What changed</h2><p class="overview-scope">${escape(ReviewTools.comparisonText(snapshot, review))}</p><p class="lead">${escape(review.summary)}</p>${revision && revision.revision > 1 ? `<p class="overview-update"><strong>Review revision ${revision.revision}</strong> · ${escape(revision.summary)}</p>` : ''}${revision?.local ? '<p class="overview-notice">This revision shows your checkout, not the pull request as pushed. Code here may not be on the pull request yet.</p>' : ''}${historyLinks}${renderUIChanges()}${progressBox}</header>${inProgress ? '' : renderVisualOptions()}${pending ? `<p class="overview-notice">${pending} previous finding${pending === 1 ? '' : 's'} still need checking. See Review details.</p>` : ''}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}${renderRiskRanking()}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${generated.map(commentCard).join('')}${unlinkedFlows().filter(({flow}) => flow.result === 'failed').map(({flow,index}) => qaFlow(flow,index)).join('')}</section>${renderOtherChecks()}${renderMyReview()}</div>`;
   }
 
   // On a phone the bar at the bottom has no pager, so a step ends with the way to the next one.
@@ -2895,6 +2971,7 @@
       await copyText(ReviewTools.visualPrompt(snapshot, review, {kind:'qa'})); return;
     }
     const evidencePreview = event.target.closest('[data-open-evidence]');
+    if (evidencePreview && event.target.closest('.shot-show [data-open-evidence]')) { const anchor = viewerAnchor; expandedViewer.close(); setTimeout(() => openEvidence(Number(evidencePreview.dataset.openEvidence), anchor), 60); return; }
     if (evidencePreview) { openEvidence(Number(evidencePreview.dataset.openEvidence), evidencePreview); return; }
     const sequenceControl = event.target.closest('[data-sequence-prev], [data-sequence-play], [data-sequence-next]');
     if (sequenceControl) {
@@ -2946,6 +3023,27 @@
       renderNavigation(); persist();
       $('content').scrollTop = componentScroll.get(scrollKey(componentTab.dataset.componentTab)) ?? $('content').scrollTop;
       return;
+    }
+    const shots = event.target.closest('[data-open-shots]');
+    if (shots) { openShots(shots.dataset.openShots, shots.dataset.shot, shots); return; }
+    if (event.target.closest('.shot-show') && shotShow) {
+      const step = event.target.closest('[data-shot-step]');
+      if (step) { stepShot(Number(step.dataset.shotStep)); return; }
+      const pick = event.target.closest('[data-shot-at]');
+      if (pick) { shotShow.at = Number(pick.dataset.shotAt); drawShot(); return; }
+      const stage = event.target.closest('.shot-show-stage');
+      if (stage) { if (event.target.tagName === 'IMG') stage.classList.toggle('is-actual'); return; }
+      // Where it belongs: the comment it is evidence for, on the Overview behind the viewer.
+      const where = event.target.closest('[data-shot-comment]');
+      if (where) {
+        expandedViewer.close();
+        select('overview');
+        const card = [...document.querySelectorAll('#content .review-thread')].find(node => node.dataset.threadId === where.dataset.shotComment);
+        if (card) { const details = card.querySelector('details'); if (details) details.open = true; card.scrollIntoView({block: 'center'}); card.querySelector('summary')?.focus({preventScroll: true}); }
+        return;
+      }
+      // A file opens behind the viewer, so the viewer goes.
+      if (event.target.closest('[data-file-link]')) expandedViewer.close();
     }
     const image = event.target.closest('[data-expand-image]');
     if (image) { expandImage(image); return; }

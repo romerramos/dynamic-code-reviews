@@ -19,7 +19,7 @@ module DCR
     KEY = /\A[A-Za-z0-9_.:-]{1,300}\z/
     AUTHORS = %w[user agent].freeze
 
-    def self.empty = {'version' => 1, 'rev' => 0, 'blobs' => {}, 'threads' => {}, 'previews' => {}, 'comments' => {}, 'screenshots' => {}, 'risk_rankings' => {}, 'verdicts' => {}, 'github' => {}, 'outbox' => [], 'acked' => 0, 'seq' => 0}
+    def self.empty = {'version' => 1, 'rev' => 0, 'blobs' => {}, 'threads' => {}, 'previews' => {}, 'comments' => {}, 'screenshots' => {}, 'no_screenshots' => {}, 'risk_rankings' => {}, 'verdicts' => {}, 'github' => {}, 'outbox' => [], 'acked' => 0, 'seq' => 0}
 
     # The key the page saves a revision's progress under (see LiveTools.progressKey).
     def self.review_key(fingerprint, series, number) = "dynamic-review:#{fingerprint}:#{series}:#{number}"
@@ -423,8 +423,15 @@ module DCR
           posted.reject! { |earlier| earlier['id'] == shot['id'] }
           posted << shot.merge('posted_at' => stamp)
         end
+        state['no_screenshots'].delete(key)
         posted
       end
+    end
+
+    # Why a review served with the running app shows none of it, in the agent's words.
+    def no_screenshots(key, reason)
+      check_key(key)
+      update { |state| state['no_screenshots'][key] = reason }
     end
 
     # --- a QA pass recorded by the agent ------------------------------------------------
