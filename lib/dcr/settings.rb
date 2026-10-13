@@ -68,6 +68,24 @@ module DCR
       on
     end
 
+    # How the reviewer writes on GitHub, in their own words, for the agent that drafts their
+    # comments (GitHubDraft); nil until they changed the default.
+    VOICE_LIMIT = 4000
+
+    def github_voice = saved['githubVoice'].is_a?(String) && !saved['githubVoice'].strip.empty? ? saved['githubVoice'] : nil
+
+    # The emojis the reviewer uses there, as they typed them; '' means none, nil that they never said.
+    def github_emojis = saved['githubEmojis'].is_a?(String) ? saved['githubEmojis'] : nil
+
+    # A blank voice goes back to the default. emojis: nil leaves them as they are.
+    def save_github_voice(text, emojis = nil)
+      text = text.to_s.strip
+      raise ArgumentError, "Keep it under #{VOICE_LIMIT} characters" if text.length > VOICE_LIMIT
+      raise ArgumentError, 'List a few emojis, or none' if emojis && !(emojis.is_a?(String) && emojis.length <= 120)
+      store(read, voice: text.empty? ? nil : text, emojis: emojis ? emojis.strip : github_emojis)
+      github_voice
+    end
+
     private
 
     MODEL = %r{\A[\w.:/@#+-]{1,120}\z}
@@ -82,10 +100,12 @@ module DCR
     end
 
     # The page writes display settings and adversaries separately; each write keeps the other.
-    def store(display, adversaries = self.adversaries, decided: adversaries_decided?, jevmypr: jevmypr_choices)
+    def store(display, adversaries = self.adversaries, decided: adversaries_decided?, jevmypr: jevmypr_choices, voice: github_voice, emojis: github_emojis)
       merged = adversaries.empty? ? display : display.merge('adversaries' => adversaries)
       merged = merged.merge('adversariesDecided' => true) if decided
       merged = merged.merge('jevmypr' => jevmypr) unless jevmypr.empty?
+      merged = merged.merge('githubVoice' => voice) if voice
+      merged = merged.merge('githubEmojis' => emojis) if emojis
       FileUtils.mkdir_p(File.dirname(@path), mode: 0o700)
       temporary = "#{@path}.#{Process.pid}.tmp"
       File.write(temporary, JSON.generate(merged), perm: 0o600)

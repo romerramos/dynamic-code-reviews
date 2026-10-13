@@ -510,3 +510,17 @@ body.dcr-has-app #qa-panel{display:none}
 }
 /* On a tablet too the verdict is on Overview, not a line over every file. */
 @media(min-width:651px) and (max-width:1199px){.review-area:has(.focus-reader) .dcr-jev{display:none}}
+
+/* Comment on GitHub: one box with the text that will be posted, and where it came from beneath. */
+.dcr-gh-box.dcr-gh-preview{max-width:640px;width:min(640px,calc(100vw - 32px))}
+.dcr-gh-box .gh-preview-text{min-height:210px;font-size:14.5px;line-height:1.6}
+.gh-voice-state{margin:0;font-size:12.5px;line-height:1.6;color:var(--muted)}
+.gh-voice-again{margin-left:6px;padding:0;border:0;background:none;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;white-space:nowrap}
+.gh-voice-again:hover{text-decoration:underline}
+.gh-voice-space{flex:1}
+.dcr-voice-link{display:block;width:100%;margin-top:10px;padding:9px 0 0;border:0;border-top:1px solid var(--line);background:none;color:var(--muted);font-size:12.5px;text-align:left;cursor:pointer}
+.dcr-voice-link:hover{color:var(--ink);text-decoration:underline}
+.gh-voice-emojis{display:grid;gap:5px;font-size:13px}
+.gh-voice-emojis span{font-weight:600}
+.dcr-gh-box .gh-voice-emojis input.gh-summary{min-height:0;height:38px;font-size:16px;resize:none}
+.gh-voice-emojis small{color:var(--muted);font-size:12.5px}

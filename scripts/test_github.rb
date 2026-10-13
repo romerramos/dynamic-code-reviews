@@ -141,3 +141,44 @@ Dir.mktmpdir('dcr-github-test') do |directory|
   assert(code == 502 && failed['error'].include?('gh auth login'), 'A GitHub failure must reach the page as a sentence')
   puts 'PASS the API remembers what was posted, never posts twice and reports failures as sentences'
 end
+
+# A comment is rewritten in the reviewer's voice before it goes anywhere, and the text they approve is kept.
+Dir.mktmpdir('dcr-github-draft-') do |root|
+  series = File.join(root, 'series')
+  FileUtils.mkdir_p(series)
+  body = ->(value) { -> { JSON.generate(value) } }
+  settings = DCR::Settings.new(File.join(root, 'config'))
+  asked = []
+  writer = lambda do |**given|
+    asked << given
+    given[:voice].include?('fail') ? raise(ArgumentError, 'Claude took longer than 2 minutes') : ['I think this may subtract the discount twice, what do you think? 🙂', 'claude']
+  end
+  api = DCR::LiveAPI.new(series, settings: settings, github: DCR::GitHub.new(series, gh: 'none'), draft: writer)
+  state = DCR::State.new(series)
+  state.update { |data| (data['threads'][KEY] = {})['c1'] = {'delivery' => 'draft', 'live' => false, 'messages' => [], 'opinions' => {'codex' => {'body' => 'It only runs once per render.'}}} }
+  assert(api.call('GET', '/api/github/voice', nil)[1] == {'voice' => DCR::GitHubDraft::DEFAULT_VOICE, 'custom' => false, 'emojis' => DCR::GitHubDraft::DEFAULT_EMOJIS}, 'The default voice is not offered')
+  code, started = api.call('POST', '/api/github/draft', body.({'key' => KEY, 'id' => 'c1', 'context' => 'issue (blocking): the discount is taken off twice'}))
+  assert(code == 200 && started['status'] == 'writing', 'A draft must start as being written')
+  sleep 0.05 until state.read.dig('github', KEY, 'drafts', 'c1', 'status') != 'writing'
+  draft = api.call('GET', "/api/state?key=#{KEY}", nil)[1].dig('github', 'drafts', 'c1')
+  assert(draft.values_at('status', 'agent') == %w[ready claude] && draft['body'].include?('what do you think?'), 'The page was not given the rewrite')
+  assert(asked.first[:opinions] == [{'agent' => 'codex', 'body' => 'It only runs once per render.'}] && asked.first[:voice] == DCR::GitHubDraft::DEFAULT_VOICE, 'The writer was not given the voice and the other opinions')
+  made = DCR::GitHubDraft.prompt(voice: 'Short and kind.', context: 'the comment', opinions: asked.first[:opinions])
+  assert(made.include?('Short and kind.') && made.include?('Codex: It only runs once per render.') && made.include?('Never mention AI') && made.include?('Say nothing about how the point was found or checked'), 'The prompt lost the voice, the opinions or its rules')
+  tried = []
+  answer = ->(agent, _prompt, **) { tried << agent; agent == 'codex' ? raise(ArgumentError, 'Codex did not answer') : 'Written.' }
+  wrote = DCR::GitHubDraft.write(context: 'c', opinions: [], voice: 'v', author: 'codex', adversaries: [{'agent' => 'codex', 'model' => 'x'}, {'agent' => 'claude'}], repo: root, ask: answer, installed: ->(_) { true })
+  assert(wrote == ['Written.', 'claude'] && tried == %w[codex claude], 'An agent that cannot answer did not hand over to the next')
+  assert(DCR::GitHubDraft.tidy("```\n\"Hello there\"\n```") == 'Hello there' && DCR::GitHubDraft.tidy('He said "no" twice') == 'He said "no" twice', 'A wrapped answer was not unwrapped')
+  assert(api.call('POST', '/api/github/voice', body.({'voice' => 'Make it fail.', 'emojis' => ' 😅 🙏 '}))[1] == {'voice' => 'Make it fail.', 'custom' => true, 'emojis' => '😅 🙏'} && settings.github_voice == 'Make it fail.', 'The voice was not saved')
+  assert(DCR::GitHubDraft.prompt(voice: 'v', context: 'c', emojis: '😅 🙏').include?('only these, which are the ones I use: 😅 🙏') && DCR::GitHubDraft.prompt(voice: 'v', context: 'c', emojis: '').include?('- No emojis at all.'), 'The prompt does not keep to the reviewer\'s emojis')
+  api.call('POST', '/api/github/draft', body.({'key' => KEY, 'id' => 'c1', 'context' => 'again'}))
+  sleep 0.05 until state.read.dig('github', KEY, 'drafts', 'c1', 'status') != 'writing'
+  assert(state.read.dig('github', KEY, 'drafts', 'c1').values_at('status', 'error') == ['failed', 'Claude took longer than 2 minutes'], 'A failed rewrite must say why')
+  assert(api.call('POST', '/api/github/voice', body.({'voice' => ' ', 'emojis' => ''}))[1].values_at('custom', 'emojis') == [false, ''], 'A blank voice must go back to the default, and no emojis must stay none')
+  # What the reviewer approved waits with the pending comment, and goes when it is taken off.
+  kept = api.call('POST', '/api/github/pending', body.({'key' => KEY, 'id' => 'c1', 'pending' => true, 'body' => 'My own words'}))[1]
+  assert(kept['bodies'] == {'c1' => 'My own words'} && kept['pending'].key?('c1'), 'The approved text was not kept with the pending comment')
+  assert(api.call('POST', '/api/github/pending', body.({'key' => KEY, 'id' => 'c1', 'pending' => false}))[1]['bodies'].empty?, 'The approved text outlived its pending comment')
+  puts 'PASS a comment is rewritten in the reviewer\'s voice in the background, and the text they approve is kept'
+end

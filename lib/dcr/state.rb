@@ -336,17 +336,30 @@ module DCR
     # Which comments wait in the reviewer's pending GitHub review, and which were posted (with
     # their link). Kept here, not in the browser, so every device shows the same.
 
-    def github_pending(key, id, pending)
+    # body: the text the reviewer approved in the preview, posted in place of the comment as written.
+    def github_pending(key, id, pending, body = nil)
       check_key(key)
       raise ArgumentError, 'Invalid comment id' unless id.to_s.match?(ID)
       update do |state|
         entry = github_entry(state, key)
         raise ArgumentError, 'That comment is already on GitHub' if entry['posted'].key?(id)
-        if pending then entry['pending'][id] = Time.now.utc.iso8601
-        else entry['pending'].delete(id)
+        if pending
+          entry['pending'][id] = Time.now.utc.iso8601
+          body.to_s.strip.empty? ? entry['bodies'].delete(id) : entry['bodies'][id] = text(body)
+        else
+          entry['pending'].delete(id)
+          entry['bodies'].delete(id)
         end
         entry
       end
+    end
+
+    # A comment being rewritten in the reviewer's voice for GitHub: {'status' => 'writing'}, then
+    # {'status' => 'ready', 'body', 'agent'} or {'status' => 'failed', 'error'}.
+    def github_draft(key, id, draft)
+      check_key(key)
+      raise ArgumentError, 'Invalid comment id' unless id.to_s.match?(ID)
+      update { |state| github_entry(state, key)['drafts'][id] = draft.merge('at' => Time.now.utc.iso8601) }
     end
 
     def github_posted(key, results, review: nil)
@@ -367,6 +380,8 @@ module DCR
       state['github'][key]['pending'] ||= {}
       state['github'][key]['posted'] ||= {}
       state['github'][key]['reviews'] ||= []
+      state['github'][key]['bodies'] ||= {}
+      state['github'][key]['drafts'] ||= {}
       state['github'][key]
     end
 

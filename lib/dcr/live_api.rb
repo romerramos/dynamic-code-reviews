@@ -4,6 +4,7 @@ require 'json'
 require 'uri'
 require_relative 'agent_catalog'
 require_relative 'github'
+require_relative 'github_draft'
 require_relative 'jevmypr'
 require_relative 'page'
 require_relative 'progress_archive'
@@ -22,7 +23,10 @@ module DCR
     # catalog: callable(fresh) listing the agent CLIs here. ask_adversaries: callable(key, id, text)
     # that has the reviewer's adversaries answer a question in the background. jevmypr: the client
     # for the outside verdict, asked only for a repository whose reviewer turned it on.
-    def initialize(directory, settings: Settings.new, evidence: nil, github: GitHub.new(directory), catalog: nil, ask_adversaries: nil, jevmypr: JevMyPR.new)
+    # draft: callable(context:, opinions:, voice:, author:, adversaries:, repo:) returning [text, agent],
+    # which writes a comment in the reviewer's voice for GitHub.
+    def initialize(directory, settings: Settings.new, evidence: nil, github: GitHub.new(directory), catalog: nil, ask_adversaries: nil, jevmypr: JevMyPR.new, draft: GitHubDraft.method(:write))
+      @draft = draft
       @jevmypr = jevmypr
       @state = State.new(directory)
       @settings = settings
@@ -77,7 +81,10 @@ module DCR
       when ['POST', '/api/finish'] then [200, {'entry' => @state.finish(json(body)['key'])}]
       when ['GET', '/api/github'] then [200, @github.status(key)]
       when ['POST', '/api/github/comment'] then github_comment(json(body))
-      when ['POST', '/api/github/pending'] then (input = json(body); [200, @state.github_pending(input['key'], input['id'], input['pending'] == true)])
+      when ['POST', '/api/github/pending'] then (input = json(body); [200, @state.github_pending(input['key'], input['id'], input['pending'] == true, input['body'])])
+      when ['POST', '/api/github/draft'] then [200, github_draft(json(body))]
+      when ['GET', '/api/github/voice'] then [200, github_voice]
+      when ['POST', '/api/github/voice'] then (input = json(body); @settings.save_github_voice(input['voice'], input['emojis']); [200, github_voice])
       when ['POST', '/api/github/review'] then github_review(json(body))
       else [404, {'error' => 'Not found'}]
       end
@@ -166,6 +173,30 @@ module DCR
       rescue StandardError => error
         warn "Adversaries could not be asked about #{id}: #{error.message}"
       end
+    end
+
+    def github_voice = {'voice' => @settings.github_voice || GitHubDraft::DEFAULT_VOICE, 'custom' => !@settings.github_voice.nil?, 'emojis' => @settings.github_emojis || GitHubDraft::DEFAULT_EMOJIS}
+
+    # The preview asks for a comment in the reviewer's voice: an agent writes it in the background,
+    # from what the page sends (the comment with its code and conversation) and the opinions kept
+    # beside the thread. Every open page sees it arrive through the poll.
+    def github_draft(input)
+      key, id, context = input.values_at('key', 'id', 'context')
+      raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
+      raise ArgumentError, 'Nothing to rewrite' unless context.is_a?(String) && !context.strip.empty? && context.length <= 200_000
+      opinions = (@state.read.dig('threads', key, id.to_s, 'opinions') || {}).filter_map { |agent, opinion| {'agent' => agent, 'body' => opinion['body']} if opinion['body'] }
+      started = @state.github_draft(key, id, {'status' => 'writing'})
+      # The agent that ran the review: the one listening now, else the one the comment is credited to.
+      author = @state.listener || (input['author'].to_s if input['author'].to_s.match?(Agents::SLUG))
+      voice, adversaries, repo = @settings.github_voice || GitHubDraft::DEFAULT_VOICE, @settings.adversaries, manifest['repo'] || Dir.pwd
+      emojis = @settings.github_emojis || GitHubDraft::DEFAULT_EMOJIS
+      Thread.new do
+        text, agent = @draft.call(context: context, opinions: opinions, voice: voice, emojis: emojis, author: author, adversaries: adversaries, repo: repo)
+        @state.github_draft(key, id, {'status' => 'ready', 'body' => text, 'agent' => agent})
+      rescue StandardError => error
+        @state.github_draft(key, id, {'status' => 'failed', 'error' => error.message[0, 300]})
+      end
+      started
     end
 
     # Posting the same comment twice (a double click, a second device) returns the first post.
