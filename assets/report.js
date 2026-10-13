@@ -3553,7 +3553,6 @@
   $('repo-label').textContent = snapshot.repo.split('/').pop();
   const scope = ReviewTools.scopeLabel(snapshot, review);
   $('scope').innerHTML = `<span class="badge neutral" title="${escape(scope)}">${escape(scope)}</span>`;
-  $('file-total').textContent = `${files.size} files`;
   const hash = location.hash.slice(1);
   if (views().includes(hash)) state.view = hash;
   if (state.view !== saved.view) state.navFile = null;

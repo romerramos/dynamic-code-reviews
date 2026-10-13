@@ -194,8 +194,6 @@
   [data-theme^="terminal-"] body.ledger-open:not(.zen) .ledger{border:0;outline:1px solid var(--line);outline-offset:-1px}
   [data-theme^="terminal-"] body.ledger-open:not(.zen)[data-pane="ledger"] .ledger{outline-color:var(--pane-ring)}
 }
-[data-theme^="terminal-"] .sidebar-heading strong{text-transform:uppercase;font-weight:700;color:var(--accent)}
-[data-theme^="terminal-"] .sidebar-heading strong::before{content:"▌";color:var(--terminal-hot);margin-right:.5ch}
 [data-theme^="terminal-"] .sidebar nav button{margin:0;padding:6px 1ch;border:0}
 [data-theme^="terminal-"] .step-number{border:0;background:transparent;color:var(--muted);width:3ch;flex-basis:3ch;justify-content:start}
 [data-theme^="terminal-"] .sidebar nav button:hover{background:var(--terminal-hover);color:var(--ink)}

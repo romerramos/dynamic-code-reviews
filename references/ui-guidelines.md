@@ -594,8 +594,9 @@ layout, comments in the code, whitespace, appearance, code size, the JevMyPR swi
 keyboard help. `,` in the space menu opens it. The toolbar's **View** menu is only what is
 flipped while reading (reading mode, diff layout, comments, whitespace) and ends on an
 **All settings** link; the same controls are in Settings, moved into whichever of the two is
-open, never duplicated. On a phone Settings is that same last row of Files, not a tab: the
-bar is Files, Agent and Review, in the order of the screen (Files opens from the left, your
+open, never duplicated. On a phone Settings is that same last row of the sidebar, not a tab: the
+bar is Menu, Agent and Review, in the order of the screen (the menu is the sidebar, with the
+search first and no heading over it; it opens from the left, your
 review from the right). The phone's header never scrolls: it keeps the title, an update when
 there is one, and one ⋯ menu for the app, the template previews, the revision and Details. Never put a preference behind
 an icon alone or under a label that is not "Settings".
