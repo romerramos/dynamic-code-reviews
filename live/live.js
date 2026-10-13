@@ -455,16 +455,33 @@
     stateOf: id => ghData.posted?.[id] ? {state: 'posted', ...ghData.posted[id]} : ghPosting.has(id) ? {state: 'posting'}
       : ghFailed.has(id) ? {state: 'failed', error: ghFailed.get(id)} : ghData.pending?.[id] ? {state: 'pending'} : {state: 'note'},
     pendingCount: () => ghPendingIds().length,
-    // Nothing goes to GitHub unread: both ways of commenting open the preview first.
-    post(id) { openPreview(id, 'post'); },
+    // What the agent wrote is read, in the reader's voice, before it goes: the preview. What the
+    // reader wrote themselves goes as they wrote it; the box they typed it in was the preview.
+    post(id) { if (own(id)) ghSend.post(id, written(id)); else openPreview(id, 'post'); },
+    // Takes a posted comment back from GitHub; true when it is gone there (also when it already was).
+    async remove(id) {
+      ghNotice('busy', 'Deleting it on GitHub…');
+      try {
+        const result = await api('/api/github/delete', {key, id});
+        ghData = {...ghData, pending: result.pending, posted: result.posted, bodies: result.bodies};
+        ghFailed.delete(id); ghRefresh();
+        ghNotice('done', result.gone ? 'It was already gone from GitHub.' : 'Deleted on GitHub.');
+        return true;
+      } catch (error) {
+        ghNotice('error', `Not deleted. ${error.message === 'Not found' ? 'This review\'s server is older than its page: restart `dcr serve`.' : error.message}`);
+        return false;
+      }
+    },
     async pend(id, on) {
-      if (on) return openPreview(id, 'pend');
+      if (on) return own(id) ? ghSend.pend(id) : openPreview(id, 'pend');
       try {
         const entry = await api('/api/github/pending', {key, id, pending: false});
         ghData = {...ghData, ...entry}; ghFailed.delete(id); ghRefresh();
       } catch (error) { ghNotice('error', error.message); }
     }
   };
+  const own = id => !!comments().find(entry => entry.id === id)?.personal;
+  const written = id => globalThis.ReviewTools.githubItem(snapshot, comments().find(entry => entry.id === id), review.qa).body;
   const ghSend = {
     async post(id, body) {
       const comment = comments().find(entry => entry.id === id);
@@ -503,103 +520,121 @@
   if (window.ReviewGitHub && globalThis.ReviewTools.githubLink(snapshot, review, {general: true})) { window.ReviewGitHub.connect(ghProvider); loadGitHub(); }
 
   // --- Comment on GitHub: read it first ---------------------------------------------------------
-  // Nothing goes to GitHub unread. A click first has an agent on this computer rewrite the comment
-  // the way the reader talks (from the comment, its code and what was said about it), with a
-  // notice saying so; then one box opens with that text, to change or send. When the rewrite
-  // fails the box opens with the comment as written and says why. The reader's own comments, and
-  // a text they already approved, open at once.
+  // Nothing goes to GitHub unread. A click opens one box at once, for that one comment, and an
+  // agent on this computer rewrites the comment the way the reader talks (from the comment, its
+  // code and what was said about it). While it writes, the box says so where the text will be and
+  // nothing can be sent; then the text is there to change or send. Rewrite does the same in place.
+  // When it fails the comment as written (or the text that was there) is shown, with the reason.
+  // A text they already approved is shown at once. The reader's own comments never come here.
   const previewDialog = document.createElement('dialog');
   previewDialog.id = 'dcr-gh-preview';
   previewDialog.className = 'modal dcr-gh-finish';
   previewDialog.setAttribute('aria-labelledby', 'dcr-gh-preview-title');
   document.body.append(previewDialog);
-  let preview = null;      // the open box: {id, mode, original, rewritten, showing}
-  let awaitedDraft = null; // the click waiting for its rewrite: {id, mode}
-  const askDraft = async (id, mode) => {
+  let preview = null; // the open box: {id, mode, waiting, before, kept, failed, since}
+  const WAIT_WORDS = ['Humanizing…', 'Finding your words…', 'Adding breathing room…', 'Leaving the door open…', 'Softening the edges…', 'Saying it like you would…'];
+  const STALE_WRITING = 150000; // a rewrite still "writing" after this was lost with its server
+  // A rewrite that can be shown: finished, and written under the voice as it is now.
+  const usableDraft = id => { const draft = ghData.drafts?.[id]; return draft?.status === 'ready' && draft.voice === ghData.voice ? draft : null; };
+  const startRewrite = async ask => {
+    const {id} = preview;
     const comment = comments().find(entry => entry.id === id);
-    awaitedDraft = {id, mode};
-    ghData = {...ghData, drafts: {...ghData.drafts, [id]: {status: 'writing'}}};
-    ghNotice('busy', 'Giving it a human touch…');
+    // What is there now comes back if this fails; the rewrite that arrives must be a newer one.
+    Object.assign(preview, {waiting: true, failed: null, since: Date.now(), before: ghData.drafts?.[id]?.at, kept: previewDialog.querySelector('.gh-preview-text').value});
+    renderPreview();
+    if (!ask) return; // one is already being written
+    ghData = {...ghData, drafts: {...ghData.drafts, [id]: {status: 'writing', at: preview.before}}};
     try { await api('/api/github/draft', {key, id, author: comment.agent || listener || undefined, context: globalThis.ReviewTools.commentText(snapshot, comment, review.qa)}); }
     catch (error) {
       // A page newer than its server: the route is not there until the server restarts.
-      const why = error.message === 'Not found' ? 'this review\'s server is older than its page; restart `dcr serve`' : error.message;
-      ghData = {...ghData, drafts: {...ghData.drafts, [id]: {status: 'failed', error: why}}};
+      const why = error.message === 'Not found' ? 'This review\'s server is older than its page: restart `dcr serve`.' : error.message;
+      ghData = {...ghData, drafts: {...ghData.drafts, [id]: {status: 'failed', error: why, at: `failed-${Date.now()}`}}};
       settleDraft();
     }
   };
-  // The awaited rewrite arrived, or failed: either way the box opens now.
+  // The rewrite the open box waits for arrived, or failed.
   function settleDraft() {
-    const draft = awaitedDraft && ghData.drafts?.[awaitedDraft.id];
-    if (!draft || draft.status === 'writing') return;
-    const {id, mode} = awaitedDraft;
-    awaitedDraft = null;
-    ghNote.hidden = true;
-    showPreview(id, mode);
+    const draft = preview?.waiting && ghData.drafts?.[preview.id];
+    if (!draft || draft.status === 'writing' || draft.at === preview.before) return;
+    const text = previewDialog.querySelector('.gh-preview-text');
+    preview.waiting = false;
+    if (draft.status === 'ready') text.value = draft.body;
+    else { preview.failed = draft.error || 'It failed.'; text.value = preview.kept; }
+    renderPreview();
+    previewDialog.querySelector('form').focus({preventScroll: true});
   }
   const openPreview = (id, mode) => {
     const comment = comments().find(entry => entry.id === id);
-    if (!comment || ghPosting.has(id) || awaitedDraft) return;
-    if (comment.personal || ghData.bodies?.[id] || ghData.drafts?.[id]?.status === 'ready') showPreview(id, mode);
-    else askDraft(id, mode);
-  };
-  const showPreview = (id, mode) => {
-    const comment = comments().find(entry => entry.id === id);
-    if (!comment) return;
-    const draft = ghData.drafts?.[id];
+    if (!comment || ghPosting.has(id)) return;
     const approved = ghData.bodies?.[id] || null;
-    const original = globalThis.ReviewTools.githubItem(snapshot, comment, review.qa).body;
-    const rewritten = draft?.status === 'ready' ? draft.body : null;
-    preview = {id, mode, original, rewritten, showing: approved ? 'approved' : rewritten ? 'rewritten' : 'original'};
-    const target = `${tools.escape(where(comment))}${ghStatus.repo ? ` · ${tools.escape(ghStatus.repo)} #${tools.escape(ghStatus.number)}` : ''}${ghStatus.login ? `, as <b>@${tools.escape(ghStatus.login)}</b>` : ''}`;
-    previewDialog.innerHTML = `<form method="dialog" class="modal-box dcr-gh-box dcr-gh-preview">
-      <header><div><h2 id="dcr-gh-preview-title">${mode === 'pend' ? 'Add to your review' : 'Comment on GitHub'}</h2><p class="muted">On ${target}. Nothing is posted until you ${mode === 'pend' ? 'finish your review' : 'send it'}.</p></div><button type="button" class="act act-quiet act-icon" data-gh-close aria-label="Close" title="Close (Esc)">${ico('x')}</button></header>
-      <textarea class="gh-summary gh-preview-text" rows="9" aria-label="The comment as it will be posted"></textarea>
-      <p class="gh-voice-state" role="status"></p>
-      <footer class="dcr-gh-actions"><button type="button" class="act act-quiet" data-gh-close>Cancel</button><button type="button" class="act act-gh" data-gh-send>${mode === 'pend' ? 'Add to review' : 'Send to GitHub'}</button></footer></form>`;
-    previewDialog.querySelector('.gh-preview-text').value = approved || rewritten || original;
-    renderPreviewNote();
+    const ready = usableDraft(id);
+    preview = {id, mode, waiting: false, failed: null};
+    const target = `${tools.escape(where(comment))}${ghStatus.repo ? ` · ${tools.escape(ghStatus.repo)} #${tools.escape(ghStatus.number)}` : ''}${ghStatus.login ? ` · as <b>@${tools.escape(ghStatus.login)}</b>` : ''}`;
+    previewDialog.innerHTML = `<form method="dialog" class="modal-box dcr-gh-box dcr-gh-preview" tabindex="-1">
+      <header><div><h2 id="dcr-gh-preview-title">${mode === 'pend' ? 'Add to your review' : 'Comment on GitHub'}</h2><p class="muted">${target}</p></div><div class="gh-preview-tools"><button type="button" class="act act-quiet act-icon" data-gh-voice-open aria-label="How I write" title="How I write on GitHub">${ico('sliders-horizontal')}</button><button type="button" class="act act-quiet act-icon" data-gh-close aria-label="Close" title="Close (Q)">${ico('x')}</button></div></header>
+      <div class="gh-preview-field"><textarea class="gh-summary gh-preview-text" rows="9" aria-label="The comment as it will be posted"></textarea><div class="gh-preview-wait" role="status" hidden><span class="gh-spinner" aria-hidden="true"></span><strong></strong><small></small></div></div>
+      <p class="gh-preview-failed" role="status" hidden>${ico('circle-alert')}<span></span></p>
+      <footer class="dcr-gh-actions gh-preview-actions"><button type="button" class="act act-quiet gh-preview-again" data-gh-again title="Have it written again">${ico('refresh-cw')}<span></span></button><span class="gh-preview-from"></span><button type="button" class="act act-quiet" data-gh-close>Cancel</button><button type="button" class="act act-gh" data-gh-send>${ico('send')}<span>${mode === 'pend' ? 'Add to review' : 'Send to GitHub'}</span></button></footer></form>`;
+    previewDialog.querySelector('.gh-preview-text').value = approved || ready?.body || globalThis.ReviewTools.githubItem(snapshot, comment, review.qa).body;
+    preview.source = approved ? 'approved' : ready ? 'rewritten' : 'written';
     previewDialog.showModal();
-    previewDialog.querySelector('.gh-preview-text').focus();
+    // On the box, not in the text and not on Send: the keys choose (I the text, Q closes, Space the rest).
+    previewDialog.querySelector('form').focus({preventScroll: true});
+    const draft = ghData.drafts?.[id];
+    const writing = draft?.status === 'writing' && Date.now() - Date.parse(draft.at || 0) < STALE_WRITING;
+    if (!approved && !ready) startRewrite(!writing);
+    else renderPreview();
   };
-  // One quiet line under the box: where this text came from, and the few things to do about it.
-  function renderPreviewNote() {
-    if (!preview) return;
-    const comment = comments().find(entry => entry.id === preview.id);
-    const draft = ghData.drafts?.[preview.id];
-    const link = (attribute, label) => `<button type="button" class="gh-voice-again" ${attribute}>${label}</button>`;
-    const voice = link('data-gh-voice-open', 'How I write');
-    const says = preview.showing === 'approved' ? `The text you approved. ${link('data-gh-again', 'Rewrite it')}`
-      : preview.showing === 'rewritten' ? `Rewritten in your voice${draft?.agent ? ` by ${tools.escape(tools.agentInfo(draft.agent).name)}` : ''}. ${link('data-gh-show="original"', 'See the original')} ${link('data-gh-again', 'Rewrite it')}`
-      : preview.rewritten ? `The comment as written. ${link('data-gh-show="rewritten"', 'Back to your voice')}`
-      : draft?.status === 'failed' ? `It could not be rewritten (${tools.escape(draft.error || 'it failed')}), so this is the comment as written. ${link('data-gh-again', 'Try again')}`
-      : comment?.personal ? `Your comment, as you wrote it. ${link('data-gh-again', 'Rewrite it in my voice')}`
-      : `The comment as written. ${link('data-gh-again', 'Rewrite it in my voice')}`;
-    previewDialog.querySelector('.gh-voice-state').innerHTML = `${says} ${voice}`;
+  let waitTimer = null;
+  function renderPreview() {
+    clearInterval(waitTimer);
+    if (!preview || !previewDialog.open) return;
+    const draft = usableDraft(preview.id);
+    const text = previewDialog.querySelector('.gh-preview-text');
+    const wait = previewDialog.querySelector('.gh-preview-wait');
+    const {waiting} = preview;
+    text.hidden = waiting;
+    wait.hidden = !waiting;
+    if (waiting) {
+      const [words, longer] = [wait.querySelector('strong'), wait.querySelector('small')];
+      const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let turn = Math.floor(Math.random() * WAIT_WORDS.length);
+      const say = () => {
+        words.textContent = calm ? 'Writing it in your voice…' : WAIT_WORDS[turn++ % WAIT_WORDS.length];
+        longer.textContent = Date.now() - preview.since > 20000 ? 'Still writing. It can take a minute.' : '';
+      };
+      say();
+      waitTimer = setInterval(() => (preview?.waiting ? say() : clearInterval(waitTimer)), 2200);
+    } else if (!preview.failed && draft && text.value === draft.body) preview.source = 'rewritten';
+    const failed = previewDialog.querySelector('.gh-preview-failed');
+    failed.hidden = !preview.failed || waiting;
+    failed.querySelector('span').textContent = preview.failed ? `It could not be rewritten, so this is ${preview.source === 'written' ? 'the comment as written' : 'the text you had'}. ${preview.failed}` : '';
+    previewDialog.querySelector('.gh-preview-again span').textContent = preview.failed ? 'Try again' : 'Rewrite';
+    previewDialog.querySelector('.gh-preview-from').textContent = waiting || preview.failed ? '' : preview.source === 'approved' ? 'The text you approved' : preview.source === 'rewritten' ? `In your voice${draft?.agent ? `, by ${tools.agentInfo(draft.agent).name}` : ''}` : '';
+    previewDialog.querySelector('[data-gh-again]').disabled = waiting;
+    previewDialog.querySelector('[data-gh-send]').disabled = waiting || !text.value.trim();
   }
   previewDialog.addEventListener('input', event => {
     if (event.target.matches('.gh-preview-text')) previewDialog.querySelector('[data-gh-send]').disabled = !event.target.value.trim();
   });
+  // Ctrl or Cmd with Enter sends from the text, as on GitHub.
+  previewDialog.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && preview) { event.preventDefault(); previewDialog.querySelector('[data-gh-send]').click(); }
+  });
   previewDialog.addEventListener('click', event => {
     if (!preview) return;
     if (event.target.closest('[data-gh-close]')) { previewDialog.close(); return; }
-    const show = event.target.closest('[data-gh-show]');
-    if (show) {
-      preview.showing = show.dataset.ghShow;
-      previewDialog.querySelector('.gh-preview-text').value = preview[preview.showing];
-      renderPreviewNote();
-      return;
-    }
-    if (event.target.closest('[data-gh-again]')) { const {id, mode} = preview; previewDialog.close(); askDraft(id, mode); return; }
+    if (event.target.closest('[data-gh-again]')) { if (!preview.waiting) startRewrite(true); return; }
     if (event.target.closest('[data-gh-send]')) {
       const {id, mode} = preview;
       const body = previewDialog.querySelector('.gh-preview-text').value.trim();
-      if (!body) return;
+      if (!body || preview.waiting) return;
       previewDialog.close();
       if (mode === 'pend') ghSend.pend(id, body); else ghSend.post(id, body);
     }
   });
-  previewDialog.addEventListener('close', () => { preview = null; });
+  // Closing while it writes loses nothing: the rewrite is kept for the next look.
+  previewDialog.addEventListener('close', () => { preview = null; clearInterval(waitTimer); });
 
   // How I write on GitHub: the reader's own description of their voice, which the rewrite follows
   // in every review on this computer. Reached from the preview and from the agent's card.
@@ -612,14 +647,15 @@
     let saved;
     try { saved = await api('/api/github/voice'); } catch (error) { flash(error.message === 'Not found' ? 'This review\'s server is older than its page. Restart `dcr serve`.' : error.message); return; }
     voiceDialog.innerHTML = `<form method="dialog" class="modal-box dcr-gh-box dcr-gh-preview">
-      <header><div><h2 id="dcr-gh-voice-title">How I write on GitHub</h2><p class="muted">Comments are rewritten this way before you read and send them, in every review on this computer. Say it in your own words.</p></div><button type="button" class="act act-quiet act-icon" data-voice-close aria-label="Close" title="Close (Esc)">${ico('x')}</button></header>
-      <textarea class="gh-summary gh-preview-text" rows="10" aria-label="How I write on GitHub"></textarea>
-      <label class="gh-voice-emojis"><span>Emojis I use</span><input type="text" class="gh-summary" data-voice-emojis maxlength="120" placeholder="None" autocomplete="off"><small>Only these are used, one now and then. Leave it empty for no emojis.</small></label>
-      <p class="gh-voice-state">${saved.custom ? 'Yours.' : 'The starting point; change anything.'} A rewrite never adds facts, names the file or mentions agents, whatever this says.</p>
-      <footer class="dcr-gh-actions"><button type="button" class="act act-quiet" data-voice-default>Use the default</button><span class="gh-voice-space"></span><button type="button" class="act act-quiet" data-voice-close>Cancel</button><button type="button" class="act act-secondary" data-voice-save>Save</button></footer></form>`;
+      <header><div><h2 id="dcr-gh-voice-title">How I write on GitHub</h2><p class="muted">In your own words. Every comment is rewritten this way before you send it.</p></div><div class="gh-preview-tools"><button type="button" class="act act-quiet act-icon" data-voice-close aria-label="Close" title="Close (Q)">${ico('x')}</button></div></header>
+      <div class="gh-preview-field"><textarea class="gh-summary gh-preview-text" rows="10" aria-label="How I write on GitHub"></textarea></div>
+      <label class="gh-voice-emojis"><span>Emojis I use</span><span class="gh-preview-field"><input type="text" class="gh-summary" data-voice-emojis maxlength="120" placeholder="None" autocomplete="off"></span><small>Only these are used, one now and then. Leave it empty for no emojis.</small></label>
+      <footer class="dcr-gh-actions gh-preview-actions"><button type="button" class="act act-quiet gh-preview-again" data-voice-default>${ico('rotate-ccw')}<span>Use the default</span></button><span class="gh-preview-from"></span><button type="button" class="act act-quiet" data-voice-close>Cancel</button><button type="button" class="act act-gh" data-voice-save>${ico('check')}<span>Save</span></button></footer></form>`;
+    voiceDialog.querySelector('form').tabIndex = -1;
     voiceDialog.querySelector('textarea').value = saved.voice;
     voiceDialog.querySelector('[data-voice-emojis]').value = saved.emojis;
     voiceDialog.showModal();
+    voiceDialog.querySelector('form').focus({preventScroll: true});
   };
   voiceDialog.addEventListener('click', async event => {
     if (event.target.closest('[data-voice-close]')) { voiceDialog.close(); return; }
@@ -628,7 +664,7 @@
     try {
       await api('/api/github/voice', {voice: reset ? '' : voiceDialog.querySelector('textarea').value, emojis: voiceDialog.querySelector('[data-voice-emojis]').value});
       voiceDialog.close();
-      flash(preview ? 'Saved. Rewrite it to hear the difference.' : 'Saved. Your next comments on GitHub are written this way.');
+      flash(preview ? 'Saved. Press Rewrite to hear the difference.' : 'Saved. Your next comments on GitHub are written this way.');
     } catch (error) { flash(error.message); }
   });
   document.addEventListener('click', event => { if (event.target.closest('[data-gh-voice-open]')) openVoice(); });
@@ -1600,8 +1636,8 @@
   // --- sync ----------------------------------------------------------------------------------
   const apply = data => {
     threads = data.threads; rev = data.rev; latest = data.latest_revision; listening = data.listening; listener = data.agent || listener; listenerModel = data.agent_model || (data.agent ? null : listenerModel); online = true; previews = data.previews || {};
-    const ghNext = {pending: data.github?.pending || {}, posted: data.github?.posted || {}, bodies: data.github?.bodies || {}, drafts: data.github?.drafts || {}};
-    if (JSON.stringify(ghNext) !== JSON.stringify({pending: ghData.pending, posted: ghData.posted, bodies: ghData.bodies, drafts: ghData.drafts})) { ghData = ghNext; settleDraft(); }
+    const ghNext = {pending: data.github?.pending || {}, posted: data.github?.posted || {}, bodies: data.github?.bodies || {}, drafts: data.github?.drafts || {}, voice: data.github?.voice};
+    if (JSON.stringify(ghNext) !== JSON.stringify({pending: ghData.pending, posted: ghData.posted, bodies: ghData.bodies, drafts: ghData.drafts, voice: ghData.voice})) { ghData = ghNext; settleDraft(); }
     receiveComments(data.comments || []);
     receiveScreenshots(data.screenshots || [], data.no_screenshots);
     // The Risk ranking the agent posts while the reader is already on the diff; until then, a placeholder.

@@ -861,8 +861,11 @@ body.zen .preview-panel.side,body.zen .preview-toggle{display:none}
 
 /* Hover a line number and a + appears, like on a pull request. */
 button.line-number{position:relative}
-button.line-number::before{content:"+";position:absolute;left:-2px;top:50%;width:19px;height:19px;border-radius:calc(5px * var(--round));background:var(--bg-accent-5);color:var(--ink-neutral-9);font:600 15px/19px var(--review-font-family);text-align:center;opacity:0;transform:translateY(-50%) scale(.85);transition:opacity .1s,transform .1s;pointer-events:none}
-button.line-number:hover::before,button.line-number:focus-visible::before{opacity:1;transform:translateY(-50%) scale(1)}
+/* Under the pointer the number's own box becomes the +, covering the number whole: a mark beside it
+   has no room next to three digits and would sit half on them, or spill out of the cell. The
+   keyboard's line keeps its number; C comments on it. */
+button.line-number::before{content:"+";position:absolute;inset:2px 0;display:grid;place-items:center;border-radius:calc(4px * var(--round));background:var(--bg-accent-5);color:var(--ink-neutral-9);font:600 15px/1 var(--review-font-family);opacity:0;transform:scale(.9);transition:opacity .1s,transform .1s;pointer-events:none}
+button.line-number:hover::before{opacity:1;transform:scale(1)}
 
 /* The composer, in the code, directly under the lines it is about. */
 tr.inline-compose>td{padding:0!important;border:0!important;background:var(--surface)!important}
@@ -880,12 +883,15 @@ tr.inline-compose>td{padding:0!important;border:0!important;background:var(--sur
 .composer-type input:focus-visible+span{outline:2px solid var(--line-accent-8);outline-offset:2px}
 .composer-text{display:block;width:100%;min-height:76px;padding:10px 12px;border:1px solid var(--line);border-radius:calc(8px * var(--round));background:var(--surface);color:var(--ink);font:inherit;line-height:1.55;resize:vertical}
 .composer-text:focus{outline:2px solid var(--line-accent-8);outline-offset:-1px;border-color:transparent}
-.composer-foot{display:flex;align-items:center;gap:14px;margin:10px 0 0}
-.composer-blocking{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);cursor:pointer}
-.composer-hint{margin-left:auto;font-size:12px;color:var(--muted)}
-.composer-hint kbd{padding:0 4px;border:1px solid var(--line);border-radius:calc(4px * var(--round));background:transparent;font:11px/16px var(--review-font-family)}
-.composer-actions{display:flex;gap:8px}
-@media(max-width:700px){.composer-hint{display:none}.composer-actions{margin-left:auto}}
+.composer-foot{display:flex;align-items:center;flex-wrap:wrap;gap:10px 14px;margin:10px 0 0}
+.composer-blocking{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);cursor:pointer;white-space:nowrap}
+.composer-key{margin-left:2px;padding:0;border:0;background:none;box-shadow:none;color:inherit;opacity:.6;font:12px/1 system-ui,sans-serif;letter-spacing:.08em}
+.composer-actions{display:flex;gap:8px;margin-left:auto}
+.composer-as{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;color:var(--muted)}
+.composer-as::before{content:"·";margin:0 8px 0 0}
+.composer-as b{color:var(--ink);font-weight:600}
+.composer-as[hidden]{display:none}
+@media(max-width:700px){.composer-key{display:none}}
 @media print{tr.inline-compose{display:none}}
 .ledger-footer{padding:14px 16px 16px}
 
@@ -1220,7 +1226,7 @@ button.risk-path:hover .risk-name{text-decoration:underline}
 .shot-file{padding:0;border:0;background:none;font:inherit;color:var(--ink-accent-3);cursor:pointer;overflow-wrap:anywhere;text-align:left}
 .shot-file:hover{text-decoration:underline}
 .shot-show-stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:20px 28px;overflow:auto;background:var(--bg-neutral-3)}
-.shot-show-stage video{display:block;max-width:100%;max-height:100%;border:1px solid var(--line-neutral-2);border-radius:calc(8px * var(--round));background:#000}
+.shot-show-stage video{display:block;max-width:100%;max-height:100%;border:1px solid var(--line-neutral-2);border-radius:calc(8px * var(--round));background:var(--bg-neutral-3)}
 .shot-show-stage img{display:block;max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in;border:1px solid var(--line-neutral-2);border-radius:calc(8px * var(--round));box-shadow:0 2px 14px color-mix(in srgb,var(--ink) 12%,transparent)}
 .shot-show-stage.is-actual{display:block}
 .shot-show-stage.is-actual img{max-width:none;max-height:none;cursor:zoom-out}
@@ -1231,7 +1237,7 @@ button.risk-path:hover .risk-name{text-decoration:underline}
 .shot-show-strip button[aria-current="true"]{opacity:1;border-color:var(--accent);outline:1px solid var(--accent)}
 .shot-show-strip button{position:relative}
 .shot-show-strip img,.shot-show-strip video{display:block;width:100%;height:100%;object-fit:cover;object-position:top center;pointer-events:none}
-.shot-show-strip i{position:absolute;right:3px;bottom:2px;font-size:10px;font-style:normal;line-height:1;color:var(--ink-neutral-9);text-shadow:0 0 3px #000}
+.shot-show-strip i{position:absolute;right:3px;bottom:2px;font-size:10px;font-style:normal;line-height:1;color:var(--ink-neutral-9);text-shadow:0 0 3px var(--shade)}
 .shot-show>header .qa-preview-status{margin-right:6px}
 @media(max-width:620px){.shot-stack{flex-wrap:wrap;gap:14px}.shot-pile{width:132px;height:84px}.shot-show>header{padding:14px 52px 12px 18px}.shot-show-stage{padding:12px}.shot-show-strip{display:none}}
 .ui-changes-none{margin:18px 0 0;font-size:13px;color:var(--muted)}

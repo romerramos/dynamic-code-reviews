@@ -242,17 +242,23 @@ globalThis.ReviewTools = (() => {
     return [comment.discussion, ...evidence].filter(Boolean).join('\n\n');
   }
   // placed: the text is pasted on the lines themselves (Comment on GitHub), so it needs no location.
-  function postingText(snapshot, comment, qa, {placed = false} = {}) {
+  // located: false leaves the file and lines out whatever the anchor, for text a server places itself.
+  function postingText(snapshot, comment, qa, {placed = false, located = true} = {}) {
     const found = anchor(snapshot, comment);
     if (!found && !comment.general) throw new Error('Comment range is not present in this snapshot.');
-    const location = found && !(placed && !found.fullFile) ? `File: ${found.file.path} (${comment.side === 'new' ? 'after' : 'before'} lines ${comment.start}–${comment.end})\n\n` : '';
+    const lines = comment.start === comment.end ? `line ${comment.start}` : `lines ${comment.start}–${comment.end}`;
+    const location = located && found && !(placed && !found.fullFile) ? `File: ${found.file.path} (${comment.side === 'new' ? 'after' : 'before'} ${lines})\n\n` : '';
     const body = commentBody(comment, qa);
     return `${comment.label} (${comment.decoration}): ${comment.subject}\n\n${location}${body}`.trim();
   }
   // What GitHub needs to post a comment: the paste-ready text and, for a line comment, its file,
   // side and lines. The server decides whether the lines are in the diff.
   function githubItem(snapshot, comment, qa) {
-    const body = postingText(snapshot, comment, qa, {placed: true});
+    // On GitHub the label is bold, as Conventional Comments writes it there (and as its browser
+    // extension recognises it): **suggestion (non-blocking):** the subject.
+    // Never the file and lines in the text: the server puts the comment on them, and names them
+    // itself in the one case where GitHub will not take the lines.
+    const body = postingText(snapshot, comment, qa, {placed: true, located: false}).replace(/^([a-z][a-z -]*(?: \([^)\n]*\))?:)(?= )/, '**$1**');
     const found = comment.general ? null : anchor(snapshot, comment);
     if (!found) return {id: comment.id, body, general: true};
     return {id: comment.id, body, general: false, path: found.file.path, side: comment.side === 'old' ? 'LEFT' : 'RIGHT', line: comment.end, start_line: comment.start};

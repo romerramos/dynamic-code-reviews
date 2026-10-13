@@ -375,6 +375,16 @@ module DCR
       end
     end
 
+    # A posted comment was taken back from GitHub: the review holds it as unposted again.
+    def github_unposted(key, id)
+      check_key(key)
+      update do |state|
+        entry = github_entry(state, key)
+        %w[posted pending bodies].each { |part| entry[part].delete(id) }
+        entry
+      end
+    end
+
     def github_entry(state, key)
       state['github'][key] ||= {}
       state['github'][key]['pending'] ||= {}

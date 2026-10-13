@@ -898,6 +898,7 @@
     pr: {placeholder: 'Leave a comment. The first line is the headline; add detail below it.', hint: 'to save'}
   };
   const composerTypes = ['note', 'question', 'suggestion', 'issue'];
+  const KEY = '<kbd class="composer-key" aria-hidden="true">⌘↵</kbd>';
   function composerNode() {
     if (composer.node) return composer.node;
     const form = document.createElement('form');
@@ -905,10 +906,10 @@
     form.className = 'composer';
     form.noValidate = true;
     form.setAttribute('aria-label', 'Add a comment');
-    form.innerHTML = `<header class="composer-head"><div class="composer-modes" role="radiogroup" aria-label="Who is this comment for?" hidden><label class="composer-mode"><input type="radio" name="composer-mode" value="agent"><span>${icon('sparkles')}Ask agent</span></label><label class="composer-mode"><input type="radio" name="composer-mode" value="pr"><span>${icon('message-square')}${prLabel}</span></label></div><span class="composer-where"></span><button type="button" class="act act-quiet act-icon" data-composer-close aria-label="Close; what you typed is kept" title="Close (Q). What you typed is kept.">${icon('x')}</button></header>
+    form.innerHTML = `<header class="composer-head"><div class="composer-modes" role="radiogroup" aria-label="Who is this comment for?" hidden><label class="composer-mode"><input type="radio" name="composer-mode" value="agent"><span>${icon('sparkles')}Ask agent</span></label><label class="composer-mode"><input type="radio" name="composer-mode" value="pr"><span>${icon('message-square')}${prLabel}</span></label></div><span class="composer-where"></span><span class="composer-as" data-composer-as hidden></span><button type="button" class="act act-quiet act-icon" data-composer-close aria-label="Close; what you typed is kept" title="Close (Q). What you typed is kept.">${icon('x')}</button></header>
       <div class="composer-types" role="radiogroup" aria-label="Type of comment">${composerTypes.map(type => `<label class="composer-type"><input type="radio" name="composer-label" value="${type}"><span>${icon(commentTypes[type][0])}${commentTypes[type][1]}</span></label>`).join('')}</div>
       <textarea class="composer-text" rows="3" aria-label="Your comment"></textarea>
-      <footer class="composer-foot"><label class="composer-blocking"><input type="checkbox" name="composer-blocking"><span>Blocks approval</span></label><span class="composer-hint"><kbd>⌘</kbd><kbd>↵</kbd> <span data-composer-hint></span></span><div class="composer-actions"><button type="button" class="act act-quiet" data-composer-cancel>Cancel</button><button type="submit" class="act act-pr" data-composer-save>Save comment</button><button type="submit" class="act act-secondary" data-gh-action="open" hidden>Copy &amp; open on GitHub ${icon('arrow-up-right')}</button><button type="submit" class="act act-secondary" data-gh-action="single" hidden title="Post it on the pull request now">Comment on GitHub</button><button type="submit" class="act act-gh" data-gh-action="review" hidden></button><button type="submit" class="act act-agent" data-composer-send hidden>${icon('send')}Ask agent</button></div></footer><p class="composer-gh" data-composer-gh role="status" aria-live="polite" hidden></p>`;
+      <footer class="composer-foot"><label class="composer-blocking"><input type="checkbox" name="composer-blocking"><span>Blocks approval</span></label><div class="composer-actions"><button type="button" class="act act-quiet" data-composer-cancel>Cancel</button><button type="submit" class="act act-pr" data-composer-save title="Ctrl or Cmd with Enter">Save comment<kbd class="composer-key" aria-hidden="true">⌘↵</kbd></button><button type="submit" class="act act-secondary" data-gh-action="open" hidden>Copy &amp; open on GitHub ${icon('arrow-up-right')}</button><button type="submit" class="act act-secondary" data-gh-action="single" hidden title="Post it on the pull request now">Comment on GitHub</button><button type="submit" class="act act-gh" data-gh-action="review" hidden title="Ctrl or Cmd with Enter"></button><button type="submit" class="act act-agent" data-composer-send hidden title="Ctrl or Cmd with Enter">${icon('send')}Ask agent<kbd class="composer-key" aria-hidden="true">⌘↵</kbd></button></div></footer><p class="composer-gh" data-composer-gh role="status" aria-live="polite" hidden></p>`;
     const text = form.querySelector('.composer-text');
     const refresh = () => {
       composer.text = text.value;
@@ -1022,7 +1023,6 @@
     form.querySelector('.composer-modes').hidden = !composer.sender;
     form.querySelector(`input[name="composer-mode"][value="${mode}"]`).checked = true;
     form.querySelector('.composer-text').placeholder = composerModes[mode].placeholder;
-    form.querySelector('[data-composer-hint]').textContent = composerModes[mode].hint;
     const gh = mode === 'agent' ? 'agent' : composerGitHub();
     form.querySelector('[data-composer-send]').hidden = gh !== 'agent';
     form.querySelector('[data-composer-save]').hidden = gh !== 'save' && gh !== 'open';
@@ -1031,15 +1031,20 @@
     form.querySelector('[data-gh-action="single"]').hidden = gh !== 'post';
     const review = form.querySelector('[data-gh-action="review"]');
     review.hidden = gh !== 'post';
-    review.textContent = ghPending() ? 'Add review comment' : 'Start a review';
-    if (gh === 'post') form.querySelector('[data-composer-hint]').textContent = ghPending() ? 'to add to your review' : 'to start a review';
-    // Who it posts as, and where: the reader knows before clicking. Waiting and failures say so.
+    // The key is on the button it presses, not in a sentence beside it.
+    const label = `${ghPending() ? 'Add review comment' : 'Start a review'}${KEY}`;
+    if (review.dataset.html !== label) { review.innerHTML = label; review.dataset.html = label; }
+    // Who it posts as, and where: beside the line in the header, where the reader already looks.
+    // Only waiting and failures take a line of their own under the buttons.
     const line = form.querySelector('[data-composer-gh]');
+    const as = form.querySelector('[data-composer-as]');
     const status = ghStatus();
+    const who = gh === 'post' && status.phase === 'ready' ? `<b>@${escape(status.login)}</b> on #${escape(status.number)}${ghPending() ? ` · ${ghPending()} pending` : ''}` : '';
+    if (as.dataset.html !== who) { as.innerHTML = who; as.dataset.html = who; as.title = who ? `Commenting as @${status.login} on ${status.repo} #${status.number}` : ''; }
+    as.hidden = !who;
     let html = '';
-    if (gh === 'post' && status.phase === 'ready') html = `<span class="gh-dot is-ready" aria-hidden="true"></span>Commenting as <b>@${escape(status.login)}</b> on ${escape(status.repo)} #${escape(status.number)}${ghPending() ? ` · <b>${ghPending()}</b> pending in your review` : ''}`;
-    else if (gh === 'post') html = `${status.phase === 'checking' ? '<span class="gh-spinner" aria-hidden="true"></span>' : '<span class="gh-dot" aria-hidden="true"></span>'}${escape(status.text || '')}`;
-    else if (gh === 'open' && ghStatus().phase === 'unavailable') html = `<span class="gh-dot" aria-hidden="true"></span>${escape(ghStatus().text)} Copy &amp; open still works.`;
+    if (gh === 'post' && status.phase !== 'ready') html = `${status.phase === 'checking' ? '<span class="gh-spinner" aria-hidden="true"></span>' : ''}${escape(status.text || '')}`;
+    else if (gh === 'open' && ghStatus().phase === 'unavailable') html = `${escape(ghStatus().text)} Copy &amp; open still works.`;
     if (line.dataset.html !== html) { line.innerHTML = html; line.dataset.html = html; }
     line.hidden = !html;
     syncComposerButtons();
@@ -1811,8 +1816,9 @@
       const html = comment ? ghBadge(comment) : '';
       if (slot.dataset.html !== html) { slot.innerHTML = html; slot.dataset.html = html; }
     });
-    // A posted comment lives on GitHub now: edit or delete it there.
+    // A posted comment lives on GitHub too: it is edited there, and deleting it here takes it back there.
     document.querySelectorAll('[data-edit], [data-delete]').forEach(item => { item.hidden = ghState(item.dataset.edit || item.dataset.delete).state === 'posted'; });
+    document.querySelectorAll('[data-gh-delete], [data-gh-remove]').forEach(item => { item.hidden = ghState(item.dataset.ghDelete || item.dataset.ghRemove).state !== 'posted'; });
     if (composer.node) syncComposerMode();
   }
   window.ReviewGitHub = {connect(provider) { github.provider = provider; refreshGitHub(); }, refresh: refreshGitHub};
@@ -1829,7 +1835,10 @@
       prLink ? menuItem(`data-copy-comment="${id}"`, 'Copy for comment', 'copy') : '',
       menuItem(`data-copy="${id}"`, 'Copy for LLMs', 'copy'),
       found && !found.fullFile ? menuItem(`data-comment="${id}"`, 'Open in diff', 'arrow-right') : '',
-      comment.personal && !posted ? menuItem(`data-edit="${id}"`, 'Edit', 'pencil') + menuItem(`data-delete="${id}"`, 'Delete', 'trash-2') : ''
+      // The reader's own comment is deleted in both places once it is on GitHub; the agent's stays
+      // in the review and is only taken back from GitHub.
+      comment.personal ? menuItem(`data-edit="${id}"${posted ? ' hidden' : ''}`, 'Edit', 'pencil') + menuItem(`data-delete="${id}"${posted ? ' hidden' : ''}`, 'Delete', 'trash-2') + menuItem(`data-gh-delete="${id}"${posted ? '' : ' hidden'}`, 'Delete here and on GitHub', 'trash-2')
+        : forAgent ? '' : menuItem(`data-gh-remove="${id}"${posted ? '' : ' hidden'}`, 'Remove from GitHub', 'trash-2')
     ];
     return `${forAgent ? '' : ghSlot(comment, size)}${moreMenu(items, size)}`;
   }
@@ -3090,7 +3099,13 @@
     const edit = event.target.closest('[data-edit]');
     if (edit) { const comment = comments.find(comment => comment.personal && comment.id === edit.dataset.edit); if (comment) openEditor(comment); }
     const remove = event.target.closest('[data-delete]');
-    if (remove) { state.personalComments = state.personalComments.filter(comment => comment.id !== remove.dataset.delete); state.resolvedComments = state.resolvedComments.filter(id => id !== remove.dataset.delete); refreshComments(); render(); toast('Comment removed.'); }
+    const forget = id => { state.personalComments = state.personalComments.filter(comment => comment.id !== id); state.resolvedComments = state.resolvedComments.filter(resolved => resolved !== id); refreshComments(); render(); };
+    if (remove) { forget(remove.dataset.delete); toast('Comment removed.'); }
+    // On GitHub first: the comment stays here when GitHub would not let go of it.
+    const both = event.target.closest('[data-gh-delete]');
+    if (both && await github.provider?.remove(both.dataset.ghDelete)) forget(both.dataset.ghDelete);
+    const back = event.target.closest('[data-gh-remove]');
+    if (back) await github.provider?.remove(back.dataset.ghRemove);
     const resolution = event.target.closest('[data-resolve]');
     if (resolution) toggleResolved(resolution.dataset.resolve);
   });

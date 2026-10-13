@@ -84,10 +84,27 @@ module DCR
       {'url' => posted['html_url'], 'event' => event, 'comments' => result}
     end
 
+    # Takes back a comment this review posted: posted is what was kept of it ({'url', 'where'}).
+    # One that is already gone from GitHub counts as taken back. A comment that went into a
+    # review's own text has no address of its own and cannot be removed from here.
+    def delete(key, posted)
+      target = target(key)
+      url = posted['url'].to_s
+      path = if (id = url[/#discussion_r(\d+)\z/, 1]) then "repos/#{target[:repo]}/pulls/comments/#{id}"
+             elsif (id = url[/#issuecomment-(\d+)\z/, 1]) then "repos/#{target[:repo]}/issues/comments/#{id}"
+             else raise Error, 'It was posted inside the text of your review, so it has no comment of its own to delete. Edit that review on GitHub.'
+             end
+      api('DELETE', path)
+      {'deleted' => true}
+    rescue NotFound
+      {'deleted' => true, 'gone' => true}
+    end
+
     private
 
     Unplaceable = Class.new(StandardError)
     Rejected = Class.new(Error) # 422: usually a line that is not part of the diff
+    NotFound = Class.new(Error) # 404
 
     # The pull request and commit a revision reviewed, from its saved page.
     def target(key)
@@ -201,7 +218,7 @@ module DCR
       detail = reasons.any? ? reasons.join('; ') : error['message']
       raise Rejected, "GitHub refused it: #{detail || 'validation failed'}." if code == 422
       raise Error, 'GitHub CLI is not signed in. Run `gh auth login` in a terminal, then try again.' if code == 401 || err.include?('gh auth login')
-      raise Error, "GitHub could not find #{path.start_with?('repos/') ? 'the pull request' : 'that'}, or this account cannot see it." if code == 404
+      raise NotFound, "GitHub could not find #{path.start_with?('repos/') ? 'the pull request' : 'that'}, or this account cannot see it." if code == 404
       raise Error, "GitHub denied it (#{detail || 'HTTP 403'})." if code == 403
       raise Error, "GitHub returned an error#{code.positive? ? " (HTTP #{code})" : ''}: #{(detail || err.strip.lines.last || 'no details').strip}"
     rescue JSON::ParserError

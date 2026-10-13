@@ -55,9 +55,14 @@ console.log('PASS Copy for LLMs carries the conversation, the thread id and the 
 // What GitHub receives: the paste-ready text, and for a line comment its file, side and lines.
 const item = reviewTools.githubItem(snapshot, comments[1]);
 assert.deepEqual({...item, body: undefined}, {id: 'mine-1', body: undefined, general: false, path: 'app/a.rb', side: 'RIGHT', line: 1, start_line: 1});
-assert.match(item.body, /^question \(non-blocking\): Why\?/);
+assert.match(item.body, /^\*\*question \(non-blocking\):\*\* Why\?/, 'the label is bold on GitHub, as Conventional Comments writes it');
 assert.ok(!item.body.includes('File: app/a.rb'), 'a comment placed on its lines does not repeat its location');
-assert.deepEqual(reviewTools.githubItem(snapshot, {id: 'g', general: true, label: 'note', decoration: 'non-blocking', subject: 'Overall', discussion: ''}), {id: 'g', body: 'note (non-blocking): Overall', general: true});
+// A comment made in the whole-file view is placed on its line too, so its text does not name it either.
+const whole = {...snapshot, files: [{...file, source: {old: 'a\nb\n', new: 'a\nb\n'}}]};
+const wholeItem = reviewTools.githubItem(whole, {id: 'w', hunk: `full:${file.id}`, side: 'new', start: 2, end: 2, label: 'question', decoration: 'non-blocking', subject: 'Why?', discussion: ''});
+assert.equal(wholeItem.body, '**question (non-blocking):** Why?', 'a comment from the whole-file view carries no File line to GitHub');
+assert.deepEqual([wholeItem.path, wholeItem.line, wholeItem.general], ['app/a.rb', 2, false]);
+assert.deepEqual(reviewTools.githubItem(snapshot, {id: 'g', general: true, label: 'note', decoration: 'non-blocking', subject: 'Overall', discussion: ''}), {id: 'g', body: '**note (non-blocking):** Overall', general: true});
 console.log('PASS a comment becomes a GitHub line or conversation comment with paste-ready text');
 
 assert.equal(tools.actionLabel(undefined), 'Ask agent');

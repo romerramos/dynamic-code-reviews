@@ -165,10 +165,10 @@
 [data-theme^="terminal-"] .dcr-app-address:focus-within{border-color:var(--terminal-hot);box-shadow:none}
 [data-theme^="terminal-"] .dcr-app-address input:focus-visible{outline:0!important;box-shadow:none!important}
 /* The reply box is one box: its frame shows the focus, so the text in it has no fill or mark of its own. */
-[data-theme^="terminal-"] .dcr-compose:focus-within{border-color:var(--terminal-hot);box-shadow:none}
+[data-theme^="terminal-"] :is(.dcr-compose,.gh-preview-field):focus-within{border-color:var(--terminal-hot);box-shadow:none}
 /* (:not(#search) only lifts this over the rule for every field above, which names #search.) */
-[data-theme^="terminal-"] .dcr-compose textarea:not(#search){background:transparent}
-[data-theme^="terminal-"] .dcr-compose textarea:focus-visible{box-shadow:none!important}
+[data-theme^="terminal-"] :is(.dcr-compose,.gh-preview-field) :is(textarea,input):not(#search){background:transparent}
+[data-theme^="terminal-"] :is(.dcr-compose,.gh-preview-field) :is(textarea,input):focus-visible{box-shadow:none!important}
 /* A spinner is the terminal's own: a bar turning in steps, | / - \. A ring with square corners is a box with one odd side. */
 [data-theme^="terminal-"] :is(.gh-spinner,.dcr-app-prep-spin){border:0;border-radius:0;background:linear-gradient(currentColor,currentColor) center/2px 100% no-repeat;animation-timing-function:steps(8)}
 [data-theme^="terminal-"] .dcr-app-prep-spin{color:var(--accent)}

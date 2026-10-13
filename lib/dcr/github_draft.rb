@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'digest'
 require_relative 'agents'
 
 module DCR
@@ -21,6 +22,25 @@ module DCR
       - I often make the point as a question ("do we need both?", "is this the same?"), or end by asking what they think.
       - One suggestion, not a menu of options.
     TEXT
+    # Earlier defaults. A reviewer who saved the dialog without changing its text has one of these
+    # in their settings, and means the default, so they follow it as it improves.
+    FORMER_VOICES = [<<~TEXT.strip].freeze
+      - Conversational and friendly, in the first person, like talking to a teammate I like.
+      - Never overconfident. Even when I am sure, I say what I checked and what I think is happening, and I leave the door open: I may be missing something. "I think", "it looks like", "maybe we could", never "this is a bug" or "this must change".
+      - When it fits, I end with a question that asks for their view ("what do you think?", "or am I missing something?").
+      - Short: one paragraph. I say what I need to say and stop; if they have questions, we follow up. Longer only when it truly cannot be said in one.
+      - Plain words and short sentences. No corporate tone, no lecture.
+    TEXT
+
+    # The reviewer's own voice, or nil when what they saved is a default, this one or an earlier one.
+    def own_voice(saved)
+      text = saved.to_s.strip
+      text.empty? || text == DEFAULT_VOICE || FORMER_VOICES.include?(text) ? nil : text
+    end
+
+    # Names the instructions a rewrite was written under, so one written under others is not reused.
+    def version(voice, emojis) = Digest::SHA256.hexdigest(prompt(voice: voice, context: '', emojis: emojis))[0, 12]
+
     # The emojis they use, until they list their own; an empty list means they use none.
     DEFAULT_EMOJIS = '🤔 🙃 😅 🙋‍♂️'
 

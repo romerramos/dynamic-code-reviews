@@ -32,6 +32,7 @@ FAKE_GH = <<~'RUBY'
   when ['POST', 'repos/acme/web/pulls/7/comments']
     fail_with.(422, 'Validation Failed') if input['line'] == 12 && !input['subject_type'] # GitHub's diff is narrower
     puts JSON.generate('html_url' => "https://github.com/acme/web/pull/7#discussion_r#{input['line'] || 'file'}")
+  when ['DELETE', 'repos/acme/web/pulls/comments/13'] then puts '{}'
   when ['POST', 'repos/acme/web/issues/7/comments'] then puts JSON.generate('html_url' => 'https://github.com/acme/web/pull/7#issuecomment-1')
   when ['POST', 'repos/acme/web/pulls/7/reviews'] then puts JSON.generate('id' => 5, 'html_url' => 'https://github.com/acme/web/pull/7#pullrequestreview-5')
   when ['GET', 'repos/acme/web/pulls/7/reviews/5/comments?per_page=100']
@@ -140,6 +141,22 @@ Dir.mktmpdir('dcr-github-test') do |directory|
   ENV.delete('GH_SIGNED_OUT')
   assert(code == 502 && failed['error'].include?('gh auth login'), 'A GitHub failure must reach the page as a sentence')
   puts 'PASS the API remembers what was posted, never posts twice and reports failures as sentences'
+
+  # Taking a posted comment back: deleted on GitHub first, and one already gone there counts.
+  ENV['GH_SIGNED_OUT'] = '1'
+  code, kept = api.call('POST', '/api/github/delete', body.({'key' => KEY, 'id' => 'mine-9'}))
+  ENV.delete('GH_SIGNED_OUT')
+  assert(code == 502 && kept['error'].include?('gh auth login') && api.call('GET', "/api/state?key=#{KEY}", nil)[1].dig('github', 'posted').key?('mine-9'), 'A comment GitHub would not delete must stay posted here')
+  code, gone = api.call('POST', '/api/github/delete', body.({'key' => KEY, 'id' => 'mine-9'}))
+  assert(code == 200 && gone['deleted'] && !gone.key?('gone') && !gone['posted'].key?('mine-9'), 'A deleted comment is still held as posted')
+  assert(calls.().last.values_at('method', 'path') == ['DELETE', 'repos/acme/web/pulls/comments/13'], 'The comment was not deleted on GitHub by its own id')
+  api.call('POST', '/api/github/comment', body.({'key' => KEY, 'item' => item.merge('id' => 'mine-12', 'line' => 14)}))
+  code, already = api.call('POST', '/api/github/delete', body.({'key' => KEY, 'id' => 'mine-12'}))
+  assert(code == 200 && already['gone'] == true && !already['posted'].key?('mine-12'), 'A comment already gone from GitHub must count as deleted')
+  code, inside = api.call('POST', '/api/github/delete', body.({'key' => KEY, 'id' => 'mine-10'}))
+  assert(code == 502 && inside['error'].include?('inside the text of your review'), 'A comment in a review\'s text has nothing of its own to delete')
+  assert(api.call('POST', '/api/github/delete', body.({'key' => KEY, 'id' => 'never'}))[0] == 400, 'A comment that was never posted was deleted')
+  puts 'PASS a posted comment is taken back from GitHub, and one already gone there counts as taken back'
 end
 
 # A comment is rewritten in the reviewer's voice before it goes anywhere, and the text they approve is kept.
@@ -176,6 +193,19 @@ Dir.mktmpdir('dcr-github-draft-') do |root|
   sleep 0.05 until state.read.dig('github', KEY, 'drafts', 'c1', 'status') != 'writing'
   assert(state.read.dig('github', KEY, 'drafts', 'c1').values_at('status', 'error') == ['failed', 'Claude took longer than 2 minutes'], 'A failed rewrite must say why')
   assert(api.call('POST', '/api/github/voice', body.({'voice' => ' ', 'emojis' => ''}))[1].values_at('custom', 'emojis') == [false, ''], 'A blank voice must go back to the default, and no emojis must stay none')
+  # Saving the dialog without changing its text is not a voice of one's own: it follows the default
+  # as it changes. And a rewrite says which instructions it was written under.
+  api.call('POST', '/api/github/voice', body.({'voice' => DCR::GitHubDraft::FORMER_VOICES.first, 'emojis' => '🤔'}))
+  assert(settings.github_voice.nil? && api.call('GET', '/api/github/voice', nil)[1].values_at('voice', 'custom', 'emojis') == [DCR::GitHubDraft::DEFAULT_VOICE, false, '🤔'], 'A saved copy of an earlier default was kept as a voice')
+  File.write(settings.path, JSON.generate('githubVoice' => DCR::GitHubDraft::FORMER_VOICES.first))
+  assert(api.call('GET', '/api/github/voice', nil)[1]['voice'] == DCR::GitHubDraft::DEFAULT_VOICE, 'An earlier default already in the settings still decides the voice')
+  under = api.call('GET', "/api/state?key=#{KEY}", nil)[1].dig('github', 'voice')
+  api.call('POST', '/api/github/draft', body.({'key' => KEY, 'id' => 'c2', 'context' => 'a comment'}))
+  sleep 0.05 until state.read.dig('github', KEY, 'drafts', 'c2', 'status') != 'writing'
+  assert(state.read.dig('github', KEY, 'drafts', 'c2', 'voice') == under && under.match?(/\A\h{12}\z/), 'A rewrite does not say which voice it was written under')
+  api.call('POST', '/api/github/voice', body.({'voice' => 'Only questions.', 'emojis' => ''}))
+  assert(api.call('GET', "/api/state?key=#{KEY}", nil)[1].dig('github', 'voice') != under, 'A changed voice must make earlier rewrites stale')
+
   # What the reviewer approved waits with the pending comment, and goes when it is taken off.
   kept = api.call('POST', '/api/github/pending', body.({'key' => KEY, 'id' => 'c1', 'pending' => true, 'body' => 'My own words'}))[1]
   assert(kept['bodies'] == {'c1' => 'My own words'} && kept['pending'].key?('c1'), 'The approved text was not kept with the pending comment')

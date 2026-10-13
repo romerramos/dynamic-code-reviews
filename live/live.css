@@ -511,16 +511,34 @@ body.dcr-has-app #qa-panel{display:none}
 /* On a tablet too the verdict is on Overview, not a line over every file. */
 @media(min-width:651px) and (max-width:1199px){.review-area:has(.focus-reader) .dcr-jev{display:none}}
 
-/* Comment on GitHub: one box with the text that will be posted, and where it came from beneath. */
-.dcr-gh-box.dcr-gh-preview{max-width:640px;width:min(640px,calc(100vw - 32px))}
-.dcr-gh-box .gh-preview-text{min-height:210px;font-size:14.5px;line-height:1.6}
-.gh-voice-state{margin:0;font-size:12.5px;line-height:1.6;color:var(--muted)}
-.gh-voice-again{margin-left:6px;padding:0;border:0;background:none;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;white-space:nowrap}
-.gh-voice-again:hover{text-decoration:underline}
-.gh-voice-space{flex:1}
+/* Comment on GitHub: one box with the text that will be posted. The field is one frame whose line
+   shows the focus, as the reply box does; the text inside has no fill or mark of its own. */
+.dcr-gh-box.dcr-gh-preview{max-width:640px;width:min(640px,calc(100vw - 32px));outline:0}
+.dcr-gh-preview>header{align-items:center}
+.dcr-gh-preview>header p{overflow-wrap:anywhere}
+.gh-preview-tools{display:flex;flex:none;gap:2px}
+.gh-preview-field{display:block;border:1px solid var(--line);border-radius:calc(8px * var(--round));background:var(--surface);transition:border-color .12s}
+.gh-preview-field:focus-within{border-color:var(--accent)}
+.dcr-gh-box .gh-preview-field .gh-summary{display:block;width:100%;border:0;border-radius:inherit;background:transparent;box-shadow:none}
+.dcr-gh-box .gh-preview-field .gh-summary:focus-visible{outline:0;box-shadow:none}
+.dcr-gh-box .gh-preview-text{min-height:210px;padding:12px 14px;font-size:14.5px;line-height:1.6}
+.gh-preview-field [hidden],.gh-preview-failed[hidden]{display:none!important}
+.gh-preview-wait{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:210px;padding:12px 14px;color:var(--muted);text-align:center}
+.gh-preview-wait strong{font-size:15px;font-weight:600;color:var(--ink)}
+.gh-preview-wait small{min-height:1.4em;font-size:12.5px}
+@media(prefers-reduced-motion:no-preference){.gh-preview-wait strong{animation:gh-word 2.2s ease-in-out infinite}}
+@keyframes gh-word{0%,100%{opacity:.35}18%,82%{opacity:1}}
+.gh-preview-failed{display:flex;gap:8px;margin:0;font-size:12.5px;line-height:1.5;color:var(--muted)}
+.gh-preview-failed svg{flex:none;width:15px;height:15px;margin-top:2px;color:var(--ink-amber-2)}
+.gh-preview-actions{align-items:center;justify-content:flex-start}
+.gh-preview-actions .act svg{width:15px;height:15px}
+.gh-preview-again{margin-left:-8px}
+.gh-preview-actions .act:disabled{opacity:.4;cursor:default}
+.gh-preview-from{flex:1;min-width:0;font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gh-voice-emojis{display:grid;gap:6px;font-size:13px}
+.gh-voice-emojis>span:first-child{font-weight:600}
+.dcr-gh-box .gh-voice-emojis input.gh-summary{min-height:0;height:40px;padding:0 12px;font-size:16px}
+.gh-voice-emojis small{color:var(--muted);font-size:12.5px}
 .dcr-voice-link{display:block;width:100%;margin-top:10px;padding:9px 0 0;border:0;border-top:1px solid var(--line);background:none;color:var(--muted);font-size:12.5px;text-align:left;cursor:pointer}
 .dcr-voice-link:hover{color:var(--ink);text-decoration:underline}
-.gh-voice-emojis{display:grid;gap:5px;font-size:13px}
-.gh-voice-emojis span{font-weight:600}
-.dcr-gh-box .gh-voice-emojis input.gh-summary{min-height:0;height:38px;font-size:16px;resize:none}
-.gh-voice-emojis small{color:var(--muted);font-size:12.5px}
+@media(max-width:520px){.gh-preview-from{display:none}.gh-preview-actions{flex-wrap:wrap}}

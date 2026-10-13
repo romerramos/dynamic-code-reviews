@@ -83,8 +83,9 @@ module DCR
       when ['POST', '/api/github/comment'] then github_comment(json(body))
       when ['POST', '/api/github/pending'] then (input = json(body); [200, @state.github_pending(input['key'], input['id'], input['pending'] == true, input['body'])])
       when ['POST', '/api/github/draft'] then [200, github_draft(json(body))]
+      when ['POST', '/api/github/delete'] then [200, github_delete(json(body))]
       when ['GET', '/api/github/voice'] then [200, github_voice]
-      when ['POST', '/api/github/voice'] then (input = json(body); @settings.save_github_voice(input['voice'], input['emojis']); [200, github_voice])
+      when ['POST', '/api/github/voice'] then (input = json(body); @settings.save_github_voice(GitHubDraft.own_voice(input['voice']), input['emojis']); [200, github_voice])
       when ['POST', '/api/github/review'] then github_review(json(body))
       else [404, {'error' => 'Not found'}]
       end
@@ -175,7 +176,20 @@ module DCR
       end
     end
 
-    def github_voice = {'voice' => @settings.github_voice || GitHubDraft::DEFAULT_VOICE, 'custom' => !@settings.github_voice.nil?, 'emojis' => @settings.github_emojis || GitHubDraft::DEFAULT_EMOJIS}
+    # Deletes on GitHub first; only then does the review forget it was posted. Already gone there is fine.
+    def github_delete(input)
+      key, id = input['key'], input['id'].to_s
+      raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
+      posted = @state.read.dig('github', key, 'posted', id) or raise ArgumentError, 'That comment is not on GitHub from this review.'
+      result = @github.delete(key, posted)
+      @state.github_unposted(key, id).slice('pending', 'posted', 'bodies').merge(result)
+    end
+
+    def github_voice = {'voice' => voice, 'custom' => !GitHubDraft.own_voice(@settings.github_voice).nil?, 'emojis' => emojis}
+
+    def voice = GitHubDraft.own_voice(@settings.github_voice) || GitHubDraft::DEFAULT_VOICE
+
+    def emojis = @settings.github_emojis || GitHubDraft::DEFAULT_EMOJIS
 
     # The preview asks for a comment in the reviewer's voice: an agent writes it in the background,
     # from what the page sends (the comment with its code and conversation) and the opinions kept
@@ -185,14 +199,15 @@ module DCR
       raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
       raise ArgumentError, 'Nothing to rewrite' unless context.is_a?(String) && !context.strip.empty? && context.length <= 200_000
       opinions = (@state.read.dig('threads', key, id.to_s, 'opinions') || {}).filter_map { |agent, opinion| {'agent' => agent, 'body' => opinion['body']} if opinion['body'] }
+      voice, emojis = self.voice, self.emojis
+      written_under = GitHubDraft.version(voice, emojis)
       started = @state.github_draft(key, id, {'status' => 'writing'})
       # The agent that ran the review: the one listening now, else the one the comment is credited to.
       author = @state.listener || (input['author'].to_s if input['author'].to_s.match?(Agents::SLUG))
-      voice, adversaries, repo = @settings.github_voice || GitHubDraft::DEFAULT_VOICE, @settings.adversaries, manifest['repo'] || Dir.pwd
-      emojis = @settings.github_emojis || GitHubDraft::DEFAULT_EMOJIS
+      adversaries, repo = @settings.adversaries, manifest['repo'] || Dir.pwd
       Thread.new do
         text, agent = @draft.call(context: context, opinions: opinions, voice: voice, emojis: emojis, author: author, adversaries: adversaries, repo: repo)
-        @state.github_draft(key, id, {'status' => 'ready', 'body' => text, 'agent' => agent})
+        @state.github_draft(key, id, {'status' => 'ready', 'body' => text, 'agent' => agent, 'voice' => written_under})
       rescue StandardError => error
         @state.github_draft(key, id, {'status' => 'failed', 'error' => error.message[0, 300]})
       end
@@ -315,7 +330,7 @@ module DCR
     def snapshot(key)
       raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
       state = @state.read
-      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'github' => state['github'][key] || {}, 'comments' => state['comments'][key] || [], 'screenshots' => Array(state['screenshots'][key]).map { |shot| shot.except('file') }, 'no_screenshots' => state['no_screenshots'][key], 'risk_ranking' => state['risk_rankings'][key], 'verdict' => state['verdicts'][key.split(':')[1].to_s],'previews' => preview_status(state['previews'][key]), 'latest_revision' => latest_revision, 'listening' => @state.listening?, 'agent' => @state.listener, 'agent_model' => @state.listener_model,
+      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'github' => (state['github'][key] || {}).merge('voice' => GitHubDraft.version(voice, emojis)), 'comments' => state['comments'][key] || [], 'screenshots' => Array(state['screenshots'][key]).map { |shot| shot.except('file') }, 'no_screenshots' => state['no_screenshots'][key], 'risk_ranking' => state['risk_rankings'][key], 'verdict' => state['verdicts'][key.split(':')[1].to_s],'previews' => preview_status(state['previews'][key]), 'latest_revision' => latest_revision, 'listening' => @state.listening?, 'agent' => @state.listener, 'agent_model' => @state.listener_model,
        'pending' => state['outbox'].count { |entry| entry['seq'] > state['acked'] && entry['key'] == key }}
     end
 
