@@ -57,15 +57,91 @@ globalThis.LiveTools = (() => {
   const commentAction = label => ACTIONS.find(entry => entry.labels.includes(label)) || ACTIONS[0];
   // What the review's agent found became of a comment once the code changed (`dcr reply --outcome`).
   const OUTCOMES = {addressed: 'Addressed', 'still-applies': 'Still applies', 'not-relevant': 'No longer relevant'};
-  // One line for the thread: the outcome, the revision it was said of, and whether the agents
-  // that checked it on their own found the same. It resolves nothing; the reader does, with the
-  // button beside it (resolve: the comment's id, while it is not resolved).
-  function outcomeHTML(thread, resolve = null) {
-    const outcome = thread?.outcome;
-    if (!OUTCOMES[outcome?.verdict]) return '';
-    const checks = verdicts(thread).map(entry => `${escape(agentInfo(entry.agent).name)} ${VERDICTS[entry.verdict].label.toLowerCase()}`);
-    return `<p class="dcr-outcome dcr-o-${escape(outcome.verdict)}"><strong>${OUTCOMES[outcome.verdict]}</strong><span>in revision ${escape(outcome.revision)}${checks.length ? ` · ${names(checks)}` : ''}</span>${resolve ? `<button type="button" class="btn btn-xs dcr-outcome-resolve" data-resolve="${escape(resolve)}">Resolve</button>` : ''}</p>`;
+  // Addressed and No longer relevant both say the comment is dealt with; Still applies says it is not.
+  const SIDES = {addressed: 'dealt', 'not-relevant': 'dealt', 'still-applies': 'applies'};
+  const WORD = /(addressed|still applies|no longer relevant|not relevant)/i;
+  const wordOf = said => { const text = said.toLowerCase(); return text === 'addressed' ? 'addressed' : text === 'still applies' ? 'still-applies' : 'not-relevant'; };
+  // An agent's own word on what became of a comment, and its reasons without it. The word is the
+  // answer's first, or (an agent that thinks aloud first) a sentence of its own, or in bold; what
+  // came before it is dropped. No word: null, and the answer as it is.
+  function outcomeWord(answer) {
+    const text = String(answer || '').trim();
+    const first = text.match(new RegExp(`^\\W*${WORD.source}\\b[\\s.:*]*`, 'i')); // not past the word's own punctuation: the reasons may start with code
+    const later = first || text.match(new RegExp(`(?:\\*\\*\\s*|(?<=[.!?:\\n])\\s*)${WORD.source}(?:\\s*[.:]\\s*\\*{0,2}|\\s*\\*\\*|\\s*\\n)\\s*`, 'i'));
+    return later ? {word: wordOf(later[1]), rest: text.slice(later.index + later[0].length).trim()} : {word: null, rest: text};
   }
+  // How a comment closes once its code changed: what the review's agent and each agent that
+  // checked on its own say became of it, one row each, and how that adds up. settled: all who
+  // said say it is dealt with. applies: all say it still applies. differ: they are on both
+  // sides. waiting: some have not answered and those who did are on one side. null: nobody said.
+  function closure(thread) {
+    const outcome = thread?.outcome;
+    if (!OUTCOMES[outcome?.verdict]) return null;
+    const own = [...(thread.messages || [])].reverse().find(message => message.author === 'agent' && !message.role && message.outcome);
+    const rows = [{agent: outcome.agent || own?.agent || null, main: true, word: outcome.verdict, body: own?.body || '', model: own?.model, effort: own?.effort, at: outcome.at}];
+    (thread.messages || []).forEach(message => {
+      if (message.role !== 'adversary' || message.about !== 'outcome') return;
+      const said = outcomeWord(message.body);
+      rows.push({agent: message.agent, word: said.word, body: said.rest, model: message.model, effort: message.effort, at: message.at});
+    });
+    Object.entries(thread.opinions || {}).forEach(([agent, opinion]) => {
+      if (opinion.about !== 'outcome' && !opinion.error) return;
+      if (opinion.error) { if (agent !== rows[0].agent && !(thread.waiting_on || []).includes(agent)) rows.push({agent, word: null, failed: true, body: ''}); return; }
+      const said = outcomeWord(opinion.body);
+      rows.push({agent, word: said.word, body: said.rest, model: opinion.model, effort: opinion.effort, at: opinion.at});
+    });
+    const waiting = (thread.waiting_on || []).filter(agent => !rows.some(row => row.agent === agent && !row.main));
+    const sides = new Set(rows.map(row => SIDES[row.word]).filter(Boolean));
+    const state = sides.size > 1 ? 'differ' : waiting.length ? 'waiting' : sides.has('applies') ? 'applies' : 'settled';
+    return {state, rows, waiting, revision: outcome.revision, side: SIDES[outcome.verdict]};
+  }
+  // Dealt with, and every agent that checked on its own says so too: nothing is left for the
+  // reader, so the comment closes by itself. One check that failed or gave no clear answer, or
+  // no check at all, leaves it to the reader.
+  function confirmed(thread) {
+    const closing = closure(thread);
+    const checks = closing?.rows.slice(1) || [];
+    return closing?.state === 'settled' && checks.length > 0 && checks.every(row => SIDES[row.word] === 'dealt');
+  }
+  // The closing block of a comment's thread. It tells it as it happened: what the review's agent
+  // did or found, in its own words, then who checked that on their own, a few words each. A
+  // check that confirms stays a name on one line (it opens to its reasons); one that does not
+  // is shown with its reasons, since that is what the reader has to weigh. Each thing is said
+  // once: the headline is what became of it, and the checks say who agrees. open: the agents the
+  // reader toggled. resolve: the comment's id while it is not resolved. still: it can be sent
+  // back to the agent as a fix. plain: offer Resolve here too (off where the card has its own).
+  function closureHTML(thread, {resolve = null, still = false, open = [], plain = true} = {}) {
+    const closing = closure(thread);
+    if (!closing) return '';
+    const toggled = new Set(open);
+    const [main, ...checks] = closing.rows;
+    const fixed = thread.fix?.state === 'done' && closing.side === 'dealt';
+    const name = row => agentInfo(row.agent).name;
+    const against = checks.filter(row => SIDES[row.word] && SIDES[row.word] !== closing.side);
+    const head = closing.state === 'differ' ? 'Not settled' : closing.side === 'applies' ? 'Still applies' : fixed ? 'Fixed' : 'No longer a problem';
+    // Only a disagreement needs a sentence: the headline no longer says what the agent found.
+    const differ = closing.state === 'differ';
+    const note = differ ? `${names(against.map(name))} ${against.length === 1 ? 'says' : 'say'} ${closing.side === 'dealt' ? 'it still applies' : 'it is dealt with'}. You decide.` : '';
+    const did = !differ ? '' : fixed ? 'fixed it' : {addressed: 'says the new code deals with it', 'not-relevant': 'says it no longer matters', 'still-applies': 'says it still applies'}[main.word];
+    const said = row => row.failed ? 'did not answer' : !SIDES[row.word] ? 'gave no clear answer' : SIDES[row.word] === closing.side ? 'agrees' : SIDES[row.word] === 'applies' ? 'says it still applies' : 'says it is dealt with';
+    const chevron = '<svg class="dcr-op-chevron" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
+    // One that does not agree is open until the reader closes it; the others open when asked.
+    const isOpen = row => String(row.body || '').trim() && (against.includes(row) ? !toggled.has(row.agent) : toggled.has(row.agent));
+    const chips = checks.map(row => {
+      const tone = row.failed || !SIDES[row.word] ? 'none' : SIDES[row.word] === closing.side ? 'agree' : 'disagree';
+      const face = `${avatarHTML(row.agent, 'dcr-face-sm')}<strong>${escape(name(row))}</strong><span class="dcr-check-said dcr-v-${tone}">${said(row)}</span>`;
+      return String(row.body || '').trim() ? `<button type="button" class="dcr-check${isOpen(row) ? ' is-open' : ''}" data-dcr-opinion="${escape(row.agent)}" aria-expanded="${!!isOpen(row)}" title="${escape(modelText(row))}">${face}${chevron}</button>` : `<span class="dcr-check">${face}</span>`;
+    }).join('') + closing.waiting.map(agent => `<span class="dcr-check is-waiting">${avatarHTML(agent, 'dcr-face-sm')}<strong>${escape(agentInfo(agent).name)}</strong><span class="dcr-check-said dcr-v-none">is checking</span><span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span></span>`).join('');
+    const opened = checks.filter(isOpen).map(row => `<div class="dcr-check-body">${avatarHTML(row.agent, 'dcr-face-sm')}<div><p class="dcr-check-by"><strong>${escape(name(row))}</strong> ${said(row)}${modelHTML(row)}</p><div class="dcr-body">${markdown(row.body)}</div></div></div>`).join('');
+    const id = resolve && escape(resolve);
+    const buttons = !id ? '' : differ
+      ? `<button type="button" class="btn btn-sm btn-primary" data-resolve="${id}" data-dcr-side="dealt">No longer a problem · Resolve</button>${still ? `<button type="button" class="btn btn-sm" data-dcr-still="${id}" data-dcr-side="applies">Still a problem · Fix this</button>` : ''}`
+      : plain ? `<button type="button" class="btn btn-sm${closing.state === 'settled' ? ' btn-primary' : ''}" data-resolve="${id}" data-dcr-side="${closing.side}">Resolve</button>` : '';
+    return `<section class="dcr-closure dcr-c-${closing.state}" aria-label="What became of this comment"><header class="dcr-closure-head"><strong>${head}</strong>${note ? `<span>${escape(note)}</span>` : ''}<span class="dcr-closure-rev">revision ${escape(closing.revision)}</span></header>`
+      + `<div class="dcr-closure-main">${avatarHTML(main.agent, 'dcr-face-sm')}<div class="dcr-closure-told"><p class="dcr-closure-by"><strong>${escape(name(main))}</strong>${did ? ` ${did}` : ''}${modelHTML(main)}</p>${String(main.body || '').trim() ? `<div class="dcr-body">${markdown(main.body)}</div>` : ''}`
+      + `${chips ? `<div class="dcr-checks" aria-label="Checked by">${chips}</div>` : ''}${opened}</div></div>${buttons ? `<div class="dcr-closure-actions">${buttons}</div>` : ''}</section>`;
+  }
+  const modelText = item => globalThis.ReviewTools?.modelText(item?.model, item?.effort) || '';
   const names = list => list.length < 2 ? list.join('') : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`;
   const progressKey = (snapshot, review) => `dynamic-review:${snapshot.fingerprint}${review.history ? `:${review.history.series}:${review.history.revision}` : ''}`;
 
@@ -102,7 +178,10 @@ globalThis.LiveTools = (() => {
   const actionLabel = thread => thread?.live ? 'Reply' : 'Ask agent';
 
   // --- reading an agent's answer -----------------------------------------------------------------
-  const markdown = text => globalThis.ReviewTools.markdown(text);
+  // An answer saved while its verdict was cut off too greedily lost the backtick its reasons
+  // began with; with an odd number of them left, it is put back so the code reads as code.
+  const mend = text => { const said = String(text ?? ''); return !said.includes('```') && (said.match(/`/g) || []).length % 2 && !said.startsWith('`') ? `\`${said}` : said; };
+  const markdown = text => globalThis.ReviewTools.markdown(mend(text));
 
   // The start of an answer as plain text for a narrow list: its first paragraph with the Markdown marks
   // removed. Underscores stay; they are part of identifiers such as `to_params`.
@@ -158,14 +237,16 @@ globalThis.LiveTools = (() => {
   function messagesHTML(thread, {seen = new Set(), now = Date.now(), agent: fallback = null} = {}) {
     const messages = thread?.messages || [];
     if (!messages.length) return '';
-    return messages.map(message => {
+    // What the agents said became of the comment is in its closing block, not here.
+    const closing = !!OUTCOMES[thread?.outcome?.verdict];
+    return messages.filter(message => !closing || !(message.about === 'outcome' || (message.author === 'agent' && !message.role && message.outcome))).map(message => {
       const agent = message.author === 'agent';
       const fresh = agent && !seen.has(message.id);
       const slug = agent ? message.agent || fallback : null;
       const adversary = message.role === 'adversary';
       const who = agent ? escape(agentInfo(slug).name) : 'You';
       const model = agent ? modelHTML(message) : '';
-      const role = adversary ? `<span class="dcr-role">second reviewer${message.about === 'outcome' ? ', on the outcome' : ''}</span>` : '';
+      const role = adversary ? `<span class="dcr-role">second reviewer${message.about === 'outcome' || message.about === 'earlier-outcome' ? ', on what became of it' : ''}</span>` : '';
       const outcome = OUTCOMES[message.outcome] ? `<span class="dcr-verdict dcr-o-${escape(message.outcome)}">${OUTCOMES[message.outcome]}</span>` : '';
       const avatar = agent ? avatarHTML(slug) : '<span class="dcr-avatar" aria-hidden="true">Y</span>';
       return `<article class="dcr-msg ${agent ? 'dcr-agent' : 'dcr-you'}${adversary ? ` dcr-adversary dcr-v-${escape(message.verdict || 'none')}` : ''}" data-msg="${escape(message.id)}">${avatar}<div class="dcr-msg-main"><header class="dcr-msg-head"><strong>${who}</strong>${model}${adversary ? verdictHTML(message.verdict) : outcome}${role}<time datetime="${escape(message.at || '')}" data-at="${escape(message.at || '')}">${escape(relativeTime(message.at, now))}</time>${fresh ? '<span class="dcr-new">New</span>' : ''}</header><div class="dcr-body">${markdown(message.body)}</div></div></article>`;
@@ -174,15 +255,20 @@ globalThis.LiveTools = (() => {
 
   // What every agent asked about a comment thinks of it: the second reviewer's verdict and the others'.
   // Once the review's agent said what became of the comment, it is what they think of that.
-  function verdicts(thread) {
+  // on 'comment': what they thought of the comment itself, whatever became of it since.
+  function verdicts(thread, on = null) {
     const out = [];
-    const about = thread?.outcome ? 'outcome' : undefined;
+    // Of an outcome, an agent agrees when its own word is on the same side as the review agent's
+    // (read from what it said, not from what was stored when words were compared letter by letter).
+    const closing = on !== 'comment' ? closure(thread) : null;
+    if (closing) return closing.rows.filter(row => !row.main && SIDES[row.word]).map(row => ({agent: row.agent, verdict: SIDES[row.word] === closing.side ? 'agree' : 'disagree'}));
+    const about = undefined;
     (thread?.messages || []).forEach(message => { if (message.role === 'adversary' && message.verdict && message.about === about) out.push({agent: message.agent, verdict: message.verdict}); });
     Object.entries(thread?.opinions || {}).forEach(([agent, opinion]) => { if (opinion.verdict && opinion.about === about) out.push({agent, verdict: opinion.verdict}); });
     return out;
   }
-  function tally(thread) {
-    const list = verdicts(thread);
+  function tally(thread, on = null) {
+    const list = verdicts(thread, on);
     const count = verdict => list.filter(entry => entry.verdict === verdict).length;
     return {total: list.length, agree: count('agree'), partly: count('partly'), disagree: count('disagree')};
   }
@@ -205,13 +291,15 @@ globalThis.LiveTools = (() => {
     const adversary = thread?.adversary;
     const opened = new Set(typeof open === 'string' ? [open] : open || []);
     // The second reviewer answers in the conversation; it shows here only when it could not answer.
-    const answered = Object.keys(opinions).filter(agent => opinions[agent].role !== 'adversary' || opinions[agent].error);
-    const waiting = (thread?.waiting_on || []).filter(agent => agent !== adversary || !checkingComment(thread));
+    // Once the comment has a closing block, what is said of the outcome, and who is still to say, is there.
+    const closing = !!OUTCOMES[thread?.outcome?.verdict];
+    const answered = Object.keys(opinions).filter(agent => (opinions[agent].role !== 'adversary' || opinions[agent].error) && !(closing && (opinions[agent].about === 'outcome' || opinions[agent].error)));
+    const waiting = closing ? [] : (thread?.waiting_on || []).filter(agent => agent !== adversary || !checkingComment(thread));
     const agents = [...new Set([...answered, ...waiting])];
     if (!agents.length) return '';
     // Verdicts a judge gave on answers to a question are counted apart from those on the comment.
     const onAnswer = Object.entries(opinions).filter(([, opinion]) => opinion.of === 'answer');
-    const counts = tally(onAnswer.length ? {opinions: Object.fromEntries(onAnswer)} : thread);
+    const counts = tally(onAnswer.length ? {opinions: Object.fromEntries(onAnswer)} : thread, closing ? 'comment' : null);
     const summary = consensus(counts);
     const rows = agents.map(agent => {
       const opinion = opinions[agent];
@@ -444,6 +532,6 @@ globalThis.LiveTools = (() => {
   }
 
   return {emojiToken, emojiMatches, escape, progressKey, allComments, sendText, drafts, statusText, statusModel, actionLabel, markdown, snippet, relativeTime, messagesHTML, unseen, agentModel, summary,
-    agentInfo, avatarHTML, modelHTML, verdictHTML, verdicts, outcomeHTML, OUTCOMES, commentAction, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
+    agentInfo, avatarHTML, modelHTML, verdictHTML, verdicts, closure, closureHTML, confirmed, outcomeWord, outcomeSide: word => SIDES[word], OUTCOMES, commentAction, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
     activeAdversaries, facesHTML, agentStatus, modelOptionsHTML, effortLevels, effortOptionsHTML, chosenModel, chosenEffort, settle, adversaryPanelHTML, adversaryIntroHTML, jevBannerHTML};
 })();

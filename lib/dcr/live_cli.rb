@@ -70,7 +70,7 @@ module DCR
     TEXT
 
     USAGE = {
-      'sync' => 'dcr sync (--repo ROOT --name SERIES | --dir DIR) [--follow-checkout]   (--follow-checkout: a pull request\'s review shows its pushed head; with this, only when the reviewer asks, it shows the checkout from now on) (updates the review to the code as it is now: a new revision with the current diff, comments moved to their lines or marked outdated, and the changed ranges printed for you to comment on)',
+      'sync' => 'dcr sync (--repo ROOT --name SERIES | --dir DIR) [--pull-request | --follow-checkout]   (--pull-request: a pull request\'s review is updated to its head as pushed now, asked of GitHub and fetched; --follow-checkout: a pull request\'s review shows its pushed head; with this, only when the reviewer asks, it shows the checkout from now on) (updates the review to the code as it is now: a new revision with the current diff, comments moved to their lines or marked outdated, and the changed ranges printed for you to comment on)',
       'wait' => 'dcr wait (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--model ID] [--effort LEVEL] [--timeout SECONDS] [--json]',
       'comments' => 'dcr comments (--repo ROOT --name SERIES | --dir DIR) [--thread ID] [--json]   (--thread prints that one conversation in full: the comment as sent, then every message)',
       'preview' => 'dcr preview submit (--repo ROOT --name SERIES | --dir DIR) --path <template path> [--file FILE] [--title TITLE] [--css STYLESHEET]... [--page-class CLASSES] [--image-map JSON] | dcr preview fail ... --path <template path> --reason TEXT',
@@ -108,6 +108,7 @@ module DCR
         p.on('--json') { options[:json] = true }
         p.on('--all') { options[:all] = true }
         p.on('--follow-checkout') { options[:follow] = true }
+        p.on('--pull-request') { options[:pull_request] = true }
         p.on('--replace MODE', %w[previous-qa all]) { |v| options[:replace] = v.tr('-', '_').to_sym }
         p.on('--agent NAME', 'Who you are: claude, codex, gemini, grok... (detected when omitted)') { |v| options[:agent] = Agents.check(v) }
         p.on('--model ID', 'The model you run on, as you know it (claude-opus-5-5, gpt-6.1-sol...)') { |v| options[:model] = model_option(v, 'model') }
@@ -467,7 +468,15 @@ module DCR
     def sync(options, directory)
       require_relative '../../scripts/series'
       history = ReviewSeries.manifest(directory)
-      result = ReviewSeries.sync(repo: history.fetch('repo'), name: history.fetch('name'), follow: options[:follow] == true)
+      pull = {}
+      if options[:pull_request]
+        require_relative 'github'
+        begin pull = GitHub.new(directory).pushed(history.fetch('repo'))
+        rescue GitHub::Error => error
+          raise ArgumentError, error.message
+        end
+      end
+      result = ReviewSeries.sync(repo: history.fetch('repo'), name: history.fetch('name'), follow: options[:follow] == true, head: pull['head'], base: pull['base'])
       return puts("Revision #{result['revision']} already shows the code as it is. Nothing to update.") if result['status'] == 'unchanged'
       puts [ReviewSeries.sync_brief(result), SYNC_RULE, sync_commands(flags(options)), 'The open page offers the new revision by itself. Comments and progress came along.'].join("\n\n")
     end

@@ -213,16 +213,16 @@ module SeriesChecks
           review = original['review'].merge('comparison' => {'base' => snapshot['base'], 'head' => second, 'pr_url' => 'https://github.com/acme/app/pull/7'})
           ReviewSeries.start(repo: root, name: 'pr-follow', report: DynamicReviews.render(snapshot: snapshot, review: review, name: 'pr-follow'))
           series = File.join(root, '.reviews/pr-follow')
-          assert(ReviewSeries.stale(repo: root, name: 'pr-follow') == {'changed' => 0, 'pinned' => true}, 'A pull request review did not say it follows the pull request')
+          assert(ReviewSeries.stale(repo: root, name: 'pr-follow') == {'changed' => 0, 'pinned' => true, 'pr' => true}, 'A pull request review did not say it follows the pull request')
           File.write(File.join(root, 'extra.rb'), "EXTRA = 1\n")
-          assert(ReviewSeries.stale(repo: root, name: 'pr-follow') == {'changed' => 1, 'pinned' => true}, 'The checkout was not compared with the pull request')
+          assert(ReviewSeries.stale(repo: root, name: 'pr-follow') == {'changed' => 1, 'pinned' => true, 'pr' => true}, 'The checkout was not compared with the pull request')
           rejects('A pull request review took the checkout unasked') { ReviewSeries.sync(repo: root, name: 'pr-follow') }
           result = ReviewSeries.sync(repo: root, name: 'pr-follow', follow: true)
           assert(result.values_at('status', 'revision') == ['updated', 2], 'Following the checkout did not save it')
           assert(ReviewSeries.manifest(series).values_at('follows', 'pinned_head') == ['checkout', second], 'The choice to follow the checkout was not kept')
           local = DynamicReviews.extract(File.join(series, 'current.html'))
           assert(local['review']['history']['local'] == true && local['snapshot']['working_tree'], 'The revision does not say it shows the checkout')
-          assert(ReviewSeries.stale(repo: root, name: 'pr-follow') == {'changed' => 0}, 'A review that follows the checkout still asks')
+          assert(ReviewSeries.stale(repo: root, name: 'pr-follow') == {'changed' => 0, 'pr' => true}, 'A review that follows the checkout still asks')
           # GitHub takes comments only where the checkout shows what the pull request has.
           target = DCR::GitHub.new(series).send(:target, DCR::State.review_key(local['snapshot']['fingerprint'], 'pr-follow', 2))
           assert(target.values_at(:commit, :unpushed) == [second, ['extra.rb']] && target[:hunks].keys == ['sample.rb'], 'Comments could reach GitHub on code that is not pushed')
@@ -241,6 +241,53 @@ module SeriesChecks
           asked = DCR::LiveAPI.new(series).call('POST', '/api/fix', -> { JSON.generate({key: key, id: 'value-note', text: 'Use a named constant.'}) })
           assert(asked[0] == 200 && asked[1]['followed'] == true && !asked[1].key?('revision') && ReviewSeries.manifest(series)['follows'] == 'checkout', "A fix on a pull request's review did not have it follow the checkout: #{asked}")
           assert(DCR::State.new(series).read.dig('threads', key, 'value-note', 'fix', 'state') == 'requested', 'The fix did not reach the agent')
+        end
+      end
+    end
+    checks['Update on a pull request review takes the newer push from GitHub; the checkout only when the reader says so'] = lambda do
+      require_relative '../lib/dcr/github'
+      require_relative '../lib/dcr/live_api'
+      ReviewChecks.fixture do |root, first|
+        Dir.mktmpdir('review-pr-push-') do |out|
+          original = DynamicReviews.extract(initial(root))
+          git = ->(*args) { DynamicReviews.git(root, *args).strip }
+          git.call('add', 'sample.rb')
+          second = git.call('commit-tree', git.call('write-tree'), '-p', first, '-m', 'test: the pull request')
+          git.call('update-ref', 'HEAD', second)
+          snapshot = DynamicReviews.collect(repo: root, mode: 'pr', base: first, head: second)
+          review = original['review'].merge('comparison' => {'base' => snapshot['base'], 'head' => second, 'pr_url' => 'https://github.com/acme/app/pull/7'})
+          ReviewSeries.start(repo: root, name: 'pushed', report: DynamicReviews.render(snapshot: snapshot, review: review, name: 'pushed'))
+          series = File.join(root, '.reviews/pushed')
+          # Someone pushes a commit the checkout does not have checked out.
+          File.write(File.join(root, 'extra.rb'), "EXTRA = 1\n")
+          git.call('add', 'extra.rb')
+          third = git.call('commit-tree', git.call('write-tree'), '-p', second, '-m', 'test: a newer push')
+          git.call('rm', '-q', '--cached', 'extra.rb')
+          File.unlink(File.join(root, 'extra.rb'))
+          gh = File.join(out, 'gh')
+          File.write(gh, "#!/bin/sh\ncat #{File.join(out, 'pull.json')}\n")
+          File.chmod(0o755, gh)
+          at = ->(head) { File.write(File.join(out, 'pull.json'), JSON.generate('head' => {'sha' => head}, 'base' => {'sha' => first, 'ref' => 'main'})) }
+          api = ->(method, body = {}) { DCR::LiveAPI.new(series, github: DCR::GitHub.new(series, gh: gh)).call(method, '/api/sync', -> { JSON.generate(body) })[1] }
+          at.call(second)
+          assert(api.call('GET').slice('pinned', 'pr', 'remote') == {'pinned' => true, 'pr' => true}, "A pull request with nothing new was reported as pushed to: #{api.call('GET')}")
+          assert(api.call('POST', {'from' => 'pr'})['status'] == 'unchanged', 'An update from a pull request with nothing new saved a revision')
+          at.call(third)
+          assert(api.call('GET')['remote'].slice('head', 'changed') == {'head' => third, 'changed' => 1}, "A newer push was not noticed: #{api.call('GET')}")
+          assert(api.call('POST', {'from' => 'pr'}).values_at('status', 'revision') == ['updated', 2], 'The newer push was not saved as the next revision')
+          saved = DynamicReviews.extract(File.join(series, 'current.html'))
+          assert(saved['snapshot']['head'] == third && !saved['snapshot']['working_tree'] && !saved['review']['history'].key?('local') && saved['snapshot']['files'].map { |file| file['path'] } == %w[extra.rb sample.rb], 'The revision does not show the pull request as pushed')
+          assert(!api.call('GET').key?('remote'), 'A push the review already shows is still offered')
+          # The checkout is shown when the reader chooses it, and the pull request takes it back.
+          # A checkout that does not have the push yet cannot be shown, and stops nothing else.
+          assert(api.call('GET').slice('changed', 'behind', 'unavailable') == {'changed' => 0, 'behind' => 'This checkout is behind the code the review shows: pull the branch first, or ask your agent for a new review'}, "A checkout behind the pull request made the review unavailable: #{api.call('GET')}")
+          git.call('update-ref', 'HEAD', third)
+          File.write(File.join(root, 'extra.rb'), "EXTRA = 1\n")
+          File.write(File.join(root, 'local.rb'), "LOCAL = 1\n")
+          assert(api.call('GET').slice('changed', 'remote', 'behind') == {'changed' => 1}, "The checkout's own differences were lost: #{api.call('GET')}")
+          assert(api.call('POST', {'follow' => true})['revision'] == 3 && ReviewSeries.manifest(series)['follows'] == 'checkout', 'The checkout was not followed when asked')
+          assert(api.call('POST', {'from' => 'pr'})['revision'] == 4 && !ReviewSeries.manifest(series).key?('follows'), 'An update from the pull request did not take the review back to it')
+          assert(DynamicReviews.extract(File.join(series, 'current.html'))['snapshot']['head'] == third, 'The review went back to something other than the pushed head')
         end
       end
     end
@@ -263,7 +310,7 @@ module SeriesChecks
         git.call('update-ref', 'refs/heads/trunk', trunk)
         git.call('add', 'sample.rb')
         git.call('update-ref', 'HEAD', git.call('commit-tree', git.call('write-tree'), '-p', second, '-p', trunk, '-m', 'test: merge trunk'))
-        assert(ReviewSeries.stale(repo: root, name: 'merged') == {'changed' => 0, 'pinned' => true}, "What the base branch gained counts as the branch's change: #{ReviewSeries.stale(repo: root, name: 'merged')}")
+        assert(ReviewSeries.stale(repo: root, name: 'merged') == {'changed' => 0, 'pinned' => true, 'pr' => true}, "What the base branch gained counts as the branch's change: #{ReviewSeries.stale(repo: root, name: 'merged')}")
         File.write(File.join(root, 'extra.rb'), "EXTRA = 1\n")
         result = ReviewSeries.sync(repo: root, name: 'merged', follow: true)
         assert(result['files'] == [{'path' => 'extra.rb', 'state' => 'added'}] && ReviewSeries.manifest(File.join(root, '.reviews/merged'))['base'] == trunk, "The update did not go on from where the branch starts now: #{result['files']}")

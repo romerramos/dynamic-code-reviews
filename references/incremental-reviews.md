@@ -60,10 +60,12 @@ on a changed range is marked needs-rechecking. A screenshot is kept while none o
 shows changed and dropped otherwise; the command lists the dropped ones. Coverage, validation, QA, previews and the risk
 ranking are cleared, as in a draft. Recorded context is left as it was, so the next `prepare`
 still sees a dependency that changed. That `prepare` lists every unreviewed range under
-`ranges_to_inspect`. A pull request's series is updated this way only once its reviewer chose to follow the checkout
-(the page's Update dialog, or `--follow-checkout`): the manifest keeps `follows: checkout` and the
-last verified head, each such revision carries `history.local`, and publishing the verified head
-again clears both.
+`ranges_to_inspect`. A pull request's series is updated from GitHub (`dcr sync --pull-request`, or Update in the
+page): the head as pushed now is fetched and becomes the next revision. It is updated from the
+checkout only once its reviewer chose that (Update from my checkout in the page, or
+`--follow-checkout`): the manifest keeps `follows: checkout` and the last verified head, each
+such revision carries `history.local`, and an update from the pull request, or publishing the
+verified head again, clears both.
 
 ## Write only the increment
 

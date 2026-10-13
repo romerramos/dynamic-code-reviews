@@ -721,7 +721,7 @@
     const keyboardHere = $('navigation').contains?.(document.activeElement); // absent only outside a browser
     const keyboardRow = keyboardHere && document.activeElement.dataset.fileLink;
     const query = $('search').value.trim().toLowerCase();
-    let html = `<ul class="menu"><li><button data-view="overview" aria-current="${state.view === 'overview' ? 'page' : 'false'}"><span class="step-number">☷</span><span class="step-body"><strong>Overview</strong><small>Comments & evidence</small></span></button></li><li><button data-view="files" aria-current="${state.view === 'files' ? 'page' : 'false'}"><span class="step-number">⌘</span><span class="step-body"><strong>All changes</strong><small>Diffs by responsibility · ${files.size} files</small></span></button></li>${sinceView ? `<li><button data-view="since" aria-current="${state.view === 'since' ? 'page' : 'false'}"><span class="step-number">Δ</span><span class="step-body"><strong>Since revision ${escape(sinceView.revision)}</strong><small>What this revision changed · ${plural(sinceView.files.length, 'file')}</small></span></button></li>` : ''}</ul>`;
+    let html = `<ul class="menu"><li><button data-view="overview" aria-current="${state.view === 'overview' ? 'page' : 'false'}"><span class="step-number">${icon('layout-list')}</span><span class="step-body"><strong>Overview</strong><small>Comments & evidence</small></span></button></li><li><button data-view="files" aria-current="${state.view === 'files' ? 'page' : 'false'}"><span class="step-number">${icon('file-diff')}</span><span class="step-body"><strong>All changes</strong><small>Diffs by responsibility · ${files.size} files</small></span></button></li>${sinceView ? `<li><button data-view="since" aria-current="${state.view === 'since' ? 'page' : 'false'}"><span class="step-number">${icon('history')}</span><span class="step-body"><strong>Since revision ${escape(sinceView.revision)}</strong><small>What this revision changed · ${plural(sinceView.files.length, 'file')}</small></span></button></li>` : ''}</ul>`;
     const fileLink = (id, layer) => {
       const file = files.get(id);
       const slash = file.path.lastIndexOf('/');
@@ -1802,7 +1802,8 @@
   const ghMark = '<svg class="gh-mark" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>';
   function githubControls(comment, size = 'sm') {
     const id = escape(comment.id);
-    if (!ghPostable(comment) || !ghLive()) return comment.audience === 'agent' ? '' : githubAction(comment, {copy: `data-copy-comment="${id}"`, github: `data-github="${id}"`}, size);
+    // Without a pull request to open there is nothing to do here but copy, and that is in the ⋯ menu.
+    if (!ghPostable(comment) || !ghLive()) return ghPostable(comment) ? githubAction(comment, {copy: `data-copy-comment="${id}"`, github: `data-github="${id}"`}, size) : '';
     const status = ghStatus();
     const state = ghState(comment.id);
     if (state.state === 'posted') return `<a class="btn btn-${size} gh-posted" href="${escape(state.url)}" target="_blank" rel="noopener noreferrer" title="${escape(ghWhere(state))}">${icon('check')}Posted · View on GitHub ${icon('arrow-up-right')}</a>`;
@@ -1847,10 +1848,9 @@
     const id = escape(comment.id);
     const found = ReviewTools.anchor(snapshot, comment);
     const forAgent = comment.audience === 'agent';
-    const prLink = !forAgent && ReviewTools.githubLink(snapshot, review, comment);
     const posted = ghState(comment.id).state === 'posted';
     const items = [
-      prLink ? menuItem(`data-copy-comment="${id}"`, 'Copy for comment', 'copy') : '',
+      forAgent ? '' : menuItem(`data-copy-comment="${id}"`, 'Copy for comment', 'copy'),
       menuItem(`data-copy="${id}"`, 'Copy for LLMs', 'copy'),
       found && !found.fullFile ? menuItem(`data-comment="${id}"`, 'Open in diff', 'arrow-right') : '',
       // The reader's own comment is deleted in both places once it is on GitHub; the agent's stays
@@ -1874,7 +1874,8 @@
     const [symbol, title, hint, tone] = commentTypes[comment.label] || commentTypes.note;
     return `<span class="thread-type type-${tone}" title="${hint}"><span class="thread-type-icon">${icon(symbol)}</span>${title}</span><span class="thread-priority ${comment.decoration === 'blocking' ? 'is-blocking' : 'is-optional'}">${comment.decoration === 'blocking' ? `${icon('circle-alert')} Blocking` : 'Non-blocking'}</span>${comment.severity ? `<span class="thread-severity">${escape(comment.severity)}</span>` : ''}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${comment.personal ? '<span class="thread-author">Your comment</span>' : agentBadge(comment.agent, comment)}${ghBadgeSlot(comment)}`;
   }
-  function commentCard(comment) {
+  // closed: the card starts folded to its subject (a comment from an earlier revision).
+  function commentCard(comment, closed = false) {
     const found = ReviewTools.anchor(snapshot, comment);
     if (!found && !comment.general) return '';
     const id = escape(comment.id);
@@ -1886,7 +1887,7 @@
     const earlier = comment.follows && comments.find(other => other.id === comment.follows);
     const earlierWas = earlier && ReviewTools.outdatedWhere(earlier);
     const follows = earlier ? `<details class="thread-follows"><summary>Follows up on “${escape(earlier.subject)}”${earlierWas?.revision ? `, from revision ${escape(earlierWas.revision)}` : ''}</summary>${earlier.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(earlier.discussion)}</div>` : ''}${earlierWas?.code ? `<figure class="thread-was"><figcaption>The code it was written on</figcaption><pre><code>${escape(earlierWas.code)}</code></pre></figure>` : ''}</details>` : '';
-    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${escape(found?.file.path || was?.path || 'General comment')}</span><span class="thread-range">${found ? range : was ? `<span class="thread-outdated" title="These lines changed after the comment was written">Outdated</span>${escape(was.lines)}` : ''}</span></div><details class="thread-details" ${comment.resolved ? '' : 'open'}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}"><span class="thread-badges">${threadBadges(comment)}</span><strong>${escape(comment.subject)}</strong><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${comment.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(comment.discussion)}</div>` : ''}${wasCode}${follows}${commentShots(comment)}${commentEvidence(comment)}</div>${found ? found.fullFile ? `<button class="thread-source btn btn-sm btn-ghost" type="button" data-comment="${id}">View in file · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : `<button class="thread-source btn btn-sm btn-ghost" type="button" data-open-code="${id}" aria-haspopup="dialog" aria-label="${escape(`View code for ${found.file.path}, ${range}: ${comment.subject}`)}">View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : ''}</details><div class="thread-footer"><div class="comment-actions">${commentActions(comment)}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
+    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''} ${closed ? 'is-earlier' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${escape(found?.file.path || was?.path || 'General comment')}</span><span class="thread-range">${found ? range : was ? `<span class="thread-outdated" title="These lines changed after the comment was written">Outdated</span>${escape(was.lines)}${closed && was.revision ? ` in revision ${escape(was.revision)}` : ''}` : ''}</span></div><details class="thread-details" ${comment.resolved || closed ? '' : 'open'}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}"><span class="thread-badges">${threadBadges(comment)}</span><strong>${escape(comment.subject)}</strong><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${comment.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(comment.discussion)}</div>` : ''}${wasCode}${follows}${commentShots(comment)}${commentEvidence(comment)}</div>${found ? found.fullFile ? `<button class="thread-source btn btn-sm btn-ghost" type="button" data-comment="${id}">View in file · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : `<button class="thread-source btn btn-sm btn-ghost" type="button" data-open-code="${id}" aria-haspopup="dialog" aria-label="${escape(`View code for ${found.file.path}, ${range}: ${comment.subject}`)}">View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : ''}</details><div class="thread-footer"><div class="comment-actions">${commentActions(comment)}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
   }
   function toggleResolved(id) {
     const comment = comments.find(comment => comment.id === id);
@@ -2323,15 +2324,34 @@
     }
   };
 
+  let earlierOpen = false; // the reader opened From earlier revisions; a redraw keeps it so
+  document.addEventListener('toggle', event => { if (event.target.matches?.('details.overview-earlier')) earlierOpen = event.target.open; }, true);
   function renderOverview() {
     const generated = comments.filter(comment => !comment.personal);
-    const pending = (review.history?.finding_states || []).filter(item => item.status === 'needs-rechecking').length;
+    // A comment whose code changed since is history: it leaves the list for a folded section
+    // under it, so what is read first is about the code as it is.
+    const earlier = generated.filter(comment => comment.outdated);
+    const earlierCards = earlier.map(comment => commentCard(comment, true)).join('');
+    const earlierSection = earlierCards ? `<details class="overview-earlier" ${earlierOpen ? 'open' : ''}><summary><span class="overview-earlier-title">From earlier revisions <span class="badge neutral">${earlier.length}</span></span><span class="overview-earlier-note"><span data-earlier-outcomes></span></span>${icon('chevron-down')}</summary>${earlierCards}</details>` : '';
+    // A finding whose code changed is its comment under From earlier revisions, which says what
+    // became of it. Only one with no comment is still said, in a line there and never a banner.
+    const subjects = new Set(generated.map(comment => comment.subject));
+    const pending = (review.history?.finding_states || []).filter(item => item.status === 'needs-rechecking' && !subjects.has(item.title)).length;
     const revision = review.history;
+    // One sentence says what this revision is: what it changed and whether that is pushed. The
+    // whole account of the update is in Review details.
+    const revisionLine = !revision ? '' : revision.revision > 1
+      ? `<p class="overview-update" title="${escape(revision.summary)}"><strong>Revision ${revision.revision}</strong> ${sinceView ? `changed ${plural(sinceView.files.length, 'file')} since revision ${escape(sinceView.revision)}${revision.local ? ', in your checkout and not pushed yet' : ''}.` : `${escape(revision.summary)}${revision.local ? ' It shows your checkout, not the pull request as pushed.' : ''}`}${sinceView ? ` <button type="button" class="link-button" data-view="since">See what changed</button>` : ''}</p>`
+      : revision.local ? '<p class="overview-update">This review shows your checkout, not the pull request as pushed.</p>' : '';
+    const failed = unlinkedFlows().filter(({flow}) => flow.result === 'failed');
+    // With nothing open on the code as it is, say so first: the fold below is history, not work.
+    const settledNote = !inProgress && earlier.length && !feedback.findings.length && !failed.length && !generated.some(comment => !comment.outdated && !comment.resolved)
+      ? `<p class="overview-status" data-overview-status><strong>Nothing is waiting on you.</strong> ${earlier.length === 1 ? 'The comment below was' : `The ${earlier.length} comments below were`} written on code that has changed since.</p>` : '';
     const qa = review.qa;
     const historyLinks = revision ? `<nav class="overview-history" aria-label="Review history"><a href="${revision.preview ? '' : '../'}current.html">Latest review</a><a href="${revision.preview ? '' : '../'}index.html">All revisions</a></nav>` : '';
     const empty = !generated.length && !feedback.findings.length && !pending && !unlinkedFlows().some(({flow}) => flow.result === 'failed') ? `<p class="review-empty">${inProgress ? 'No comments yet. They appear here as your agent writes them.' : 'No issues found in this review.'}</p>` : '';
     const progressBox = inProgress ? `<div class="review-progress" role="status"><span class="review-progress-dot" aria-hidden="true"></span><div><h3>Your review is in progress</h3><p>Start reading now. Your agent's comments appear here and beside the code as it writes them, with a notice when one arrives, even on a file you already read. Explanations, test results and the finished walkthrough follow. Template previews and QA open once it is done.</p><p class="review-progress-count">${generated.length ? `${generated.length} comment${generated.length === 1 ? '' : 's'} so far` : 'No comments yet'}</p></div><button type="button" class="btn btn-sm btn-primary" data-start-reading>Start reading ${icon('arrow-right')}</button></div>` : '';
-    return `<div class="overview-reading"><header class="overview-intro"><p class="eyebrow">Review overview</p><h1>${escape(review.title)}</h1><h2 class="what-changed-title">What changed</h2><p class="overview-scope">${escape(ReviewTools.comparisonText(snapshot, review))}</p><p class="lead">${escape(review.summary)}</p>${revision && revision.revision > 1 ? `<p class="overview-update"><strong>Review revision ${revision.revision}</strong> · ${escape(revision.summary)}${sinceView ? ` <button type="button" class="link-button" data-view="since">See what changed since revision ${escape(sinceView.revision)}</button>` : ''}</p>` : ''}${revision?.local ? '<p class="overview-notice">This revision shows your checkout, not the pull request as pushed. Code here may not be on the pull request yet.</p>' : ''}${historyLinks}${renderUIChanges()}${progressBox}</header>${inProgress ? '' : renderVisualOptions()}${pending ? `<p class="overview-notice">${pending} previous finding${pending === 1 ? '' : 's'} still need checking. See Review details.</p>` : ''}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}${renderRiskRanking()}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${generated.map(commentCard).join('')}${unlinkedFlows().filter(({flow}) => flow.result === 'failed').map(({flow,index}) => qaFlow(flow,index)).join('')}</section>${renderOtherChecks()}${renderMyReview()}</div>`;
+    return `<div class="overview-reading"><header class="overview-intro"><p class="eyebrow">Review overview</p><h1>${escape(review.title)}</h1><h2 class="what-changed-title">What changed</h2><p class="overview-scope">${escape(ReviewTools.comparisonText(snapshot, review))}</p><p class="lead">${escape(review.summary)}</p>${revisionLine}${historyLinks}${renderUIChanges()}${progressBox}</header>${inProgress ? '' : renderVisualOptions()}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}${renderRiskRanking()}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${settledNote}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${generated.filter(comment => !comment.outdated).map(comment => commentCard(comment)).join('')}${unlinkedFlows().filter(({flow}) => flow.result === 'failed').map(({flow,index}) => qaFlow(flow,index)).join('')}${earlierSection}${pending ? `<p class="overview-status">${plural(pending, 'earlier finding')} ${pending === 1 ? 'was' : 'were'} not checked again after the code changed. Review details has ${pending === 1 ? 'it' : 'them'}.</p>` : ''}</section>${renderOtherChecks()}${renderMyReview()}</div>`;
   }
 
   // On a phone the bar at the bottom has no pager, so a step ends with the way to the next one.
@@ -2922,7 +2942,10 @@
     const button = menu.querySelector('summary').getBoundingClientRect();
     const list = menu.querySelector('.more-list');
     const height = list.offsetHeight;
-    list.style.left = `${Math.max(8, Math.min(button.left, innerWidth - list.offsetWidth - 8))}px`;
+    // A menu that is the arrow of a wider control (data-menu-from) opens under that control's
+    // left edge, not under the arrow's.
+    const from = menu.dataset.menuFrom === 'previous' ? menu.previousElementSibling : menu.dataset.menuFrom === 'parent' ? menu.parentElement : null;
+    list.style.left = `${Math.max(8, Math.min((from?.getBoundingClientRect() || button).left, innerWidth - list.offsetWidth - 8))}px`;
     list.style.top = `${button.top - height - 6 >= 8 ? button.top - height - 6 : Math.min(button.bottom + 6, innerHeight - height - 8)}px`;
   }, true);
   document.addEventListener('scroll', () => closeMenus(), true);
@@ -3085,7 +3108,7 @@
         expandedViewer.close();
         select('overview');
         const card = [...document.querySelectorAll('#content .review-thread')].find(node => node.dataset.threadId === where.dataset.shotComment);
-        if (card) { const details = card.querySelector('details'); if (details) details.open = true; card.scrollIntoView({block: 'center'}); card.querySelector('summary')?.focus({preventScroll: true}); }
+        if (card) { card.closest('details.overview-earlier')?.setAttribute('open', ''); const details = card.querySelector('details'); if (details) details.open = true; card.scrollIntoView({block: 'center'}); card.querySelector('summary')?.focus({preventScroll: true}); }
         return;
       }
       // A file opens behind the viewer, so the viewer goes.

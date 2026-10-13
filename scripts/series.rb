@@ -253,18 +253,23 @@ module ReviewSeries
   # The series' code as it is now. Refused when the checkout no longer continues the previous revision.
   # checkout: a pull request's series read from the checkout as it is, which its reviewer chose
   # (Follow my checkout), instead of from a verified head.
-  def current_snapshot(repo, history, previous, head: nil, base: nil, working_tree: false, checkout: false)
+  # forward: an update (not a full review) goes on from a base branch that only moved forward.
+  def current_snapshot(repo, history, previous, head: nil, base: nil, working_tree: false, checkout: false, forward: false)
+    start = nil
     if history['origin_mode'] == 'pr' && !checkout
       raise ArgumentError, 'PR series requires explicitly verified --base and --head refs' unless base && head
       current_base = DynamicReviews.git(repo, 'merge-base', DynamicReviews.sha(repo, base), DynamicReviews.sha(repo, head)).strip
-      raise ArgumentError, 'PR base changed; start a new baseline series' unless current_base == history['base']
+      unless current_base == history['base']
+        raise ArgumentError, 'PR base changed; start a new baseline series' unless forward && DynamicReviews.git(repo, 'merge-base', history['base'], current_base, allowed: [0, 1]).strip == history['base']
+        start = current_base
+      end
     end
     if working_tree && head && DynamicReviews.sha(repo, 'HEAD') != DynamicReviews.sha(repo, head)
       raise ArgumentError, 'Working-tree PR review requires the checkout HEAD to match the verified PR head'
     end
     # A checkout whose branch took in its base branch (a merge or a rebase) is compared from
     # where it starts now, so the review shows its own change and not what the base gained.
-    start = head || base ? nil : moved_start(repo, history, previous)
+    start ||= head || base ? nil : moved_start(repo, history, previous)
     current = DynamicReviews.collect(repo: repo, mode: 'series', base: start || history.fetch('base'), head: working_tree ? nil : head)
     common = DynamicReviews.git(repo, 'merge-base', previous['snapshot']['head'], current['head'], allowed: [0, 1]).strip
     if history['origin_mode'] == 'pr'
@@ -664,7 +669,9 @@ module ReviewSeries
   # shows the current diff, keeps the explanations of the ranges that did not change and leaves the
   # others unexplained. Every comment follows its lines or becomes outdated, and the reader's
   # progress and conversations come along. Returns what changed, for whoever reviews it next.
-  def sync(repo:, name:, follow: false, **_unused)
+  # head, base: the pull request as pushed now, verified by the caller; the review then shows
+  # that head, and no longer follows the checkout if it did.
+  def sync(repo:, name:, follow: false, head: nil, base: nil, **_unused)
     path = directory(repo, name)
     locked(path) do
       history = manifest(path)
@@ -674,12 +681,21 @@ module ReviewSeries
       entry = history['revisions'].last
       pr = history['origin_mode'] == 'pr'
       # A pull request's review shows its pushed head until the reviewer has it follow the checkout.
-      if pr && history['follows'] != 'checkout'
-        raise ArgumentError, 'This review follows its pull request, not your checkout. The reviewer chooses Follow my checkout in the page (Update), or you run `dcr sync --follow-checkout` when they ask for it.' unless follow
-        history.merge!('follows' => 'checkout', 'pinned_head' => previous['snapshot']['head'])
-        atomic_write(File.join(path, 'manifest.json'), JSON.pretty_generate(history))
+      if head
+        raise ArgumentError, 'Only a review of a pull request is updated from one' unless pr
+        current = current_snapshot(repo, history, previous, head: head, base: base, forward: true)
+        if history['follows']
+          %w[follows pinned_head].each { |field| history.delete(field) }
+          atomic_write(File.join(path, 'manifest.json'), JSON.pretty_generate(history))
+        end
+      else
+        if pr && history['follows'] != 'checkout'
+          raise ArgumentError, 'This review follows its pull request, not your checkout. Update it from the pull request (`dcr sync --pull-request`, or Update in the page); the checkout is shown only when the reviewer asks for it (`dcr sync --follow-checkout`, or Update from my checkout in the page).' unless follow
+          history.merge!('follows' => 'checkout', 'pinned_head' => previous['snapshot']['head'])
+          atomic_write(File.join(path, 'manifest.json'), JSON.pretty_generate(history))
+        end
+        current = current_snapshot(repo, history, previous, working_tree: true, checkout: pr)
       end
-      current = current_snapshot(repo, history, previous, working_tree: true, checkout: pr)
       next({'status' => 'unchanged', 'revision' => entry['number']}) if code_key(previous['snapshot']) == code_key(current)
       changes = compare(previous['snapshot'], current)
       history['base'] = current['base'] # where the branch starts now, when it took in its base branch
@@ -704,7 +720,7 @@ module ReviewSeries
       placed = review['comments'].reject { |comment| comment['outdated'] }.map { |comment| comment['id'] }
       shots, dropped = with_screenshots(path, history, previous['review']).partition { |shot| (shot['paths'] - kept).empty? && (!shot['comment_id'] || placed.include?(shot['comment_id'])) }
       review['screenshots'] = shots if shots.any?
-      summary = "Updated to the code as it is now: #{count(changed.length, 'file')} changed since revision #{entry['number']}"
+      summary = "Updated to #{head ? 'the pull request as pushed' : 'the code as it is now'}: #{count(changed.length, 'file')} changed since revision #{entry['number']}"
       summary += in_progress || ranges.empty? ? '.' : ", #{count(ranges.length, 'range')} not reviewed yet."
       summary += " #{count(outdated.length, 'comment')} #{outdated.length == 1 ? 'is' : 'are'} outdated." if outdated.any?
       summary += " #{count(dropped.length, 'screenshot')} of changed files #{dropped.length == 1 ? 'was' : 'were'} dropped." if dropped.any?
@@ -776,12 +792,34 @@ module ReviewSeries
     raise ArgumentError, 'Branch changed; choose the correct series or start a new one' unless history['branch'] == branch(repo)
     previous = latest(path, history)
     pr = history['origin_mode'] == 'pr'
-    changes = compare(previous['snapshot'], current_snapshot(repo, history, previous, working_tree: true, checkout: pr))
-    result = {'changed' => changes['files'].count { |file| file['state'] != 'unchanged' }}
+    # A pull request's review is updated from GitHub, so a checkout that cannot be compared (it
+    # does not have the reviewed commits yet) only rules out updating from the checkout.
+    changes = begin
+      compare(previous['snapshot'], current_snapshot(repo, history, previous, working_tree: true, checkout: pr))
+    rescue ArgumentError => error
+      raise unless pr
+      behind = error.message
+      {'files' => []}
+    end
+    result = {'changed' => changes['files'].count { |file| file['state'] != 'unchanged' }, 'behind' => behind}
     # pinned: it shows the pull request's head, and the reader has not chosen the checkout yet.
     result['pinned'] = true if pr && history['follows'] != 'checkout'
+    result['pr'] = true if pr
     result['warning'] = rebased(repo, history, previous) if pr
     result.compact
+  end
+
+  # What a newer push of the pull request changes: how many files, or nil when the review already
+  # shows that head (or a head with the same code). head, base: as GitHub has them, fetched.
+  def pushed(repo:, name:, head:, base:)
+    path = directory(repo, name)
+    history = manifest(path)
+    previous = latest(path, history)
+    shown = history['follows'] == 'checkout' ? history['pinned_head'] : previous['snapshot']['head']
+    return if DynamicReviews.sha(repo, head) == shown
+    changes = compare(previous['snapshot'], current_snapshot(repo, history, previous, head: head, base: base, forward: true))
+    changed = changes['files'].count { |file| file['state'] != 'unchanged' }
+    {'head' => head, 'changed' => changed} if changed.positive? || history['follows'] == 'checkout'
   end
 
   # Where the branch starts from its base branch now, when that is not where the review starts.

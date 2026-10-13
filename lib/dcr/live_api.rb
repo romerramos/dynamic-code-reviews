@@ -73,6 +73,7 @@ module DCR
       when ['POST', '/api/send'] then send_items(json(body))
       when ['POST', '/api/message'] then message(json(body))
       when ['POST', '/api/fix'] then [200, fix(json(body))]
+      when ['POST', '/api/closure'] then (input = json(body); [200, {'closed' => @state.closed(input['key'], input['id'].to_s, input['side'].to_s)}])
       when ['GET', '/api/screenshot'] then [200, screenshot(key, query['id'])]
       when ['GET', '/api/sync'] then [200, stale]
       when ['POST', '/api/sync'] then [200, sync(json(body))]
@@ -240,11 +241,39 @@ module DCR
 
     # Whether the code moved on since the review's latest revision. A series that cannot be
     # updated from the page (a pull request's, another branch) says why instead.
+    # remote: on a pull request's review, what a newer push changes, as GitHub has it.
     def stale
       require_relative '../../scripts/series'
-      ReviewSeries.stale(repo: manifest.fetch('repo'), name: manifest.fetch('name'))
+      result = ReviewSeries.stale(repo: manifest.fetch('repo'), name: manifest.fetch('name'))
+      result['pr'] ? result.merge(remote_status(wait: 6)) : result
     rescue ArgumentError, KeyError => error
       {'unavailable' => error.message}
+    end
+
+    REMOTE_SECONDS = 60
+
+    # GitHub is asked at most once a minute, in the background: a fetch can outlast a request.
+    # {'remote' => {head, changed}} when the pull request has a newer push, {'remote_error' =>
+    # why} when GitHub could not be asked, {} when there is nothing new or no answer yet.
+    def remote_status(wait:, fresh: false)
+      @remote_lock ||= Mutex.new
+      thread = @remote_lock.synchronize do
+        stale = fresh || @remote.nil? || Time.now - @remote[:at] > REMOTE_SECONDS
+        @remote_thread = Thread.new { ask_remote } if stale && !@remote_thread&.alive?
+        @remote_thread
+      end
+      thread&.join(wait) if fresh || @remote.nil?
+      @remote_lock.synchronize { fresh && thread&.alive? ? {'remote_pending' => true} : @remote ? @remote[:value] : {} }
+    end
+
+    def ask_remote
+      repo, name = manifest.fetch('repo'), manifest.fetch('name')
+      pull = @github.pushed(repo)
+      newer = ReviewSeries.pushed(repo: repo, name: name, head: pull['head'], base: pull['base'])
+      value = newer ? {'remote' => newer.merge('base' => pull['base'])} : {'remote_head' => pull.slice('head', 'base')}
+      @remote_lock.synchronize { @remote = {at: Time.now, value: value} }
+    rescue StandardError => error
+      @remote_lock.synchronize { @remote = {at: Time.now, value: {'remote_error' => error.message}} }
     end
 
     # Fix this, Apply this or Act on this on a comment: the agent is handed it as a task that changes code. The fix is to
@@ -274,13 +303,21 @@ module DCR
     # The reader's Update: the next revision shows the code as it is, and the listening agent is
     # handed what changed so it can comment on it.
     # follow: the reader chose Follow my checkout for a pull request's review.
+    # from 'pr': the next revision shows the pull request as pushed now, asked of GitHub.
     def sync(input)
-      update_review(input['follow'] == true).slice('status', 'revision', 'summary')
+      return update_review(input['follow'] == true).slice('status', 'revision', 'summary') unless input['from'] == 'pr'
+      asked = remote_status(wait: 12, fresh: true)
+      raise ArgumentError, 'Still fetching the pull request from GitHub. Try again in a moment.' if asked['remote_pending']
+      raise ArgumentError, asked['remote_error'] if asked['remote_error']
+      pull = asked['remote'] || asked['remote_head']
+      result = update_review(false, head: pull['head'], base: pull['base'])
+      @remote_lock.synchronize { @remote = nil }
+      result.slice('status', 'revision', 'summary')
     end
 
-    def update_review(follow)
+    def update_review(follow, head: nil, base: nil)
       require_relative '../../scripts/series'
-      result = ReviewSeries.sync(repo: manifest.fetch('repo'), name: manifest.fetch('name'), follow: follow)
+      result = ReviewSeries.sync(repo: manifest.fetch('repo'), name: manifest.fetch('name'), follow: follow, head: head, base: base)
       @state.code_updated(result['key'], ReviewSeries.sync_brief(result)) if result['status'] == 'updated' && result['unreviewed'].any?
       result
     end

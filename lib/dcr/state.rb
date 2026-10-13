@@ -272,6 +272,25 @@ module DCR
     end
 
     OUTCOMES = %w[addressed still-applies not-relevant].freeze
+    SIDES = %w[dealt applies].freeze
+
+    # The reviewer closed a comment whose code changed: the side they took (it is dealt with, or
+    # it still applies), kept beside what each agent had said, so how often they side with whom
+    # can be counted later. said: {agent => the side it took}, as the thread has them now.
+    def closed(key, id, side)
+      raise ArgumentError, "A comment is closed as one of: #{SIDES.join(', ')}" unless SIDES.include?(side)
+      update do |state|
+        thread = thread(state, key, id)
+        raise ArgumentError, 'Nobody said what became of this comment yet' unless thread['outcome']
+        # An agent that checked on its own agreed or not with the review's agent: its side is that one, or the other.
+        own = thread['outcome']['verdict'] == 'still-applies' ? 'applies' : 'dealt'
+        sided = ->(verdict) { verdict == 'agree' ? own : verdict == 'disagree' ? (SIDES - [own]).first : nil }
+        said = {(thread['outcome']['agent'] || 'agent') => own}
+        thread['messages'].each { |message| said[message['agent']] = sided.call(message['verdict']) if message['role'] == 'adversary' && message['about'] == 'outcome' }
+        (thread['opinions'] || {}).each { |agent, opinion| said[agent] = sided.call(opinion['verdict']) if opinion['about'] == 'outcome' }
+        thread['closed'] = {'side' => side, 'at' => Time.now.utc.iso8601, 'said' => said.compact}
+      end
+    end
     FIX_LAPSE = 3600 # seconds after which a fix nobody reported on no longer holds the others back
 
     FIX_ASKS = %w[fix apply answer].freeze # fix what it says, apply what it suggests, act on the reader's answer to it
@@ -288,6 +307,10 @@ module DCR
         thread = thread(state, key, id)
         thread.merge!('fix' => {'state' => 'requested', 'at' => Time.now.utc.iso8601}, 'delivery' => 'sent', 'live' => true)
         thread.delete('outcome')
+        # What was said of the outcome it had is history now: it stays in the conversation, and
+        # no longer counts for the outcome the fix ends in.
+        thread['messages'].each { |message| message['about'] = 'earlier-outcome' if message['about'] == 'outcome' }
+        (thread['opinions'] || {}).each_value { |opinion| opinion['about'] = 'earlier-outcome' if opinion['about'] == 'outcome' }
         add_message(state, key, id, 'user', note) unless note.to_s.strip.empty?
         enqueue(state, 'fix', key, [id], text.to_s, 'ask' => ask)
       end

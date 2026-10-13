@@ -62,11 +62,14 @@
 .dcr-split-main .btn{gap:6px}.dcr-split-main .btn .dcr-face{flex:none}
 .dcr-split .btn>svg{flex:none;width:15px;height:15px}
 .dcr-split-menu[hidden]{display:none}
-.dcr-split-cancel[hidden]{display:none}.dcr-split.is-writing{gap:6px}
-/* In a card or popover the text box belongs to the whole comment: full width, under a rule, and sent by the control below it. */
+.dcr-split-cancel[hidden]{display:none}
+/* In a card or popover the text box belongs to the whole comment: full width, under a rule, with its own
+   send button right under it, named for what it sends. The control in the footer steps aside meanwhile. */
 .dcr-card .dcr-reply,.dcr-popover .dcr-reply{margin:18px 0 0;padding-top:16px;border-top:1px solid var(--line)}
-.dcr-card .dcr-reply .dcr-actions>[type="submit"],.dcr-card .dcr-reply .dcr-actions>[data-dcr-cancel],.dcr-popover .dcr-reply .dcr-actions>[type="submit"],.dcr-popover .dcr-reply .dcr-actions>[data-dcr-cancel]{display:none}
-.dcr-card .dcr-reply .dcr-actions,.dcr-popover .dcr-reply .dcr-actions{margin-top:6px;min-height:0}
+.dcr-card .dcr-reply .dcr-actions,.dcr-popover .dcr-reply .dcr-actions{align-items:center;justify-content:flex-end;flex-wrap:wrap;margin-top:8px}
+.dcr-card .dcr-reply .dcr-actions .dcr-adv-toggle,.dcr-popover .dcr-reply .dcr-actions .dcr-adv-toggle{margin-left:0}
+.dcr-send-hint{margin-right:auto;font-size:12px;color:var(--muted)}.dcr-send-hint kbd{font:600 10.5px/1 var(--mono);padding:2px 5px}
+.dcr-split.is-writing{display:none}
 .dcr-split-more{gap:4px;padding-inline:4px 6px;list-style:none;cursor:pointer}.dcr-split-more::-webkit-details-marker{display:none}
 .dcr-split-more svg{width:13px;height:13px;opacity:.75}
 .comment-actions .dcr-split .more-list .btn.dcr-card-act,.comment-actions .dcr-split .more-list .btn.dcr-card-fix{display:flex;justify-content:flex-start;width:100%;height:auto;min-height:0;padding:8px 10px;border:0;border-radius:calc(7px * var(--round));background:none;box-shadow:none;color:var(--ink);font-size:13px;font-weight:500}
@@ -93,6 +96,7 @@
 /* Update: quiet while the review shows the code as it is, the accent once the code moved on. */
 #dcr-update{white-space:nowrap}
 #dcr-update[hidden]{display:none}
+.dcr-update-more[hidden]{display:none}.dcr-update-ico{display:inline-grid}.dcr-update-more{margin-left:-6px}.dcr-update-more>summary{padding:0 6px}.dcr-update-more>summary svg{width:14px;height:14px}
 #dcr-update svg{flex:none;width:15px;height:15px;color:var(--ink-neutral-5)}
 #dcr-update.is-stale{color:var(--accent);font-weight:650}
 #dcr-update.is-stale svg{color:var(--accent)}
@@ -135,6 +139,15 @@ body.qa-live .evidence-strip:not(:has(button:not(.visual-qa-option))){display:no
 .ledger-status .dcr-dot{width:7px;height:7px}
 /* With conversations listed, the how-to-start hint is no longer needed. */
 .dcr-convos~.ledger-note{display:none}
+.dcr-idle{margin:0;padding:14px 16px;font-size:13px;font-weight:600;color:var(--ink)}
+/* Comments on code that changed since, folded under the current conversations. */
+.dcr-convos-earlier{border-top:1px solid var(--line)}
+.dcr-convos-earlier>summary{display:flex;align-items:center;gap:8px;padding:12px 16px;list-style:none;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted)}
+.dcr-convos-earlier>summary::-webkit-details-marker{display:none}
+.dcr-convos-earlier>summary svg{width:15px;height:15px;margin-left:auto;transition:transform .15s}.dcr-convos-earlier[open]>summary svg{transform:rotate(180deg)}
+.dcr-convos-earlier>summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.dcr-peek .dcr-earlier-outcome{margin:0;font-size:12px}
+@media(prefers-reduced-motion:reduce){.dcr-convos-earlier>summary svg{transition:none}}
 .dcr-peek{display:grid;gap:3px;width:100%;margin:0;padding:2px 16px 12px;border:0;background:none;color:var(--ink);font:inherit;text-align:left;white-space:normal;cursor:pointer}
 .dcr-peek:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:calc(6px * var(--round))}
 .dcr-peek-who{display:flex;align-items:center;gap:6px;min-width:0;font-size:12px;color:var(--muted)}
@@ -309,6 +322,52 @@ body.dcr-has-app #qa-panel{display:none}
 .dcr-verdict.dcr-o-not-relevant{background:var(--dcr-partly-soft);color:var(--dcr-partly)}
 .dcr-refusal{display:flex;flex-wrap:wrap;align-items:center;gap:8px;flex:1 1 100%;margin:0 0 8px;padding:8px 10px;border:1px solid color-mix(in srgb,var(--dcr-disagree) 45%,transparent);border-radius:var(--round);font-size:13px;line-height:1.4;color:var(--ink)}
 .dcr-refusal>svg{flex:none;width:15px;height:15px;color:var(--dcr-disagree)}.dcr-refusal>span{flex:1 1 220px;min-width:0}
+.dcr-earlier-outcome{margin-right:8px;font-size:11.5px;font-weight:650;color:var(--muted)}.dcr-earlier-outcome.dcr-o-addressed{color:var(--dcr-agree)}.dcr-earlier-outcome.dcr-o-still-applies{color:var(--dcr-disagree)}.dcr-earlier-outcome.dcr-o-not-relevant{color:var(--dcr-partly)}
+/* What became of a comment once its code changed. It sits in the comment's card as text: no box,
+   no rule down its side, no bordered chips. Only its headline word carries the state's colour. */
+.dcr-closure{flex:1 1 100%;margin:0 0 8px;color:var(--ink)}
+/* Reading room: one hairline sets the block off from the comment above it. Who checked is the
+   last line of the agent's own account, under its text. Rules, never boxes. */
+.dcr-card .dcr-closure,.dcr-popover .dcr-closure{margin-top:6px;padding-top:18px;border-top:1px solid var(--line)}
+.dcr-closure-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin-bottom:16px;font-size:13px;line-height:1.5;color:var(--muted)}
+.dcr-closure-head strong{font-size:14.5px;font-weight:650;color:var(--dcr-agree)}
+.dcr-closure.dcr-c-differ .dcr-closure-head strong{color:var(--dcr-partly)}.dcr-closure.dcr-c-applies .dcr-closure-head strong{color:var(--dcr-disagree)}.dcr-closure.dcr-c-waiting .dcr-closure-head strong{color:var(--ink)}
+.dcr-closure-rev{margin-left:auto;font-size:12px}
+.dcr-closure-main,.dcr-check-body{display:grid;grid-template-columns:20px minmax(0,1fr);column-gap:12px;align-items:start}
+.dcr-closure-main>.dcr-face,.dcr-check-body>.dcr-face{margin-top:2px}
+.dcr-closure-by,.dcr-check-by{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 6px;margin:0 0 4px;font-size:13px;line-height:1.5;color:var(--muted)}
+.dcr-closure-by strong,.dcr-check-by strong{font-weight:600;color:var(--ink)}
+.dcr-closure .dcr-body{max-width:72ch;font-size:13.5px;line-height:1.6}.dcr-closure .dcr-body>:last-child{margin-bottom:0}
+.dcr-checks{display:flex;flex-wrap:wrap;align-items:center;gap:2px 18px;margin-top:10px;font-size:13px}
+/* Where the agents differ the block's own two buttons close the comment; the card's Resolve would be a third. */
+.review-thread:has(.dcr-closure-actions)>.thread-footer>[data-resolve]{display:none}
+.dcr-check{display:inline-flex;align-items:center;gap:6px;min-width:0;min-height:28px;padding:2px 0;border:0;background:none;color:inherit;font:inherit;font-size:13px}
+button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-decoration:underline}button.dcr-check:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.dcr-check strong{font-weight:600}.dcr-check-said{color:var(--muted)}
+.dcr-check-said.dcr-v-agree{color:var(--dcr-agree)}.dcr-check-said.dcr-v-disagree{color:var(--dcr-disagree);font-weight:600}
+.dcr-check .dcr-op-chevron{color:var(--muted)}.dcr-check.is-open .dcr-op-chevron{transform:rotate(90deg)}
+.dcr-check-body{margin-top:14px}
+.dcr-closure-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+/* On a phone the words keep the full width: the checks go one to a line, and the closing buttons
+   are as wide as the card, tall enough for a thumb. */
+@media(max-width:640px){
+  .dcr-closure-rev{flex-basis:100%;margin-left:0}
+  .dcr-checks{flex-direction:column;align-items:flex-start;gap:4px}
+  .dcr-check{min-height:36px}
+  .dcr-closure-actions{flex-direction:column;gap:10px}
+  :is(#content,#comment-popover,#ledger) .dcr-closure-actions .btn{width:100%;min-height:40px;justify-content:flex-start}
+  .dcr-stage>summary.dcr-stage-head{position:relative;padding-right:28px}.dcr-stage>summary .dcr-stage-note{flex:1 1 100%}
+  .dcr-stage>summary.dcr-stage-head svg{position:absolute;right:0;top:16px}
+}
+/* What was said before the closing block, folded to one line. */
+.dcr-stage>summary{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 10px;margin-top:10px;padding:14px 0 6px;border-top:1px solid var(--line);list-style:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--ink)}
+.dcr-stage>summary[hidden]{display:none}.dcr-stage>summary::-webkit-details-marker{display:none}
+.dcr-stage-note{flex:1;min-width:0;font-weight:400;color:var(--muted)}
+.dcr-stage>summary svg{align-self:center;width:15px;height:15px;color:var(--muted);transition:transform .15s}.dcr-stage[open]>summary svg{transform:rotate(180deg)}
+.dcr-stage>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.dcr-earlier-outcome.dcr-c-differ{color:var(--dcr-partly)}.dcr-earlier-outcome.dcr-c-settled{color:var(--dcr-agree)}.dcr-earlier-outcome.dcr-c-applies{color:var(--dcr-disagree)}
+[data-earlier-outcomes] .btn{margin-left:10px}
+
 .dcr-outcome{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;margin:0 0 8px;font-size:12.5px;color:var(--muted)}
 .dcr-outcome strong{font-weight:600}.dcr-outcome-resolve{margin-left:2px}
 .dcr-outcome.dcr-o-addressed strong{color:var(--dcr-agree)}.dcr-outcome.dcr-o-still-applies strong{color:var(--dcr-disagree)}.dcr-outcome.dcr-o-not-relevant strong{color:var(--dcr-partly)}

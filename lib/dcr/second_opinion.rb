@@ -16,7 +16,7 @@ module DCR
     module_function
 
     CONTEXT_LINES = 4 # unchanged lines shown around the commented range
-    VERDICT = /\A\W*(agree|partly agree|partially agree|mostly agree|disagree)\b\W*/i
+    VERDICT = /\A\W*(agree|partly agree|partially agree|mostly agree|disagree)\b[\s.:*_]*/i # not past the word's own punctuation: the reasons may start with code
     # `Answer:` opens the short answer, wherever an agent's narration ends ("I'll check the cache.Answer: Yes").
     ANSWER = /(?:\A|[\n.!?:])[ \t*_#]*answer[*_]*:[*_]*[ \t]*/i
     DETAILS = /^[ \t*_#]*details[*_]*:[*_]*[ \t]*\n?/i
@@ -32,6 +32,8 @@ module DCR
 
         How to answer:
         - Start with one word on its own line: Agree, Partly agree or Disagree.
+        - Check first, without writing. Your reply is only the verdict and its reasons: write nothing before the word, and never say what you are about to do, are checking or have looked at.
+        - Always give the word, also when you could not check everything; then say what you could not check.
         - Then 2 to 4 short sentences in plain, simple words. No jargon you do not need, no long words.
         - Talk about this code only. Name the file and line when it helps.
         - If you would change the comment, say how in one sentence.
@@ -110,7 +112,11 @@ module DCR
       end
     end
 
-    OUTCOME = /\A\W*(addressed|still applies|no longer relevant|not relevant)\b\W*/i
+    OUTCOME = /\A\W*(addressed|still applies|no longer relevant|not relevant)\b[\s.:*]*/i # not past the word's own punctuation: the reasons may start with code
+    # An agent that thinks aloud first still says its word as a sentence of its own, or in bold.
+    OUTCOME_LATER = /(?:\*\*\s*|(?<=[.!?:\n])\s*)(addressed|still applies|no longer relevant|not relevant)(?:\s*[.:]\s*\*{0,2}|\s*\*\*|\s*\n)\s*/i
+    # Addressed and No longer relevant both say the comment is dealt with; Still applies says it is not.
+    OUTCOME_SIDES = {'addressed' => 'dealt', 'not-relevant' => 'dealt', 'still-applies' => 'applies'}.freeze
     OUTCOME_WORDS = {'addressed' => 'Addressed', 'still-applies' => 'Still applies', 'not-relevant' => 'No longer relevant'}.freeze
     CHANGED_LINES = 300 # of what changed since, shown to an agent asked what became of a comment
 
@@ -134,7 +140,7 @@ module DCR
       state.await_opinions(key, id, panel.first['agent'], panel.drop(1).map { |adversary| adversary['agent'] })
       found = lambda do |answer|
         word, body = outcome_word(answer)
-        [word && (word == said ? 'agree' : 'disagree'), word ? "**#{OUTCOME_WORDS[word]}.** #{body}" : body]
+        [word && (OUTCOME_SIDES[word] == OUTCOME_SIDES[said] ? 'agree' : 'disagree'), word ? "**#{OUTCOME_WORDS[word]}.** #{body}" : body]
       end
       consult(state, key, id, panel, repo || history['repo'], ask, about: 'outcome', parse: found) { |agent, _| "You are #{Agents.name(agent)}.\n\n#{text}" }
     end
@@ -142,7 +148,7 @@ module DCR
     # [addressed, still-applies, not-relevant or nil, the answer without that line].
     def outcome_word(answer)
       text = tidy(answer)
-      match = text.match(OUTCOME) or return [nil, text]
+      match = text.match(OUTCOME) || text.match(OUTCOME_LATER) or return [nil, text]
       word = match[1].downcase
       [word == 'addressed' ? 'addressed' : word == 'still applies' ? 'still-applies' : 'not-relevant', text[match.end(0)..].strip]
     end
@@ -159,6 +165,8 @@ module DCR
 
         How to answer:
         - Start with one of these on its own line: Addressed, Still applies or No longer relevant.
+        - Check first, without writing. Your reply is only the verdict and its reasons: write nothing before the word, and never say what you are about to do, are checking or have looked at.
+        - Always give the word, also when you could not check everything; then say what you could not check.
         - Then 2 to 4 short sentences in plain, simple words: what in the new code makes you say so. Name the file and line when it helps.
         - Say so if the change broke or left out something the comment was about.
         - You may read files in this repository to check; they are the new code. Do not change anything.
@@ -269,7 +277,7 @@ module DCR
         How to answer:
         - Write `Answer:` and then your answer in one or two plain sentences. The reviewer may read nothing else, so it must stand on its own.
         - Only if the answer needs backing, add a line `Details:` and under it at most four short bullets, and at most one short code block. Leave it out when the answer is enough.
-        - Write nothing before `Answer:`. Do not say what you are about to do.
+        - Check first, without writing. Write nothing before `Answer:`, and never say what you are about to do, are checking or have looked at.
         - Plain, simple words. Name the file and line when it helps.
         - You may read files in this repository to check. Do not change anything.
 

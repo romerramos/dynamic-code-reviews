@@ -140,7 +140,7 @@
     block.dataset.dcr = id;
     block.innerHTML = variant === 'ledger'
       ? `<div class="dcr-scroll">${quoteHTML(comment)}<div class="dcr-convo"></div><div class="dcr-state" role="status" aria-live="polite"></div><div class="dcr-opinions-slot"></div></div>${composeHTML()}`
-      : `<div class="dcr-state" role="status" aria-live="polite"></div><div class="dcr-convo"></div><div class="dcr-opinions-slot"></div><form class="dcr-reply" hidden><textarea rows="3" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea><div class="dcr-actions"><button type="submit" class="btn btn-sm btn-primary">Send reply</button><button type="button" class="btn btn-sm btn-ghost" data-dcr-cancel>Cancel</button>${advToggleHTML}</div></form>${variant === 'popover' ? `<div class="dcr-actions"><button type="button" class="btn btn-sm btn-primary" data-dcr-act data-dcr-for="${tools.escape(id)}"></button></div>` : ''}`;
+      : `<div class="dcr-state" role="status" aria-live="polite"></div><details class="dcr-stage" open><summary class="dcr-stage-head" hidden></summary><div class="dcr-convo"></div><div class="dcr-opinions-slot"></div></details><form class="dcr-reply" hidden><textarea rows="3" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea><div class="dcr-actions"><span class="dcr-send-hint"><kbd>${/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'}</kbd> <kbd>Enter</kbd> sends</span>${advToggleHTML}<button type="button" class="btn btn-sm btn-ghost" data-dcr-cancel>Cancel</button><button type="submit" class="btn btn-sm btn-primary">Send reply</button></div></form>${variant === 'popover' ? `<div class="dcr-actions"><button type="button" class="btn btn-sm btn-primary" data-dcr-act data-dcr-for="${tools.escape(id)}"></button></div>` : ''}`;
     block.querySelector('textarea').value = drafts.get(id) || '';
     return block;
   };
@@ -188,11 +188,13 @@
     const model = online ? tools.statusModel(thread, listening, Date.now(), listener) : {tone: 'off', text: 'The review server stopped. Restart `dcr serve` to send or receive.'};
     // The reply carries its own time; the status line only says that it came.
     // In Your review the row already says it replied; under the thread only work in progress shows.
-    const outcome = tools.outcomeHTML(thread, resolved().includes(id) ? null : id);
+    // What became of the comment once its code changed: each agent's word, and the reader's closing buttons.
+    const comment = comments().find(entry => entry.id === id);
+    const outcome = tools.closureHTML(thread, {plain: ledger, resolve: resolved().includes(id) ? null : id, still: !!comment && !comment.personal && online && !fixingId(), open: [...(openOpinions.get(id) || [])]});
     const action = actionOf(id);
     // A request that was not taken says why here, and stays until it is read: a toast is gone too soon.
     const refused = refusals.has(id) ? `<p class="dcr-refusal" role="alert">${ico('circle-alert')}<span>${tools.escape(refusals.get(id))}</span><button type="button" class="btn btn-xs btn-ghost" data-dcr-refusal="${tools.escape(id)}">Dismiss</button></p>` : '';
-    const status = refused + outcome + (ledger && model?.tone === 'done' ? '' : stateHTML(model, ''));
+    const status = refused + outcome + ((ledger || outcome) && model?.tone === 'done' ? '' : stateHTML(model, '')); // the closing block already says the agent answered
     const statusSignature = status ? `${model?.tone}|${model?.text}|${outcome}|${refused}` : '';
     const form = block.querySelector('.dcr-reply');
     if (ledger) {
@@ -213,6 +215,23 @@
       if (following) scroller.scrollTop = scroller.scrollHeight;
     }
     clampLong(convo);
+    // With a closing block, the discussion before it folds under one line, unless it went on since.
+    const stage = block.querySelector('.dcr-stage');
+    if (stage) {
+      const closing = tools.closure(thread);
+      const head = stage.querySelector('.dcr-stage-head');
+      const earlier = (thread?.messages || []).filter(message => !(message.about === 'outcome' || (message.author === 'agent' && !message.role && message.outcome)));
+      const went = closing && earlier.some(message => message.at > (thread.outcome.at || ''));
+      const fold = closing && (html || opinions) ? (went ? 'open' : 'folded') : 'none';
+      set(head, 'hidden', fold === 'none');
+      if (fold !== 'none') {
+        const count = earlier.length || tools.verdicts(thread, 'comment').length;
+        const label = `<span>Earlier discussion</span><span class="dcr-stage-note">${tools.escape([count && `${count} ${earlier.length ? 'message' : 'opinion'}${count === 1 ? '' : 's'}`, comment?.outdated?.revision && `revision ${comment.outdated.revision}`].filter(Boolean).join(' · '))}</span>${ico('chevron-down')}`;
+        if (head.dataset.html !== label) { head.innerHTML = label; head.dataset.html = label; }
+      }
+      // Set when what it should be changes, so the reader's own opening or closing is kept.
+      if (stage.dataset.fold !== fold) { stage.dataset.fold = fold; stage.open = fold !== 'folded'; }
+    }
     const stateEl = block.querySelector('.dcr-state');
     if (stateEl.dataset.sig !== statusSignature) { stateEl.innerHTML = status; stateEl.dataset.sig = statusSignature; }
     // The adversaries only ever give opinions: they can be asked along with a question, an answer
@@ -223,8 +242,8 @@
     // words, or the comment asks for nothing (the agent's note or praise), the mark alone opens
     // the menu. What the agent wrote is replied to with words of the reader's own; sending it
     // back as it is would only have the agent confirm itself.
-    // While the text box is open the control is its send button, named for what it sends, with
-    // Cancel beside it: one button says it, not one in the box and another under it.
+    // While the text box is open its own send button, right under it, says what it sends; this
+    // control is hidden then (.is-writing), so the action is named once.
     (ledger ? null : block.closest('article, .popover-comment'))?.querySelectorAll('[data-dcr-split]').forEach(split => {
       const main = split.querySelector('.dcr-split-main');
       const menu = split.querySelector('.dcr-split-menu');
@@ -324,7 +343,7 @@
   const narrowCards = matchMedia('(max-width: 640px)');
   narrowCards.addEventListener('change', () => document.querySelectorAll('.dcr-thread').forEach(refreshBlock));
   const addSplit = (actions, id, size) => {
-    actions.insertAdjacentHTML('afterbegin', `<span class="dcr-split"><span class="dcr-split-main"></span><details class="more-menu dcr-split-menu"><summary class="btn btn-${size} btn-ghost dcr-split-more" aria-label="More for your agent" title="More for your agent"></summary><div class="more-list"></div></details><button type="button" class="btn btn-${size} btn-ghost dcr-split-cancel" data-dcr-cancel hidden>Cancel</button></span>`);
+    actions.insertAdjacentHTML('afterbegin', `<span class="dcr-split"><span class="dcr-split-main"></span><details class="more-menu dcr-split-menu" data-menu-from="parent"><summary class="btn btn-${size} btn-ghost dcr-split-more" aria-label="More for your agent" title="More for your agent"></summary><div class="more-list"></div></details><button type="button" class="btn btn-${size} btn-ghost dcr-split-cancel" data-dcr-cancel hidden>Cancel</button></span>`);
     const split = actions.firstElementChild;
     split.dataset.dcrSplit = id;
     const act = Object.assign(document.createElement('button'), {type: 'button', className: `btn btn-${size} dcr-card-act`});
@@ -336,6 +355,16 @@
     noted.dataset.dcrFixNote = id;
     split.querySelector('.more-list').append(noted, fix);
   };
+  // What became of a comment whose code changed, in a word: the tag on its folded card in the
+  // Overview and on its row in Your review.
+  const becameOf = id => {
+    const closing = tools.closure(threads[id]);
+    return {state: closing?.state || 'none', label: !closing ? 'Not checked yet' : closing.state === 'waiting' ? 'Being checked' : closing.state === 'applies' ? 'Still applies' : resolved().includes(id) ? 'Resolved' : 'No longer a problem'};
+  };
+  // A comment the agents differ on, or one sent back to be fixed, is the reader's to close: it
+  // stays with the current comments until then.
+  const undecided = id => (tools.closure(threads[id])?.state === 'differ' || threads[id]?.fix?.state === 'requested') && !resolved().includes(id);
+  const putAway = id => { const comment = comments().find(entry => entry.id === id); return !!comment?.outdated && !comment.personal && !undecided(id); };
   const decorate = () => {
     document.querySelectorAll('#content article.review-thread[data-thread-id]').forEach(card => {
       const id = card.dataset.threadId;
@@ -348,7 +377,54 @@
       if (actions && !actions.querySelector('[data-dcr-split]')) addSplit(actions, id, 'sm');
     });
     document.querySelectorAll('.dcr-thread').forEach(refreshBlock);
+    // From earlier revisions holds what is settled. A comment the agents differ on is the
+    // reader's to close, so it goes back up, first in the list. Each folded card says what
+    // became of it, and the section adds them up and closes the settled ones in one click.
+    const section = document.querySelector('#content details.overview-earlier');
+    if (!section) return;
+    const said = {};
+    section.querySelectorAll('article.review-thread.is-earlier').forEach(card => {
+      const id = card.dataset.threadId;
+      if (undecided(id)) {
+        card.classList.remove('is-earlier');
+        card.classList.add('is-undecided');
+        (section.parentElement.querySelector(':scope > article.review-thread:not(.is-undecided)') || section).before(card);
+        return;
+      }
+      const {label, state} = becameOf(id);
+      said[label] = (said[label] || 0) + 1;
+      const head = card.querySelector('.thread-range');
+      let chip = head?.querySelector('.dcr-earlier-outcome');
+      if (head && !chip) { chip = document.createElement('span'); head.prepend(chip); }
+      if (chip && chip.textContent !== label) { chip.className = `dcr-earlier-outcome dcr-c-${state}`; chip.textContent = label; }
+    });
+    // One the reader has to close went back up: then something is waiting.
+    const quiet = section.parentElement.querySelector('[data-overview-status]');
+    if (quiet) set(quiet, 'hidden', !!section.parentElement.querySelector(':scope > article.is-undecided'));
+    const left = section.querySelectorAll('article.review-thread.is-earlier').length;
+    set(section, 'hidden', !left);
+    const badge = section.querySelector('summary .badge');
+    if (badge && badge.textContent !== String(left)) badge.textContent = left;
+    const sum = section.querySelector('[data-earlier-outcomes]');
+    const text = Object.entries(said).map(([label, count]) => `${count} ${label.toLowerCase()}`).join(' · ');
+    const open = settledIds().length;
+    const html = `${tools.escape(text)}${open ? `<button type="button" class="btn btn-xs" data-dcr-settle>Resolve ${open === 1 ? 'it' : `those ${open}`}</button>` : ''}`;
+    if (sum && sum.dataset.html !== html) { sum.innerHTML = html; sum.dataset.html = html; }
   };
+  // A comment on changed code that every agent agrees is dealt with resolves itself, once: the
+  // reader who reopens it keeps it open.
+  const autoKey = `dcr-auto:${key}`;
+  let autoResolved = new Set();
+  try { autoResolved = new Set(JSON.parse(localStorage.getItem(autoKey) || '[]')); } catch { /* resolved again at worst */ }
+  const autoResolve = () => {
+    const due = comments().filter(comment => comment.outdated && !comment.personal && !autoResolved.has(comment.id) && !resolved().includes(comment.id) && tools.confirmed(threads[comment.id]));
+    if (!due.length) return;
+    due.forEach(comment => autoResolved.add(comment.id));
+    try { localStorage.setItem(autoKey, JSON.stringify([...autoResolved])); } catch { /* this session only */ }
+    due.forEach(comment => document.querySelector(`#content .thread-footer > [data-resolve="${CSS.escape(comment.id)}"]`)?.click());
+  };
+  // The outdated comments every agent says are dealt with, and the reader has not resolved yet.
+  const settledIds = () => comments().filter(comment => comment.outdated && !comment.personal && !resolved().includes(comment.id) && tools.closure(threads[comment.id])?.state === 'settled').map(comment => comment.id);
 
   // --- marking what you have read -------------------------------------------------------------------
   // An agent message counts as read once it has been on screen for a moment.
@@ -407,6 +483,30 @@
       else document.querySelectorAll(`.dcr-thread[data-dcr="${CSS.escape(id)}"]`).forEach(refreshBlock);
       return;
     }
+    // The reader closes a comment whose code changed: which side they took is kept beside what
+    // each agent said, and Still a problem sends it back to the agent as a fix.
+    const side = event.target.closest('.dcr-closure [data-dcr-side]');
+    if (side) {
+      const id = side.dataset.resolve || side.dataset.dcrStill;
+      api('/api/closure', {key, id, side: side.dataset.dcrSide}).catch(() => {});
+      if (side.dataset.dcrStill) {
+        const comment = comments().find(entry => entry.id === id);
+        side.disabled = true;
+        try { if (comment) await askFix(id, {kind: 'fix'}, comment, 'This is still a problem in the code as it is now. Fix it.'); } catch (error) { refuse(id, error.message); }
+        decorate();
+        return;
+      }
+    }
+    const settle = event.target.closest('[data-dcr-settle]');
+    if (settle) {
+      event.preventDefault();
+      settledIds().forEach(id => document.querySelector(`#content .thread-footer > [data-resolve="${CSS.escape(id)}"]`)?.click());
+      return;
+    }
+    // The card's own Resolve closes it on the side the agents took.
+    const closed = event.target.closest('.thread-footer > [data-resolve].btn-soft');
+    const closedOn = closed && tools.closure(threads[closed.dataset.resolve]);
+    if (closedOn) api('/api/closure', {key, id: closed.dataset.resolve, side: closedOn.side}).catch(() => {});
     const dismissed = event.target.closest('[data-dcr-refusal]');
     if (dismissed) { refusals.delete(dismissed.dataset.dcrRefusal); document.querySelectorAll('.dcr-thread').forEach(refreshBlock); return; }
     // Fix this, Apply this, Act on this: the box opens for what to add, and sends from there.
@@ -533,12 +633,13 @@
     else if (!footer && panel.parentNode !== holder) holder.append(panel);
   };
   const renderPanel = () => {
-    const summary = tools.summary(comments(), threads, resolved());
+    // Conversations put away under From earlier revisions are not waiting on anyone.
+    const summary = tools.summary(comments(), Object.fromEntries(Object.entries(threads).filter(([id]) => !putAway(id))), resolved());
     const mine = comments().filter(comment => comment.personal).length;
     const parts = [];
     const onGitHub = Object.keys(ghData.posted || {}).length;
     if (!online) parts.push('Server stopped');
-    else if (!mine && !summary.waiting && !summary.answered && !ghPendingIds().length && !onGitHub) parts.push('No comments yet');
+    else if (!mine && !summary.waiting && !summary.answered && !ghPendingIds().length && !onGitHub) parts.push(comments().some(comment => putAway(comment.id)) ? 'Nothing waiting' : 'No comments yet');
     else {
       if (mine) parts.push(`${mine} comment${mine === 1 ? '' : 's'}`);
       if (onGitHub) parts.push(`${onGitHub} posted on GitHub`);
@@ -986,7 +1087,9 @@
     const lines = was ? `Outdated · ${was.lines}` : comment.general ? 'General comment' : `${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}`;
     return `${found?.file.path || was?.path || 'General'} · ${lines}`;
   };
-  const rowFor = comment => `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-conversation="1"><button type="button" class="ledger-jump" data-ledger-jump="${tools.escape(comment.id)}"><span class="ledger-where">${tools.escape(whereOf(comment))}</span><span class="ledger-subject">${tools.escape(comment.subject)}</span></button><div class="ledger-meta"></div></li>`;
+  // A row from an earlier revision says where the comment was, as its folded card does.
+  const wasWhere = comment => { const was = globalThis.ReviewTools.outdatedWhere(comment); return `${was.path} · ${was.lines}${was.revision ? ` in revision ${was.revision}` : ''}`; };
+  const rowFor = (comment, earlier = false) => `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-conversation="1"${earlier ? ' data-earlier="1"' : ''}><button type="button" class="ledger-jump" data-ledger-jump="${tools.escape(comment.id)}"><span class="ledger-where">${tools.escape(earlier ? wasWhere(comment) : whereOf(comment))}</span><span class="ledger-subject">${tools.escape(comment.subject)}</span></button><div class="ledger-meta"></div></li>`;
   // The faces of every agent that weighed in, each ringed with what it thinks.
   // The other agents that weighed in, beside the one already named: small marks, the tally on hover.
   const facesHTML = (thread, named) => {
@@ -998,7 +1101,16 @@
   const chevron = '<svg class="dcr-peek-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
   // The latest answer, flat under the row: who said it (and what they think), then its first lines.
   // The faces of the others who weighed in show only when there is more than one voice.
-  const peekHTML = thread => {
+  // A comment whose code changed says what became of it, as its card does. What an agent thought
+  // of the comment back then is not the news, and its chip beside today's outcome misleads.
+  const peekHTML = (thread, id, earlier) => {
+    const closing = tools.closure(thread);
+    if (earlier || closing) {
+      const {label, state} = closing?.state === 'differ' ? {label: 'Not settled', state: 'differ'} : becameOf(id);
+      const against = (closing?.rows || []).slice(1).filter(row => closing.state === 'differ' && tools.outcomeSide(row.word) && tools.outcomeSide(row.word) !== closing.side);
+      const note = against.length ? `${tools.names(against.map(row => tools.agentInfo(row.agent).name))} ${against.length === 1 ? 'says' : 'say'} ${closing.side === 'dealt' ? 'it still applies' : 'it is dealt with'}. You decide.` : '';
+      return `<span class="dcr-peek-who"><span class="dcr-earlier-outcome dcr-c-${state}">${tools.escape(label)}</span><span class="dcr-peek-end">${chevron}</span></span>${note ? `<span class="dcr-peek-text">${tools.escape(note)}</span>` : ''}`;
+    }
     const last = [...(thread.messages || [])].reverse().find(message => message.author === 'agent');
     const faces = facesHTML(thread, last?.agent || listener);
     if (!last) return `<span class="dcr-peek-who"><span class="dcr-peek-note">Open conversation</span><span class="dcr-peek-end">${faces}${chevron}</span></span>`;
@@ -1007,14 +1119,14 @@
   };
   const decoratePeek = (item, comment, thread) => {
     let peek = item.querySelector(':scope > .dcr-peek');
-    if (!hasConversation(thread)) { peek?.remove(); return; }
+    if (!hasConversation(thread) && !item.dataset.earlier) { peek?.remove(); return; }
     if (!peek) {
       peek = Object.assign(document.createElement('button'), {type: 'button', className: 'dcr-peek'});
       peek.dataset.dcrOpen = item.dataset.ledger;
       peek.setAttribute('aria-label', `Open the conversation about ${comment?.subject || 'this comment'}`);
       item.append(peek);
     }
-    const html = peekHTML(thread);
+    const html = peekHTML(thread, item.dataset.ledger, !!item.dataset.earlier);
     if (peek.dataset.html !== html) { peek.innerHTML = html; peek.dataset.html = html; }
   };
 
@@ -1076,6 +1188,7 @@
   });
   // From an announced answer: open that conversation in Your review, rather than leaving the page.
   const showConversation = id => openConversation(id);
+  let ledgerEarlierOpen = false; // the reader opened From earlier revisions in Your review; a redraw keeps it so
   const decorateLedger = () => {
     const body = document.getElementById('ledger-body');
     if (!body) return;
@@ -1087,8 +1200,17 @@
     else {
       if (!section) { section = document.createElement('section'); section.className = 'ledger-group dcr-convos'; body.prepend(section); }
       // Only the list of rows decides the markup; states and answers are filled in below.
-      const html = `<h3>Conversations with your agent</h3><ul class="ledger-list">${joined.map(rowFor).join('')}</ul>`;
-      if (section.dataset.html !== html) { section.innerHTML = html; section.dataset.html = html; }
+      // As in the Overview: what is read first is about the code as it is. Comments on code
+      // that changed since are folded under it, each with what became of it.
+      const before = joined.filter(comment => putAway(comment.id));
+      const now = joined.filter(comment => !before.includes(comment));
+      // The same words as the Overview when nothing is open, so the two never disagree.
+      const idle = !now.length && !comments().some(comment => comment.personal && !resolved().includes(comment.id));
+      const html = `${idle ? '<p class="dcr-idle">Nothing is waiting on you.</p>' : ''}${now.length ? `<h3>Conversations with your agent</h3><ul class="ledger-list">${now.map(comment => rowFor(comment)).join('')}</ul>` : ''}${before.length ? `<details class="dcr-convos-earlier"${ledgerEarlierOpen ? ' open' : ''}><summary>From earlier revisions <span class="badge neutral">${before.length}</span>${ico('chevron-down')}</summary><ul class="ledger-list">${before.map(comment => rowFor(comment, true)).join('')}</ul></details>` : ''}`;
+      if (section.dataset.html !== html) {
+        section.innerHTML = html; section.dataset.html = html;
+        section.querySelector('.dcr-convos-earlier')?.addEventListener('toggle', event => { ledgerEarlierOpen = event.target.open; });
+      }
     }
     // The agent's comments you put on GitHub (pending or posted), so the panel shows your whole GitHub review.
     const onGitHub = comments().filter(comment => !mine.has(comment.id) && (ghData.pending?.[comment.id] || ghData.posted?.[comment.id]));
@@ -1656,11 +1778,20 @@
   // never on a timer, so the button can say how many files moved.
   const updateButton = Object.assign(document.createElement('button'), {type: 'button', id: 'dcr-update', className: 'header-button', hidden: true});
   document.getElementById('revision-navigation')?.before(updateButton);
+  // Update takes what the review shows: a pull request's review asks GitHub, and one the reader
+  // has following the checkout reads the checkout. The menu holds only the other one.
+  const updateMore = document.createElement('details');
+  updateMore.className = 'more-menu dcr-update-more';
+  updateMore.hidden = true;
+  updateMore.dataset.menuFrom = 'previous';
+  updateMore.innerHTML = `<summary class="header-button" aria-label="Where to update from" title="Where to update from">${ico('chevron-down')}</summary><div class="more-list"><button type="button" class="more-item" data-update-other><span class="dcr-update-ico"></span><span></span></button></div>`;
+  updateButton.after(updateMore);
   const updatedKey = 'dynamic-review:updated';
   let stale = null, updating = false, staleAt = 0;
   const renderUpdate = () => {
     // A newer save of the review has its own button.
     set(updateButton, 'hidden', !stale || newer());
+    set(updateMore, 'hidden', updateButton.hidden || !stale.pr || !!stale.unavailable || updating);
     if (updateButton.hidden) return;
     // A review that cannot be updated right now says why, rather than losing its button.
     if (stale.unavailable) {
@@ -1672,15 +1803,24 @@
       updateButton.classList.remove('is-stale', 'is-busy');
       return;
     }
-    const count = updating ? 0 : stale.changed || 0;
+    // On a pull request's review the count is what a newer push changes; the checkout's own
+    // differences count only once the reader has the review follow it.
+    const pushed = stale.pr ? stale.remote : null;
+    const count = updating ? 0 : pushed ? pushed.changed || 0 : stale.pinned ? 0 : stale.changed || 0;
+    const other = updateMore.querySelector('[data-update-other]');
+    const differs = stale.changed ? ` · ${stale.changed} ${stale.changed === 1 ? 'file' : 'files'}` : '';
+    const face = stale.pinned ? ['folder-git-2', `Update from my checkout${differs}`, stale.behind || 'Show your files as they are, pushed or not'] : ['git-pull-request', 'Update from the pull request', 'Take the review back to the pull request as pushed'];
+    if (other.dataset.face !== face.join('|')) { other.dataset.face = face.join('|'); other.firstElementChild.innerHTML = ico(face[0]); other.lastElementChild.textContent = face[1]; }
+    set(other, 'disabled', !!stale.pinned && !!stale.behind);
+    set(other, 'title', face[2]);
     const files = `${count} ${count === 1 ? 'file' : 'files'}`;
     const html = `${ico('refresh-cw')}<span>${updating ? 'Updating…' : count ? `Update · ${files}` : 'Update'}</span>`;
     if (updateButton.innerHTML !== html) updateButton.innerHTML = html;
-    const hint = stale.pinned ? 'This review follows the pull request, not your checkout. Click to choose.' : updating ? 'Updating this review to the code as it is now' : count ? `${files} changed since this review. Update it: your comments and progress are kept.` : 'Check the code again and update this review';
+    const hint = pushed && !updating ? `The pull request has a newer push${count ? `: ${files} changed` : ''}. Update the review to it: your comments and progress are kept.` : stale.pinned && !updating ? 'Ask GitHub whether the pull request has a newer push, and update this review to it' : updating ? 'Updating this review to the code as it is now' : count ? `${files} changed since this review. Update it: your comments and progress are kept.` : 'Check the code again and update this review';
     set(updateButton, 'title', hint);
     updateButton.setAttribute('aria-label', hint);
     set(updateButton, 'disabled', updating);
-    updateButton.classList.toggle('is-stale', count > 0);
+    updateButton.classList.toggle('is-stale', count > 0 || (!!pushed && !updating));
     updateButton.classList.toggle('is-busy', updating);
   };
   const checkStale = async () => {
@@ -1696,37 +1836,58 @@
   followDialog.className = 'modal';
   followDialog.setAttribute('aria-labelledby', 'dcr-follow-title');
   document.body.append(followDialog);
-  const askFollow = () => {
+  // said: what the update just found (nothing new on the pull request), when that is why the
+  // checkout is offered.
+  const askFollow = (said = '') => {
     const count = stale.changed || 0;
     const differs = count ? `Your checkout differs in ${count} ${count === 1 ? 'file' : 'files'}.` : 'Your checkout has the same code right now.';
-    const body = stale.pinned
-      ? `<p>This review shows the pull request as it was pushed, not your checkout. ${differs}</p><p><b>Follow my checkout</b> makes Update show your files as they are, pushed or not. Comments and progress are kept; Comment on GitHub then works only on files that match the pull request.</p><p class="muted">To go back, ask your agent to review the pull request again.</p>`
+    const body = stale.pr
+      ? `<p>${said ? `${tools.escape(said)} ` : ''}${differs}</p><p><b>Update from my checkout</b> shows your files as they are, pushed or not. Comments and progress are kept; GitHub comments then go only on files that match the pull request.</p><p class="muted">Update takes the review back to the pull request as pushed.</p>`
       : '<p>Update shows your checkout as it is. Comments and progress are kept.</p>';
     followDialog.innerHTML = `<form method="dialog" class="modal-box dcr-gh-box">
-      <header><div><h2 id="dcr-follow-title">${stale.pinned ? 'This review follows the pull request' : 'Update this review'}</h2></div><button type="button" class="act act-quiet act-icon" data-follow-close aria-label="Close" title="Close (Esc)">${ico('x')}</button></header>
+      <header><div><h2 id="dcr-follow-title">${stale.pr ? (said ? 'Nothing new on the pull request' : 'Update from my checkout') : 'Update this review'}</h2></div><button type="button" class="act act-quiet act-icon" data-follow-close aria-label="Close" title="Close (Esc)">${ico('x')}</button></header>
       <div class="dcr-follow-text">${body}${stale.warning ? `<p class="dcr-follow-warning" role="alert">${tools.escape(stale.warning)}</p>` : ''}</div>
-      <footer class="dcr-gh-actions"><button type="button" class="act act-quiet" data-follow-close>Cancel</button><button type="button" class="act act-primary" data-follow-go>${stale.pinned ? 'Follow my checkout' : 'Update anyway'}</button></footer></form>`;
+      <footer class="dcr-gh-actions"><button type="button" class="act act-quiet" data-follow-close>Cancel</button><button type="button" class="act act-primary" data-follow-go>${stale.pr ? 'Update from my checkout' : 'Update anyway'}</button></footer></form>`;
     followDialog.showModal();
     followDialog.querySelector('[data-follow-close]:not(.act-icon)').focus();
   };
   followDialog.addEventListener('click', event => {
     if (event.target.closest('[data-follow-close]')) followDialog.close();
-    else if (event.target.closest('[data-follow-go]')) { followDialog.close(); runUpdate(true); }
+    else if (event.target.closest('[data-follow-go]')) { followDialog.close(); runUpdate('checkout', !!stale?.pinned); }
   });
-  updateButton.addEventListener('click', () => (stale?.pinned || stale?.warning ? askFollow() : runUpdate(false)));
-  const runUpdate = async follow => {
+  // Update on a pull request's review asks GitHub; the checkout is what it shows only when the
+  // reader says so, here or in the menu. A review that already follows the checkout goes on doing so.
+  updateButton.addEventListener('click', () => {
+    // A review the reader has following the checkout goes on doing so until the pull request has a newer push.
+    if (stale?.pr && (stale.pinned || stale.remote)) runUpdate('pr');
+    else if (stale?.warning) askFollow();
+    else runUpdate('checkout');
+  });
+  updateMore.addEventListener('click', event => {
+    if (!event.target.closest('[data-update-other]:not(:disabled)')) return;
+    updateMore.open = false;
+    if (stale?.pinned) askFollow();
+    else runUpdate('pr');
+  });
+  // from 'pr': the pull request as pushed. 'checkout': the files as they are; follow says the
+  // reader chose that for a pull request's review.
+  const runUpdate = async (from, follow = false) => {
     updating = true;
     renderUpdate();
     try {
-      const result = await api('/api/sync', {follow});
+      const result = await api('/api/sync', from === 'pr' ? {from: 'pr'} : {follow});
       if (result.status === 'updated') {
         try { sessionStorage.setItem(updatedKey, result.summary); } catch { /* the Overview says it too */ }
-        history.replaceState(null, '', '/#since'); // the new revision, on what it changed
+        history.replaceState(null, '', `/${location.hash}`); // the new revision, on the page the reader was on
         location.reload();
         return;
       }
-      stale = {changed: 0};
-      flash(follow ? 'This review now follows your checkout, which has the same code right now.' : 'This review already shows the code as it is.');
+      updating = false;
+      staleAt = 0;
+      await checkStale();
+      // Nothing new where it looked. From the pull request, a checkout that differs is offered.
+      if (from === 'pr' && stale?.pinned && stale.changed) askFollow('The pull request has no new commits.');
+      else flash(from === 'pr' ? 'The pull request has no new commits. This review shows it as pushed.' : follow ? 'This review now follows your checkout, which has the same code right now.' : 'This review already shows the code as it is.');
     } catch (error) { flash(error.message); }
     updating = false;
     renderUpdate();
@@ -1887,9 +2048,15 @@
     if ('verdict' in data) showVerdict(data.verdict);
     window.ReviewRisk?.allowRedo(online);
     if (!seenKnown) { tools.unseen(threads, seen).forEach(item => seen.add(item.id)); saveSeen(); seenKnown = true; }
+    // What the agents said became of a comment is its closing block, not a message to read: it
+    // is never announced, and never opens Your review. A disagreement is, since the reader decides.
+    Object.values(threads).forEach(thread => {
+      if (!thread.outcome || tools.closure(thread)?.state === 'differ') return;
+      (thread.messages || []).forEach(message => { if (message.author === 'agent' && (message.about === 'outcome' || (!message.role && message.outcome)) && !seen.has(message.id)) { seen.add(message.id); saveSeen(); } });
+    });
     const arrived = tools.unseen(threads, seen).filter(item => !announced.has(item.id));
     arrived.forEach(item => announced.add(item.id));
-    decorate(); decorateLedger(); window.ReviewGitHub?.refresh(); renderPanel(); renderUnsent(); renderAgent(); refreshUnread();
+    decorate(); autoResolve(); decorateLedger(); window.ReviewGitHub?.refresh(); renderPanel(); renderUnsent(); renderAgent(); refreshUnread();
     announce(arrived);
     announceFinished();
     renderUpdate();

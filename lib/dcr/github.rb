@@ -44,6 +44,30 @@ module DCR
       value
     end
 
+    FETCH_SECONDS = 120
+
+    # The pull request as GitHub has it now: its head and its base branch's tip, both fetched
+    # into the repository (no branch or file of the checkout is touched) so they can be compared.
+    def pushed(root)
+      _, review = saved_page(File.join(@series_dir, 'current.html'))
+      match = review&.dig('comparison', 'pr_url').to_s.match(PR_URL) or raise Error, 'This review has no GitHub pull request.'
+      slug = "#{match[1]}/#{match[2]}"
+      pull = api('GET', "repos/#{slug}/pulls/#{match[3]}")
+      head, base = pull.dig('head', 'sha'), pull.dig('base', 'sha')
+      raise Error, 'GitHub did not say where the pull request is.' unless head && base
+      have = ->(sha) { Open3.capture2e('git', '-C', root, 'cat-file', '-e', "#{sha}^{commit}").last.success? }
+      unless have.call(head) && have.call(base)
+        remotes, = Open3.capture2('git', '-C', root, 'remote', '-v')
+        remote = remotes.lines.find { |line| line.downcase.include?("#{slug.downcase}.git") || line.downcase.match?(/#{Regexp.escape(slug.downcase)}\s/) }&.split&.first || 'origin'
+        fetch = ['git', '-C', root, 'fetch', '--quiet', '--no-tags', remote, "refs/pull/#{match[3]}/head", "refs/heads/#{pull.dig('base', 'ref')}"]
+        _, status = Timeout.timeout(FETCH_SECONDS) { Open3.capture2e(*fetch) }
+        raise Error, 'The pull request could not be fetched from GitHub. Check your connection and try again.' unless status.success? && have.call(head) && have.call(base)
+      end
+      {'head' => head, 'base' => base, 'number' => match[3].to_i}
+    rescue Timeout::Error
+      raise Error, 'Fetching the pull request from GitHub took too long. Try again.'
+    end
+
     # One comment, posted now. On lines outside the pull request's diff GitHub refuses a line
     # comment, so it becomes a comment on the file that names the lines.
     def comment(key, item)
@@ -130,8 +154,9 @@ module DCR
     end
 
     # [snapshot, review] of a saved revision, or nil.
-    def saved(number)
-      path = File.join(@series_dir, 'revisions', format('%03d.html', number))
+    def saved(number) = saved_page(File.join(@series_dir, 'revisions', format('%03d.html', number)))
+
+    def saved_page(path)
       return unless File.file?(path)
       json = File.read(path)[/<script\b(?=[^>]*\bid=["']data["'])[^>]*>(.*?)<\/script>/m, 1] or raise Error, 'This review has no data.'
       JSON.parse(json).values_at('snapshot', 'review')

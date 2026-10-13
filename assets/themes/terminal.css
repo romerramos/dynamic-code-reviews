@@ -145,6 +145,10 @@
 [data-theme^="terminal-"] :is(.btn-primary,.act-primary,.act-gh)::before,[data-theme^="terminal-"] :is(.btn-primary,.act-primary,.act-gh)::after{content:none}
 [data-theme^="terminal-"] :is(.btn-primary,.act-primary,.act-gh):not(:disabled){padding:2px 1.5ch}
 [data-theme^="terminal-"] :is(.btn-primary,.act-primary,.act-gh,.dcr-send):hover:not(:disabled){background:color-mix(in srgb,var(--terminal-fill) 82%,var(--ink));color:var(--terminal-on-fill)}
+/* The text box's send button is the one filled button on a comment: it has to read as "this sends". */
+[data-theme^="terminal-"] :is(#content,#comment-popover) .dcr-reply .dcr-actions>[type="submit"]:not(:disabled){background:var(--terminal-fill);color:var(--terminal-on-fill);font-weight:700;padding:2px 1.5ch}
+[data-theme^="terminal-"] :is(#content,#comment-popover) .dcr-reply .dcr-actions>[type="submit"]::before,[data-theme^="terminal-"] :is(#content,#comment-popover) .dcr-reply .dcr-actions>[type="submit"]::after{content:none}
+[data-theme^="terminal-"] :is(#content,#comment-popover) .dcr-reply .dcr-actions>[type="submit"]:hover:not(:disabled){background:color-mix(in srgb,var(--terminal-fill) 82%,var(--ink));color:var(--terminal-on-fill)}
 [data-theme^="terminal-"] :is(.btn,.act):disabled{color:var(--terminal-overlay0);background:transparent;opacity:1}
 [data-theme^="terminal-"] .ledger-count{background:var(--terminal-hot);color:var(--terminal-on-fill);font-weight:700}
 [data-theme^="terminal-"] .pager,[data-theme^="terminal-"] .focus-file-actions{border:0!important;background:transparent;box-shadow:none;padding:0}
@@ -235,6 +239,11 @@
 /* --- headings: a rule that carries its label --------------------------------------------------- */
 [data-theme^="terminal-"] :is(.eyebrow,.view-menu h2,.settings-body h2,.leader-menu h2,.keys-list h3,.dcr-opinions-title,.dcr-adv-title){display:flex;align-items:center;gap:1ch;text-transform:uppercase;font-weight:700;color:var(--accent)}
 [data-theme^="terminal-"] :is(.eyebrow,.view-menu h2,.settings-body h2,.leader-menu h2,.dcr-opinions-title,.dcr-adv-title)::before{content:"──";color:var(--terminal-surface1);font-weight:400}
+/* Other opinions: its title carries the rule, as every section title here does. One line, not a rule and a dash under it. */
+[data-theme^="terminal-"] .dcr-opinions{padding-top:0;border-top:0}
+[data-theme^="terminal-"] .dcr-opinions-head{align-items:center;gap:1ch}
+[data-theme^="terminal-"] .dcr-opinions-title{flex:1}
+[data-theme^="terminal-"] .dcr-opinions-title::after{content:"";flex:1;border-top:1px solid var(--line)}
 [data-theme^="terminal-"] :is(.eyebrow,.view-menu h2,.settings-body h2,.leader-menu h2)::after{content:"";flex:1;border-top:1px solid var(--line)}
 [data-theme^="terminal-"] :is(h1,h2,h3){font-weight:700}
 [data-theme^="terminal-"] main h1::before{content:"# ";color:var(--terminal-hot)}
@@ -287,6 +296,12 @@
 [data-theme^="terminal-"] .dcr-split:not(.is-narrow) .dcr-split-more::before{content:none!important}
 [data-theme^="terminal-"] .dcr-split:not(.is-narrow) .dcr-split-more{padding-left:.4ch}
 [data-theme^="terminal-"] .dcr-split .more-list .btn::before,[data-theme^="terminal-"] .dcr-split .more-list .btn::after{content:none!important}
+/* Update and its menu are one control too: one pair of brackets. */
+[data-theme^="terminal-"] #dcr-update:has(+.dcr-update-more:not([hidden]))::after{content:none!important}
+[data-theme^="terminal-"] #dcr-update:has(+.dcr-update-more:not([hidden])){padding-right:0}
+[data-theme^="terminal-"] .dcr-update-more>summary::before{content:none!important}
+[data-theme^="terminal-"] .dcr-update-more>summary{padding-left:.4ch}
+[data-theme^="terminal-"] .dcr-update-more{margin-left:0}
 [data-theme^="terminal-"] .thread-source{width:auto;justify-content:flex-start;margin-left:calc(28px - .5ch)}
 @media(max-width:740px){[data-theme^="terminal-"] .thread-source{margin-left:calc(18px - .5ch)}}
 [data-theme^="terminal-"] .thread-type-icon{background:transparent;width:auto;height:auto}

@@ -155,15 +155,88 @@ from its original snapshot and analysis when refreshing presentation only.
   another branch is checked out, the branch was rebased onto a newer base, the review cannot
   be read. Never a toast: it is gone before it is read, and reads as a bug.
 - **The text box belongs to the whole comment**: full width of the card, under a rule, never
-  indented under the conversation or an adversary's opinion. It has no buttons of its own.
-  While it is open the split control below it is its send button, named for what it sends
-  (Fix this, Apply this, Act on this, Send answer, Send reply), with **Cancel** beside it and
-  no ▾: the action is named once, never in the box and again under it. ⌘ Enter sends.
-- An **outcome** is one line above the conversation: the word (Addressed in green, Still
-  applies in red, No longer relevant in amber), the revision it was said of, and what the
-  adversaries found ("Codex agrees"). The reply that gave it carries the same word as a chip;
-  an adversary's check reads "second reviewer, on the outcome". It never resolves a comment:
-  a small **Resolve** sits at the end of the line until the reader presses it.
+  indented under the conversation or an adversary's opinion. **Its send button is right under
+  it**, at the right, filled, and named for what it sends (Fix this, Apply this, Act on this,
+  Send answer, Send reply), with **Cancel** before it and "⌘ Enter sends" at the left (Ctrl off
+  a Mac). A box with no visible way to send reads as broken: nobody guesses a key. While the
+  box is open the split control in the footer is hidden, so the action is still named once.
+- **What is read first is about the code as it is.** A comment whose lines changed since
+  (outdated) leaves the Overview's list for **From earlier revisions**, a folded section under
+  the current comments: its count and what became of them ("3 no longer a problem"). Opened, each comment is one folded card: its
+  file, what became of it (Addressed, Still applies, No longer relevant, Not checked yet),
+  Outdated, and its subject. Opening a card shows all of it: the discussion, the code it was
+  written on, the conversation and its actions. The Since view still shows a revision's
+  outdated comments under their file. Never lead a revision with comments on code that is gone.
+- **A comment whose code changed ends in a closing block**, first in its thread, and it is
+  told as it happened, each thing once: the headline says what became of it, then the review's
+  agent by name with what it wrote, and as the last line of that account each agent that
+  checked on its own, a name and a few words: "Codex agrees", "Grok says it still applies",
+  "gave no clear answer", "is checking". No "Checked by" label, no sentence in the headline
+  that repeats the checks, and no "says it no longer matters" under "No longer a problem".
+  A check that agrees opens to its reasons when clicked; one that does not is shown with its
+  reasons, since that is what the reader weighs. Never three equal paragraphs, and never the
+  same agent as both the doer and a checker. Addressed and No longer relevant are the same
+  side; only Still applies is the other. An answer that thinks aloud first is read at its
+  word, and the thinking is not shown.
+- **No box inside the card.** The closing block is text in the comment's card: no border, no
+  background, no rule down its side, no bordered chips, no quote-style left border on a
+  check's reasons. Its headline word carries the state's colour (green, amber when not
+  settled, red when it still applies) and nothing else does. This goes for anything placed
+  inside a card, popover or panel: group with spacing, indentation and a small heading.
+- **Hairlines and room, in place of boxes.** One hairline sets the closing block off from the
+  comment above it and one sets off the folded discussion below; the checks sit under the
+  agent's account with no rule between. Reasons are held to
+  a readable line length. On a phone the checks go one to a line, the closing buttons are as
+  wide as the card and 40px tall, the revision drops under the headline, and the folded
+  discussion's note wraps to its own line under its title.
+- **How it closes**: *Fixed* (the reader asked for the fix) or *No longer a problem*; *Still
+  applies*; *Not settled* ("Grok says it still applies. You decide.", and here the agent's
+  line says which side it took). What the reader chose is kept beside the side each agent took.
+- **One Resolve per card.** A card closes with the Resolve in its footer, never a second one in
+  the closing block (Your review's panel has no footer, so the block carries it there). Only
+  when not settled does the block offer its two choices, **No longer a problem · Resolve** and
+  **Still a problem · Fix this** (which sends the comment back to the agent as a fix), and then
+  the footer's Resolve is hidden.
+- **A card's footer is Reply, ⋯ and Resolve.** Copy for comment is in the ⋯ menu; a button for
+  GitHub shows only when the comment can be posted or opened there.
+- **One tag per folded card.** Every card in From earlier revisions is on code that changed,
+  and the section says so; a card does not repeat it with "Outdated". Its one tag says what
+  became of the comment, and its place names the revision ("After L95 in revision 1"), since
+  that line is from before.
+- **The sidebar's views have icons from the bundled set**, never text glyphs: Overview
+  (layout-list), All changes (file-diff), Since revision N (history).
+- **Only what is settled is put away.** In From earlier revisions a folded card says No longer a problem, Still applies, Being checked, Not checked yet or Resolved, and the section's line
+  adds them up and offers "Resolve those N". A comment the agents differ on, or one
+  sent back to be fixed, stays in the Overview's list, first, until the reader closes it.
+- **What was said before the closing block folds to one line** ("Earlier discussion ·
+  3 messages · revision 1"), unless it went on after the outcome. It does not repeat who
+  agreed then: next to "Codex agrees" above, that reads as the same thing twice. What the
+  agents said of the outcome is in the block and not in the conversation too, and "Other
+  opinions" lists only what was said of the comment itself.
+- **The Overview and Your review say the same thing about what is waiting.** With nothing open
+  on the code as it is, both lead with "Nothing is waiting on you."; the Overview adds that
+  the comments below were written on code that has changed since. Your review's footer does
+  not count conversations that are put away.
+- **A revision is one sentence, never a banner**: "Revision 3 changed 1 file since revision 2,
+  in your checkout and not pushed yet. See what changed". The whole account of the update is
+  its tooltip and Review details. An amber notice is for something the reader must act on
+  (QA not finished); two on one page means neither is read.
+- **A finding whose code changed is its comment** under From earlier revisions. It gets no
+  "still needs checking" notice of its own; only one with no comment is mentioned, in a quiet
+  line under that section.
+- **What the agents said became of a comment is never announced** and never opens Your
+  review: it is the closing block. Only a disagreement, which the reader decides, is.
+- **A settled comment closes by itself.** When the review's agent says a comment on changed
+  code is dealt with and every agent that checked on its own clearly agrees, it is resolved
+  without the reader, once (reopened, it stays open). A check that failed or gave no clear
+  answer, or no check at all, leaves Resolve to the reader.
+- **Your review folds them the same way.** Conversations on code that changed since leave
+  "Conversations with your agent" for a folded **From earlier revisions** under it, closed
+  until opened. Each row is where the comment was ("After L95 in revision 1"), its subject and
+  what became of it, in the words its card uses. Never the latest message with an agent's
+  Agrees or Disagrees chip: that is what it thought back then, and beside today's outcome it
+  reads as an open disagreement. One the agents differ on, or one sent back to be fixed, stays
+  in the list above and says "Not settled" with who differs.
 - **Since revision N** sits under All changes in the sidebar once a revision changed code:
   one card per changed file with that revision's own diff (split headings name the two
   revisions), a quiet badge when the file joined the change or went back to its base, and
@@ -269,6 +342,19 @@ these; do not add a third row or a floating toolbar.
   one word, quiet while the review shows the code as it is; the accent colour and
   "Update · N files" once the code moved on; the icon turns while it updates; icon
   only at 740px and below. It is hidden while a newer save of the review is offered.
+  **Update takes what the review shows, and its arrow holds only the other source.** On a pull
+  request's review Update asks GitHub: the count is what a newer push changes, and the arrow
+  holds "Update from my checkout · N files" (disabled, with the reason, when the checkout
+  does not have the reviewed commits). Once the reader has the review follow the checkout,
+  Update reads the checkout until the pull request has a newer push, and the arrow holds
+  "Update from the pull request". Update and its arrow are one control (one bracket pair in
+  Terminal), and the menu opens under the control's left edge, never under the arrow's.
+  When GitHub has nothing new and the checkout differs, a dialog says so and offers the
+  checkout; with nothing new anywhere, a toast says "The pull request has no new commits."
+  **An update leaves the reader where they were**: the new revision opens on the same page
+  (Overview stays Overview, a step stays that step), with the summary of what changed as a
+  toast. What changed is one click away: "Since revision N" in the sidebar and on the Overview.
+
 - Reading bar (52px): sidebar toggle, then a bordered pager (previous, position,
   next). On the right, one View button whose label names the current settings, for
   example "Unified · File by file". It opens a native popover with Reading mode (a

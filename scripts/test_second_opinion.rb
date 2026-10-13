@@ -141,7 +141,7 @@ Dir.mktmpdir('dcr-opinions') do |series|
   before = state.read.dig('threads', key, 'c1', 'messages').count { |message| message['role'] == 'adversary' }
   state.agent_reply('c1', 'The limit is read from the README now.', key: key, agent: 'claude', outcome: 'addressed')
   heard = Queue.new
-  found = ->(agent, question, dir:, model:, effort:) { heard << question; agent == 'codex' ? "Still applies\nThe limit is still ten." : "Addressed\nIt reads the README." }
+  found = ->(agent, question, dir:, model:, effort:) { heard << question; agent == 'codex' ? "Still applies\nThe limit is still ten." : "I'll check where the limit comes from.No longer relevant. The limit is not in this file any more." }
   with_agents('codex' => 'exit 0', 'grok' => 'exit 0') do
     result = DCR::SecondOpinion.outcome(series_dir: series, id: 'c1', author: 'claude', ask: found)
     assert(result == {'codex' => 'disagree', 'grok' => 'agree'}, "Each agent's own finding is held against the review agent's: #{result}")
@@ -150,6 +150,17 @@ Dir.mktmpdir('dcr-opinions') do |series|
   checks = thread['messages'].select { |message| message['role'] == 'adversary' }
   assert(checks.length == before + 1 && checks.last.values_at('about', 'verdict', 'body') == ['outcome', 'disagree', '**Still applies.** The limit is still ten.'], "The second reviewer's finding joins the conversation beside what it said of the comment: #{checks.last}")
   assert(thread.dig('opinions', 'grok').values_at('about', 'verdict') == %w[outcome agree] && thread['outcome'].values_at('verdict', 'revision') == ['addressed', 1], 'The others weigh in on the side, and the outcome stays the review agent\'s')
+  # An agent that thinks aloud first is read at its word, and Addressed and No longer relevant
+  # are the same side: the comment is dealt with.
+  assert(thread.dig('opinions', 'grok', 'body') == '**No longer relevant.** The limit is not in this file any more.', "The answer kept what the agent said before its word: #{thread.dig('opinions', 'grok', 'body')}")
+  # The reviewer closes it; the side they took is kept beside the side each agent took.
+  rejects = lambda do |side|
+    state.closed(key, 'c1', side)
+    false
+  rescue ArgumentError
+    true
+  end
+  assert(rejects.call('maybe') && state.closed(key, 'c1', 'applies') && state.read.dig('threads', key, 'c1', 'closed').values_at('side', 'said') == ['applies', {'claude' => 'dealt', 'codex' => 'applies', 'grok' => 'dealt'}], "Closing did not keep who was on which side: #{state.read.dig('threads', key, 'c1', 'closed')}")
   question = heard.pop
   assert(question.include?('Say what became of the comment') && question.include?(comment['subject']) && !question.include?('read from the README now'), 'An adversary is asked the question itself, never shown the review agent\'s answer')
   begin
@@ -158,6 +169,10 @@ Dir.mktmpdir('dcr-opinions') do |series|
   rescue ArgumentError => error
     assert(error.message.include?('Nobody said what became of nobody'), error.message)
   end
+  # Sent back to be fixed, what was said of that outcome is history and no longer counts.
+  state.request_fix(key, 'c1', 'Fix it.')
+  again = state.read.dig('threads', key, 'c1')
+  assert(!again.key?('outcome') && again['messages'].none? { |message| message['about'] == 'outcome' } && again.dig('opinions', 'grok', 'about') == 'earlier-outcome', 'A fix kept the answers on the outcome it replaces')
   puts 'PASS what became of a comment is checked by the adversaries on their own and held against the review agent\'s outcome'
 end
 puts 'PASS a posted comment gets the second reviewer in its conversation and the others beside it, failures included'
