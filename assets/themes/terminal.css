@@ -281,6 +281,12 @@
 [data-theme^="terminal-"] .preview-toggle::before{content:"[";color:var(--terminal-overlay0)}[data-theme^="terminal-"] .preview-toggle::after{content:"]";color:var(--terminal-overlay0)}
 [data-theme^="terminal-"] .preview-toggle:hover{background:var(--terminal-hover)}[data-theme^="terminal-"] .preview-toggle:hover::before,[data-theme^="terminal-"] .preview-toggle:hover::after{color:var(--terminal-fill)}
 [data-theme^="terminal-"] .more-list{border:3px double var(--terminal-overlay0);background:var(--surface);box-shadow:none}
+/* The agent's split control is one bracketed thing, [ mark Apply this v ], not two; its menu rows have no brackets. */
+[data-theme^="terminal-"] .dcr-split:not(.is-narrow):has(.dcr-split-menu:not([hidden])) .dcr-split-main .btn::after{content:none!important}
+[data-theme^="terminal-"] .dcr-split:not(.is-narrow):has(.dcr-split-menu:not([hidden])) .dcr-split-main .btn{padding-right:0}
+[data-theme^="terminal-"] .dcr-split:not(.is-narrow) .dcr-split-more::before{content:none!important}
+[data-theme^="terminal-"] .dcr-split:not(.is-narrow) .dcr-split-more{padding-left:.4ch}
+[data-theme^="terminal-"] .dcr-split .more-list .btn::before,[data-theme^="terminal-"] .dcr-split .more-list .btn::after{content:none!important}
 [data-theme^="terminal-"] .thread-source{width:auto;justify-content:flex-start;margin-left:calc(28px - .5ch)}
 @media(max-width:740px){[data-theme^="terminal-"] .thread-source{margin-left:calc(18px - .5ch)}}
 [data-theme^="terminal-"] .thread-type-icon{background:transparent;width:auto;height:auto}

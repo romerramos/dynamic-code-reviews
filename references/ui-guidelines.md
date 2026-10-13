@@ -118,6 +118,46 @@ from its original snapshot and analysis when refreshing presentation only.
   ticked, solid accent once ticked. It sits before Ask agent in the code's composer (Ask agent
   mode only), beside Ask agent on a comment before its first send, and in the reply field after it, appears only when an adversary can answer, and starts unticked on
   every message, so nothing spends the reviewer's accounts by accident.
+- Everything that goes to the agent is **one split control** at the start of a comment's
+  actions: the listening agent's mark and the first action as its button, then a small ▾
+  that opens the rest (the other action). The mark is shown once, on the button; the menu's
+  rows are plain words. Behind Fix this or Apply this the reply reads **Just reply**, so it
+  is clear it changes nothing. The ▾ is
+  absent when there is nothing behind it. At 640px and below the words go: the mark alone
+  opens the menu, the first action on top. A card's row is then the split control,
+  **GitHub**, ⋯ and Resolve. The adversaries are never in this menu: they only give opinions,
+  so their "+" lives in the text box, shown for a reply or an answer and hidden for a request
+  that changes code.
+- What the agent wrote is never sent back to it as it is, which would only have it confirm
+  itself: the other action there is **Reply**, which opens the text box and needs the
+  reader's words. **Ask agent** remains on the reader's own comment, which is the question.
+- A comment the agent wrote (served review) leads with what the reader would do about it:
+  **Fix this** (issue, typo, todo, chore) or **Apply this** (suggestion, nitpick, polish,
+  quibble) as the primary action with Reply behind the ▾; **Answer** as the primary
+  action on a question or thought, with **Act on this** behind the ▾; on a note or praise
+  no button at all, only the mark and its ▾ with Reply inside, since Resolve is what there
+  is to do. None of them on the reader's
+  own, outdated or resolved comments. **Fix this and Apply this go at once, in one click**;
+  "Fix with a note…" / "Apply with a note…" behind the ▾ opens the text box first. Answer,
+  Act on this and Reply always open it, since they need the reader's words. The button reads
+  Fixing…, Applying… or Working on it… and is disabled while its change runs, and is disabled
+  with the reason as its tooltip while another runs or the server is gone.
+- **The text box belongs to the whole comment**: full width of the card, under a rule, never
+  indented under the conversation or an adversary's opinion. It has no buttons of its own.
+  While it is open the split control below it is its send button, named for what it sends
+  (Fix this, Apply this, Act on this, Send answer, Send reply), with **Cancel** beside it and
+  no ▾: the action is named once, never in the box and again under it. ⌘ Enter sends.
+- An **outcome** is one line above the conversation: the word (Addressed in green, Still
+  applies in red, No longer relevant in amber), the revision it was said of, and what the
+  adversaries found ("Codex agrees"). The reply that gave it carries the same word as a chip;
+  an adversary's check reads "second reviewer, on the outcome". It never resolves a comment:
+  a small **Resolve** sits at the end of the line until the reader presses it.
+- **Since revision N** sits under All changes in the sidebar once a revision changed code:
+  one card per changed file with that revision's own diff (split headings name the two
+  revisions), a quiet badge when the file joined the change or went back to its base, and
+  under it the comments that revision outdated, with the code they were written on. Only
+  after-side line numbers take a comment there. A comment that takes up an outdated one
+  shows "Follows up on …" folded under its text.
 
 ## The running app (App view)
 
@@ -475,11 +515,11 @@ With complete captured source, File by file lets personal comments select any ol
 
 ## Comment on GitHub: the preview
 
-What the agent wrote never reaches GitHub unread; what the reader wrote themselves goes as they wrote it, at once, because the box they typed it in was the preview (a preview there would leave a saved, unposted comment behind on Cancel). So for an agent's comment, Comment on GitHub and Add to review open one dialog at once (the Finish your review box, 640px), for that one comment: being modal, it is what keeps the reader from starting a second while the first is written. An agent on this computer rewrites the comment in the reader's voice, and while it does the field shows a waiting state in place of the text: the spinner and one line of words that changes every two seconds ("Humanizing…", "Finding your words…", "Adding breathing room…"; one fixed line with reduced motion), and after twenty seconds a second line saying it is still writing. Rewrite and the send action are disabled meanwhile; Cancel and Q are not, and closing loses nothing, since the rewrite is kept for the next look. Rewrite does the same in place: the dialog never closes on it, and no toast speaks for it. When a rewrite fails, the text that was there (or the comment as written) comes back with one line saying why. A rewrite made under an earlier voice is not reused. A text the reader already approved is shown at once without a rewrite.
+What the agent wrote never reaches GitHub unread; what the reader wrote themselves goes as they wrote it, at once, because the box they typed it in was the preview (a preview there would leave a saved, unposted comment behind on Cancel). So for an agent's comment, the card's one **GitHub** button (GitHub's mark and the word) opens one dialog at once (the Finish your review box, 640px), for that one comment: being modal, it is what keeps the reader from starting a second while the first is written. An agent on this computer rewrites the comment in the reader's voice, and while it does the field shows a waiting state in place of the text: the spinner and one line of words that changes every two seconds ("Humanizing…", "Finding your words…", "Adding breathing room…"; one fixed line with reduced motion), and after twenty seconds a second line saying it is still writing. Rewrite and the send action are disabled meanwhile; Cancel and Q are not, and closing loses nothing, since the rewrite is kept for the next look. Rewrite does the same in place: the dialog never closes on it, and no toast speaks for it. When a rewrite fails, the text that was there (or the comment as written) comes back with one line saying why. A rewrite made under an earlier voice is not reused. A text the reader already approved is shown at once without a rewrite.
 
 - **Header**: the title, and beneath it only where the comment lands and as whom. On the right two icon buttons: How I write (sliders) and Close. No sentence about nothing being posted: the dialog says that by being there.
 - **The text** is one framed field, as the reply box is: the frame's line shows the focus, and the text inside has no fill, outline or focus bar of its own, in any theme.
-- **Footer**: on the left Rewrite (the refresh icon; Try again after a failure, Rewrite in my voice for the reader's own comment) with a few muted words beside it saying where the text came from ("In your voice, by Claude"); on the right Cancel and the one action, Send to GitHub or Add to review, with the send icon. There is no way back to the comment as written: this is a comment on GitHub, not the agent's.
+- **Footer**: on the left Rewrite (the refresh icon; Try again after a failure, Rewrite in my voice for the reader's own comment) with a few muted words beside it saying where the text came from ("In your voice, by Claude"); on the right Cancel, then the quiet **Comment now** (send icon) and the main **Add to my GitHub review** (plus icon, ⌘ Enter): where the text goes is chosen here, with the text in view. The reader's own comment has no box, so its GitHub button is a menu with the same two choices, Add to my GitHub review first. "Start a review" is never said: the first comment added starts the review on GitHub by itself. The footer wraps to a second line before it would overflow the box. There is no way back to the comment as written: this is a comment on GitHub, not the agent's.
 - **Keyboard**: the dialog opens with the focus on the box, not in the text and not on Send, so a stray Enter posts nothing. It follows the app's keys for anything open over the page: I goes into the text and Esc leaves it, Q closes, Space lists the actions (Rewrite, How I write, Send), Tab walks them. Ctrl or Cmd with Enter sends from the text.
 
 **How I write on GitHub** is its own dialog, with the same field and footer: the reader's description of their voice, and the emojis they use (only those are used; none when the field is empty). It is one setting for every review on this computer, never per comment, reached from the sliders button and from the agent's card. The rules that keep a rewrite honest are not editable.

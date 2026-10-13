@@ -56,6 +56,24 @@
 
 .dcr-reply{margin:16px 0 0 40px}
 .dcr-reply[hidden]{display:none}
+.dcr-card-fix[hidden]{display:none}
+.dcr-split{display:inline-flex;align-items:center;gap:0}
+.dcr-split-main{display:inline-flex}.dcr-split.is-narrow .dcr-split-main{display:none}
+.dcr-split-main .btn{gap:6px}.dcr-split-main .btn .dcr-face{flex:none}
+.dcr-split .btn>svg{flex:none;width:15px;height:15px}
+.dcr-split-menu[hidden]{display:none}
+.dcr-split-cancel[hidden]{display:none}.dcr-split.is-writing{gap:6px}
+/* In a card or popover the text box belongs to the whole comment: full width, under a rule, and sent by the control below it. */
+.dcr-card .dcr-reply,.dcr-popover .dcr-reply{margin:18px 0 0;padding-top:16px;border-top:1px solid var(--line)}
+.dcr-card .dcr-reply .dcr-actions>[type="submit"],.dcr-card .dcr-reply .dcr-actions>[data-dcr-cancel],.dcr-popover .dcr-reply .dcr-actions>[type="submit"],.dcr-popover .dcr-reply .dcr-actions>[data-dcr-cancel]{display:none}
+.dcr-card .dcr-reply .dcr-actions,.dcr-popover .dcr-reply .dcr-actions{margin-top:6px;min-height:0}
+.dcr-split-more{gap:4px;padding-inline:4px 6px;list-style:none;cursor:pointer}.dcr-split-more::-webkit-details-marker{display:none}
+.dcr-split-more svg{width:13px;height:13px;opacity:.75}
+.comment-actions .dcr-split .more-list .btn.dcr-card-act,.comment-actions .dcr-split .more-list .btn.dcr-card-fix{display:flex;justify-content:flex-start;width:100%;height:auto;min-height:0;padding:8px 10px;border:0;border-radius:calc(7px * var(--round));background:none;box-shadow:none;color:var(--ink);font-size:13px;font-weight:500}
+.comment-actions .dcr-split .more-list .btn.dcr-card-act:hover:not(:disabled),.comment-actions .dcr-split .more-list .btn.dcr-card-fix:hover:not(:disabled){background:color-mix(in oklab,var(--ink) 7%,transparent)}
+.comment-actions .dcr-split .more-list .btn.dcr-card-act:disabled,.comment-actions .dcr-split .more-list .btn.dcr-card-fix:disabled{opacity:.45}
+.comment-actions .dcr-split .more-list .btn.dcr-card-act,.comment-actions .dcr-split .more-list .btn.dcr-card-fix{gap:8px}
+.comment-actions .dcr-split .more-list .btn.dcr-card-fix[hidden]{display:none}
 .dcr-reply textarea{width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid color-mix(in oklab,currentColor 22%,transparent);border-radius:calc(8px * var(--round));background:transparent;color:inherit;font:inherit;font-size:14px;line-height:1.5;resize:vertical}
 .dcr-reply textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .dcr-reply .dcr-actions,.dcr-popover>.dcr-actions{display:flex;gap:8px;margin-top:10px}
@@ -286,6 +304,12 @@ body.dcr-has-app #qa-panel{display:none}
 .dcr-verdict.dcr-v-agree{background:var(--dcr-agree-soft);color:var(--dcr-agree)}
 .dcr-verdict.dcr-v-partly{background:var(--dcr-partly-soft);color:var(--dcr-partly)}
 .dcr-verdict.dcr-v-disagree{background:var(--dcr-disagree-soft);color:var(--dcr-disagree)}
+.dcr-verdict.dcr-o-addressed{background:var(--dcr-agree-soft);color:var(--dcr-agree)}
+.dcr-verdict.dcr-o-still-applies{background:var(--dcr-disagree-soft);color:var(--dcr-disagree)}
+.dcr-verdict.dcr-o-not-relevant{background:var(--dcr-partly-soft);color:var(--dcr-partly)}
+.dcr-outcome{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;margin:0 0 8px;font-size:12.5px;color:var(--muted)}
+.dcr-outcome strong{font-weight:600}.dcr-outcome-resolve{margin-left:2px}
+.dcr-outcome.dcr-o-addressed strong{color:var(--dcr-agree)}.dcr-outcome.dcr-o-still-applies strong{color:var(--dcr-disagree)}.dcr-outcome.dcr-o-not-relevant strong{color:var(--dcr-partly)}
 .dcr-role{color:var(--muted);font-size:12px;white-space:nowrap}
 .dcr-role+time{margin-left:-4px}
 .dcr-role+time::before{content:"· "}
@@ -513,7 +537,7 @@ body.dcr-has-app #qa-panel{display:none}
 
 /* Comment on GitHub: one box with the text that will be posted. The field is one frame whose line
    shows the focus, as the reply box does; the text inside has no fill or mark of its own. */
-.dcr-gh-box.dcr-gh-preview{max-width:640px;width:min(640px,calc(100vw - 32px));outline:0}
+.dcr-gh-box.dcr-gh-preview{max-width:640px;width:min(640px,calc(100vw - 32px));grid-template-columns:minmax(0,1fr);outline:0}
 .dcr-gh-preview>header{align-items:center}
 .dcr-gh-preview>header p{overflow-wrap:anywhere}
 .gh-preview-tools{display:flex;flex:none;gap:2px}
@@ -530,11 +554,12 @@ body.dcr-has-app #qa-panel{display:none}
 @keyframes gh-word{0%,100%{opacity:.35}18%,82%{opacity:1}}
 .gh-preview-failed{display:flex;gap:8px;margin:0;font-size:12.5px;line-height:1.5;color:var(--muted)}
 .gh-preview-failed svg{flex:none;width:15px;height:15px;margin-top:2px;color:var(--ink-amber-2)}
-.gh-preview-actions{align-items:center;justify-content:flex-start}
+.gh-preview-actions{align-items:center;justify-content:flex-start;flex-wrap:wrap;row-gap:8px}
+.gh-preview-actions .act{white-space:nowrap}
 .gh-preview-actions .act svg{width:15px;height:15px}
 .gh-preview-again{margin-left:-8px}
 .gh-preview-actions .act:disabled{opacity:.4;cursor:default}
-.gh-preview-from{flex:1;min-width:0;font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gh-preview-from{flex:1 1 60px;min-width:0;font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gh-voice-emojis{display:grid;gap:6px;font-size:13px}
 .gh-voice-emojis>span:first-child{font-weight:600}
 .dcr-gh-box .gh-voice-emojis input.gh-summary{min-height:0;height:40px;padding:0 12px;font-size:16px}

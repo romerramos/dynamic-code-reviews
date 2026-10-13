@@ -50,4 +50,5 @@ slow to open.
   - License: `fonts/jetbrains-mono/LICENSE` (SIL Open Font License 1.1).
   - Used by the Terminal theme, which names them with `url(vendor/fonts/...)`; the renderer embeds
     them in the page as data, so no font is fetched at runtime.
-
+- GitHub mark: the `mark-github` icon of Primer Octicons (https://github.com/primer/octicons, MIT),
+  inlined in `assets/report.js` as `ghMark`. It marks the one button that sends a comment to GitHub.

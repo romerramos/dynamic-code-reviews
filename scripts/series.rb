@@ -356,6 +356,40 @@ module ReviewSeries
     [findings, states]
   end
 
+  # What a revision changed since the one before it: the diff between the files as the two
+  # revisions captured them, never between their two diffs. A line put back as the base has it is
+  # gone from the whole change, and is a change here. A file in one revision only was as its base
+  # has it in the other. Returns {'revision' => the earlier number, 'files' => [...]}, each file
+  # with the ranges of that diff, or a note when its text was not captured.
+  def since(previous, current, number)
+    was, now = [previous, current].map { |snapshot| snapshot['files'].to_h { |file| [file['path'], file] } }
+    files = (was.keys | now.keys).sort.filter_map do |path|
+      old, new = was[path], now[path]
+      next if old && new && file_key(old) == file_key(new)
+      before = old ? old.dig('source', 'new') : new.dig('source', 'old')
+      after = new ? new.dig('source', 'new') : old.dig('source', 'old')
+      state = !old ? 'joined' : !new ? 'left' : 'changed'
+      next({'path' => path, 'state' => state, 'note' => 'Changed, but its text was not captured in both revisions.', 'hunks' => []}) unless before && after
+      next if before == after && state == 'changed'
+      {'path' => path, 'state' => state, 'patch' => text_diff(before, after)}
+    end
+    files.each_with_index do |file, index|
+      file['id'] = "d#{index + 1}"
+      file['hunks'] = DynamicReviews.hunks(file['patch'], file['id']) if file['patch']
+    end
+    {'revision' => number, 'files' => files}
+  end
+
+  # A unified diff of two texts, from its first range on.
+  def text_diff(before, after)
+    Dir.mktmpdir('dcr-since-') do |dir|
+      File.write(File.join(dir, 'a'), before)
+      File.write(File.join(dir, 'b'), after)
+      patch = DynamicReviews.text(DynamicReviews.git(dir, 'diff', '--no-index', '--no-ext-diff', '--no-textconv', '--no-color', '--unified=3', 'a', 'b', allowed: [0, 1]))
+      patch[/^@@ .*/m].to_s
+    end
+  end
+
   def publish(prepared:, update:, record: false, **_unused)
     plan = read(File.join(prepared, 'plan.json'))
     snapshot = read(File.join(prepared, 'snapshot.json'))
@@ -399,7 +433,7 @@ module ReviewSeries
       increment = {'summary' => update['since_previous'], 'files' => changes,
                    'reused_ranges' => plan['changes']['mapping'].length, 'inspected_ranges' => plan['changes']['required_hunks'].length,
                    'changed_context' => plan['changed_context'], 'groups' => group_states, 'finding_states' => states}
-      next append(path, history, snapshot, review, increment) unless same
+      next append(path, history, snapshot, review, increment.merge('since' => since(previous['snapshot'], snapshot, plan['revision']))) unless same
       # Its files are still what the revision changed, not this comparison of the code with itself.
       amend(path, history, snapshot, review, update['since_previous'], increment.except('files'), was: previous['review']['history'])
     end
@@ -673,10 +707,21 @@ module ReviewSeries
       key = ->(revision, fingerprint) { DCR::State.review_key(fingerprint, name, revision) }
       DynamicReviews.validate(current, review)
       # The reader's side first, so a page that opens the new revision at once finds it there.
-      DCR::State.new(path).carry_changed(key.call(entry['number'], entry['fingerprint']), key.call(entry['number'] + 1, current['fingerprint']), kept) { |comment| anchors.carry(comment, full: true) }
+      state = DCR::State.new(path)
+      state.carry_changed(key.call(entry['number'], entry['fingerprint']), key.call(entry['number'] + 1, current['fingerprint']), kept) { |comment| anchors.carry(comment, full: true) }
+      delta = since(previous['snapshot'], current, entry['number'])
       append(path, history, current, review, {'summary' => summary, 'files' => changes['files'], 'reused_ranges' => changes['mapping'].length,
-             'inspected_ranges' => 0, 'changed_context' => [], 'groups' => {}, 'finding_states' => states, 'update' => true})
-      {'status' => 'updated', 'revision' => entry['number'] + 1, 'previous_revision' => entry['number'], 'summary' => summary, 'base' => history['base'],
+             'inspected_ranges' => 0, 'changed_context' => [], 'groups' => {}, 'finding_states' => states, 'update' => true, 'since' => delta})
+      # Each comment whose lines changed, with what is needed to say what became of it: the code it
+      # was written on, what changed in its file since, and what other agents said of it.
+      kept_state = state.read
+      own = Array(kept_state.dig('blobs', key.call(entry['number'] + 1, current['fingerprint']), 'personalComments')).select { |comment| comment.dig('outdated', 'revision') == entry['number'] }
+      threads = kept_state.dig('threads', key.call(entry['number'] + 1, current['fingerprint'])) || {}
+      patches = delta['files'].to_h { |file| [file['path'], file['patch']] }
+      lost = (outdated + own.map { |comment| comment.merge('reader' => true) }).map do |comment|
+        comment.slice('id', 'label', 'decoration', 'subject', 'discussion', 'agent', 'outdated', 'reader').merge('patch' => patches[comment.dig('outdated', 'path')], 'opinions' => opinions(threads[comment['id']])).compact
+      end
+      {'status' => 'updated', 'outdated_comments' => lost, 'revision' => entry['number'] + 1, 'previous_revision' => entry['number'], 'summary' => summary, 'base' => history['base'],
        'key' => key.call(entry['number'] + 1, current['fingerprint']),
        'files' => changed.map { |file| file.slice('path', 'state') }, 'outdated' => outdated.map { |comment| comment['id'] },
        'screenshots_dropped' => dropped.map { |shot| shot.slice('id', 'title', 'page', 'comment_id') },
@@ -684,14 +729,31 @@ module ReviewSeries
     end
   end
 
+  # What other agents said of a comment, a line each, for whoever looks at it again.
+  def opinions(thread)
+    said = Array(thread&.dig('messages')).select { |message| message['role'] == 'adversary' }.map { |message| [message['agent'], 'second reviewer', message['verdict'], message['body']] } +
+           (thread&.dig('opinions') || {}).select { |_, opinion| opinion['body'] }.map { |agent, opinion| [agent, nil, opinion['verdict'], opinion['short'] || opinion['body']] }
+    said.map { |agent, role, verdict, body| "- #{DCR::Agents.name(agent)}#{" (#{[role, verdict].compact.join(', ')})" if role || verdict}: #{body.gsub(/\s*\n\s*/, ' ')[0, 700]}" }
+  end
+
   def count(number, noun) = "#{number} #{noun}#{'s' unless number == 1}"
 
   BRIEF_LINES = 400 # of changed code handed to the agent; the rest it reads itself
+  OUTDATED_LINES = 80 # of what changed in an outdated comment's file
 
   # What an update changed, for the agent that comments on it: the ranges nobody has reviewed, as patches.
   def sync_brief(result)
     out = ["CODE UPDATE: #{result['summary']}", result['files'].map { |file| "#{file['state']}: #{file['path']}" }.join("\n")]
-    out << "Outdated comments (their lines changed or went): #{result['outdated'].join(', ')}" if result['outdated'].any?
+    Array(result['outdated_comments']).each do |comment|
+      was = comment['outdated']
+      lines = was['start'] == was['end'] ? "line #{was['start']}" : "lines #{was['start']}-#{was['end']}"
+      patch = comment['patch'].to_s.lines
+      out << ["OUTDATED COMMENT #{comment['id']} (#{comment['reader'] ? 'written by the reviewer' : "by #{DCR::Agents.name(comment['agent'] || 'agent')}"}): #{[comment['label'], comment['subject']].compact.join(': ')}",
+              comment['discussion'].to_s.strip.then { |text| text unless text.empty? },
+              "The code it was written on (#{was['path']}, #{was['side'] == 'new' ? 'after' : 'before'} the change, #{lines}, revision #{was['revision']}):\n#{Array(was['lines']).join("\n")}",
+              patch.empty? ? nil : "What changed in #{was['path']} since revision #{was['revision']}:\n#{patch.first(OUTDATED_LINES).join.chomp}#{"\n(#{patch.length - OUTDATED_LINES} more lines: read the file)" if patch.length > OUTDATED_LINES}",
+              Array(comment['opinions']).empty? ? nil : "What other agents said of it:\n#{comment['opinions'].join("\n")}"].compact.join("\n\n")
+    end
     gone = Array(result['screenshots_dropped'])
     out << "Screenshots dropped because their files changed; take the ones still worth showing again and post them with `dcr screenshot`:\n#{gone.map { |shot| "- #{shot['id']}: #{shot['title']}#{" (#{shot['page']})" if shot['page']}" }.join("\n")}" if gone.any?
     left = BRIEF_LINES

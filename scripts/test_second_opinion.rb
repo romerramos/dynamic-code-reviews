@@ -136,6 +136,29 @@ Dir.mktmpdir('dcr-opinions') do |series|
   again = state.read.dig('threads', key, 'c1')
   assert(again['messages'].map { |entry| entry['body'] } == ['Agreed after all.'], 'Asking again replaces the earlier answer, it does not repeat it')
   assert(again.dig('opinions', 'grok', 'body') == 'Fine.', 'A failed retry keeps the answer already given')
+  # What became of the comment once the code changed: the adversaries say it on their own, from the
+  # comment and the code, and theirs is held against what the review's agent found.
+  before = state.read.dig('threads', key, 'c1', 'messages').count { |message| message['role'] == 'adversary' }
+  state.agent_reply('c1', 'The limit is read from the README now.', key: key, agent: 'claude', outcome: 'addressed')
+  heard = Queue.new
+  found = ->(agent, question, dir:, model:, effort:) { heard << question; agent == 'codex' ? "Still applies\nThe limit is still ten." : "Addressed\nIt reads the README." }
+  with_agents('codex' => 'exit 0', 'grok' => 'exit 0') do
+    result = DCR::SecondOpinion.outcome(series_dir: series, id: 'c1', author: 'claude', ask: found)
+    assert(result == {'codex' => 'disagree', 'grok' => 'agree'}, "Each agent's own finding is held against the review agent's: #{result}")
+  end
+  thread = state.read.dig('threads', key, 'c1')
+  checks = thread['messages'].select { |message| message['role'] == 'adversary' }
+  assert(checks.length == before + 1 && checks.last.values_at('about', 'verdict', 'body') == ['outcome', 'disagree', '**Still applies.** The limit is still ten.'], "The second reviewer's finding joins the conversation beside what it said of the comment: #{checks.last}")
+  assert(thread.dig('opinions', 'grok').values_at('about', 'verdict') == %w[outcome agree] && thread['outcome'].values_at('verdict', 'revision') == ['addressed', 1], 'The others weigh in on the side, and the outcome stays the review agent\'s')
+  question = heard.pop
+  assert(question.include?('Say what became of the comment') && question.include?(comment['subject']) && !question.include?('read from the README now'), 'An adversary is asked the question itself, never shown the review agent\'s answer')
+  begin
+    DCR::SecondOpinion.outcome(series_dir: series, id: 'nobody', author: 'claude', ask: found)
+    assert(false, 'An outcome nobody gave was checked')
+  rescue ArgumentError => error
+    assert(error.message.include?('Nobody said what became of nobody'), error.message)
+  end
+  puts 'PASS what became of a comment is checked by the adversaries on their own and held against the review agent\'s outcome'
 end
 puts 'PASS a posted comment gets the second reviewer in its conversation and the others beside it, failures included'
 

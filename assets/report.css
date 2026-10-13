@@ -91,6 +91,7 @@ main#content{position:relative;overflow-y:auto;scroll-behavior:smooth;min-width:
 .thread-file-path{font:600 12px/1.7 var(--mono);overflow-wrap:anywhere;min-width:0;color:var(--ink-neutral-3)}
 .thread-range{font-size:12px;white-space:nowrap;color:var(--ink-neutral-4)}
 .thread-outdated{display:inline-block;margin-right:8px;padding:1px 8px;border:1px solid var(--line-amber-3);border-radius:calc(5px * var(--round));background:var(--bg-amber-1);color:var(--ink-neutral-3);font-size:11px;line-height:1.5;font-weight:650}
+.thread-follows{margin:14px 0 0;font-size:13px;color:var(--ink-neutral-5)}.thread-follows summary{cursor:pointer}.thread-follows .comment-discussion{margin-top:8px}
 .thread-was{margin:14px 0 0}.thread-was figcaption{margin-bottom:6px;font-size:12px;color:var(--ink-neutral-5)}
 .thread-was pre{margin:0;padding:10px 12px;overflow-x:auto;border:1px solid var(--line-neutral-2);border-radius:calc(6px * var(--round));background:var(--bg-neutral-2);color:var(--ink-neutral-4);font:12px/1.6 var(--mono)}
 .review-thread .thread-details{display:block;margin:0;padding:0;border:0;border-radius:0;background:transparent}
@@ -234,6 +235,8 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 .overview-intro .lead{font-size:17px;line-height:1.65;color:var(--ink-neutral-3);margin-bottom:18px}
 .overview-update{font-size:13px;line-height:1.6;color:var(--ink-neutral-5);margin:0 0 12px}
 .overview-update strong{font-weight:600;color:var(--ink-neutral-3)}
+.since-note{margin:12px 16px}
+.since-outdated{padding:14px 16px;border-top:1px solid var(--line-neutral-2)}.since-outdated h3{margin:0 0 10px;font-size:12px;font-weight:600;color:var(--ink-neutral-5)}
 .overview-history{display:flex;flex-wrap:wrap;gap:18px;font-size:13px}
 .overview-notice{padding:12px 16px;border-left:3px solid var(--line-amber-5);background:var(--bg-amber-1);font-size:14px;line-height:1.6}
 .overview-comments .review-thread{max-width:none;margin:0 0 28px;border-color:var(--line-neutral-2);border-radius:calc(12px * var(--round))}
@@ -965,7 +968,7 @@ dialog.stage::backdrop{background:color-mix(in srgb,var(--bg-neutral-8) 40%,tran
 /* Where a comment goes. Ask agent (violet) stays in this review; GitHub (neutral, ↗) leaves it. */
 .gh-act{gap:6px;border:1px solid var(--line-neutral-3);background:var(--bg-neutral-1);color:var(--ink-neutral-2);font-weight:550}.btn-sm.gh-act{font-size:13px}
 .gh-act:hover{border-color:var(--line-neutral-5);background:var(--bg-neutral-2);color:var(--ink-neutral-1)}
-.gh-act svg{width:14px;height:14px}
+.gh-act svg{width:14px;height:14px}.gh-menu>summary.gh-act{display:inline-flex;align-items:center;list-style:none;cursor:pointer}.gh-menu>summary.gh-act::-webkit-details-marker{display:none}.gh-menu>summary.gh-act svg:last-child{width:12px;height:12px;opacity:.7}
 .more-menu{position:relative;display:inline-flex}
 .more-menu>summary{list-style:none;padding:0 8px}
 .more-menu>summary::-webkit-details-marker{display:none}

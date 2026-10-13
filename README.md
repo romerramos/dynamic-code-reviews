@@ -31,6 +31,8 @@ files that open offline.
   record a clip, or press Start QA review and the agent records the flows behind its comments.
 - **On your other devices**, with Tailscale: open the same live review from your phone or a laptop in
   a remote session. See [Open reviews from your other devices](#open-reviews-from-your-other-devices).
+- **Since the last revision.** After an update the page opens on only what changed since the previous revision, with the comments that change outdated; the whole change is one click away.
+- **Fix this, Apply this, Answer.** A comment your agent wrote leads with what you would do about it: fix an issue, apply a suggestion, answer a question (and have the agent act on your answer). The agent changes the code in your checkout, the next revision shows that change alone, it says what it did, and your adversaries check it on their own.
 - **History.** Each change to the code saves a revision; a follow-up review reuses the explanations of code that did
   not change.
 
@@ -182,7 +184,8 @@ commands. Everything runs as `<skill>/bin/dcr <command>`, with Ruby 3.1+ (under 
 | `sync` | Update a review to the code as it is now, with no new analysis: comments follow their lines or become outdated. The served page's Update button does the same. A pull request's review does this only after its reviewer chose Follow my checkout (`--follow-checkout`). |
 | `serve [--share] [--app <url>]` | Serve a review live: conversation, previews, the running app, tailnet sharing. |
 | `focus` / `link` | Bring the review's browser tab to the front; print its local and tailnet addresses. |
-| `comment` | Post a review comment to a review in progress. |
+| `comment` | Post a review comment to a review in progress. With `"follows"`, it takes up an outdated comment on the new lines. |
+| `reply --outcome` | After the code changed, say what became of a comment: `addressed`, `still-applies` or `not-relevant`. The adversaries then check it on their own. |
 | `wait` / `reply` / `comments` | Receive the reviewer's messages, answer a thread, list threads. |
 | `preview submit` / `preview fail` | Answer a template preview request. |
 | `record` / `evidence attach` | Record and attach visual QA evidence. |

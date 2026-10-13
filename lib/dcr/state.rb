@@ -185,7 +185,9 @@ module DCR
 
     # agent: which agent wrote an agent message (claude, codex, ...). role 'adversary' marks the
     # second opinion that challenges a comment; it is not an answer to the reviewer.
-    def add_message(state, key, id, author, body, agent: nil, role: nil, verdict: nil, model: nil, effort: nil)
+    # outcome: what the agent found became of the comment once the code changed (OUTCOMES).
+    # about 'outcome' marks a second opinion on that, not on the comment itself.
+    def add_message(state, key, id, author, body, agent: nil, role: nil, verdict: nil, model: nil, effort: nil, outcome: nil, about: nil)
       raise ArgumentError, 'Invalid author' unless AUTHORS.include?(author)
       body = text(body)
       thread = thread(state, key, id)
@@ -194,6 +196,7 @@ module DCR
       message.merge!({'model' => model, 'effort' => effort}.compact) if author == 'agent' # whose judgement it is
       message['role'] = role if role
       message['verdict'] = verdict if verdict
+      message.merge!({'outcome' => outcome, 'about' => about}.compact)
       thread['messages'] << message
       thread['delivery'] = 'answered' if author == 'agent' && role.nil?
       message
@@ -249,12 +252,44 @@ module DCR
       end
     end
 
-    def agent_reply(id, body, key: nil, agent: nil, model: nil, effort: nil)
+    # outcome: the agent's finding on a comment after the code changed; it stays on the thread
+    # with the revision it was said of, and ends a fix the reviewer asked for. It resolves
+    # nothing: the reviewer does.
+    def agent_reply(id, body, key: nil, agent: nil, model: nil, effort: nil, outcome: nil)
+      raise ArgumentError, "An outcome is one of: #{OUTCOMES.join(', ')}" unless outcome.nil? || OUTCOMES.include?(outcome)
       update do |state|
         # A thread carried across revisions exists under several keys; the reviewer reads the newest.
         key ||= state['threads'].select { |_, threads| threads.key?(id) }.keys.max_by { |name| name.split(':').last.to_i }
         raise ArgumentError, "No thread #{id}. Reply to an id printed by `dcr wait`." unless key
-        add_message(state, key, id, 'agent', body, agent: agent, model: model, effort: effort)
+        message = add_message(state, key, id, 'agent', body, agent: agent, model: model, effort: effort, outcome: outcome)
+        if outcome
+          thread = thread(state, key, id)
+          thread['outcome'] = {'verdict' => outcome, 'revision' => key.split(':').last.to_i, 'at' => message['at'], 'agent' => message['agent']}.compact
+          thread['fix']['state'] = 'done' if thread['fix']
+        end
+        message
+      end
+    end
+
+    OUTCOMES = %w[addressed still-applies not-relevant].freeze
+    FIX_LAPSE = 3600 # seconds after which a fix nobody reported on no longer holds the others back
+
+    FIX_ASKS = %w[fix apply answer].freeze # fix what it says, apply what it suggests, act on the reader's answer to it
+
+    # The reviewer pressed Fix this, Apply this or Act on this on a comment: the agent is handed
+    # the comment as a task that changes code. One at a time, so the next revision shows that
+    # change and nothing else. note: what the reviewer added, which joins the conversation.
+    def request_fix(key, id, text, ask: 'fix', note: nil)
+      raise ArgumentError, "A fix asks for one of: #{FIX_ASKS.join(', ')}" unless FIX_ASKS.include?(ask)
+      raise ArgumentError, 'Acting on a question needs your answer' if ask == 'answer' && note.to_s.strip.empty?
+      update do |state|
+        busy = (state['threads'][key] || {}).find { |_, thread| thread.dig('fix', 'state') == 'requested' && Time.now - Time.parse(thread['fix']['at']) < FIX_LAPSE }
+        raise ArgumentError, "Your agent is still fixing another comment (#{busy.first}). One fix at a time, so each shows as its own change." if busy
+        thread = thread(state, key, id)
+        thread.merge!('fix' => {'state' => 'requested', 'at' => Time.now.utc.iso8601}, 'delivery' => 'sent', 'live' => true)
+        thread.delete('outcome')
+        add_message(state, key, id, 'user', note) unless note.to_s.strip.empty?
+        enqueue(state, 'fix', key, [id], text.to_s, 'ask' => ask)
       end
     end
 
@@ -277,7 +312,9 @@ module DCR
 
     # verdict: agree, partly or disagree, when the answer said so. short: the answer in a sentence
     # or two, when the agent marked one; body then carries it and the details under it.
-    def add_opinion(key, id, agent, body, verdict: nil, short: nil, adversary: false, model: nil, effort: nil)
+    # about 'outcome': it is said of the review agent's outcome, so what the same agent said of
+    # the comment itself stays in the conversation.
+    def add_opinion(key, id, agent, body, verdict: nil, short: nil, adversary: false, model: nil, effort: nil, about: nil)
       agent = Agents.check(agent)
       update do |state|
         awaiting(state, key, id, agent).each do |copy|
@@ -286,9 +323,9 @@ module DCR
           # Asked again, an agent's newer answer replaces its earlier one.
           thread['opinions']&.delete(agent)
           if adversary
-            thread['messages'].reject! { |message| message['role'] == 'adversary' && message['agent'] == agent }
-            add_message(state, copy, id, 'agent', body, agent: agent, role: 'adversary', verdict: verdict, model: model, effort: effort)
-          else (thread['opinions'] ||= {})[agent] = {'id' => SecureRandom.hex(6), 'body' => text(body), 'short' => short, 'verdict' => verdict, 'model' => model, 'effort' => effort, 'at' => Time.now.utc.iso8601}.compact
+            thread['messages'].reject! { |message| message['role'] == 'adversary' && message['agent'] == agent && message['about'] == about }
+            add_message(state, copy, id, 'agent', body, agent: agent, role: 'adversary', verdict: verdict, model: model, effort: effort, about: about)
+          else (thread['opinions'] ||= {})[agent] = {'id' => SecureRandom.hex(6), 'body' => text(body), 'short' => short, 'verdict' => verdict, 'about' => about, 'model' => model, 'effort' => effort, 'at' => Time.now.utc.iso8601}.compact
           end
         end
       end

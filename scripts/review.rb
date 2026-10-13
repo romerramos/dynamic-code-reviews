@@ -367,6 +367,8 @@ module DynamicReviews
     snapshot = Marshal.load(Marshal.dump(snapshot))
     add_sources(snapshot) unless snapshot['mode'] == 'uncommitted' || snapshot['working_tree']
     snapshot['files'].each { |file| file['hunks'].each { |hunk| hunk['rows'] = diff_rows(hunk) } }
+    # The same for what the revision changed since the one before it (ReviewSeries.since).
+    Array(review.dig('history', 'since', 'files')).each { |file| file['hunks'].each { |hunk| hunk['rows'] = diff_rows(hunk) } }
     {'snapshot' => snapshot, 'review' => review}
   end
 

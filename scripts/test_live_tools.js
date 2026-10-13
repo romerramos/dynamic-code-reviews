@@ -156,6 +156,23 @@ assert.match(thread, /dcr-adversary dcr-v-disagree/);
 assert.match(tools.messagesHTML({messages:[{id:'r1', author:'agent', body:'ok'}]}, {agent:'claude'}), /<strong>Claude<\/strong>/, 'an unnamed reply takes the listening agent');
 assert.deepEqual(tools.tally(debated), {total:2, agree:1, partly:0, disagree:1});
 assert.equal(tools.tallyText(tools.tally(debated)), '1 agrees · 1 disagrees');
+// Once the review's agent said what became of the comment, the thread says so in a line, and the
+// tally is what the others found of that, not what they said of the comment before.
+const settled = {...debated, outcome:{verdict:'addressed', revision:3, agent:'claude'},
+  messages:[...debated.messages, {id:'m2', author:'agent', agent:'claude', outcome:'addressed', body:'It is capped now.', at:'2026-10-09T11:00:00Z'},
+    {id:'m3', author:'agent', agent:'codex', role:'adversary', about:'outcome', verdict:'agree', body:'**Addressed.** The cap is there.', at:'2026-10-09T11:01:00Z'}],
+  opinions:{grok:{id:'o2', body:'Still open.', verdict:'disagree', about:'outcome', at:'2026-10-09T11:02:00Z'}}};
+assert.equal(tools.outcomeHTML(debated), '', 'a thread nobody settled says nothing');
+assert.match(tools.outcomeHTML(settled, 'c-1'), /<button type="button" class="btn btn-xs dcr-outcome-resolve" data-resolve="c-1">Resolve<\/button><\/p>$/, 'the reader resolves from the outcome line');
+assert.doesNotMatch(tools.outcomeHTML(settled), /data-resolve/, 'a resolved comment offers no Resolve there');
+// The first action on a comment the agent wrote follows what the comment is.
+assert.deepEqual(['issue', 'typo', 'suggestion', 'nitpick', 'question', 'thought', 'note', 'praise'].map(label => [tools.commentAction(label).kind, tools.commentAction(label).act]),
+  [['fix', 'Fix this'], ['fix', 'Fix this'], ['apply', 'Apply this'], ['apply', 'Apply this'], ['answer', 'Act on this'], ['answer', 'Act on this'], ['none', null], ['none', null]]);
+assert.match(tools.outcomeHTML(settled), /dcr-o-addressed"><strong>Addressed<\/strong><span>in revision 3 · Codex agrees and Grok disagrees<\/span>/);
+assert.deepEqual(tools.tally(settled), {total:2, agree:1, partly:0, disagree:1});
+const settledThread = tools.messagesHTML(settled, {seen:new Set(['m1', 'm2', 'm3'])});
+assert.match(settledThread, /<strong>Claude<\/strong><span class="dcr-verdict dcr-o-addressed">Addressed<\/span>/, 'the outcome is said on the reply that gave it');
+assert.match(settledThread, /second reviewer, on the outcome<\/span>/, 'a check of the outcome says so');
 const side = tools.opinionsHTML(debated);
 assert.match(side, /Other opinions/);
 assert.match(side, /data-dcr-opinion="grok" aria-expanded="false">.*<strong>Grok<\/strong><span class="dcr-op-verdict dcr-v-agree">.*Agree<\/span>.*dcr-op-snippet">Looks right to me\.</s, 'a side opinion is one row: its mark, name, verdict and the start of its answer');

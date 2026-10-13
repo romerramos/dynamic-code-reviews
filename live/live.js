@@ -188,8 +188,10 @@
     const model = online ? tools.statusModel(thread, listening, Date.now(), listener) : {tone: 'off', text: 'The review server stopped. Restart `dcr serve` to send or receive.'};
     // The reply carries its own time; the status line only says that it came.
     // In Your review the row already says it replied; under the thread only work in progress shows.
-    const status = ledger && model?.tone === 'done' ? '' : stateHTML(model, '');
-    const statusSignature = status ? `${model.tone}|${model.text}` : '';
+    const outcome = tools.outcomeHTML(thread, resolved().includes(id) ? null : id);
+    const action = actionOf(id);
+    const status = outcome + (ledger && model?.tone === 'done' ? '' : stateHTML(model, ''));
+    const statusSignature = status ? `${model?.tone}|${model?.text}|${outcome}` : '';
     const form = block.querySelector('.dcr-reply');
     if (ledger) {
       set(form, 'hidden', !sent);
@@ -197,7 +199,7 @@
       set(field, 'disabled', !online);
       set(field, 'placeholder', online ? 'Reply to your agent' : 'The review server stopped');
       set(form.querySelector('.dcr-send'), 'disabled', !online);
-    } else if (!sent && !form.hidden) form.hidden = true;
+    } else if (!sent && !form.hidden && !form.dataset.mode) form.hidden = true;
     block.classList.toggle('has-content', !!(html || status || opinions || !form.hidden));
     const slot = block.querySelector('.dcr-opinions-slot');
     if (slot.dataset.html !== opinions) { slot.innerHTML = opinions; slot.dataset.html = opinions; }
@@ -211,18 +213,104 @@
     clampLong(convo);
     const stateEl = block.querySelector('.dcr-state');
     if (stateEl.dataset.sig !== statusSignature) { stateEl.innerHTML = status; stateEl.dataset.sig = statusSignature; }
-    syncAdvToggles(block.querySelectorAll('.dcr-reply .dcr-adv-toggle'), id, true);
-    actionButtons(id).forEach(button => {
-      // Before the first ask, its + sits beside Ask agent; after it, in the reply field.
-      if (!button.nextElementSibling?.matches('.dcr-adv-toggle')) button.insertAdjacentHTML('afterend', advToggleHTML);
-      syncAdvToggles([button.nextElementSibling], id, !sent);
-      set(button, 'textContent', sent ? 'Reply' : 'Ask agent');
-      set(button, 'disabled', !online);
-      button.classList.toggle('btn-primary', !sent);
-      button.classList.toggle('dcr-act-reply', sent);
-      button.classList.remove('btn-soft');
+    // The adversaries only ever give opinions: they can be asked along with a question, an answer
+    // or a reply, never with a request that changes code.
+    syncAdvToggles(block.querySelectorAll('.dcr-reply .dcr-adv-toggle'), id, form.dataset.mode !== 'act');
+    // Everything that goes to the agent is one control: its mark and the first action, which
+    // follows what the comment is, and a menu with the rest. Where there is no room for the
+    // words, or the comment asks for nothing (the agent's note or praise), the mark alone opens
+    // the menu. What the agent wrote is replied to with words of the reader's own; sending it
+    // back as it is would only have the agent confirm itself.
+    // While the text box is open the control is its send button, named for what it sends, with
+    // Cancel beside it: one button says it, not one in the box and another under it.
+    (ledger ? null : block.closest('article, .popover-comment'))?.querySelectorAll('[data-dcr-split]').forEach(split => {
+      const main = split.querySelector('.dcr-split-main');
+      const menu = split.querySelector('.dcr-split-menu');
+      const list = menu.querySelector('.more-list');
+      const act = split.querySelector('[data-dcr-act]');
+      const fix = split.querySelector('[data-dcr-fix]');
+      const noted = split.querySelector('[data-dcr-fix-note]');
+      const writing = !form.hidden;
+      const mode = writing ? form.dataset.mode || 'reply' : null;
+      const narrow = !writing && (narrowCards.matches || (!sent && action?.kind === 'none'));
+      const fixing = thread?.fix?.state === 'requested';
+      const other = !fixing && fixingId();
+      // While its change runs, the control says so (Fixing…), whatever was said in the thread since.
+      const first = writing ? (mode === 'act' ? fix : act) : action?.act && (fixing || (!sent && action.kind !== 'answer')) ? fix : act;
+      if (narrow) { if (list.firstElementChild !== first) list.prepend(first); }
+      else if (first.parentElement !== main) main.replaceChildren(first);
+      const second = first === fix ? act : fix;
+      if (second.parentElement !== list || second.nextElementSibling) list.append(second);
+      // Fix this and Apply this go at once; the same with something to add is one step down.
+      if (noted.parentElement !== list || noted.nextElementSibling !== second) second.before(noted);
+      // Behind Fix this or Apply this, replying is the way to say something without a change.
+      paint(act, writing ? (mode === 'answer' && action?.kind === 'answer' ? 'Send answer' : 'Send reply') : !sent && mine(id) ? 'Ask agent' : !sent && action?.kind === 'answer' ? 'Answer' : first === fix ? 'Just reply' : 'Reply', first === act && !narrow);
+      set(act, 'disabled', !online);
+      act.classList.toggle('dcr-act-reply', sent && !writing);
+      set(fix, 'hidden', !action?.act);
+      const direct = !!action?.act && action.kind !== 'answer';
+      set(noted, 'hidden', !direct || fixing || writing);
+      if (action?.act) {
+        paint(fix, fixing ? action.busy : action.act, first === fix && !narrow);
+        if (direct) paint(noted, `${action.act.replace(' this', '')} with a note…`);
+        [fix, noted].forEach(button => {
+          set(button, 'disabled', !online || fixing || !!other);
+          set(button, 'title', fixing ? 'Your agent is working on it. The next revision shows what it changed.' : other ? 'Your agent is changing the code for another comment. One at a time, so each shows as its own change.' : 'Have your agent change the code in your checkout. The next revision shows that change and nothing else.');
+        });
+      }
+      [act, fix].forEach(button => { button.classList.toggle('btn-primary', button === first && (writing || (!sent && !!action?.act))); button.classList.toggle('btn-ghost', button !== first); });
+      split.classList.toggle('is-narrow', narrow);
+      split.classList.toggle('is-writing', writing);
+      const more = menu.querySelector('summary');
+      const face = `${narrow ? agentMark() : ''}${ico('chevron-down')}`;
+      if (more.dataset.html !== face) { more.innerHTML = face; more.dataset.html = face; }
+      set(menu, 'hidden', writing || (!narrow && second.hidden && noted.hidden));
+      set(split.querySelector('.dcr-split-cancel'), 'hidden', !writing);
     });
     if (block.classList.contains('dcr-popover')) widenPopover();
+  };
+  // Fix this: on a comment the agent wrote, asking it again only has it confirm itself; what
+  // helps is having it act. Not on a comment whose lines already changed.
+  const fixable = id => { const comment = comments().find(entry => entry.id === id); return !!comment && !comment.personal && !comment.outdated && !resolved().includes(id); };
+  // Its first action, by what the comment is (tools.commentAction); null on one that is not the agent's to act on.
+  const actionOf = id => fixable(id) ? tools.commentAction(comments().find(entry => entry.id === id).label) : null;
+  const mine = id => comments().find(entry => entry.id === id)?.personal !== false;
+  // The card's one text box, for a reply, an answer to the agent's question, or what to add to a fix.
+  const openForm = (block, mode, action = null) => {
+    const form = block?.querySelector('.dcr-reply');
+    if (!form) return;
+    const field = form.querySelector('textarea');
+    mode ? form.dataset.mode = mode : delete form.dataset.mode;
+    form.hidden = false;
+    refreshBlock(block);
+    const answering = action?.kind === 'answer';
+    field.placeholder = mode === 'act' ? (answering ? 'Your answer, for your agent to act on' : 'Anything to add? (optional)') : mode === 'answer' && answering ? 'Your answer' : 'Reply to your agent';
+    if (!form.classList.contains('dcr-compose')) form.querySelector('[type="submit"]').textContent = mode === 'act' ? action.act : mode === 'answer' && answering ? 'Send answer' : 'Send reply';
+    field.focus();
+  };
+  const fixingId = () => Object.keys(threads).find(id => threads[id].fix?.state === 'requested' && Date.now() - Date.parse(threads[id].fix.at) < 3600000);
+  // The listening agent's mark, on the control that sends to it.
+  const agentMark = () => listener ? tools.avatarHTML(listener, 'dcr-face-sm') : ico('sparkles');
+  // The control carries the agent's mark once, on its button; what is in its menu goes to the
+  // same agent and does not repeat it.
+  const paint = (button, text, marked = false) => {
+    const html = `${marked ? agentMark() : ''}<span>${tools.escape(text)}</span>`;
+    if (button.dataset.html !== html) { button.innerHTML = html; button.dataset.html = html; }
+  };
+  const narrowCards = matchMedia('(max-width: 640px)');
+  narrowCards.addEventListener('change', () => document.querySelectorAll('.dcr-thread').forEach(refreshBlock));
+  const addSplit = (actions, id, size) => {
+    actions.insertAdjacentHTML('afterbegin', `<span class="dcr-split"><span class="dcr-split-main"></span><details class="more-menu dcr-split-menu"><summary class="btn btn-${size} btn-ghost dcr-split-more" aria-label="More for your agent" title="More for your agent"></summary><div class="more-list"></div></details><button type="button" class="btn btn-${size} btn-ghost dcr-split-cancel" data-dcr-cancel hidden>Cancel</button></span>`);
+    const split = actions.firstElementChild;
+    split.dataset.dcrSplit = id;
+    const act = Object.assign(document.createElement('button'), {type: 'button', className: `btn btn-${size} dcr-card-act`});
+    Object.assign(act.dataset, {dcrAct: '1', dcrFor: id});
+    const fix = Object.assign(document.createElement('button'), {type: 'button', className: `btn btn-${size} dcr-card-fix`, hidden: true});
+    fix.dataset.dcrFix = id;
+    split.querySelector('.dcr-split-main').append(act);
+    const noted = Object.assign(document.createElement('button'), {type: 'button', className: `btn btn-${size} btn-ghost dcr-card-fix`, hidden: true});
+    noted.dataset.dcrFixNote = id;
+    split.querySelector('.more-list').append(noted, fix);
   };
   const decorate = () => {
     document.querySelectorAll('#content article.review-thread[data-thread-id]').forEach(card => {
@@ -233,11 +321,7 @@
         footer ? footer.before(block) : card.append(block);
       }
       const actions = card.querySelector('.comment-actions');
-      if (actions && !actions.querySelector('[data-dcr-act]')) {
-        actions.prepend(Object.assign(document.createElement('button'), {type: 'button', className: 'btn btn-sm btn-primary dcr-card-act'}));
-        actions.firstChild.dataset.dcrAct = '1';
-        actions.firstChild.dataset.dcrFor = id;
-      }
+      if (actions && !actions.querySelector('[data-dcr-split]')) addSplit(actions, id, 'sm');
     });
     document.querySelectorAll('.dcr-thread').forEach(refreshBlock);
   };
@@ -290,7 +374,7 @@
       return;
     }
     const cancel = event.target.closest('[data-dcr-cancel]');
-    if (cancel) { const block = cancel.closest('.dcr-thread'); block.querySelector('.dcr-reply').hidden = true; refreshBlock(block); return; }
+    if (cancel) { const block = blockFor(cancel); const form = block.querySelector('.dcr-reply'); form.hidden = true; delete form.dataset.mode; refreshBlock(block); return; }
     const advToggle = event.target.closest('.dcr-adv-toggle');
     if (advToggle) {
       const id = advToggle.dataset.dcrAdvFor;
@@ -299,18 +383,43 @@
       else document.querySelectorAll(`.dcr-thread[data-dcr="${CSS.escape(id)}"]`).forEach(refreshBlock);
       return;
     }
+    // Fix this, Apply this, Act on this: the box opens for what to add, and sends from there.
+    const noted = event.target.closest('[data-dcr-fix-note]');
+    const fix = event.target.closest('[data-dcr-fix]');
     const button = event.target.closest('[data-dcr-act]');
+    (noted || fix || button)?.closest('details.dcr-split-menu')?.removeAttribute('open');
+    if (noted) { openForm(blockFor(noted), 'act', actionOf(noted.dataset.dcrFixNote)); return; }
+    // With the text box open, the control is its send button.
+    const pressed = fix || button;
+    const writing = pressed?.closest('.dcr-split') && blockFor(pressed)?.querySelector('.dcr-reply:not([hidden])');
+    if (writing) { writing.requestSubmit(); return; }
+    if (fix) {
+      const id = fix.dataset.dcrFix, action = actionOf(id), comment = comments().find(entry => entry.id === id);
+      if (!action || !comment) return;
+      // Acting on the agent's question needs the answer; a fix or a suggestion goes as it is.
+      if (action.kind === 'answer') { openForm(blockFor(fix), 'act', action); return; }
+      fix.disabled = true;
+      try {
+        await api('/api/fix', {key, id, ask: action.kind, text: tools.sendText(snapshot, review, comment, '', threads[id])});
+        await refresh();
+        flash(`Asked your agent to change the code. The next revision will show it.${listening === false ? ' No agent is listening yet; it starts when your agent picks it up.' : ''}`);
+      } catch (error) { flash(error.message); }
+      decorate();
+      return;
+    }
     if (!button) return;
     const id = button.dataset.dcrFor;
     const thread = threads[id];
     const block = blockFor(button);
+    const sent = thread && (thread.live || thread.delivery !== 'draft');
+    // The first word on something the agent wrote is the reader's: the box opens for it.
+    if (!sent && !mine(id)) { openForm(block, 'answer', actionOf(id)); return; }
     if (thread && (thread.live || thread.delivery !== 'draft')) {
       // Already with the agent: open the reply box.
       const form = block?.querySelector('.dcr-reply');
       if (!form) return;
-      form.hidden = !form.hidden;
-      refreshBlock(block);
-      if (!form.hidden) form.querySelector('textarea').focus();
+      if (form.hidden || form.dataset.mode) openForm(block, null);
+      else { form.hidden = true; refreshBlock(block); }
       return;
     }
     button.disabled = true;
@@ -328,10 +437,30 @@
     const id = block.dataset.dcr;
     const field = form.querySelector('textarea');
     const text = field.value.trim();
-    if (!text) { field.focus(); return; }
+    const mode = form.dataset.mode;
+    const action = mode === 'act' ? actionOf(id) : null;
+    // A fix needs nothing added; an answer, and acting on a question, need the answer.
+    if (!text && !(action && action.kind !== 'answer')) { field.focus(); return; }
     if (form.querySelector('[type="submit"]').disabled) return; // ⌘ Enter while the last reply is still sending
     form.querySelector('[type="submit"]').disabled = true;
     const ledger = block.classList.contains('dcr-ledger');
+    if (mode) {
+      const comment = comments().find(entry => entry.id === id);
+      try {
+        if (!comment || (mode === 'act' && !action)) throw new Error('This comment can no longer be acted on.');
+        if (mode === 'answer') await sendComment(id, text);
+        else await api('/api/fix', {key, id, ask: action.kind, note: text, text: tools.sendText(snapshot, review, comment, text, threads[id])});
+        drafts.delete(id);
+        field.value = '';
+        form.hidden = true;
+        delete form.dataset.mode;
+        await refresh();
+        const unheard = listening === false ? ' No agent is listening yet; it starts when your agent picks it up.' : '';
+        flash(mode === 'answer' ? `Sent to your agent.${unheard}` : `Asked your agent to change the code. The next revision will show it.${unheard}`);
+      } catch (error) { flash(error.message); }
+      finally { form.querySelector('[type="submit"]').disabled = !online; decorate(); }
+      return;
+    }
     try {
       const asked = takeAdversaries(id);
       await api('/api/message', {key, id, body: text, adversaries: asked.length > 0});
@@ -461,7 +590,9 @@
     pendingCount: () => ghPendingIds().length,
     // What the agent wrote is read, in the reader's voice, before it goes: the preview. What the
     // reader wrote themselves goes as they wrote it; the box they typed it in was the preview.
-    post(id) { if (own(id)) ghSend.post(id, written(id)); else openPreview(id, 'post'); },
+    post(id) { if (own(id)) ghSend.post(id, written(id)); else openPreview(id); },
+    // The agent's comment in the reader's words, with both ways to send it.
+    open(id) { openPreview(id); },
     // Takes a posted comment back from GitHub; true when it is gone there (also when it already was).
     async remove(id) {
       ghNotice('busy', 'Deleting it on GitHub…');
@@ -477,7 +608,7 @@
       }
     },
     async pend(id, on) {
-      if (on) return own(id) ? ghSend.pend(id) : openPreview(id, 'pend');
+      if (on) return own(id) ? ghSend.pend(id) : openPreview(id);
       try {
         const entry = await api('/api/github/pending', {key, id, pending: false});
         ghData = {...ghData, ...entry}; ghFailed.delete(id); ghRefresh();
@@ -567,18 +698,20 @@
     renderPreview();
     previewDialog.querySelector('form').focus({preventScroll: true});
   }
-  const openPreview = (id, mode) => {
+  // The box chooses where the text goes: its main button adds it to the reader's GitHub review
+  // (sent with the rest on Finish your review), the quiet one posts it now.
+  const openPreview = id => {
     const comment = comments().find(entry => entry.id === id);
     if (!comment || ghPosting.has(id)) return;
     const approved = ghData.bodies?.[id] || null;
     const ready = usableDraft(id);
-    preview = {id, mode, waiting: false, failed: null};
+    preview = {id, waiting: false, failed: null};
     const target = `${tools.escape(where(comment))}${ghStatus.repo ? ` · ${tools.escape(ghStatus.repo)} #${tools.escape(ghStatus.number)}` : ''}${ghStatus.login ? ` · as <b>@${tools.escape(ghStatus.login)}</b>` : ''}`;
     previewDialog.innerHTML = `<form method="dialog" class="modal-box dcr-gh-box dcr-gh-preview" tabindex="-1">
-      <header><div><h2 id="dcr-gh-preview-title">${mode === 'pend' ? 'Add to your review' : 'Comment on GitHub'}</h2><p class="muted">${target}</p></div><div class="gh-preview-tools"><button type="button" class="act act-quiet act-icon" data-gh-voice-open aria-label="How I write" title="How I write on GitHub">${ico('sliders-horizontal')}</button><button type="button" class="act act-quiet act-icon" data-gh-close aria-label="Close" title="Close (Q)">${ico('x')}</button></div></header>
+      <header><div><h2 id="dcr-gh-preview-title">Your comment for GitHub</h2><p class="muted">${target}</p></div><div class="gh-preview-tools"><button type="button" class="act act-quiet act-icon" data-gh-voice-open aria-label="How I write" title="How I write on GitHub">${ico('sliders-horizontal')}</button><button type="button" class="act act-quiet act-icon" data-gh-close aria-label="Close" title="Close (Q)">${ico('x')}</button></div></header>
       <div class="gh-preview-field"><textarea class="gh-summary gh-preview-text" rows="9" aria-label="The comment as it will be posted"></textarea><div class="gh-preview-wait" role="status" hidden><span class="gh-spinner" aria-hidden="true"></span><strong></strong><small></small></div></div>
       <p class="gh-preview-failed" role="status" hidden>${ico('circle-alert')}<span></span></p>
-      <footer class="dcr-gh-actions gh-preview-actions"><button type="button" class="act act-quiet gh-preview-again" data-gh-again title="Have it written again">${ico('refresh-cw')}<span></span></button><span class="gh-preview-from"></span><button type="button" class="act act-quiet" data-gh-close>Cancel</button><button type="button" class="act act-gh" data-gh-send>${ico('send')}<span>${mode === 'pend' ? 'Add to review' : 'Send to GitHub'}</span></button></footer></form>`;
+      <footer class="dcr-gh-actions gh-preview-actions"><button type="button" class="act act-quiet gh-preview-again" data-gh-again title="Have it written again">${ico('refresh-cw')}<span></span></button><span class="gh-preview-from"></span><button type="button" class="act act-quiet" data-gh-close>Cancel</button><button type="button" class="act act-secondary" data-gh-send="post" title="Post it on the pull request now">${ico('send')}<span>Comment now</span></button><button type="button" class="act act-gh" data-gh-send="pend" title="Keep it with your other comments, and send them together with Finish your review (⌘ Enter)">${ico('plus')}<span>Add to my GitHub review</span></button></footer></form>`;
     previewDialog.querySelector('.gh-preview-text').value = approved || ready?.body || globalThis.ReviewTools.githubItem(snapshot, comment, review.qa).body;
     preview.source = approved ? 'approved' : ready ? 'rewritten' : 'written';
     previewDialog.showModal();
@@ -616,21 +749,22 @@
     previewDialog.querySelector('.gh-preview-again span').textContent = preview.failed ? 'Try again' : 'Rewrite';
     previewDialog.querySelector('.gh-preview-from').textContent = waiting || preview.failed ? '' : preview.source === 'approved' ? 'The text you approved' : preview.source === 'rewritten' ? `In your voice${draft?.agent ? `, by ${tools.agentInfo(draft.agent).name}` : ''}` : '';
     previewDialog.querySelector('[data-gh-again]').disabled = waiting;
-    previewDialog.querySelector('[data-gh-send]').disabled = waiting || !text.value.trim();
+    previewDialog.querySelectorAll('[data-gh-send]').forEach(button => { button.disabled = waiting || !text.value.trim(); });
   }
   previewDialog.addEventListener('input', event => {
-    if (event.target.matches('.gh-preview-text')) previewDialog.querySelector('[data-gh-send]').disabled = !event.target.value.trim();
+    if (event.target.matches('.gh-preview-text')) previewDialog.querySelectorAll('[data-gh-send]').forEach(button => { button.disabled = !event.target.value.trim(); });
   });
   // Ctrl or Cmd with Enter sends from the text, as on GitHub.
   previewDialog.addEventListener('keydown', event => {
-    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && preview) { event.preventDefault(); previewDialog.querySelector('[data-gh-send]').click(); }
+    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && preview) { event.preventDefault(); previewDialog.querySelector('[data-gh-send="pend"]').click(); }
   });
   previewDialog.addEventListener('click', event => {
     if (!preview) return;
     if (event.target.closest('[data-gh-close]')) { previewDialog.close(); return; }
     if (event.target.closest('[data-gh-again]')) { if (!preview.waiting) startRewrite(true); return; }
-    if (event.target.closest('[data-gh-send]')) {
-      const {id, mode} = preview;
+    const send = event.target.closest('[data-gh-send]');
+    if (send) {
+      const {id} = preview, mode = send.dataset.ghSend;
       const body = previewDialog.querySelector('.gh-preview-text').value.trim();
       if (!body || preview.waiting) return;
       previewDialog.close();
@@ -1095,7 +1229,7 @@
       // One row of actions, after the conversation, led by Ask agent as on the cards.
       const actions = section.querySelector(':scope > .comment-actions');
       const act = block.querySelector(':scope > .dcr-actions');
-      if (actions && act) { act.firstElementChild.classList.replace('btn-sm', 'btn-xs'); actions.prepend(act.firstElementChild); act.remove(); section.append(actions); }
+      if (actions && act) { act.remove(); addSplit(actions, section.dataset.commentId, 'xs'); section.append(actions); }
       added = true;
     });
     if (!added) return;
@@ -1463,7 +1597,8 @@
   // itself when that takes nothing from the reader: nothing typed, no dialog open, and either away
   // from the tab or on Overview. Otherwise a notice says so, and a button in the header stays
   // until they take it, however the notice went.
-  const openLatest = () => { history.replaceState(null, '', '/#overview'); location.reload(); };
+  // A newer revision opens on what it changed; a save into this one, on the Overview.
+  const openLatest = () => { history.replaceState(null, '', latest > (review.history?.revision || 0) ? '/#since' : '/#overview'); location.reload(); };
   const newerButton = Object.assign(document.createElement('button'), {type: 'button', id: 'dcr-newer', className: 'header-button', hidden: true, onclick: openLatest});
   document.querySelector('.header-actions')?.prepend(newerButton);
   const shownRevision = review.history?.revision || 0;
@@ -1566,7 +1701,8 @@
       const result = await api('/api/sync', {follow});
       if (result.status === 'updated') {
         try { sessionStorage.setItem(updatedKey, result.summary); } catch { /* the Overview says it too */ }
-        location.reload(); // the same place, on the new revision
+        history.replaceState(null, '', '/#since'); // the new revision, on what it changed
+        location.reload();
         return;
       }
       stale = {changed: 0};

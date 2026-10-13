@@ -72,6 +72,7 @@ module DCR
       when ['POST', '/api/preview'] then (input = json(body); [200, {'entry' => @state.request_preview(input['key'], input['path'])}])
       when ['POST', '/api/send'] then send_items(json(body))
       when ['POST', '/api/message'] then message(json(body))
+      when ['POST', '/api/fix'] then [200, {'entry' => fix(json(body))}]
       when ['GET', '/api/screenshot'] then [200, screenshot(key, query['id'])]
       when ['GET', '/api/sync'] then [200, stale]
       when ['POST', '/api/sync'] then [200, sync(json(body))]
@@ -244,6 +245,16 @@ module DCR
       ReviewSeries.stale(repo: manifest.fetch('repo'), name: manifest.fetch('name'))
     rescue ArgumentError, KeyError => error
       {'unavailable' => error.message}
+    end
+
+    # Fix this, Apply this or Act on this on a comment: the agent is handed it as a task that changes code. Only on a review
+    # that shows the code as it is, so the revision the fix ends in holds the fix and nothing else.
+    def fix(input)
+      moved = stale
+      raise ArgumentError, moved['unavailable'] if moved['unavailable']
+      raise ArgumentError, 'This review follows its pull request, not your checkout. Choose Follow my checkout (Update) first, so a fix can be shown.' if moved['pinned']
+      raise ArgumentError, 'The code changed since this revision. Update the review first, so the fix shows as its own change.' if moved['changed'].to_i.positive?
+      @state.request_fix(input['key'], input['id'].to_s, input['text'].to_s, ask: input.fetch('ask', 'fix'), note: input['note'])
     end
 
     # The reader's Update: the next revision shows the code as it is, and the listening agent is

@@ -110,6 +110,75 @@ module DCR
       end
     end
 
+    OUTCOME = /\A\W*(addressed|still applies|no longer relevant|not relevant)\b\W*/i
+    OUTCOME_WORDS = {'addressed' => 'Addressed', 'still-applies' => 'Still applies', 'not-relevant' => 'No longer relevant'}.freeze
+    CHANGED_LINES = 300 # of what changed since, shown to an agent asked what became of a comment
+
+    # The review's agent said what became of a comment once the code changed (`dcr reply --outcome`).
+    # The adversaries answer the same question on their own, from the comment and the code and never
+    # from its answer; theirs is then held against it: the same finding agrees, another disagrees.
+    def outcome(series_dir:, id:, author:, repo: nil, ask: Agents.method(:ask), adversaries: Settings.new.adversaries)
+      require_relative '../../scripts/series'
+      panel = Agents.panel(author, adversaries)
+      return {} if panel.empty?
+      history = ReviewSeries.manifest(series_dir)
+      payload = ReviewSeries.latest(series_dir, history)
+      entry = history['revisions'].last
+      key = State.review_key(entry['fingerprint'], history['name'], entry['number'])
+      state = State.new(series_dir)
+      kept = state.read
+      said = kept.dig('threads', key, id, 'outcome', 'verdict') or raise ArgumentError, "Nobody said what became of #{id} yet"
+      known = Array(kept.dig('comments', key)) + Array(payload.dig('review', 'comments')) + Array(kept.dig('blobs', key, 'personalComments'))
+      comment = known.find { |candidate| candidate['id'] == id } or raise ArgumentError, "No comment #{id} in this review"
+      text = outcome_prompt(author: comment['agent'], comment: comment, payload: payload)
+      state.await_opinions(key, id, panel.first['agent'], panel.drop(1).map { |adversary| adversary['agent'] })
+      found = lambda do |answer|
+        word, body = outcome_word(answer)
+        [word && (word == said ? 'agree' : 'disagree'), word ? "**#{OUTCOME_WORDS[word]}.** #{body}" : body]
+      end
+      consult(state, key, id, panel, repo || history['repo'], ask, about: 'outcome', parse: found) { |agent, _| "You are #{Agents.name(agent)}.\n\n#{text}" }
+    end
+
+    # [addressed, still-applies, not-relevant or nil, the answer without that line].
+    def outcome_word(answer)
+      text = tidy(answer)
+      match = text.match(OUTCOME) or return [nil, text]
+      word = match[1].downcase
+      [word == 'addressed' ? 'addressed' : word == 'still applies' ? 'still-applies' : 'not-relevant', text[match.end(0)..].strip]
+    end
+
+    def outcome_prompt(author:, comment:, payload:)
+      was = comment['outdated']
+      since = payload.dig('review', 'history', 'since') || {'files' => []}
+      path = was ? was['path'] : payload['snapshot']['files'].find { |file| file['hunks'].any? { |hunk| hunk['id'] == comment['hunk'] } }&.fetch('path')
+      written = was ? Array(was['lines']).join("\n") : (code(payload['snapshot'], comment)[:lines] rescue '(not captured)')
+      own = since['files'].select { |file| file['path'] == path && file['patch'] }
+      changed = (own.empty? ? since['files'].select { |file| file['patch'] } : own).map { |file| "#{file['path']}\n#{file['patch']}" }.join("\n").lines
+      <<~TEXT
+        You are the second reviewer. A comment was left on a code change, and the code has changed since. Say what became of the comment.
+
+        How to answer:
+        - Start with one of these on its own line: Addressed, Still applies or No longer relevant.
+        - Then 2 to 4 short sentences in plain, simple words: what in the new code makes you say so. Name the file and line when it helps.
+        - Say so if the change broke or left out something the comment was about.
+        - You may read files in this repository to check; they are the new code. Do not change anything.
+
+        The comment#{" by #{Agents.name(author)}" if author} (#{[comment['label'], comment['decoration']].compact.join(', ')}):
+        #{comment['subject']}
+        #{comment['discussion'].to_s.strip}
+
+        The code it was written on (#{path || 'a general comment'}#{", revision #{was['revision']}" if was}):
+        ```#{language(path)}
+        #{written}
+        ```
+
+        What changed since#{" revision #{since['revision']}" if since['revision']}:
+        ```diff
+        #{changed.empty? ? '(nothing recorded)' : changed.first(CHANGED_LINES).join.chomp}
+        ```
+      TEXT
+    end
+
     # A question the reviewer asked with adversaries ticked: each answers it on its own, beside the
     # review's agent (author), which answers in the conversation as usual. text: what the review's
     # agent was sent, so they know as much as it does.
@@ -222,15 +291,16 @@ module DCR
     # Asks every adversary at once and posts each answer as it arrives. On a comment the first
     # answers in the conversation and each says what it thinks of the comment; on a question
     # (on_comment false) they all answer beside it, a short answer first. Returns {agent => verdict or what failed}.
-    def consult(state, key, id, panel, repo, ask, on_comment: true)
+    # about: what the answers are said of, when not the comment itself. parse: [verdict, body] of an answer.
+    def consult(state, key, id, panel, repo, ask, on_comment: true, about: nil, parse: method(:verdict))
       panel.each_with_index.map do |adversary, index|
         agent, model, effort = adversary.values_at('agent', 'model', 'effort')
         adversarial = on_comment && index.zero?
         Thread.new do
           answer = ask.call(agent, yield(agent, adversarial), dir: repo, model: model, effort: effort)
-          word, body = on_comment ? verdict(answer) : [nil, nil]
+          word, body = on_comment ? parse.call(answer) : [nil, nil]
           short, body = structured(answer) unless on_comment
-          state.add_opinion(key, id, agent, body, verdict: word, short: short, adversary: adversarial, model: model, effort: effort)
+          state.add_opinion(key, id, agent, body, verdict: word, short: short, adversary: adversarial, model: model, effort: effort, about: about)
           AgentCatalog::Results.record(agent)
           [agent, word || 'answered']
         rescue ArgumentError, SystemCallError => error

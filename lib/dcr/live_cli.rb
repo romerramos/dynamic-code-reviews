@@ -56,9 +56,17 @@ module DCR
     TEXT
 
     SYNC_RULE = <<~TEXT.strip
-      CODE UPDATE. The review now shows the code as it is. Review what changed and post what is worth saying.
-      Read each range listed as not reviewed yet, with the code around it, and post a comment for anything a reviewer should know, one at a time, as in a review in progress. No comment is the right answer when nothing stands out. If an outdated comment of yours still applies, post it again on the new lines under a new id.
+      CODE UPDATE. The review now shows the code as it is. Say what became of each outdated comment, then review what changed.
+      For each OUTDATED COMMENT below: read the code it was written on and what changed since, weigh what other agents said of it, and answer with `dcr reply --outcome`: `addressed` (the new code deals with it), `still-applies` (it does not: first post it again on the new lines with `dcr comment`, under a new id and with `"follows": "<the outdated comment's id>"`) or `not-relevant` (the code it was about is gone, or the point no longer matters). Say why in one or two sentences. This goes for the reviewer's own comments too; there the outcome is your reading and they decide. You resolve nothing.
+      Then read each range listed as not reviewed yet, with the code around it, and post a comment for anything a reviewer should know, one at a time, as in a review in progress. No comment is the right answer when nothing stands out.
       You may read files, search and run read-only commands, and write the comment JSON to a temporary file outside the project. Do not edit, create or delete anything in the project.
+    TEXT
+
+    # Printed when the reviewer presses Fix this on a comment: the one request that changes code.
+    FIX_RULE = <<~TEXT.strip
+      FIX REQUEST. The reviewer asked you to change the code for the comment below. This is a task that changes code, not a conversation, and the one exception to reply only.
+      You may edit, create and delete files in the project for this one comment, and run the tests of the code you touch. Change nothing else: no unrelated cleanups, no formatters over files you did not touch, no migrations or installs the fix does not need. Do not commit, stash, push or change branches: the fix stays in the working tree, for the reviewer to read and commit.
+      If you think the comment is wrong, or a fix needs a decision that is the reviewer's, change nothing and say so with `dcr reply`.
     TEXT
 
     USAGE = {
@@ -74,8 +82,8 @@ module DCR
       'stop' => 'dcr stop (--repo ROOT --name SERIES | --dir DIR | --all)   (stops the served review and its `dcr wait`; --all stops every review served on this computer)',
       'link' => 'dcr link (--repo ROOT --name SERIES | --dir DIR)   (the served review\'s addresses: on this computer, and on your tailnet when shared)',
       'focus' => 'dcr focus (--repo ROOT --name SERIES | --dir DIR)   (brings the browser tab showing the served review to the front)',
-      'reply' => 'dcr reply (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--model ID] [--effort LEVEL] [--key KEY] [--json] <thread-id> <text>',
-      'second-opinion' => 'dcr second-opinion (--repo ROOT --name SERIES | --dir DIR) --comment ID [--comment ID]... [--agent AUTHOR] [--context TEXT]   (asks the reviewer\'s adversaries to check a posted comment; `dcr comment` does this by itself)',
+      'reply' => 'dcr reply (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--model ID] [--effort LEVEL] [--key KEY] [--json] [--outcome addressed|still-applies|not-relevant] [--no-second-opinion] <thread-id> <text>   (--outcome: what became of that comment after the code changed; the adversaries then check it)',
+      'second-opinion' => 'dcr second-opinion (--repo ROOT --name SERIES | --dir DIR) (--comment ID [--comment ID]... | --outcome ID) [--agent AUTHOR] [--context TEXT]   (asks the reviewer\'s adversaries to check a posted comment, or what became of one after the code changed; `dcr comment` and `dcr reply --outcome` do this by themselves)',
       'evidence' => 'dcr evidence attach (--repo ROOT --name SERIES | --dir DIR) --file ITEMS.json [--replace previous-qa|all]   (ITEMS: [{"path", "title", "result": "passed|failed", "observed", "comment_id"?, "screenshot_id"?, "page"?}]; screenshot_id: the review screenshot this clip shows in motion, which it then replaces, keeping it as its thumbnail; previous-qa, the default, replaces the last QA review; all replaces every recording, only when the reviewer asks to start over)'
     }.freeze
 
@@ -107,6 +115,7 @@ module DCR
         p.on('--comment ID') { |v| (options[:comments] ||= []) << v }
         p.on('--context TEXT') { |v| options[:context] = v }
         p.on('--no-second-opinion') { options[:second_opinion] = false }
+        p.on('--outcome WORD', 'reply: what became of the comment after the code changed (addressed, still-applies, not-relevant)') { |v| options[:outcome] = v }
         p.on('--none REASON') { |v| options[:none] = v }
       end
       parser.parse!(argv)
@@ -184,33 +193,66 @@ module DCR
       qas = entries.select { |entry| entry['kind'] == 'qa' }
       syncs = entries.select { |entry| entry['kind'] == 'sync' }
       risks = entries.select { |entry| entry['kind'] == 'risk' }
+      fixes = entries.select { |entry| entry['kind'] == 'fix' }
       ids = sends.flat_map { |entry| entry['thread_ids'] }.uniq
-      conversation = sends.any? || finish || (previews.empty? && qas.empty? && risks.empty? && syncs.empty?) # a pure task request is not a conversation
+      conversation = sends.any? || finish || (previews.empty? && qas.empty? && risks.empty? && syncs.empty? && fixes.empty?) # a pure task request is not a conversation
       out = []
       out << REPLY_ONLY if conversation
       out << PREVIEW_RULE if previews.any?
       out << QA_RULE if qas.any?
       out << RISK_RULE if risks.any?
       out << SYNC_RULE if syncs.any?
+      out << FIX_RULE if fixes.any?
       out << (finish ? 'The reviewer finished this round.' : 'The reviewer sent you the following from the review.') if conversation
       sends.each { |entry| out << "---\nThread: #{entry['thread_ids'].join(', ')}\n\n#{entry['text']}" }
       previews.each { |entry| out << "---\n#{preview_request(entry, flags)}" }
       qas.each { |entry| out << "---\nThread: #{entry['thread_ids'].join(', ')}\n\n#{entry['text']}" }
       out << "---\nPost it with: dcr risk-ranking #{flags} --file <ranking.json>   (or --none '<why, in a few words>')" if risks.any?
       syncs.each { |entry| out << "---\n#{entry['text']}" }
-      out << "---\nPost each comment with: dcr comment #{flags} --file <comment.json>" if syncs.any?
+      out << "---\n#{sync_commands(flags)}" if syncs.any?
+      fixes.each { |entry| out << "---\n#{fix_request(entry, flags)}" }
       out << '---'
       out << "Answer each thread with: dcr reply #{flags} <thread-id> '<your answer: what you found, and what you would change if anything>'" unless ids.empty?
       out << 'Do not resolve threads; the reviewer resolves them.' unless ids.empty? || finish
       out << 'Then run `dcr wait` again for the next round.' unless finish
       out << 'Finish received: send any outstanding replies, then stop waiting unless the reviewer asks for another round.' if finish
-      out << if conversation then 'Reminder: reply only. No file changes, no commits, no pushes.'
+      out << if conversation && fixes.any? then 'Reminder: only the fix request changes code, for its one comment, in the working tree. Every other thread is reply only. No commits, no pushes.'
+             elsif conversation then 'Reminder: reply only. No file changes, no commits, no pushes.'
              elsif qas.any? then 'Reminder: record and attach only, with development data you add as needed. No changes to the project\'s files, no commits, no pushes.'
              elsif risks.any? && previews.empty? then 'Reminder: post the risk ranking only; change nothing in the project.'
-             elsif syncs.any? && previews.empty? then 'Reminder: post comments only; change nothing in the project.'
+             elsif fixes.any? then 'Reminder: fix that one comment only, in the working tree. No commits, no pushes.'
+             elsif syncs.any? && previews.empty? then 'Reminder: post outcomes and comments only; change nothing in the project.'
              else 'Reminder: submit HTML only, change nothing in the project.'
              end
       out.join("\n\n")
+    end
+
+    def sync_commands(flags)
+      ["Say what became of each outdated comment with: dcr reply #{flags} --outcome addressed|still-applies|not-relevant <comment-id> '<why, in a sentence or two>'",
+       "Post each comment with: dcr comment #{flags} --file <comment.json>"].join("\n")
+    end
+
+    FIX_ASKS = {'fix' => 'fix what the comment says.',
+                'apply' => 'do what the comment suggests.',
+                'answer' => 'act on the comment as their message under it says: it is their answer to what the comment asked.'}.freeze
+
+    def fix_request(entry, flags)
+      id = entry['thread_ids'].first
+      <<~TEXT.strip
+        Thread: #{id}
+        What the reviewer asks: #{FIX_ASKS.fetch(entry['ask'], FIX_ASKS['fix'])}
+
+        #{entry['text']}
+
+        Steps:
+        1. Make the change in the working tree, and run the tests of what you touched.
+        2. Bring the review up to the code: dcr sync #{flags}
+           It saves the next revision, whose "Since" view shows your fix and nothing else, and prints what it changed. If it refuses because the review follows its pull request, stop and tell the reviewer: they choose Follow my checkout in the page.
+        3. If the fix shows in the app and the review is served with it, post a screenshot of it with `dcr screenshot`.
+        4. Say what you did: dcr reply #{flags} --outcome addressed #{id} '<what you changed and where, and how you checked it>'
+           The reviewer's adversaries then check the fix on their own. Use `--outcome still-applies` instead if you could only fix part of it, and say what is left.
+        Other outdated comments and unreviewed ranges the update lists are handled as in any code update.
+      TEXT
     end
 
     def preview_request(entry, flags)
@@ -338,7 +380,8 @@ module DCR
       [parsed, inline ? Dir.pwd : File.dirname(File.expand_path(value))]
     end
 
-    COMMENT_FIELDS = %w[id label decoration subject discussion hunk side start end context].freeze
+    # follows: the id of the outdated comment this one takes up again on the new lines.
+    COMMENT_FIELDS = %w[id label decoration subject discussion hunk side start end context follows].freeze
 
     # While a review is in progress the agent posts each comment as soon as it is sure of it; the
     # open page shows it beside the code and announces it. `dcr series finish` keeps them.
@@ -356,6 +399,8 @@ module DCR
       end
       hunks = DynamicReviews.hunk_index(snapshot)
       ids = ReviewSeries.with_posted(directory, history, review).map { |existing| existing['id'] }
+      latest = history['revisions'].last
+      known = ids + Array(state.read.dig('blobs', State.review_key(latest['fingerprint'], history['name'], latest['number']), 'personalComments')).map { |own| own['id'] }
       comments = comments.map do |entry|
         unknown = entry.keys - COMMENT_FIELDS
         raise ArgumentError, "Unknown comment field(s): #{unknown.join(', ')}" unless unknown.empty?
@@ -363,6 +408,7 @@ module DCR
         DynamicReviews.validate_comment(entry, hunks)
         raise ArgumentError, "Comment id #{entry['id']} is used twice" if ids.include?(entry['id'])
         raise ArgumentError, 'A comment context must be short text' if entry.key?('context') && !(entry['context'].is_a?(String) && entry['context'].length <= 1000)
+        raise ArgumentError, "Comment #{entry['id']} follows #{entry['follows'].inspect}, which is not a comment of this review" if entry.key?('follows') && !known.include?(entry['follows'])
         ids << entry['id']
         entry
       end
@@ -423,7 +469,7 @@ module DCR
       history = ReviewSeries.manifest(directory)
       result = ReviewSeries.sync(repo: history.fetch('repo'), name: history.fetch('name'), follow: options[:follow] == true)
       return puts("Revision #{result['revision']} already shows the code as it is. Nothing to update.") if result['status'] == 'unchanged'
-      puts [ReviewSeries.sync_brief(result), SYNC_RULE, "Post each comment with: dcr comment #{flags(options)} --file <comment.json>", 'The open page offers the new revision by itself. Comments and progress came along.'].join("\n\n")
+      puts [ReviewSeries.sync_brief(result), SYNC_RULE, sync_commands(flags(options)), 'The open page offers the new revision by itself. Comments and progress came along.'].join("\n\n")
     end
 
     # The Risk ranking: the open page shows it at once. While the review is in progress `dcr series
@@ -469,8 +515,12 @@ module DCR
     NO_ADVERSARIES = 'No adversaries are set up, so nobody else checks it. The reviewer chooses them in the review page (the agent card).'
 
     def second_opinion(options, directory, parser)
-      raise ArgumentError, parser.to_s unless options[:comments]
+      raise ArgumentError, parser.to_s unless options[:comments] || options[:outcome]
       require_relative 'second_opinion'
+      if options[:outcome]
+        answers = SecondOpinion.outcome(series_dir: directory, id: options[:outcome], author: agent(options) || 'agent')
+        return puts(answers.empty? ? NO_ADVERSARIES : "#{options[:outcome]}: #{answers.map { |slug, said| "#{Agents.name(slug)} #{said}" }.join(', ')}")
+      end
       results = SecondOpinion.run(series_dir: directory, comment_ids: options[:comments], author: agent(options) || 'agent', context: options[:context])
       return puts(NO_ADVERSARIES) if results.empty?
       results.each { |id, answers| puts "#{id}: #{answers.map { |slug, outcome| "#{Agents.name(slug)} #{outcome}" }.join(', ')}" }
@@ -541,12 +591,40 @@ module DCR
       puts "Brought the review to the front in #{browser}."
     end
 
+    # --outcome: what became of a comment once the code changed. It is said of the latest revision,
+    # on a comment that may have no conversation yet, and the reviewer's adversaries then check it.
     def reply(state, options, argv, parser)
       id, *words = argv
       raise ArgumentError, parser.to_s unless id && !words.empty?
       model, effort = own_model(options, state)
-      message = state.agent_reply(id, words.join(' '), key: options[:key], agent: agent(options, state), model: model, effort: effort)
-      puts options[:json] ? JSON.generate(message) : "Replied to #{id}."
+      author = agent(options, state)
+      key = options[:key]
+      if options[:outcome] && !key
+        require_relative '../../scripts/series'
+        series = directory(options, parser)
+        history = ReviewSeries.manifest(series)
+        latest = history['revisions'].last
+        key = State.review_key(latest['fingerprint'], history['name'], latest['number'])
+        known = ReviewSeries.with_posted(series, history, ReviewSeries.latest(series, history)['review']) + Array(state.read.dig('blobs', key, 'personalComments'))
+        raise ArgumentError, "No comment #{id} in this review. Give the id of the comment the outcome is about." unless known.any? { |comment| comment['id'] == id }
+      end
+      message = state.agent_reply(id, words.join(' '), key: key, agent: author, model: model, effort: effort, outcome: options[:outcome])
+      return puts(JSON.generate(message)) if options[:json]
+      puts "Replied to #{id}#{" (#{options[:outcome]})" if options[:outcome]}."
+      check_outcome(series, id, author) if series && options[:second_opinion] != false
+    end
+
+    # The adversaries say what became of the comment on their own, in the background, as for a comment.
+    def check_outcome(directory, id, author)
+      require_relative 'settings'
+      panel = Agents.panel(author, Settings.new.adversaries).map { |adversary| Agents.name(adversary['agent']) }
+      return puts(NO_ADVERSARIES) if panel.empty?
+      File.open(File.join(directory, '.second-opinions.log'), 'a', 0o600) do |log|
+        command = [RbConfig.ruby, DCR_BIN, 'second-opinion', '--dir', directory, '--outcome', id]
+        command += ['--agent', author] if author
+        Process.detach(Process.spawn(*command, in: File::NULL, out: log, err: log, pgroup: true))
+      end
+      puts "Asked #{panel.first} to check it on its own#{panel.length > 1 ? " (#{panel.drop(1).join(' and ')} weigh in on the side)" : ''}; their answers appear in the page."
     end
   end
 end

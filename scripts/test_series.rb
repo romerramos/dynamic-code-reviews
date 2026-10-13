@@ -362,6 +362,8 @@ module SeriesChecks
           mine = ->(id, line) { {'id' => id, 'hunk' => hid, 'side' => 'new', 'start' => line, 'end' => line, 'label' => 'note', 'decoration' => 'non-blocking', 'subject' => id} }
           state.save_blob(old_key, {'personalComments' => [mine.call('mine-kept', 2), mine.call('mine-gone', 3)], 'viewedFiles' => ['sample.rb'], 'notes' => {'group-1-step-1' => 'Mine'}})
           state.user_message(old_key, 'mine-kept', 'Why this name?')
+          state.await_opinions(old_key, 'value-note', 'codex')
+          state.add_opinion(old_key, 'value-note', 'codex', 'It should be three.', verdict: 'disagree', adversary: true)
           assert(ReviewSeries.sync(repo: root, name: 'live')['status'] == 'unchanged', 'Unchanged code was saved as an update')
           assert(ReviewSeries.stale(repo: root, name: 'live') == {'changed' => 0}, 'Unchanged code was reported as moved')
           File.write(File.join(root, 'sample.rb'), "# frozen_string_literal: true\nclass Sample\n  def value\n    3\n  end\nend\n")
@@ -372,6 +374,12 @@ module SeriesChecks
           assert(result['unreviewed'].map { |range| range['path'] } == ['extra.rb', 'sample.rb'], 'The changed ranges were not handed over')
           saved = DynamicReviews.extract(File.join(series, 'current.html'))
           review = saved['review']
+          # What this revision changed since the one before, as its own diff: the value went from 2 to 3
+          # there, although the whole change still shows it going from 1 to 3.
+          since = review['history']['since']
+          lines = ->(path) { since['files'].find { |file| file['path'] == path }['hunks'].flat_map { |hunk| hunk['rows']['unified'] }.reject { |row| row['kind'] == 'context' }.map { |row| [row['kind'], row['text']] } }
+          assert(since['revision'] == 1 && since['files'].map { |file| file.values_at('path', 'state') } == [%w[extra.rb joined], %w[sample.rb changed]], 'The revision does not say which files it changed since the previous one')
+          assert(lines.call('sample.rb') == [['add', '# frozen_string_literal: true'], ['del', '    2'], ['add', '    3']] && lines.call('extra.rb') == [['add', 'EXTRA = 1']], "The diff since the previous revision is not between the two captured files: #{lines.call('sample.rb')}")
           note = review['comments'].find { |comment| comment['id'] == 'value-note' }
           assert(note['general'] && !note.key?('hunk') && note['outdated'] == {'side' => 'new', 'start' => 3, 'end' => 3, 'path' => 'sample.rb', 'lines' => ['    2'], 'revision' => 1}, 'A comment on a changed line was not kept as outdated')
           assert(review['unreviewed'] == %w[f2h1 f1h1] && review['groups'].last['id'] == 'updates', 'New code was not placed unexplained')
@@ -384,12 +392,61 @@ module SeriesChecks
           assert(blob['viewedFiles'].empty? && blob['notes'] == {'group-1-step-1' => 'Mine'}, 'Progress did not come along as it should')
           assert(state.read.dig('threads', new_key, 'mine-kept', 'messages', 0, 'body') == 'Why this name?', 'The conversation did not come along')
           assert(ReviewSeries.sync(repo: root, name: 'live')['status'] == 'unchanged' && ReviewSeries.manifest(series)['revisions'].length == 2, 'A second update invented a revision')
-          # The agent comments on what came in; the next full review still has to explain it.
-          File.write(File.join(out, 'comment.json'), JSON.generate(mine.call('extra-note', 1).merge('hunk' => 'f1h1')))
+          # What became of each comment the update outdated is the agent's to say. It is handed the
+          # comment, the code it was written on, what changed since and what other agents said of it.
+          lost = result['outdated_comments']
+          assert(lost.map { |comment| comment.values_at('id', 'reader') } == [['value-note', nil], ['mine-gone', true]] && lost.all? { |comment| comment['patch'].include?("-    2\n+    3") }, 'The outdated comments were not handed over with what changed under them')
+          brief = ReviewSeries.sync_brief(result)
+          assert(brief.include?('OUTDATED COMMENT value-note (by ') && brief.include?('OUTDATED COMMENT mine-gone (written by the reviewer)') && brief.include?("revision 1):\n    2") && brief.include?('What changed in sample.rb since revision 1:'), "The agent is not told what each outdated comment was about:\n#{brief}")
+          assert(brief.include?('- Codex (second reviewer, disagree): It should be three.') && brief.scan('What other agents said of it').length == 1, 'What the adversaries said of an outdated comment was not passed on')
+          outcome = ->(id, word) { DCR::LiveCLI.reply(state, {dir: series, outcome: word, second_opinion: false, agent: 'claude'}, [id, 'The value is three now.'], nil) }
+          outcome.call('value-note', 'addressed')
+          said = state.read.dig('threads', new_key, 'value-note')
+          assert(said['outcome'].values_at('verdict', 'revision', 'agent') == ['addressed', 2, 'claude'] && said['messages'].last.values_at('outcome', 'body') == ['addressed', 'The value is three now.'], 'The outcome was not kept on the comment\'s thread')
+          assert(!state.read.dig('blobs', new_key, 'resolvedComments').to_a.include?('value-note'), 'An outcome resolved a comment; only the reviewer does')
+          outcome.call('mine-gone', 'not-relevant')
+          assert(state.read.dig('threads', new_key, 'mine-gone', 'outcome', 'verdict') == 'not-relevant', 'The agent could not say what became of the reader\'s own comment')
+          rejects('An outcome on a comment the review does not have') { outcome.call('nobody', 'addressed') }
+          rejects('An outcome outside the three') { outcome.call('value-note', 'fixed') }
+          # The agent comments on what came in; the next full review still has to explain it. A
+          # comment that takes up an outdated one says which.
+          rejects('A follow-up of an unknown comment was posted') do
+            File.write(File.join(out, 'comment.json'), JSON.generate(mine.call('lost-note', 1).merge('hunk' => 'f1h1', 'follows' => 'nobody')))
+            DCR::LiveCLI.comment(state, {file: File.join(out, 'comment.json'), second_opinion: false}, series)
+          end
+          File.write(File.join(out, 'comment.json'), JSON.generate(mine.call('extra-note', 1).merge('hunk' => 'f1h1', 'follows' => 'value-note')))
           DCR::LiveCLI.comment(state, {file: File.join(out, 'comment.json'), second_opinion: false}, series)
+          assert(state.read.dig('comments', new_key).last.values_at('id', 'follows') == %w[extra-note value-note], 'A follow-up lost the comment it takes up')
           prepared = ReviewSeries.prepare(repo: root, name: 'live', out: out)
           assert(prepared['status'] == 'changed' && prepared['ranges_to_inspect'].map { |range| range['hunk'] }.sort == %w[f1h1 f2h1], 'Unreviewed ranges were not left to inspect')
           assert(ReviewSeries.read(File.join(out, 'draft.json'))['comments'].map { |comment| comment['id'] } == ['extra-note'], 'A comment posted after the update was not kept')
+          # Fix this: the one request that changes code. Only on a review that shows the code as it
+          # is, and one at a time, so the revision a fix ends in holds that fix and nothing else.
+          require_relative '../lib/dcr/live_api'
+          api = DCR::LiveAPI.new(series)
+          fix = ->(id, extra = {}) { api.call('POST', '/api/fix', -> { JSON.generate({key: new_key, id: id, text: 'Use a named constant.'}.merge(extra)) }) }
+          File.write(File.join(root, 'extra.rb'), "EXTRA = 2\n")
+          behind = fix.call('extra-note')
+          assert(behind[0] == 400 && behind[1]['error'].include?('Update the review first'), "A fix was asked for on a review behind its code: #{behind}")
+          File.write(File.join(root, 'extra.rb'), "EXTRA = 1\n")
+          assert(fix.call('extra-note')[0] == 200 && state.read.dig('threads', new_key, 'extra-note').values_at('delivery', 'live') == ['sent', true], 'Fix this did not reach the agent')
+          asked = DCR::LiveCLI.render(state.pending.last(1), '--repo r --name s')
+          assert(asked.start_with?('FIX REQUEST.') && asked.include?('Use a named constant.') && asked.include?('dcr sync --repo r --name s') && asked.include?("--outcome addressed extra-note") && !asked.include?('REPLY ONLY') && asked.include?('No commits'), "dcr wait must hand over a fix as a task that changes code:\n#{asked}")
+          busy = fix.call('value-note')
+          assert(busy[0] == 400 && busy[1]['error'].include?('One fix at a time'), "A second fix started while one was running: #{busy}")
+          outcome.call('extra-note', 'addressed')
+          assert(state.read.dig('threads', new_key, 'extra-note', 'fix', 'state') == 'done', 'Saying what was done did not end the fix')
+          # What is asked depends on the comment: a suggestion is applied, and a question is acted
+          # on with the reader's answer, which joins the conversation.
+          assert(fix.call('value-note', ask: 'answer')[0] == 400 && fix.call('value-note', ask: 'rewrite')[0] == 400, 'A question was acted on without an answer, or an unknown request was taken')
+          assert(fix.call('value-note', ask: 'answer', note: 'Yes, make it three.')[0] == 200, 'Acting on an answered question did not reach the agent')
+          acted = DCR::LiveCLI.render(state.pending.last(1), '--repo r --name s')
+          assert(acted.include?('What the reviewer asks: act on the comment as their message under it says') && state.read.dig('threads', new_key, 'value-note', 'messages').last.values_at('author', 'body') == ['user', 'Yes, make it three.'], "The answer did not go with the request:\n#{acted}")
+          assert(asked.include?('What the reviewer asks: fix what the comment says.'), 'A plain fix does not say what is asked')
+          # A fix handed over with a conversation keeps the two apart: only the fix changes code.
+          state.send_items(new_key, [{'id' => 'mine-kept', 'text' => 'Why this name?'}])
+          both = DCR::LiveCLI.render(state.pending.last(2), '--repo r --name s')
+          assert(both.include?('REPLY ONLY') && both.include?('FIX REQUEST.') && both.end_with?('Every other thread is reply only. No commits, no pushes.'), "A fix beside a conversation ends on the wrong reminder:\n#{both.lines.last}")
         end
       end
     end

@@ -45,6 +45,27 @@ globalThis.LiveTools = (() => {
   };
   const verdictIcon = verdict => `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${VERDICT_ICON[verdict] || ''}</svg>`;
   const verdictHTML = verdict => VERDICTS[verdict] ? `<span class="dcr-verdict dcr-v-${verdict}">${verdictIcon(verdict)}${VERDICTS[verdict].label}</span>` : '';
+  // What the reader does first with a comment the agent wrote, by what the comment is: something
+  // wrong is fixed, a proposal applied, a question answered (and acted on with that answer), and a
+  // note only read. kind is what the agent is asked for; act names its button, null when there is none.
+  const ACTIONS = [
+    {kind: 'fix', act: 'Fix this', busy: 'Fixing…', labels: ['issue', 'typo', 'todo', 'chore']},
+    {kind: 'apply', act: 'Apply this', busy: 'Applying…', labels: ['suggestion', 'nitpick', 'polish', 'quibble']},
+    {kind: 'answer', act: 'Act on this', busy: 'Working on it…', labels: ['question', 'thought']},
+    {kind: 'none', act: null, busy: null, labels: ['note', 'praise']}
+  ];
+  const commentAction = label => ACTIONS.find(entry => entry.labels.includes(label)) || ACTIONS[0];
+  // What the review's agent found became of a comment once the code changed (`dcr reply --outcome`).
+  const OUTCOMES = {addressed: 'Addressed', 'still-applies': 'Still applies', 'not-relevant': 'No longer relevant'};
+  // One line for the thread: the outcome, the revision it was said of, and whether the agents
+  // that checked it on their own found the same. It resolves nothing; the reader does, with the
+  // button beside it (resolve: the comment's id, while it is not resolved).
+  function outcomeHTML(thread, resolve = null) {
+    const outcome = thread?.outcome;
+    if (!OUTCOMES[outcome?.verdict]) return '';
+    const checks = verdicts(thread).map(entry => `${escape(agentInfo(entry.agent).name)} ${VERDICTS[entry.verdict].label.toLowerCase()}`);
+    return `<p class="dcr-outcome dcr-o-${escape(outcome.verdict)}"><strong>${OUTCOMES[outcome.verdict]}</strong><span>in revision ${escape(outcome.revision)}${checks.length ? ` · ${names(checks)}` : ''}</span>${resolve ? `<button type="button" class="btn btn-xs dcr-outcome-resolve" data-resolve="${escape(resolve)}">Resolve</button>` : ''}</p>`;
+  }
   const names = list => list.length < 2 ? list.join('') : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`;
   const progressKey = (snapshot, review) => `dynamic-review:${snapshot.fingerprint}${review.history ? `:${review.history.series}:${review.history.revision}` : ''}`;
 
@@ -125,7 +146,7 @@ globalThis.LiveTools = (() => {
         : {tone: 'wait', text: 'Sent. Your agent will pick it up in a moment.'};
     }
     if (stale(thread, now)) return {tone: 'idle', text: `Your agent received this ${relativeTime(thread.delivered_at, now)} and has not answered. It may have been interrupted; reply to nudge it.`};
-    if (thread.delivery === 'delivered') return {tone: 'work', text: 'Your agent is working on an answer', typing: true};
+    if (thread.delivery === 'delivered') return {tone: 'work', text: thread.fix?.state === 'requested' ? 'Your agent is working on the fix' : 'Your agent is working on an answer', typing: true};
     if (thread.delivery === 'answered') return {tone: 'done', text: `${last?.agent || listener ? agentInfo(last?.agent || listener).name : 'Your agent'} replied`, at: last?.at};
     return null;
   }
@@ -144,17 +165,20 @@ globalThis.LiveTools = (() => {
       const adversary = message.role === 'adversary';
       const who = agent ? escape(agentInfo(slug).name) : 'You';
       const model = agent ? modelHTML(message) : '';
-      const role = adversary ? '<span class="dcr-role">second reviewer</span>' : '';
+      const role = adversary ? `<span class="dcr-role">second reviewer${message.about === 'outcome' ? ', on the outcome' : ''}</span>` : '';
+      const outcome = OUTCOMES[message.outcome] ? `<span class="dcr-verdict dcr-o-${escape(message.outcome)}">${OUTCOMES[message.outcome]}</span>` : '';
       const avatar = agent ? avatarHTML(slug) : '<span class="dcr-avatar" aria-hidden="true">Y</span>';
-      return `<article class="dcr-msg ${agent ? 'dcr-agent' : 'dcr-you'}${adversary ? ` dcr-adversary dcr-v-${escape(message.verdict || 'none')}` : ''}" data-msg="${escape(message.id)}">${avatar}<div class="dcr-msg-main"><header class="dcr-msg-head"><strong>${who}</strong>${model}${adversary ? verdictHTML(message.verdict) : ''}${role}<time datetime="${escape(message.at || '')}" data-at="${escape(message.at || '')}">${escape(relativeTime(message.at, now))}</time>${fresh ? '<span class="dcr-new">New</span>' : ''}</header><div class="dcr-body">${markdown(message.body)}</div></div></article>`;
+      return `<article class="dcr-msg ${agent ? 'dcr-agent' : 'dcr-you'}${adversary ? ` dcr-adversary dcr-v-${escape(message.verdict || 'none')}` : ''}" data-msg="${escape(message.id)}">${avatar}<div class="dcr-msg-main"><header class="dcr-msg-head"><strong>${who}</strong>${model}${adversary ? verdictHTML(message.verdict) : outcome}${role}<time datetime="${escape(message.at || '')}" data-at="${escape(message.at || '')}">${escape(relativeTime(message.at, now))}</time>${fresh ? '<span class="dcr-new">New</span>' : ''}</header><div class="dcr-body">${markdown(message.body)}</div></div></article>`;
     }).join('');
   }
 
   // What every agent asked about a comment thinks of it: the second reviewer's verdict and the others'.
+  // Once the review's agent said what became of the comment, it is what they think of that.
   function verdicts(thread) {
     const out = [];
-    (thread?.messages || []).forEach(message => { if (message.role === 'adversary' && message.verdict) out.push({agent: message.agent, verdict: message.verdict}); });
-    Object.entries(thread?.opinions || {}).forEach(([agent, opinion]) => { if (opinion.verdict) out.push({agent, verdict: opinion.verdict}); });
+    const about = thread?.outcome ? 'outcome' : undefined;
+    (thread?.messages || []).forEach(message => { if (message.role === 'adversary' && message.verdict && message.about === about) out.push({agent: message.agent, verdict: message.verdict}); });
+    Object.entries(thread?.opinions || {}).forEach(([agent, opinion]) => { if (opinion.verdict && opinion.about === about) out.push({agent, verdict: opinion.verdict}); });
     return out;
   }
   function tally(thread) {
@@ -420,6 +444,6 @@ globalThis.LiveTools = (() => {
   }
 
   return {emojiToken, emojiMatches, escape, progressKey, allComments, sendText, drafts, statusText, statusModel, actionLabel, markdown, snippet, relativeTime, messagesHTML, unseen, agentModel, summary,
-    agentInfo, avatarHTML, modelHTML, verdictHTML, verdicts, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
+    agentInfo, avatarHTML, modelHTML, verdictHTML, verdicts, outcomeHTML, OUTCOMES, commentAction, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
     activeAdversaries, facesHTML, agentStatus, modelOptionsHTML, effortLevels, effortOptionsHTML, chosenModel, chosenEffort, settle, adversaryPanelHTML, adversaryIntroHTML, jevBannerHTML};
 })();
