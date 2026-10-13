@@ -1418,7 +1418,8 @@
   presenceCard.hidden = true;
   presenceCard.setAttribute('role', 'dialog');
   presenceCard.setAttribute('aria-label', 'Your agent');
-  presenceCard.innerHTML = '<div class="dcr-presence-main"></div><section class="dcr-adv" aria-labelledby="dcr-adv-title"></section><button type="button" class="dcr-voice-link" data-gh-voice-open>How I write on GitHub</button>';
+  // On a phone the card is a whole screen, as the menu and your review are, so it has their heading and their way out.
+  presenceCard.innerHTML = `<div class="dcr-presence-bar"><h2>Your agent</h2><button type="button" class="act act-quiet act-icon" data-presence-close aria-label="Close" title="Close">${ico('x')}</button></div>` + '<div class="dcr-presence-main"></div><section class="dcr-adv" aria-labelledby="dcr-adv-title"></section><button type="button" class="dcr-voice-link" data-gh-voice-open>How I write on GitHub</button>';
   const presenceMain = presenceCard.querySelector('.dcr-presence-main');
   const advPanel = presenceCard.querySelector('.dcr-adv');
   document.body.append(presenceCard);
@@ -1578,6 +1579,7 @@
   document.addEventListener('keydown', event => { if (event.key === 'Escape' && !presenceCard.hidden) { togglePresenceCard(false); presence.focus(); } });
   window.addEventListener('resize', () => { if (!presenceCard.hidden) placePresenceCard(); });
   presenceCard.addEventListener('click', async event => {
+    if (event.target.closest('[data-presence-close]')) { togglePresenceCard(false); presence.focus(); return; }
     if (!event.target.closest('[data-dcr-copy-wait]')) return;
     try { await navigator.clipboard.writeText(connectCommand()); flash('Copied. Run it where your agent works.'); }
     catch { getSelection().selectAllChildren(presenceCard.querySelector('code')); flash('Select and copy the command.'); }

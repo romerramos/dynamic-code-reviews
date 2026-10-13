@@ -599,8 +599,12 @@ edge with its panel icon outermost, and between them the agent, focus and View. 
 open, never duplicated. On a phone Settings is that same last row of the sidebar, not a tab: the
 bar is Menu, Agent and Review, in the order of the screen (the menu is the sidebar, with the
 search first and no heading over it; it opens from the left, your
-review from the right). The phone's header never scrolls: it keeps the title, an update when
-there is one, and one ⋯ menu for the app, the template previews, the revision and Details. Never put a preference behind
+review from the right). On a tablet the open sidebar
+and the open Your review dim the page beside them, and a tap there closes them; a wide screen
+has no such dimming. Under 1200px the header never scrolls or wraps: it keeps the title, an update when
+there is one, and one ⋯ menu. The revision and Details are in the menu on every tablet and
+phone; under 900px (a tablet held upright, a phone) the app and the template previews are too,
+and a tablet on its side keeps Code, App and Previews beside the title. Never put a preference behind
 an icon alone or under a label that is not "Settings".
 
 A−/A+ in Settings changes code font size from 10–20px (13px default), updating row spacing

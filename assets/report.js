@@ -2764,6 +2764,8 @@
       document.body.dataset.position = $('position').textContent;
       $('prev').disabled = focusIndex === 0; $('next').disabled = focusIndex === focusOrder.length - 1;
     }
+    // Overview, All changes and Since revision are not in a sequence: there the pager is their name, with no arrows.
+    $('prev').hidden = $('next').hidden = !layer && !fileReadingActive();
     $('prev').setAttribute('aria-label', fileReadingActive() ? 'Previous file' : 'Previous step');
     $('next').setAttribute('aria-label', fileReadingActive() ? 'Next file' : 'Next step');
     $('content').innerHTML = fileReadingActive() ? renderFocus() : layer ? renderStep(layer) : state.view === 'files' ? renderFiles() : state.view === 'since' ? renderSince() : renderOverview();
@@ -3227,6 +3229,11 @@
     $('nav-toggle').setAttribute('aria-label', label);
     $('nav-toggle').title = label;
   }
+  // On a tablet the sidebar and your review open over the page: a tap on the page beside them closes them.
+  $('sidebar-scrim').onclick = () => {
+    if (document.body.classList.contains('navigation-open')) $('nav-toggle').click();
+    if (ledgerOpen()) setLedger(false);
+  };
   $('nav-toggle').onclick = () => {
     if (wideScreen()) { state.sidebarCollapsed = !state.sidebarCollapsed; persist(); applySidebar(); return; }
     const open = document.body.classList.toggle('navigation-open');
@@ -3291,13 +3298,15 @@
   });
   $('search').oninput = () => { searchAt = null; renderNavigation(); if (state.view === 'files') render(); };
   $('context-toggle').onclick = context;
-  // A phone's header has room for the title, an update and one menu. The menu holds what the wide
-  // header shows side by side: the other ways to look at the change, the revision and the details.
-  // It is written when it opens, from the controls it stands for, so it never says what they do not.
+  // Under a wide screen the header keeps the title, an update and one menu. The menu holds what the
+  // header has no room to show side by side: the revision and the details, and on a narrower screen
+  // the other ways to look at the change. It is written when it opens, from the controls it stands
+  // for, so it never says what they do not, and never repeats one that is still in the header.
   $('header-more-toggle').innerHTML = icon('ellipsis');
   $('header-more-toggle').onclick = () => {
-    const app = document.querySelector('.dcr-views [data-view="app"]');
-    const previews = document.querySelector('.dcr-views [data-view="previews"]') || ($('preview-list-toggle').hidden ? null : $('preview-list-toggle'));
+    const inMenu = control => control && !shown(control) ? control : null;
+    const app = inMenu(document.querySelector('.dcr-views [data-view="app"]'));
+    const previews = inMenu(document.querySelector('.dcr-views [data-view="previews"]') || ($('preview-list-toggle').hidden ? null : $('preview-list-toggle')));
     const count = previews?.querySelector('b')?.textContent;
     const revisions = $('revision-navigation').querySelector('select');
     $('header-more-list').innerHTML = [

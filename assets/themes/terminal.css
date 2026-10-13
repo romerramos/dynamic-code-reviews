@@ -139,6 +139,8 @@
 [data-theme^="terminal-"] :is(.btn,.act,.header-button,.view-toggle,.ledger-toggle,#dcr-presence,.file-viewed):hover:not(:disabled)::before,[data-theme^="terminal-"] :is(.btn,.act,.header-button,.view-toggle,.ledger-toggle,#dcr-presence,.file-viewed):hover:not(:disabled)::after{color:var(--terminal-fill)}
 [data-theme^="terminal-"] .view-toggle[aria-expanded="true"],[data-theme^="terminal-"] #dcr-presence[aria-expanded="true"],[data-theme^="terminal-"] .ledger-toggle[aria-expanded="true"]{background:var(--terminal-hover)}
 [data-theme^="terminal-"] .icon-button{padding:0;color:var(--muted)}
+/* Where Your review has no room for its words (a tablet held upright) it is an icon, as the sidebar's toggle at the other end is: no brackets. */
+@media(min-width:651px) and (max-width:900px){[data-theme^="terminal-"] #ledger-toggle{padding:0 .5ch;color:var(--muted)}[data-theme^="terminal-"] #ledger-toggle::before,[data-theme^="terminal-"] #ledger-toggle::after{content:none}[data-theme^="terminal-"] #ledger-toggle.has-unread::after{content:"";position:absolute;top:3px;right:0;width:8px;height:8px;background:var(--accent)}}
 [data-theme^="terminal-"] .file-viewed{display:inline-flex;align-items:center;cursor:pointer}
 /* The one action that matters is a solid block, as a focused button is in a terminal. */
 [data-theme^="terminal-"] :is(.btn-primary,.act-primary,.act-gh,.dcr-send:not(:disabled)){background:var(--terminal-fill);color:var(--terminal-on-fill);font-weight:700}

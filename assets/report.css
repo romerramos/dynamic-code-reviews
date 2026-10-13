@@ -588,6 +588,7 @@ html[data-mode="dark"] .revision-control .select:is(:focus,:open):not(:focus-vis
 .icon-button:disabled{opacity:.3;cursor:default}
 .icon-button .review-icon{width:17px;height:17px}
 .pager .icon-button{width:28px;height:28px;border-radius:calc(7px * var(--round))}
+.pager .icon-button[hidden]{display:none}
 .toolbar-options{gap:8px;flex-wrap:nowrap}
 .view-toggle{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 12px 0 10px;border:1px solid var(--line);border-radius:calc(10px * var(--round));background:var(--bg-neutral-1);color:var(--ink-neutral-3);font-size:12.5px;font-weight:600}
 .view-toggle:hover,.view-toggle[aria-expanded="true"]{border-color:var(--line-neutral-3);background:var(--bg-neutral-2)}
@@ -1034,6 +1035,26 @@ dialog.stage::backdrop{background:color-mix(in srgb,var(--bg-neutral-8) 40%,tran
 .more-row svg{width:15px;height:15px;color:var(--ink-neutral-5)}
 .more-row select{margin-left:auto}
 .header-more{display:none}
+/* On a tablet the sidebar and your review open over the page, and what is beside them is dimmed
+   and closes them on a tap. On a phone each is the whole screen, and a wide screen is left as it
+   is: a pointer has the button, and the panels are worked beside the page. */
+.sidebar-scrim{display:none}
+@media(min-width:651px) and (max-width:1199px){
+  :is(.navigation-open,.ledger-open) .sidebar-scrim{display:block;position:fixed;inset:calc(var(--chrome-h) + var(--toolbar-h)) 0 0 0;z-index:14;background:color-mix(in srgb,var(--ink) 16%,transparent)}
+}
+/* Under a wide screen the header keeps one line and says less. The revision and the details go
+   into one menu; on a tablet held upright and on a phone the other ways to look at the change
+   (the app, the previews) go there too. A tablet on its side keeps those beside the title: there
+   is room, and the app is worth using at that width. */
+@media(max-width:1199px){
+  .header-actions :is(#revision-navigation,#context-toggle){display:none}
+  .header-more{display:inline-flex}
+  .header-more>summary{width:36px;height:36px;padding:0;justify-content:center}
+  .header-more>summary svg{width:20px;height:20px}
+  .header-more .more-list{left:auto!important;right:8px;min-width:230px}
+  .header-more .more-item,.more-row{min-height:44px;font-size:14px}
+}
+@media(max-width:900px){.header-actions :is(.dcr-views,#preview-list-toggle){display:none}}
 .act-gh{background:var(--bg-green-5);color:var(--ink-neutral-9)}
 .act-gh:hover:not(:disabled){background:var(--bg-green-5)}
 .act-gh:disabled{background:color-mix(in oklab,var(--bg-green-5) 45%,var(--surface));color:var(--ink-neutral-9)}
@@ -1132,12 +1153,6 @@ button.risk-path:hover .path-name{text-decoration:underline}
      one, and one menu for the rest (the app, the previews, the revision, the details). */
   html,body{overflow-x:clip}
   .header-actions{flex:none;gap:2px}
-  .header-actions :is(.dcr-views,#revision-navigation,#preview-list-toggle,#context-toggle){display:none}
-  .header-more{display:inline-flex}
-  .header-more>summary{width:36px;height:36px;padding:0;justify-content:center}
-  .header-more>summary svg{width:20px;height:20px}
-  .header-more .more-list{left:auto!important;right:8px;min-width:230px}
-  .header-more .more-item,.more-row{min-height:44px;font-size:14px}
   /* The pager and the menus sit at the bottom, under the thumb, and the reading starts at the top. */
   .review-toolbar{position:fixed;top:auto;bottom:0;left:0;right:0;z-index:16;border-top:1px solid var(--line);border-bottom:0;padding-bottom:env(safe-area-inset-bottom)}
   main#content{padding:16px 12px calc(var(--toolbar-h) + 28px + env(safe-area-inset-bottom))}
