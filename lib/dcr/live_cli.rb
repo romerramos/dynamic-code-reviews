@@ -247,7 +247,7 @@ module DCR
         Steps:
         1. Make the change in the working tree, and run the tests of what you touched.
         2. Bring the review up to the code: dcr sync #{flags}
-           It saves the next revision, whose "Since" view shows your fix and nothing else, and prints what it changed. If it refuses because the review follows its pull request, stop and tell the reviewer: they choose Follow my checkout in the page.
+           It saves the next revision, whose "Since" view shows your fix and nothing else, and prints what it changed.
         3. If the fix shows in the app and the review is served with it, post a screenshot of it with `dcr screenshot`.
         4. Say what you did: dcr reply #{flags} --outcome addressed #{id} '<what you changed and where, and how you checked it>'
            The reviewer's adversaries then check the fix on their own. Use `--outcome still-applies` instead if you could only fix part of it, and say what is left.

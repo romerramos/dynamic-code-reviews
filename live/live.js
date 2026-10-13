@@ -190,8 +190,10 @@
     // In Your review the row already says it replied; under the thread only work in progress shows.
     const outcome = tools.outcomeHTML(thread, resolved().includes(id) ? null : id);
     const action = actionOf(id);
-    const status = outcome + (ledger && model?.tone === 'done' ? '' : stateHTML(model, ''));
-    const statusSignature = status ? `${model?.tone}|${model?.text}|${outcome}` : '';
+    // A request that was not taken says why here, and stays until it is read: a toast is gone too soon.
+    const refused = refusals.has(id) ? `<p class="dcr-refusal" role="alert">${ico('circle-alert')}<span>${tools.escape(refusals.get(id))}</span><button type="button" class="btn btn-xs btn-ghost" data-dcr-refusal="${tools.escape(id)}">Dismiss</button></p>` : '';
+    const status = refused + outcome + (ledger && model?.tone === 'done' ? '' : stateHTML(model, ''));
+    const statusSignature = status ? `${model?.tone}|${model?.text}|${outcome}|${refused}` : '';
     const form = block.querySelector('.dcr-reply');
     if (ledger) {
       set(form, 'hidden', !sent);
@@ -288,6 +290,28 @@
     if (!form.classList.contains('dcr-compose')) form.querySelector('[type="submit"]').textContent = mode === 'act' ? action.act : mode === 'answer' && answering ? 'Send answer' : 'Send reply';
     field.focus();
   };
+  // Fix this, Apply this, Act on this. The server first brings the review to the code as it is (a
+  // pull request's review goes on to follow the checkout), so the fix shows as its own revision;
+  // when that saved a revision the page opens it, where the reader was.
+  const refusals = new Map();
+  const refuse = (id, message) => { refusals.set(id, message); document.querySelectorAll(`.dcr-thread[data-dcr="${CSS.escape(id)}"]`).forEach(refreshBlock); };
+  const askFix = async (id, action, comment, note) => {
+    refusals.delete(id);
+    const result = await api('/api/fix', {key, id, ask: action.kind, ...(note === null ? {} : {note}), text: tools.sendText(snapshot, review, comment, note || '', threads[id])});
+    const unheard = listening === false ? ' No agent is listening yet; it starts when your agent picks it up.' : '';
+    const said = result.outdated ? 'This comment\'s code had already changed in your checkout. The review is updated; nothing was sent.'
+      : `Your agent is on it.${result.followed ? ' This review now shows your checkout.' : result.revision ? ' The review was updated to your checkout first.' : ''}${unheard}`;
+    if (result.revision) {
+      try { sessionStorage.setItem(updatedKey, said); } catch { /* the Overview says it too */ }
+      history.replaceState(null, '', `/${location.hash}`);
+      location.reload();
+      return false;
+    }
+    await refresh();
+    staleAt = 0; checkStale();
+    flash(said);
+    return true;
+  };
   const fixingId = () => Object.keys(threads).find(id => threads[id].fix?.state === 'requested' && Date.now() - Date.parse(threads[id].fix.at) < 3600000);
   // The listening agent's mark, on the control that sends to it.
   const agentMark = () => listener ? tools.avatarHTML(listener, 'dcr-face-sm') : ico('sparkles');
@@ -383,6 +407,8 @@
       else document.querySelectorAll(`.dcr-thread[data-dcr="${CSS.escape(id)}"]`).forEach(refreshBlock);
       return;
     }
+    const dismissed = event.target.closest('[data-dcr-refusal]');
+    if (dismissed) { refusals.delete(dismissed.dataset.dcrRefusal); document.querySelectorAll('.dcr-thread').forEach(refreshBlock); return; }
     // Fix this, Apply this, Act on this: the box opens for what to add, and sends from there.
     const noted = event.target.closest('[data-dcr-fix-note]');
     const fix = event.target.closest('[data-dcr-fix]');
@@ -399,11 +425,7 @@
       // Acting on the agent's question needs the answer; a fix or a suggestion goes as it is.
       if (action.kind === 'answer') { openForm(blockFor(fix), 'act', action); return; }
       fix.disabled = true;
-      try {
-        await api('/api/fix', {key, id, ask: action.kind, text: tools.sendText(snapshot, review, comment, '', threads[id])});
-        await refresh();
-        flash(`Asked your agent to change the code. The next revision will show it.${listening === false ? ' No agent is listening yet; it starts when your agent picks it up.' : ''}`);
-      } catch (error) { flash(error.message); }
+      try { await askFix(id, action, comment, null); } catch (error) { refuse(id, error.message); }
       decorate();
       return;
     }
@@ -449,15 +471,13 @@
       try {
         if (!comment || (mode === 'act' && !action)) throw new Error('This comment can no longer be acted on.');
         if (mode === 'answer') await sendComment(id, text);
-        else await api('/api/fix', {key, id, ask: action.kind, note: text, text: tools.sendText(snapshot, review, comment, text, threads[id])});
+        else if (!await askFix(id, action, comment, text)) return; // the page is opening the updated review
         drafts.delete(id);
         field.value = '';
         form.hidden = true;
         delete form.dataset.mode;
-        await refresh();
-        const unheard = listening === false ? ' No agent is listening yet; it starts when your agent picks it up.' : '';
-        flash(mode === 'answer' ? `Sent to your agent.${unheard}` : `Asked your agent to change the code. The next revision will show it.${unheard}`);
-      } catch (error) { flash(error.message); }
+        if (mode === 'answer') { await refresh(); flash(`Sent to your agent.${listening === false ? ' No agent is listening yet; it starts when your agent picks it up.' : ''}`); }
+      } catch (error) { mode === 'act' ? refuse(id, error.message) : flash(error.message); }
       finally { form.querySelector('[type="submit"]').disabled = !online; decorate(); }
       return;
     }

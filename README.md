@@ -32,7 +32,7 @@ files that open offline.
 - **On your other devices**, with Tailscale: open the same live review from your phone or a laptop in
   a remote session. See [Open reviews from your other devices](#open-reviews-from-your-other-devices).
 - **Since the last revision.** After an update the page opens on only what changed since the previous revision, with the comments that change outdated; the whole change is one click away.
-- **Fix this, Apply this, Answer.** A comment your agent wrote leads with what you would do about it: fix an issue, apply a suggestion, answer a question (and have the agent act on your answer). The agent changes the code in your checkout, the next revision shows that change alone, it says what it did, and your adversaries check it on their own.
+- **Fix this, Apply this, Answer.** A comment your agent wrote leads with what you would do about it: fix an issue, apply a suggestion, answer a question (and have the agent act on your answer). The agent changes the code in your checkout, and the next revision shows that change alone: a review of a pull request goes on to follow your checkout, and one behind your code is updated first, without asking. Then it says what it did, and your adversaries check it on their own.
 - **History.** Each change to the code saves a revision; a follow-up review reuses the explanations of code that did
   not change.
 

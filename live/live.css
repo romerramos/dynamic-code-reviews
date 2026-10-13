@@ -16,7 +16,7 @@
 .dcr-card{padding:2px 28px 22px}
 .dcr-popover{margin-top:12px;padding-top:14px;border-top:1px solid var(--line)}
 
-.dcr-state{display:flex;align-items:center;gap:8px;margin:0 0 14px;font-size:13px;color:var(--muted)}
+.dcr-state{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 14px;font-size:13px;color:var(--muted)}
 .dcr-state:empty{display:none}
 .dcr-state time{opacity:.8}
 .dcr-dot{flex:none;width:8px;height:8px;border-radius:calc(50% * var(--round));background:var(--dcr-off)}
@@ -307,6 +307,8 @@ body.dcr-has-app #qa-panel{display:none}
 .dcr-verdict.dcr-o-addressed{background:var(--dcr-agree-soft);color:var(--dcr-agree)}
 .dcr-verdict.dcr-o-still-applies{background:var(--dcr-disagree-soft);color:var(--dcr-disagree)}
 .dcr-verdict.dcr-o-not-relevant{background:var(--dcr-partly-soft);color:var(--dcr-partly)}
+.dcr-refusal{display:flex;flex-wrap:wrap;align-items:center;gap:8px;flex:1 1 100%;margin:0 0 8px;padding:8px 10px;border:1px solid color-mix(in srgb,var(--dcr-disagree) 45%,transparent);border-radius:var(--round);font-size:13px;line-height:1.4;color:var(--ink)}
+.dcr-refusal>svg{flex:none;width:15px;height:15px;color:var(--dcr-disagree)}.dcr-refusal>span{flex:1 1 220px;min-width:0}
 .dcr-outcome{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;margin:0 0 8px;font-size:12.5px;color:var(--muted)}
 .dcr-outcome strong{font-weight:600}.dcr-outcome-resolve{margin-left:2px}
 .dcr-outcome.dcr-o-addressed strong{color:var(--dcr-agree)}.dcr-outcome.dcr-o-still-applies strong{color:var(--dcr-disagree)}.dcr-outcome.dcr-o-not-relevant strong{color:var(--dcr-partly)}

@@ -234,6 +234,13 @@ module SeriesChecks
           ReviewSeries.publish(prepared: out, update: increment(out).merge('items' => []))
           assert(!ReviewSeries.manifest(series).key?('follows') && !DynamicReviews.extract(File.join(series, 'current.html'))['review']['history'].key?('local'), 'A review of the pull request did not end following the checkout')
           assert(ReviewSeries.stale(repo: root, name: 'pr-follow')['pinned'] == true, 'The review does not follow the pull request again')
+          # Fix this asks for a change in the checkout, so it makes that choice itself.
+          require_relative '../lib/dcr/live_api'
+          current = DynamicReviews.extract(File.join(series, 'current.html'))
+          key = DCR::State.review_key(current['snapshot']['fingerprint'], 'pr-follow', current['review']['history']['revision'])
+          asked = DCR::LiveAPI.new(series).call('POST', '/api/fix', -> { JSON.generate({key: key, id: 'value-note', text: 'Use a named constant.'}) })
+          assert(asked[0] == 200 && asked[1]['followed'] == true && !asked[1].key?('revision') && ReviewSeries.manifest(series)['follows'] == 'checkout', "A fix on a pull request's review did not have it follow the checkout: #{asked}")
+          assert(DCR::State.new(series).read.dig('threads', key, 'value-note', 'fix', 'state') == 'requested', 'The fix did not reach the agent')
         end
       end
     end
@@ -420,16 +427,17 @@ module SeriesChecks
           prepared = ReviewSeries.prepare(repo: root, name: 'live', out: out)
           assert(prepared['status'] == 'changed' && prepared['ranges_to_inspect'].map { |range| range['hunk'] }.sort == %w[f1h1 f2h1], 'Unreviewed ranges were not left to inspect')
           assert(ReviewSeries.read(File.join(out, 'draft.json'))['comments'].map { |comment| comment['id'] } == ['extra-note'], 'A comment posted after the update was not kept')
-          # Fix this: the one request that changes code. Only on a review that shows the code as it
-          # is, and one at a time, so the revision a fix ends in holds that fix and nothing else.
+          # Fix this: the one request that changes code, one at a time, so the revision a fix ends
+          # in holds that fix and nothing else. For the same reason a review behind its code is
+          # updated first, unasked: what was already different gets a revision of its own.
           require_relative '../lib/dcr/live_api'
           api = DCR::LiveAPI.new(series)
           fix = ->(id, extra = {}) { api.call('POST', '/api/fix', -> { JSON.generate({key: new_key, id: id, text: 'Use a named constant.'}.merge(extra)) }) }
-          File.write(File.join(root, 'extra.rb'), "EXTRA = 2\n")
+          File.write(File.join(root, 'other.rb'), "OTHER = 1\n")
           behind = fix.call('extra-note')
-          assert(behind[0] == 400 && behind[1]['error'].include?('Update the review first'), "A fix was asked for on a review behind its code: #{behind}")
-          File.write(File.join(root, 'extra.rb'), "EXTRA = 1\n")
-          assert(fix.call('extra-note')[0] == 200 && state.read.dig('threads', new_key, 'extra-note').values_at('delivery', 'live') == ['sent', true], 'Fix this did not reach the agent')
+          assert(behind[0] == 200 && behind[1].values_at('revision', 'followed') == [3, false] && ReviewSeries.stale(repo: root, name: 'live') == {'changed' => 0}, "A fix on a review behind its code did not update it first: #{behind}")
+          new_key = DCR::State.review_key(DynamicReviews.extract(File.join(series, 'current.html'))['snapshot']['fingerprint'], 'live', 3)
+          assert(state.read.dig('threads', new_key, 'extra-note').values_at('delivery', 'live') == ['sent', true], 'Fix this did not reach the agent on the revision the update saved')
           asked = DCR::LiveCLI.render(state.pending.last(1), '--repo r --name s')
           assert(asked.start_with?('FIX REQUEST.') && asked.include?('Use a named constant.') && asked.include?('dcr sync --repo r --name s') && asked.include?("--outcome addressed extra-note") && !asked.include?('REPLY ONLY') && asked.include?('No commits'), "dcr wait must hand over a fix as a task that changes code:\n#{asked}")
           busy = fix.call('value-note')
@@ -447,6 +455,11 @@ module SeriesChecks
           state.send_items(new_key, [{'id' => 'mine-kept', 'text' => 'Why this name?'}])
           both = DCR::LiveCLI.render(state.pending.last(2), '--repo r --name s')
           assert(both.include?('REPLY ONLY') && both.include?('FIX REQUEST.') && both.end_with?('Every other thread is reply only. No commits, no pushes.'), "A fix beside a conversation ends on the wrong reminder:\n#{both.lines.last}")
+          # A comment whose own lines the checkout already changed is outdated by that update:
+          # there is nothing left to fix as it was written, and the agent says what became of it.
+          File.write(File.join(root, 'extra.rb'), "EXTRA = 2\n")
+          gone = fix.call('extra-note')
+          assert(gone[0] == 200 && gone[1].values_at('revision', 'outdated', 'entry') == [4, true, nil] && state.read['threads'].select { |name, _| name.end_with?(':4') }.values.first.dig('extra-note', 'fix', 'state') == 'done', "A fix was asked for on code that had already changed: #{gone}")
         end
       end
     end

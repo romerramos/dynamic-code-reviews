@@ -72,7 +72,7 @@ module DCR
       when ['POST', '/api/preview'] then (input = json(body); [200, {'entry' => @state.request_preview(input['key'], input['path'])}])
       when ['POST', '/api/send'] then send_items(json(body))
       when ['POST', '/api/message'] then message(json(body))
-      when ['POST', '/api/fix'] then [200, {'entry' => fix(json(body))}]
+      when ['POST', '/api/fix'] then [200, fix(json(body))]
       when ['GET', '/api/screenshot'] then [200, screenshot(key, query['id'])]
       when ['GET', '/api/sync'] then [200, stale]
       when ['POST', '/api/sync'] then [200, sync(json(body))]
@@ -247,24 +247,42 @@ module DCR
       {'unavailable' => error.message}
     end
 
-    # Fix this, Apply this or Act on this on a comment: the agent is handed it as a task that changes code. Only on a review
-    # that shows the code as it is, so the revision the fix ends in holds the fix and nothing else.
+    # Fix this, Apply this or Act on this on a comment: the agent is handed it as a task that changes code. The fix is to
+    # show as a revision of its own, so the review is first brought to the code as it is: a pull
+    # request's review goes on to follow the checkout, and what the checkout already changed is
+    # saved as its own revision. The reader asked for a change in their checkout; they are not
+    # asked again. A comment whose lines that update changed is outdated, and is not fixed.
     def fix(input)
+      require_relative '../../scripts/series'
       moved = stale
+      raise ArgumentError, "This review is of #{manifest['branch']}, and another branch is checked out. Check it out again to change its code from here." if manifest['branch'] && manifest['repo'] && manifest['branch'] != ReviewSeries.branch(manifest['repo'])
       raise ArgumentError, moved['unavailable'] if moved['unavailable']
-      raise ArgumentError, 'This review follows its pull request, not your checkout. Choose Follow my checkout (Update) first, so a fix can be shown.' if moved['pinned']
-      raise ArgumentError, 'The code changed since this revision. Update the review first, so the fix shows as its own change.' if moved['changed'].to_i.positive?
-      @state.request_fix(input['key'], input['id'].to_s, input['text'].to_s, ask: input.fetch('ask', 'fix'), note: input['note'])
+      key, id, behind = input['key'], input['id'].to_s, moved['changed'].to_i.positive?
+      raise ArgumentError, moved['warning'] if moved['warning'] && behind
+      said = {'followed' => moved['pinned'] == true}
+      if moved['pinned'] || behind
+        result = update_review(moved['pinned'] == true)
+        if result['status'] == 'updated'
+          said['revision'] = result['revision']
+          return said.merge('outdated' => true) if result['outdated_comments'].any? { |comment| comment['id'] == id }
+          key = result['key']
+        end
+      end
+      said.merge('entry' => @state.request_fix(key, id, input['text'].to_s, ask: input.fetch('ask', 'fix'), note: input['note']))
     end
 
     # The reader's Update: the next revision shows the code as it is, and the listening agent is
     # handed what changed so it can comment on it.
     # follow: the reader chose Follow my checkout for a pull request's review.
     def sync(input)
+      update_review(input['follow'] == true).slice('status', 'revision', 'summary')
+    end
+
+    def update_review(follow)
       require_relative '../../scripts/series'
-      result = ReviewSeries.sync(repo: manifest.fetch('repo'), name: manifest.fetch('name'), follow: input['follow'] == true)
+      result = ReviewSeries.sync(repo: manifest.fetch('repo'), name: manifest.fetch('name'), follow: follow)
       @state.code_updated(result['key'], ReviewSeries.sync_brief(result)) if result['status'] == 'updated' && result['unreviewed'].any?
-      result.slice('status', 'revision', 'summary')
+      result
     end
 
     def manifest

@@ -142,6 +142,18 @@ from its original snapshot and analysis when refreshing presentation only.
   Act on this and Reply always open it, since they need the reader's words. The button reads
   Fixing…, Applying… or Working on it… and is disabled while its change runs, and is disabled
   with the reason as its tooltip while another runs or the server is gone.
+- **A fix never asks "are you sure?".** The reader asked for a change in their checkout, so
+  the page does what that needs without a dialog: a pull request's review goes on to follow
+  the checkout, and a review behind its code is updated first, so what was already different
+  is its own revision and the fix lands alone in the next. When that saved a revision the
+  page opens it where the reader was, with the button already reading Fixing…. One short
+  toast says it ("Your agent is on it. This review now shows your checkout."); the Overview's
+  notice on a revision that shows the checkout is the lasting mention. A comment whose own
+  lines that update changed is outdated: nothing is sent, and the toast says so.
+- **A request that was not taken says why on the card**, in a bordered line above the
+  conversation with Dismiss, and stays until it is dismissed or the request goes through:
+  another branch is checked out, the branch was rebased onto a newer base, the review cannot
+  be read. Never a toast: it is gone before it is read, and reads as a bug.
 - **The text box belongs to the whole comment**: full width of the card, under a rule, never
   indented under the conversation or an adversary's opinion. It has no buttons of its own.
   While it is open the split control below it is its send button, named for what it sends
