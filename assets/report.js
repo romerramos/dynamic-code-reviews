@@ -3291,6 +3291,35 @@
   });
   $('search').oninput = () => { searchAt = null; renderNavigation(); if (state.view === 'files') render(); };
   $('context-toggle').onclick = context;
+  // A phone's header has room for the title, an update and one menu. The menu holds what the wide
+  // header shows side by side: the other ways to look at the change, the revision and the details.
+  // It is written when it opens, from the controls it stands for, so it never says what they do not.
+  $('header-more-toggle').innerHTML = icon('ellipsis');
+  $('header-more-toggle').onclick = () => {
+    const app = document.querySelector('.dcr-views [data-view="app"]');
+    const previews = document.querySelector('.dcr-views [data-view="previews"]') || ($('preview-list-toggle').hidden ? null : $('preview-list-toggle'));
+    const count = previews?.querySelector('b')?.textContent;
+    const revisions = $('revision-navigation').querySelector('select');
+    $('header-more-list').innerHTML = [
+      app ? menuItem('data-header-more="app"', 'Use the app', 'monitor') : '',
+      previews ? menuItem('data-open-previews', `Template previews${count ? `<small>${escape(count)}</small>` : ''}`, 'scan-text') : '',
+      revisions?.options.length > 1 ? `<label class="more-row">${icon('history')}<span>Revision</span><select class="select select-sm select-bordered" aria-label="Review revision" data-header-revision>${revisions.innerHTML}</select></label>` : '',
+      menuItem('data-header-more="details"', 'Review details', 'info')
+    ].join('');
+    const picker = $('header-more-list').querySelector('[data-header-revision]');
+    if (picker) picker.value = revisions.value;
+  };
+  $('header-more-list').onclick = event => {
+    const to = event.target.closest('[data-header-more]')?.dataset.headerMore;
+    if (to === 'app') document.querySelector('.dcr-views [data-view="app"]')?.click();
+    if (to === 'details') context();
+  };
+  $('header-more-list').onchange = event => {
+    const revisions = $('revision-navigation').querySelector('select');
+    if (!event.target.matches('[data-header-revision]') || !revisions) return;
+    revisions.value = event.target.value;
+    revisions.dispatchEvent(new Event('change'));
+  };
   $('write-comment').onclick = () => openEditor();
   $('clear-range').onclick = clearSelection;
   $('cancel-comment').onclick = () => $('comment-editor').close();
@@ -3306,17 +3335,13 @@
   };
   $('settings-toggle').onclick = openSettings;
   // On a phone the toolbar's tab is named Settings, so it opens them, with no menu in between.
-  $('view-toggle').addEventListener('click', event => { if (matchMedia('(max-width: 650px)').matches) { event.preventDefault(); openSettings(); } });
   $('settings-dialog').addEventListener('close', () => $('view-menu').prepend(...document.querySelectorAll('#settings-view [data-view-switch]')));
   $('settings-dialog').addEventListener('click', event => {
     if (event.target.closest('[data-close]')) $('settings-dialog').close();
     if (event.target.closest('[data-open-keys]')) { $('settings-dialog').close(); $('keys-dialog').showModal(); }
-    if (event.target.closest('[data-open-details]')) { $('settings-dialog').close(); context(); }
   });
   $('view-menu').addEventListener('click', event => {
     if (event.target.closest('[data-open-settings]')) openSettings();
-    // On a phone the header has no room for Details, so it is here.
-    if (event.target.closest('[data-open-details]')) { $('view-menu').hidePopover?.(); context(); }
   });
   $('close-previews').onclick = () => $('previews-dialog').close();
   // Toolbar icons come from the bundled Lucide set; the static glyphs are only fallbacks.

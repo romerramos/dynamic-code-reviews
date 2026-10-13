@@ -594,8 +594,10 @@ layout, comments in the code, whitespace, appearance, code size, the JevMyPR swi
 keyboard help. `,` in the space menu opens it. The toolbar's **View** menu is only what is
 flipped while reading (reading mode, diff layout, comments, whitespace) and ends on an
 **All settings** link; the same controls are in Settings, moved into whichever of the two is
-open, never duplicated. On a phone the toolbar's tab is already named Settings, so it opens
-the dialog with no menu in between, and Details is a row in it. Never put a preference behind
+open, never duplicated. On a phone Settings is that same last row of Files, not a tab: the
+bar is Files, Agent and Review, in the order of the screen (Files opens from the left, your
+review from the right). The phone's header never scrolls: it keeps the title, an update when
+there is one, and one ⋯ menu for the app, the template previews, the revision and Details. Never put a preference behind
 an icon alone or under a label that is not "Settings".
 
 A−/A+ in Settings changes code font size from 10–20px (13px default), updating row spacing

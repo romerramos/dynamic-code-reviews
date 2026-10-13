@@ -1033,6 +1033,11 @@ dialog.stage::backdrop{background:color-mix(in srgb,var(--bg-neutral-8) 40%,tran
    and a green tag once it is on GitHub. Spinners say that something is on its way. */
 .gh-slot{display:contents}
 .more-item[hidden]{display:none}
+.more-item small{margin-left:auto;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.more-row{display:flex;align-items:center;gap:10px;padding:5px 10px;font-size:13px;font-weight:500;color:var(--ink-neutral-2)}
+.more-row svg{width:15px;height:15px;color:var(--ink-neutral-5)}
+.more-row select{margin-left:auto}
+.header-more{display:none}
 .act-gh{background:var(--bg-green-5);color:var(--ink-neutral-9)}
 .act-gh:hover:not(:disabled){background:var(--bg-green-5)}
 .act-gh:disabled{background:color-mix(in oklab,var(--bg-green-5) 45%,var(--surface));color:var(--ink-neutral-9)}
@@ -1127,13 +1132,16 @@ button.risk-path:hover .path-name{text-decoration:underline}
   .app-header .header-title{display:flex;min-width:0;overflow:hidden}
   .app-header .header-meta{display:none}
   /* Nothing is wider than the screen: a page that is makes the phone zoom out, and the bar at the
-     bottom leaves with it. The header keeps the views and the revision; Details is in Settings, and
-     what is still too wide for a small phone scrolls inside the header, never the page. */
+     bottom leaves with it. Nothing in the header scrolls either: it keeps an update, when there is
+     one, and one menu for the rest (the app, the previews, the revision, the details). */
   html,body{overflow-x:clip}
-  .header-actions{flex:1 1 auto;min-width:0;justify-content:flex-start;overflow-x:auto;scrollbar-width:none}
-  .header-actions>*{flex:none}
-  #context-toggle{display:none}
-  :is(.view-menu,.settings-body) section.phone-only{display:flex}
+  .header-actions{flex:none;gap:2px}
+  .header-actions :is(.dcr-views,#revision-navigation,#preview-list-toggle,#context-toggle){display:none}
+  .header-more{display:inline-flex}
+  .header-more>summary{width:36px;height:36px;padding:0;justify-content:center}
+  .header-more>summary svg{width:20px;height:20px}
+  .header-more .more-list{left:auto!important;right:8px;min-width:230px}
+  .header-more .more-item,.more-row{min-height:44px;font-size:14px}
   /* The pager and the menus sit at the bottom, under the thumb, and the reading starts at the top. */
   .review-toolbar{position:fixed;top:auto;bottom:0;left:0;right:0;z-index:16;border-top:1px solid var(--line);border-bottom:0;padding-bottom:env(safe-area-inset-bottom)}
   main#content{padding:16px 12px calc(var(--toolbar-h) + 28px + env(safe-area-inset-bottom))}
@@ -1148,23 +1156,24 @@ button.risk-path:hover .path-name{text-decoration:underline}
   /* The sidebar opens over the whole screen, above the bar. */
   .navigation-open .sidebar{top:0;bottom:calc(var(--toolbar-h) + env(safe-area-inset-bottom));width:100vw;max-width:none}
   .comment-popover{max-width:calc(100vw - 16px)}
-  /* The bar is a tab bar, as a phone's apps have: an icon over a word for each place (the files,
-     the agent, your review, the settings), each a wide target. Going from file to file is in the
-     page, at the top and the end of each, and by a swipe. Focus mode is for a wide screen. */
+  /* The bar is a tab bar, as a phone's apps have: an icon over a word for each place, each a wide
+     target, in the order of the screen. Files opens from the left, your review from the right, and
+     the agent you are talking to is between them. Settings is not a place: it is the last row of
+     Files, as on a wide screen. Going from file to file is in the page, at the top and the end of
+     each, and by a swipe. Focus mode is for a wide screen. */
   :root{--toolbar-h:56px}
   .review-toolbar{display:flex;align-items:stretch;gap:0;height:calc(var(--toolbar-h) + env(safe-area-inset-bottom));min-height:0;padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
-  .review-toolbar #zen-toggle,.toolbar-navigation .pager{display:none}
+  .review-toolbar :is(#zen-toggle,#view-toggle),.toolbar-navigation .pager{display:none}
   .toolbar-navigation,.toolbar-options{display:contents}
-  .review-toolbar :is(#nav-toggle,#ledger-toggle,#view-toggle,#dcr-presence){position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;flex:1 1 0;width:auto;min-width:0;height:auto;min-height:0;margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;color:var(--muted);font:500 10px/1 var(--review-font-family);letter-spacing:.01em}
-  .review-toolbar :is(#nav-toggle,#ledger-toggle,#view-toggle,#dcr-presence)::before{content:none}
-  .review-toolbar :is(#nav-toggle,#ledger-toggle,#view-toggle,#dcr-presence)::after{position:static;width:auto;height:auto;background:none;color:inherit}
+  .review-toolbar :is(#nav-toggle,#ledger-toggle,#dcr-presence){position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;flex:1 1 0;width:auto;min-width:0;height:auto;min-height:0;margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;color:var(--muted);font:500 10px/1 var(--review-font-family);letter-spacing:.01em}
+  .review-toolbar :is(#nav-toggle,#ledger-toggle,#dcr-presence)::before{content:none}
+  .review-toolbar :is(#nav-toggle,#ledger-toggle,#dcr-presence)::after{position:static;width:auto;height:auto;background:none;color:inherit}
   .review-toolbar #nav-toggle::after{content:"Files"}
   .review-toolbar #dcr-presence::after{content:"Agent"}
   .review-toolbar #ledger-toggle::after{content:"Review"}
-  .review-toolbar #view-toggle::after{content:"Settings"}
-  .review-toolbar :is(#ledger-toggle .ledger-label,#view-toggle .view-label,#view-toggle #view-summary){display:none}
-  .review-toolbar :is(#nav-toggle,#ledger-toggle,#view-toggle) .review-icon{width:20px;height:20px}
-  .review-toolbar :is(#nav-toggle,#ledger-toggle,#view-toggle,#dcr-presence)[aria-expanded="true"]{color:var(--accent);background:none}
+  .review-toolbar #ledger-toggle .ledger-label{display:none}
+  .review-toolbar :is(#nav-toggle,#ledger-toggle) .review-icon{width:20px;height:20px}
+  .review-toolbar :is(#nav-toggle,#ledger-toggle,#dcr-presence)[aria-expanded="true"]{color:var(--accent);background:none}
   .review-toolbar #ledger-toggle .ledger-count{position:absolute;top:6px;left:calc(50% + 8px)}
   .phone-only{display:inline-flex}
   /* A file's header is three lines, not a third of the screen: the step and where you are in the

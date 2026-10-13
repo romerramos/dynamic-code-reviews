@@ -21,7 +21,7 @@
   <header class="app-header">
     <div class="brand" title="Dynamic Code Reviews"><span class="brand-icon" aria-hidden="true"><%= icon %></span></div>
     <div class="header-title"><strong id="title"></strong><span class="header-meta"><span id="repo-label"></span><span id="scope"></span></span></div>
-    <div class="header-actions"><button class="header-button" id="preview-list-toggle" data-open-previews hidden>Previews</button><div id="revision-navigation"></div><button class="header-button" id="context-toggle">Details</button></div>
+    <div class="header-actions"><button class="header-button" id="preview-list-toggle" data-open-previews hidden>Previews</button><div id="revision-navigation"></div><button class="header-button" id="context-toggle">Details</button><details class="more-menu header-more"><summary class="header-button" id="header-more-toggle" aria-label="More about this review" title="More about this review"></summary><div class="more-list" id="header-more-list"></div></details></div>
   </header>
   <div class="workspace">
     <aside class="sidebar" aria-label="Change groups">
@@ -54,7 +54,6 @@
     <section data-view-switch><h2>Diff</h2><fieldset class="segmented" role="group" aria-label="Diff layout"><button id="unified">Unified</button><button id="split">Split</button></fieldset></section>
     <section data-view-switch class="view-row"><label class="view-switch"><input id="comments-toggle" class="toggle toggle-sm toggle-primary" type="checkbox" checked><span>Review comments in the code</span></label></section>
     <section data-view-switch class="view-row"><label class="view-switch"><input id="whitespace-toggle" class="toggle toggle-sm toggle-primary" type="checkbox"><span>Ignore whitespace changes</span></label></section>
-    <section class="view-row phone-only" data-view-switch><span>This review</span><button type="button" class="btn btn-sm" data-open-details>Details</button></section>
     <section class="view-row"><button type="button" class="link-button view-all" data-open-settings><span id="view-all-icon" aria-hidden="true"></span>All settings</button></section>
   </div>
   <dialog id="settings-dialog" class="modal" aria-labelledby="settings-title"><div class="modal-box settings-box"><header><h2 id="settings-title">Settings</h2><button type="button" class="btn btn-sm btn-circle btn-ghost" data-close aria-label="Close settings">✕</button></header><div class="settings-body">
