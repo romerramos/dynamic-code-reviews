@@ -72,6 +72,9 @@
   --round:0;--shade:transparent;--status-h:26px;--pane-ring:var(--terminal-fill);--cursor-line:color-mix(in srgb,var(--terminal-fill) 20%,transparent);--chrome-h:44px;--toolbar-h:44px;
   font-variant-ligatures:none;scrollbar-color:var(--terminal-surface1) transparent;scrollbar-width:thin;
 }
+/* In the light, rose is also what a removed line is tinted with, so the line the keyboard is on is iris. */
+[data-theme="terminal-light"]{--cursor-line:color-mix(in srgb,var(--terminal-hot) 24%,transparent)}
+[data-theme="terminal-light"] body[data-pane="main"] .code-row.is-cursor>td:first-child{box-shadow:inset 3px 0 var(--terminal-hot)}
 [data-theme^="terminal-"] *{letter-spacing:0!important;scrollbar-color:var(--terminal-surface1) transparent;scrollbar-width:thin}
 /* Everything is the size of the code, so the Code size control zooms the whole terminal. */
 [data-theme^="terminal-"] body *:not(svg,svg *,.dcr-app *){font-size:var(--code-font-size,12px)!important}
