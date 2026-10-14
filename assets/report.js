@@ -159,7 +159,7 @@
   const shown = node => !!node?.getClientRects().length;
   // Your review lists comments, each with one thing to open: its conversation when it has one (the
   // served review adds that), else its place in the code. An open conversation covers the list.
-  const ledgerRows = () => [...$('ledger-body').querySelectorAll('.ledger-item')].map(item => item.querySelector('[data-dcr-open]') || item.querySelector('.ledger-jump')).filter(shown);
+  const ledgerRows = () => [...$('ledger-body').querySelectorAll('.ledger-item')].map(item => item.querySelector('[data-dcr-open]') || item.querySelector('.ledger-jump, .ledger-place')).filter(shown);
   const conversation = () => { const view = $('ledger').querySelector('.dcr-detail'); return view && !view.hidden ? view : null; };
   const panes = () => ['nav', 'main', 'ledger'].filter(name => name === 'main' || shown(name === 'nav' ? $('navigation') : $('ledger')));
   function setPane(name, focus = true) {
@@ -902,13 +902,13 @@
   // Who the composer is for is remembered, so a run of PR comments does not mean switching each time.
   const composerModeKey = 'dcr-composer-mode';
   const savedMode = (() => { try { return localStorage.getItem(composerModeKey); } catch { return null; } })();
-  const composer = {text: '', label: 'note', blocking: false, mode: savedMode === 'pr' ? 'pr' : 'agent', node: null, shownFor: '', sender: null};
+  const composer = {text: '', label: 'thought', blocking: false, mode: savedMode === 'pr' ? 'pr' : 'agent', node: null, shownFor: '', sender: null};
   const prLabel = snapshot.mode === 'pr' || review.history?.origin_mode === 'pr' ? 'PR comment' : 'Review comment';
   const composerModes = {
-    agent: {placeholder: 'Ask your agent about these lines. It answers here; nothing goes to GitHub.', hint: 'to ask'},
+    agent: {placeholder: 'Ask your agent about these lines, or tell it what to change and send it with ▾ Send change. Nothing goes to GitHub.', hint: 'to ask'},
     pr: {placeholder: 'Leave a comment. The first line is the headline; add detail below it.', hint: 'to save'}
   };
-  const composerTypes = ['note', 'question', 'suggestion', 'issue'];
+  const composerTypes = ['thought', 'praise', 'question', 'suggestion', 'nitpick', 'issue'];
   const KEY = '<kbd class="composer-key" aria-hidden="true">⌘↵</kbd>';
   function composerNode() {
     if (composer.node) return composer.node;
@@ -917,10 +917,10 @@
     form.className = 'composer';
     form.noValidate = true;
     form.setAttribute('aria-label', 'Add a comment');
-    form.innerHTML = `<header class="composer-head"><div class="composer-modes" role="radiogroup" aria-label="Who is this comment for?" hidden><label class="composer-mode"><input type="radio" name="composer-mode" value="agent"><span>${icon('sparkles')}Ask agent</span></label><label class="composer-mode"><input type="radio" name="composer-mode" value="pr"><span>${icon('message-square')}${prLabel}</span></label></div><span class="composer-where"></span><span class="composer-as" data-composer-as hidden></span><button type="button" class="act act-quiet act-icon" data-composer-close aria-label="Close; what you typed is kept" title="Close (Q). What you typed is kept.">${icon('x')}</button></header>
+    form.innerHTML = `<header class="composer-head"><div class="composer-modes" role="radiogroup" aria-label="Who is this comment for?" hidden><label class="composer-mode"><input type="radio" name="composer-mode" value="agent"><span>${icon('sparkles')}Agent</span></label><label class="composer-mode"><input type="radio" name="composer-mode" value="pr"><span>${icon('message-square')}${prLabel}</span></label></div><span class="composer-where"></span><span class="composer-as" data-composer-as hidden></span><button type="button" class="act act-quiet act-icon" data-composer-close aria-label="Close; what you typed is kept" title="Close (Q). What you typed is kept.">${icon('x')}</button></header>
       <div class="composer-types" role="radiogroup" aria-label="Type of comment">${composerTypes.map(type => `<label class="composer-type"><input type="radio" name="composer-label" value="${type}"><span>${icon(commentTypes[type][0])}${commentTypes[type][1]}</span></label>`).join('')}</div>
       <textarea class="composer-text" rows="3" aria-label="Your comment"></textarea>
-      <footer class="composer-foot"><label class="composer-blocking"><input type="checkbox" name="composer-blocking"><span>Blocks approval</span></label><div class="composer-actions"><button type="button" class="act act-quiet" data-composer-cancel>Cancel</button><button type="submit" class="act act-pr" data-composer-save title="Ctrl or Cmd with Enter">Save comment<kbd class="composer-key" aria-hidden="true">⌘↵</kbd></button><button type="submit" class="act act-secondary" data-gh-action="open" hidden>Copy &amp; open on GitHub ${icon('arrow-up-right')}</button><button type="submit" class="act act-secondary" data-gh-action="single" hidden title="Post it on the pull request now">Comment now</button><button type="submit" class="act act-gh" data-gh-action="review" hidden title="Ctrl or Cmd with Enter"></button><button type="submit" class="act act-agent" data-composer-send hidden title="Ctrl or Cmd with Enter">${icon('send')}Ask agent<kbd class="composer-key" aria-hidden="true">⌘↵</kbd></button></div></footer><p class="composer-gh" data-composer-gh role="status" aria-live="polite" hidden></p>`;
+      <footer class="composer-foot"><label class="composer-blocking"><input type="checkbox" name="composer-blocking"><span>Blocks approval</span></label><div class="composer-actions"><button type="button" class="act act-quiet" data-composer-cancel>Cancel</button><button type="submit" class="act act-pr" data-composer-save title="Ctrl or Cmd with Enter">Save comment<kbd class="composer-key" aria-hidden="true">⌘↵</kbd></button><button type="submit" class="act act-secondary" data-gh-action="open" hidden>Copy &amp; open on GitHub ${icon('arrow-up-right')}</button><button type="submit" class="act act-secondary" data-gh-action="single" hidden title="Post it on the pull request now">Comment now</button><button type="submit" class="act act-gh" data-gh-action="review" hidden title="Ctrl or Cmd with Enter"></button><span class="composer-split" data-composer-agent hidden><button type="submit" class="act act-agent" data-composer-send title="Ask about these lines (Ctrl or Cmd with Enter)">${icon('send')}Ask agent<kbd class="composer-key" aria-hidden="true">⌘↵</kbd></button><details class="more-menu" data-menu-from="parent"><summary class="act act-quiet act-icon" aria-label="More for your agent" title="More for your agent">${icon('chevron-down')}</summary><div class="more-list"><button type="submit" class="more-item" data-composer-change>${icon('wrench')}Send change<small>it edits your checkout</small></button></div></details></span></div></footer><p class="composer-gh" data-composer-gh role="status" aria-live="polite" hidden></p>`;
     const text = form.querySelector('.composer-text');
     const refresh = () => {
       composer.text = text.value;
@@ -954,8 +954,11 @@
       const entered = splitComment(composer.text);
       if (!entered.subject || !selection) return;
       const ask = composerMode() === 'agent';
+      // Send change, behind the arrow: the agent is to do what the comment says, not answer it.
+      const change = ask && !!event.submitter?.hasAttribute('data-composer-change');
+      event.submitter?.closest('details.more-menu')?.removeAttribute('open');
       const comment = {hunk: selection.hunk, side: selection.side, start: selection.start, end: selection.end, id: `mine-${crypto.randomUUID()}`,
-        label: ask ? 'question' : composer.label, decoration: !ask && composer.blocking ? 'blocking' : 'non-blocking', audience: ask ? 'agent' : 'pr', subject: entered.subject, discussion: entered.discussion};
+        label: change ? 'todo' : ask ? 'question' : composer.label, decoration: !ask && composer.blocking ? 'blocking' : 'non-blocking', audience: ask ? 'agent' : 'pr', subject: entered.subject, discussion: entered.discussion};
       drafts.set(`line:${composer.shownFor}`, '');
       // ⌘ Enter means the main button: Add to my GitHub review.
       const action = ask ? 'ask' : event.submitter?.dataset.ghAction || composerPrimary();
@@ -968,7 +971,7 @@
         return;
       }
       commitComment(comment, action === 'single' || action === 'review' ? false : undefined);
-      if (ask) composer.sender(comment.id);
+      if (ask) composer.sender(comment.id, change ? 'change' : 'ask');
       else if (action === 'single') github.provider.post(comment.id);
       else if (action === 'review') github.provider.pend(comment.id, true);
     });
@@ -1016,13 +1019,19 @@
     if (!ReviewTools.githubLink(snapshot, review, {general: true})) return 'save';
     return ghLive() ? 'post' : 'open';
   }
-  const composerPrimary = () => ({post: 'review', open: 'save', save: 'save'})[composerGitHub()];
+  // Lines in a file the checkout changed since the last push are not on the pull request yet, so
+  // GitHub cannot take a comment on them: it is saved instead, and posted from its card once pushed.
+  const composerUnpushed = () => {
+    const file = selection && (hunkFiles.get(selection.hunk) || files.get(String(selection.hunk).replace(/^full:/, '')));
+    return composerGitHub() === 'post' && !!file && (ghStatus().unpushed || []).includes(file.path);
+  };
+  const composerPrimary = () => composerUnpushed() ? 'save' : ({post: 'review', open: 'save', save: 'save'})[composerGitHub()];
   function syncComposerButtons() {
     const form = composer.node;
     if (!form) return;
     const empty = !form.querySelector('.composer-text').value.trim();
     const ready = ghStatus().phase === 'ready';
-    form.querySelectorAll('[data-composer-save], [data-composer-send], [data-gh-action="open"]').forEach(button => { button.disabled = empty; });
+    form.querySelectorAll('[data-composer-save], [data-composer-send], [data-composer-change], [data-gh-action="open"]').forEach(button => { button.disabled = empty; });
     form.querySelectorAll('[data-gh-action="single"], [data-gh-action="review"]').forEach(button => { button.disabled = empty || !ready; });
   }
   // Asking the agent needs a served review; a saved page only drafts comments for the PR.
@@ -1035,13 +1044,14 @@
     form.querySelector(`input[name="composer-mode"][value="${mode}"]`).checked = true;
     form.querySelector('.composer-text').placeholder = composerModes[mode].placeholder;
     const gh = mode === 'agent' ? 'agent' : composerGitHub();
-    form.querySelector('[data-composer-send]').hidden = gh !== 'agent';
-    form.querySelector('[data-composer-save]').hidden = gh !== 'save' && gh !== 'open';
+    form.querySelector('[data-composer-agent]').hidden = gh !== 'agent';
+    const unpushed = mode === 'pr' && composerUnpushed();
+    form.querySelector('[data-composer-save]').hidden = gh !== 'save' && gh !== 'open' && !unpushed;
     form.querySelector('[data-composer-save]').className = `act ${gh === 'open' ? 'act-secondary' : 'act-pr'}`;
     form.querySelector('[data-gh-action="open"]').hidden = gh !== 'open';
-    form.querySelector('[data-gh-action="single"]').hidden = gh !== 'post';
+    form.querySelector('[data-gh-action="single"]').hidden = gh !== 'post' || unpushed;
     const review = form.querySelector('[data-gh-action="review"]');
-    review.hidden = gh !== 'post';
+    review.hidden = gh !== 'post' || unpushed;
     // The key is on the button it presses, not in a sentence beside it.
     // The first one starts the review on GitHub and the rest join it: one name for both.
     const label = `Add to my GitHub review${KEY}`;
@@ -1051,11 +1061,12 @@
     const line = form.querySelector('[data-composer-gh]');
     const as = form.querySelector('[data-composer-as]');
     const status = ghStatus();
-    const who = gh === 'post' && status.phase === 'ready' ? `<b>@${escape(status.login)}</b> on #${escape(status.number)}${ghPending() ? ` · ${ghPending()} pending` : ''}` : '';
+    const who = gh === 'post' && status.phase === 'ready' && !unpushed ? `<b>@${escape(status.login)}</b> on #${escape(status.number)}${ghPending() ? ` · ${ghPending()} pending` : ''}` : '';
     if (as.dataset.html !== who) { as.innerHTML = who; as.dataset.html = who; as.title = who ? `Commenting as @${status.login} on ${status.repo} #${status.number}` : ''; }
     as.hidden = !who;
     let html = '';
-    if (gh === 'post' && status.phase !== 'ready') html = `${status.phase === 'checking' ? '<span class="gh-spinner" aria-hidden="true"></span>' : ''}${escape(status.text || '')}`;
+    if (unpushed) html = 'These lines are not on the pull request yet, so GitHub cannot take a comment on them. Save it, push, then post it from its card.';
+    else if (gh === 'post' && status.phase !== 'ready') html = `${status.phase === 'checking' ? '<span class="gh-spinner" aria-hidden="true"></span>' : ''}${escape(status.text || '')}`;
     else if (gh === 'open' && ghStatus().phase === 'unavailable') html = `${escape(ghStatus().text)} Copy &amp; open still works.`;
     if (line.dataset.html !== html) { line.innerHTML = html; line.dataset.html = html; }
     line.hidden = !html;
@@ -1072,7 +1083,7 @@
   function removeComposer(reset = false) {
     const row = composer.node?.closest('tr.inline-compose');
     row?.remove();
-    if (reset) { composer.text = ''; composer.label = 'note'; composer.blocking = false; composer.shownFor = ''; if (composer.node) syncComposerFields(); }
+    if (reset) { composer.text = ''; composer.label = 'thought'; composer.blocking = false; composer.shownFor = ''; if (composer.node) syncComposerFields(); }
   }
   // Put the composer in a row right under the last selected line, in whichever layout is showing.
   function placeComposer() {
@@ -1092,6 +1103,7 @@
     }
     const where = `${selection.side === 'new' ? 'After' : 'Before'} ${selection.start === selection.end ? `line ${selection.start}` : `lines ${selection.start}–${selection.end}`}`;
     form.querySelector('.composer-where').textContent = where;
+    syncComposerMode(); // what can be posted depends on the file
     const signature = `${selection.hunk}|${selection.side}|${selection.start}|${selection.end}`;
     if (composer.shownFor !== signature) {
       // What was being written for these lines comes back; text typed while the range grew goes with it.
@@ -1170,8 +1182,24 @@
     }
   }
 
+  // The reader's face: their GitHub avatar once the served review found it (window.ReviewMe), else a Y.
+  const youAvatar = () => {
+    const avatar = window.ReviewMe?.avatar;
+    return `<span class="comment-avatar" aria-hidden="true">${/^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(avatar || '') ? `<img src="${avatar}" alt="">` : 'Y'}</span>`;
+  };
+  // In the diff's popover the lines go with the file, path:88, as in an editor; the reader's own comment
+  // reads as their message, in a chat: their face, You, then what they wrote.
   function commentHTML(comment) {
-    return `<section class="popover-comment" data-comment-id="${escape(comment.id)}"><p class="comment-location">${pathFit(ReviewTools.anchor(snapshot, comment)?.file.path || '', '', true)}</p><div class="thread-badges">${threadBadges(comment)}</div><p class="comment-location">${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}</p><h4>${escape(comment.subject)}</h4>${ReviewTools.commentBody(comment, review.qa) ? `<div class="comment-discussion">${ReviewTools.markdown(ReviewTools.commentBody(comment, review.qa))}</div>` : ''}${ReviewTools.evidenceFlows(review.qa, comment).length ? `<button class="btn btn-xs btn-soft" data-evidence="${escape(comment.id)}">See visual evidence</button>` : ''}<div class="comment-actions">${commentActions(comment, 'xs')}</div></section>`;
+    const lines = `:${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}${comment.side === 'new' ? '' : ' (before)'}`;
+    const where = `<p class="comment-location">${pathFit(ReviewTools.anchor(snapshot, comment)?.file.path || '', lines, true)}</p>`;
+    const body = ReviewTools.commentBody(comment, review.qa) ? `<div class="comment-discussion">${ReviewTools.markdown(ReviewTools.commentBody(comment, review.qa))}</div>` : '';
+    const evidence = ReviewTools.evidenceFlows(review.qa, comment).length ? `<button class="btn btn-xs btn-soft" data-evidence="${escape(comment.id)}">See visual evidence</button>` : '';
+    const actions = `<div class="comment-actions">${commentActions(comment, 'xs')}</div>`;
+    if (comment.personal) {
+      const tags = comment.audience === 'agent' ? (comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : '') : threadBadges(comment, true);
+      return `<section class="popover-comment is-own" data-comment-id="${escape(comment.id)}">${where}<div class="comment-own">${youAvatar()}<div class="comment-own-main"><p class="comment-own-head"><strong>You</strong>${tags}</p><h4>${escape(comment.subject)}</h4>${body}</div></div>${evidence}${actions}</section>`;
+    }
+    return `<section class="popover-comment" data-comment-id="${escape(comment.id)}">${where}<div class="thread-badges">${threadBadges(comment)}</div><h4>${escape(comment.subject)}</h4>${body}${evidence}${actions}</section>`;
   }
 
   function commentTrigger(hunk, side, number, comment = null, path) {
@@ -1870,10 +1898,11 @@
     const model = ReviewTools.modelText(comment.model, comment.effort);
     return `<span class="thread-by" title="Written by ${escape(model ? `${name}, ${model}` : name)}">by<span class="agent-face" data-agent="${escape(slug)}" aria-hidden="true">${mark}</span>${escape(name)}${model ? `<span class="thread-model">${escape(model)}</span>` : ''}</span>`;
   }
-  function threadBadges(comment) {
+  // own: in a message already signed You, so it does not say Your comment.
+  function threadBadges(comment, own = false) {
     if (comment.audience === 'agent') return `<span class="thread-type type-purple" title="A question for your agent. It stays in this review."><span class="thread-type-icon">${icon('sparkles')}</span>For your agent</span>${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}`;
     const [symbol, title, hint, tone] = commentTypes[comment.label] || commentTypes.note;
-    return `<span class="thread-type type-${tone}" title="${hint}"><span class="thread-type-icon">${icon(symbol)}</span>${title}</span><span class="thread-priority ${comment.decoration === 'blocking' ? 'is-blocking' : 'is-optional'}">${comment.decoration === 'blocking' ? `${icon('circle-alert')} Blocking` : 'Non-blocking'}</span>${comment.severity ? `<span class="thread-severity">${escape(comment.severity)}</span>` : ''}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${comment.personal ? '<span class="thread-author">Your comment</span>' : agentBadge(comment.agent, comment)}${ghBadgeSlot(comment)}`;
+    return `<span class="thread-type type-${tone}" title="${hint}"><span class="thread-type-icon">${icon(symbol)}</span>${title}</span><span class="thread-priority ${comment.decoration === 'blocking' ? 'is-blocking' : 'is-optional'}">${comment.decoration === 'blocking' ? `${icon('circle-alert')} Blocking` : 'Non-blocking'}</span>${comment.severity ? `<span class="thread-severity">${escape(comment.severity)}</span>` : ''}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${comment.personal ? own ? '' : '<span class="thread-author">Your comment</span>' : agentBadge(comment.agent, comment)}${ghBadgeSlot(comment)}`;
   }
   // closed: the card starts folded to its subject (a comment from an earlier revision).
   function commentCard(comment, closed = false) {
@@ -1888,7 +1917,7 @@
     const earlier = comment.follows && comments.find(other => other.id === comment.follows);
     const earlierWas = earlier && ReviewTools.outdatedWhere(earlier);
     const follows = earlier ? `<details class="thread-follows"><summary>Follows up on “${escape(earlier.subject)}”${earlierWas?.revision ? `, from revision ${escape(earlierWas.revision)}` : ''}</summary>${earlier.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(earlier.discussion)}</div>` : ''}${earlierWas?.code ? `<figure class="thread-was"><figcaption>The code it was written on</figcaption><pre><code>${escape(earlierWas.code)}</code></pre></figure>` : ''}</details>` : '';
-    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''} ${closed ? 'is-earlier' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${pathFit(found?.file.path || was?.path || 'General comment', '', true)}</span><span class="thread-range">${found ? range : was ? `<span class="thread-outdated" title="These lines changed after the comment was written">Outdated</span>${escape(was.lines)}${closed && was.revision ? ` in revision ${escape(was.revision)}` : ''}` : ''}</span></div><details class="thread-details" ${comment.resolved || closed ? '' : 'open'}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}"><span class="thread-badges">${threadBadges(comment)}</span><strong>${escape(comment.subject)}</strong><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${comment.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(comment.discussion)}</div>` : ''}${wasCode}${follows}${commentShots(comment)}${commentEvidence(comment)}</div>${found ? found.fullFile ? `<button class="thread-source btn btn-sm btn-ghost" type="button" data-comment="${id}">View in file · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : `<button class="thread-source btn btn-sm btn-ghost" type="button" data-open-code="${id}" aria-haspopup="dialog" aria-label="${escape(`View code for ${found.file.path}, ${range}: ${comment.subject}`)}">View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : ''}</details><div class="thread-footer"><div class="comment-actions">${commentActions(comment)}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
+    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''} ${closed ? 'is-earlier' : ''}${comment.personal ? ' is-own' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${pathFit(found?.file.path || was?.path || 'General comment', '', true)}</span><span class="thread-range">${found ? range : was ? `<span class="thread-outdated" title="These lines changed after the comment was written">Outdated</span>${escape(was.lines)}${closed && was.revision ? ` in revision ${escape(was.revision)}` : ''}` : ''}</span></div><details class="thread-details" ${comment.resolved || closed ? '' : 'open'}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}"><span class="thread-badges">${comment.personal ? `${youAvatar()}<b class="thread-you">You</b>${comment.audience === 'agent' ? (comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : '') : threadBadges(comment, true)}` : threadBadges(comment)}</span><strong>${escape(comment.subject)}</strong><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${comment.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(comment.discussion)}</div>` : ''}${wasCode}${follows}${commentShots(comment)}${commentEvidence(comment)}</div>${found ? found.fullFile ? `<button class="thread-source btn btn-sm btn-ghost" type="button" data-comment="${id}">View in file · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : `<button class="thread-source btn btn-sm btn-ghost" type="button" data-open-code="${id}" aria-haspopup="dialog" aria-label="${escape(`View code for ${found.file.path}, ${range}: ${comment.subject}`)}">View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : ''}</details><div class="thread-footer"><div class="comment-actions">${commentActions(comment)}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
   }
   function toggleResolved(id) {
     const comment = comments.find(comment => comment.id === id);
@@ -1900,7 +1929,8 @@
     refreshComments();
     const stored = persist();
     render();
-    const updated = [...document.querySelectorAll('[data-thread-id]')].find(card => card.dataset.threadId === id);
+    // A card resolved into the closed Resolved fold is not followed there: the reader stays where they were.
+    const updated = [...document.querySelectorAll('[data-thread-id]')].find(card => card.dataset.threadId === id && !card.closest('details.overview-fold:not([open])'));
     if (updated && top !== undefined) $('content').scrollTop += updated.getBoundingClientRect().top - top;
     updated?.querySelector('[data-resolve]')?.focus({preventScroll:true});
     toast(stored ? (comment.resolved ? 'Conversation reopened.' : 'Conversation resolved locally.') : 'Browser storage is unavailable. Export local notes to keep your resolution state.');
@@ -2317,15 +2347,21 @@
     }
   };
 
-  let earlierOpen = false; // the reader opened From earlier revisions; a redraw keeps it so
-  document.addEventListener('toggle', event => { if (event.target.matches?.('details.overview-earlier')) earlierOpen = event.target.open; }, true);
+  // The folds under the open comments, Resolved and From earlier revisions: a redraw keeps the
+  // ones the reader opened.
+  const foldsOpen = new Set();
+  document.addEventListener('toggle', event => {
+    const fold = event.target.matches?.('details.overview-fold') && event.target.dataset.fold;
+    if (fold) event.target.open ? foldsOpen.add(fold) : foldsOpen.delete(fold);
+  }, true);
+  const fold = (name, title, count, cards, note = '') => `<details class="overview-fold overview-${name}" data-fold="${name}" ${foldsOpen.has(name) ? 'open' : ''}><summary><h3 class="overview-fold-title">${title} <span class="badge neutral">${count}</span></h3>${note}${icon('chevron-down')}</summary>${cards}</details>`;
   function renderOverview() {
     const generated = comments.filter(comment => !comment.personal);
     // A comment whose code changed since is history: it leaves the list for a folded section
     // under it, so what is read first is about the code as it is.
     const earlier = generated.filter(comment => comment.outdated);
     const earlierCards = earlier.map(comment => commentCard(comment, true)).join('');
-    const earlierSection = earlierCards ? `<details class="overview-earlier" ${earlierOpen ? 'open' : ''}><summary><span class="overview-earlier-title">From earlier revisions <span class="badge neutral">${earlier.length}</span></span><span class="overview-earlier-note"><span data-earlier-outcomes></span></span>${icon('chevron-down')}</summary>${earlierCards}</details>` : '';
+    const earlierSection = earlierCards ? fold('earlier', 'From earlier revisions', earlier.length, earlierCards, '<span class="overview-fold-note"><span data-earlier-outcomes></span></span>') : '';
     // A finding whose code changed is its comment under From earlier revisions, which says what
     // became of it. Only one with no comment is still said, in a line there and never a banner.
     const subjects = new Set(generated.map(comment => comment.subject));
@@ -2337,14 +2373,20 @@
       ? `<p class="overview-update" title="${escape(revision.summary)}"><strong>Revision ${revision.revision}</strong> ${sinceView ? `changed ${plural(sinceView.files.length, 'file')} since revision ${escape(sinceView.revision)}${revision.local ? ', in your checkout and not pushed yet' : ''}.` : `${escape(revision.summary)}${revision.local ? ' It shows your checkout, not the pull request as pushed.' : ''}`}${sinceView ? ` <button type="button" class="link-button" data-view="since">See what changed</button>` : ''}</p>`
       : revision.local ? '<p class="overview-update">This review shows your checkout, not the pull request as pushed.</p>' : '';
     const failed = unlinkedFlows().filter(({flow}) => flow.result === 'failed');
-    // With nothing open on the code as it is, say so first: the fold below is history, not work.
-    const settledNote = !inProgress && earlier.length && !feedback.findings.length && !failed.length && !generated.some(comment => !comment.outdated && !comment.resolved)
-      ? `<p class="overview-status" data-overview-status><strong>Nothing is waiting on you.</strong> ${earlier.length === 1 ? 'The comment below was' : `The ${earlier.length} comments below were`} written on code that has changed since.</p>` : '';
+    // Open comments come first; resolved ones go after them, apart from the work, in their own fold.
+    const current = generated.filter(comment => !comment.outdated);
+    const settled = current.filter(comment => comment.resolved);
+    const resolvedSection = settled.length ? fold('resolved', 'Resolved', settled.length, settled.map(comment => commentCard(comment)).join('')) : '';
+    // With nothing left to do, one message says so, whether there never was anything or the
+    // reader settled it all. What is settled stays folded below it.
+    const folded = settled.length + earlier.length;
+    const clear = !inProgress && !feedback.findings.length && !failed.length && !pending && !current.some(comment => !comment.resolved)
+      ? `<div class="overview-clear" data-overview-status>${icon('check-check')}<div><strong>All clear</strong><p>Nothing in this review is waiting on you. Nice work.${folded ? ` ${folded === 1 ? 'The comment below is' : `The ${folded} comments below are`} settled.` : ''}</p></div></div>` : '';
     const qa = review.qa;
     const historyLinks = revision ? `<nav class="overview-history" aria-label="Review history"><a href="${revision.preview ? '' : '../'}current.html">Latest review</a><a href="${revision.preview ? '' : '../'}index.html">All revisions</a></nav>` : '';
-    const empty = !generated.length && !feedback.findings.length && !pending && !unlinkedFlows().some(({flow}) => flow.result === 'failed') ? `<p class="review-empty">${inProgress ? 'No comments yet. They appear here as your agent writes them.' : 'No issues found in this review.'}</p>` : '';
+    const empty = inProgress && !generated.length && !feedback.findings.length && !pending && !failed.length ? '<p class="review-empty">No comments yet. They appear here as your agent writes them.</p>' : '';
     const progressBox = inProgress ? `<div class="review-progress" role="status"><span class="review-progress-dot" aria-hidden="true"></span><div><h3>Your review is in progress</h3><p>Start reading now. Your agent's comments appear here and beside the code as it writes them, with a notice when one arrives, even on a file you already read. Explanations, test results and the finished walkthrough follow. Template previews and QA open once it is done.</p><p class="review-progress-count">${generated.length ? `${generated.length} comment${generated.length === 1 ? '' : 's'} so far` : 'No comments yet'}</p></div><button type="button" class="btn btn-sm btn-primary" data-start-reading>Start reading ${icon('arrow-right')}</button></div>` : '';
-    return `<div class="overview-reading"><header class="overview-intro"><p class="eyebrow">Review overview</p><h1>${escape(review.title)}</h1><h2 class="what-changed-title">What changed</h2><p class="overview-scope">${escape(ReviewTools.comparisonText(snapshot, review))}</p><p class="lead">${escape(review.summary)}</p>${revisionLine}${historyLinks}${renderUIChanges()}${progressBox}</header>${inProgress ? '' : renderVisualOptions()}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}${renderRiskRanking()}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${settledNote}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${generated.filter(comment => !comment.outdated).map(comment => commentCard(comment)).join('')}${unlinkedFlows().filter(({flow}) => flow.result === 'failed').map(({flow,index}) => qaFlow(flow,index)).join('')}${earlierSection}${pending ? `<p class="overview-status">${plural(pending, 'earlier finding')} ${pending === 1 ? 'was' : 'were'} not checked again after the code changed. Review details has ${pending === 1 ? 'it' : 'them'}.</p>` : ''}</section>${renderOtherChecks()}${renderMyReview()}</div>`;
+    return `<div class="overview-reading"><header class="overview-intro"><p class="eyebrow">Review overview</p><h1>${escape(review.title)}</h1><h2 class="what-changed-title">What changed</h2><p class="overview-scope">${escape(ReviewTools.comparisonText(snapshot, review))}</p><p class="lead">${escape(review.summary)}</p>${revisionLine}${historyLinks}${renderUIChanges()}${progressBox}</header>${inProgress ? '' : renderVisualOptions()}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}${renderRiskRanking()}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${clear}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${current.filter(comment => !comment.resolved).map(comment => commentCard(comment)).join('')}${failed.map(({flow,index}) => qaFlow(flow,index)).join('')}${resolvedSection}${earlierSection}${pending ? `<p class="overview-status">${plural(pending, 'earlier finding')} ${pending === 1 ? 'was' : 'were'} not checked again after the code changed. Review details has ${pending === 1 ? 'it' : 'them'}.</p>` : ''}</section>${renderOtherChecks()}${renderMyReview()}</div>`;
   }
 
   // On a phone the bar at the bottom has no pager, so a step ends with the way to the next one.
@@ -2602,8 +2644,9 @@
     if (!open) return;
     const groups = new Map();
     entries.forEach(entry => { if (!groups.has(entry.path)) groups.set(entry.path, []); groups.get(entry.path).push(entry); });
-    const row = entry => `<li class="ledger-item" data-ledger="${escape(entry.id)}" data-state="${entry.resolved ? 'resolved' : 'draft'}"><button type="button" class="ledger-jump" data-ledger-jump="${escape(entry.id)}"><span class="ledger-where">${escape(entry.where)}</span><span class="ledger-subject">${escape(entry.subject)}</span></button><div class="ledger-meta">${ghBadgeSlot(comments.find(comment => comment.id === entry.id) || {})}<button type="button" data-resolve="${escape(entry.id)}">${entry.resolved ? 'Reopen' : 'Resolve'}</button><button type="button" data-copy="${escape(entry.id)}">Copy for LLMs</button></div></li>`;
-    const byFile = [...groups].map(([path, list]) => `<section class="ledger-group"><h3>${pathFit(path, '', true)}</h3><ul class="ledger-list">${list.map(row).join('')}</ul></section>`).join('');
+    const row = entry => `<li class="ledger-item" data-ledger="${escape(entry.id)}" data-state="${entry.resolved ? 'resolved' : 'draft'}"><button type="button" class="ledger-place" data-ledger-jump="${escape(entry.id)}" title="Show in the code">${escape(entry.where)}${icon('arrow-up-right')}</button><div class="ledger-msg">${youAvatar()}<b class="ledger-name">You</b><span class="ledger-subject">${escape(entry.subject)}</span></div><div class="ledger-meta">${ghBadgeSlot(comments.find(comment => comment.id === entry.id) || {})}<button type="button" data-resolve="${escape(entry.id)}">${entry.resolved ? 'Reopen' : 'Resolve'}</button><button type="button" data-copy="${escape(entry.id)}">Copy for LLMs</button></div></li>`;
+    // Your own comments under a title of their own, as the agent's conversations are, then by file.
+    const byFile = (groups.size ? '<h3 class="ledger-title">Your comments</h3>' : '') + [...groups].map(([path, list]) => `<section class="ledger-group"><h3>${pathFit(path, '', true)}</h3><ul class="ledger-list">${list.map(row).join('')}</ul></section>`).join('');
     const stepNotes = notes.length ? `<section class="ledger-group"><h3>Step notes</h3><ul class="ledger-list">${notes.map(note => `<li class="ledger-item" data-state="draft"><button type="button" class="ledger-jump" data-ledger-step="${escape(note.id)}"><span class="ledger-where">${escape(note.title)}</span><span class="ledger-subject">${escape(note.text)}</span></button></li>`).join('')}</ul></section>` : '';
     const empty = !entries.length && !notes.length ? '<p class="ledger-note">Select lines in a diff and write a comment. What you say, and what your agent answers, collects here.</p>' : '';
     const previews = previewsPossible ? `<section class="ledger-previews"><strong>Template previews</strong><p data-preview-summary>${previewSummary(lifecycle())}</p><button type="button" class="btn btn-sm btn-soft" data-open-previews>Open previews</button></section>` : '';
@@ -2710,7 +2753,11 @@
   }
   $('ledger-toggle').onclick = () => setLedger(!ledgerOpen());
   $('ledger-close').onclick = () => setLedger(false);
+  // A row is one thing to open: a click on what was said opens its conversation when it has one (the
+  // served review adds it), else its place in the code; the place line above it always goes to the code.
   function ledgerClick(event) {
+    const said = event.target.closest('.ledger-msg');
+    if (said) { const item = said.closest('.ledger-item'); (item.querySelector('[data-dcr-open]') || item.querySelector('[data-ledger-jump]'))?.click(); return; }
     const jumpTo = event.target.closest('[data-ledger-jump]');
     const stepTo = event.target.closest('[data-ledger-step]');
     if (!jumpTo && !stepTo) return;
@@ -3105,7 +3152,7 @@
         expandedViewer.close();
         select('overview');
         const card = [...document.querySelectorAll('#content .review-thread')].find(node => node.dataset.threadId === where.dataset.shotComment);
-        if (card) { card.closest('details.overview-earlier')?.setAttribute('open', ''); const details = card.querySelector('details'); if (details) details.open = true; card.scrollIntoView({block: 'center'}); card.querySelector('summary')?.focus({preventScroll: true}); }
+        if (card) { card.closest('details.overview-fold')?.setAttribute('open', ''); const details = card.querySelector('details'); if (details) details.open = true; card.scrollIntoView({block: 'center'}); card.querySelector('summary')?.focus({preventScroll: true}); }
         return;
       }
       // A file opens behind the viewer, so the viewer goes.

@@ -35,6 +35,7 @@
   const previewsAnnounced = new Set();
   // Reply text survives the review re-rendering its cards, and, kept by the page as it is typed, a reload.
   const kept = globalThis.ReviewDrafts;
+  let me = null; // who the GitHub CLI is signed in as, for the reader's own avatar
   const drafts = {get: id => kept.get(`reply:${id}`), set: (id, text) => kept.set(`reply:${id}`, text), delete: id => kept.set(`reply:${id}`, '')};
   // Adversaries: other agents that check the review. Chosen in the agent card, kept by the server
   // for every review on this computer. A question asks them only when its + is ticked, and every
@@ -121,16 +122,18 @@
   // In Your review the thread is narrow and always ready to answer: the comment it started from,
   // then the messages, then a reply field that grows as you type (⌘/Ctrl Enter sends).
   // The comment a conversation is about, as its first message: who wrote it, what kind it is, and
-  // the whole comment (long ones start folded). The title and place are already in the bar above.
+  // the whole comment (long ones start folded). The place is already in the bar above, and an agent's
+  // title too; the reader's own comment is their message, every word of it, as in a chat.
   const quoteHTML = comment => {
     if (!comment) return '';
-    const text = (comment.discussion || '').trim();
-    const avatar = comment.personal ? '<span class="dcr-avatar" aria-hidden="true">Y</span>' : tools.avatarHTML(comment.agent || null);
+    const text = (comment.personal ? [comment.subject, comment.discussion] : [comment.discussion]).filter(Boolean).join('\n\n').trim();
+    const avatar = comment.personal ? tools.youHTML(me) : tools.avatarHTML(comment.agent || null);
     const who = comment.personal ? 'You' : comment.agent ? tools.escape(tools.agentInfo(comment.agent).name) : 'Review';
-    const kind = (comment.audience === 'agent' ? 'question for your agent' : [comment.label, comment.decoration].filter(Boolean).join(' · ')).replace(/^./, letter => letter.toUpperCase());
+    // Asking your own agent needs no label: the conversation is with it.
+    const kind = (comment.audience === 'agent' ? '' : [comment.label, comment.decoration].filter(Boolean).join(' · ')).replace(/^./, letter => letter.toUpperCase());
     const long = text.length > 320 || text.split(/\n\s*\n/).length > 2;
     const body = text ? `<div class="dcr-body${long ? ' is-clamped' : ''}">${tools.markdown(text)}</div>${long ? '<button type="button" class="dcr-more">Show more</button>' : ''}` : '';
-    return `<article class="dcr-msg dcr-origin${comment.personal ? ' dcr-you' : ' dcr-agent'}">${avatar}<div class="dcr-msg-main"><header class="dcr-msg-head"><strong>${who}</strong>${comment.personal ? '' : tools.modelHTML(comment)}<span class="dcr-role">${tools.escape(kind)}</span></header>${body}</div></article>`;
+    return `<article class="dcr-msg dcr-origin${comment.personal ? ' dcr-you' : ' dcr-agent'}">${avatar}<div class="dcr-msg-main"><header class="dcr-msg-head"><strong>${who}</strong>${comment.personal ? '' : tools.modelHTML(comment)}${kind ? `<span class="dcr-role">${tools.escape(kind)}</span>` : ''}</header>${body}</div></article>`;
   };
   const advToggleHTML = '<button type="button" class="dcr-adv-toggle" data-dcr-adv hidden aria-pressed="false"></button>';
   const composeHTML = () => `<form class="dcr-reply dcr-compose" hidden><textarea rows="1" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea>${advToggleHTML}<button type="submit" class="dcr-send" aria-label="Send reply" title="Send reply (⌘ Enter)">${ico('send')}</button></form>`;
@@ -181,20 +184,20 @@
     // The DOM re-serialises markup (an escaped quote comes back as a quote), so compare the
     // string that was set, not innerHTML, or the observer would re-trigger itself forever.
     const convo = block.querySelector('.dcr-convo');
-    const html = tools.messagesHTML(thread, {seen, agent: listener});
-    const opinions = tools.opinionsHTML(thread, {open: [...(openOpinions.get(id) || [])], seen});
+    const html = tools.messagesHTML(thread, {seen, agent: listener, me});
+    const opinions = tools.opinionsHTML(thread);
     // Keyed on the messages, not their text: "2 min ago" changes by itself and must not redraw.
-    const signature = (thread?.messages || []).map(message => message.id + (message.author === 'agent' && !seen.has(message.id) ? '!' : '')).join('|');
+    const signature = [...(thread?.messages || []), ...tools.opinionMessages(thread)].map(message => message.id + (message.author === 'agent' && !seen.has(message.id) ? '!' : '')).join('|');
     const model = online ? tools.statusModel(thread, listening, Date.now(), listener) : {tone: 'off', text: 'The review server stopped. Restart `dcr serve` to send or receive.'};
-    // The reply carries its own time; the status line only says that it came.
-    // In Your review the row already says it replied; under the thread only work in progress shows.
+    // Under a thread the status line only says what is still happening; an answer is shown, not announced.
     // What became of the comment once its code changed: each agent's word, and the reader's closing buttons.
     const comment = comments().find(entry => entry.id === id);
     const outcome = tools.closureHTML(thread, {plain: ledger, resolve: resolved().includes(id) ? null : id, still: !!comment && !comment.personal && online && !fixingId(), open: [...(openOpinions.get(id) || [])]});
     const action = actionOf(id);
     // A request that was not taken says why here, and stays until it is read: a toast is gone too soon.
     const refused = refusals.has(id) ? `<p class="dcr-refusal" role="alert">${ico('circle-alert')}<span>${tools.escape(refusals.get(id))}</span><button type="button" class="btn btn-xs btn-ghost" data-dcr-refusal="${tools.escape(id)}">Dismiss</button></p>` : '';
-    const status = refused + outcome + ((ledger || outcome) && model?.tone === 'done' ? '' : stateHTML(model, '')); // the closing block already says the agent answered
+    // An answer is its own message, signed by who wrote it: no line above it says that it came.
+    const status = refused + outcome + (model?.tone === 'done' ? '' : stateHTML(model, ''));
     const statusSignature = status ? `${model?.tone}|${model?.text}|${outcome}|${refused}` : '';
     const form = block.querySelector('.dcr-reply');
     if (ledger) {
@@ -388,7 +391,7 @@
       if (undecided(id)) {
         card.classList.remove('is-earlier');
         card.classList.add('is-undecided');
-        (section.parentElement.querySelector(':scope > article.review-thread:not(.is-undecided)') || section).before(card);
+        (section.parentElement.querySelector(':scope > article.review-thread:not(.is-undecided), :scope > details.overview-resolved') || section).before(card);
         return;
       }
       const {label, state} = becameOf(id);
@@ -573,7 +576,7 @@
         if (mode === 'answer') await sendComment(id, text);
         else if (!await askFix(id, action, comment, text)) return; // the page is opening the updated review
         drafts.delete(id);
-        field.value = '';
+        document.querySelectorAll(`.dcr-thread[data-dcr="${CSS.escape(id)}"] textarea`).forEach(other => { other.value = ''; });
         form.hidden = true;
         delete form.dataset.mode;
         if (mode === 'answer') { await refresh(); flash(`Sent to your agent.${listening === false ? ' No agent is listening yet; it starts when your agent picks it up.' : ''}`); }
@@ -773,6 +776,12 @@
     } catch (error) { ghStatus = {phase: 'unavailable', text: error.message}; }
     ghRefresh();
   };
+  // The reader's face is the same on every review, so it is asked once, with or without a pull request.
+  api('/api/github/me').then(found => {
+    me = found;
+    window.ReviewMe = me; // the page draws the reader's face with it too
+    if (me?.avatar) document.querySelectorAll('.dcr-you > .dcr-avatar').forEach(node => { node.outerHTML = tools.youHTML(me); });
+  }).catch(() => {});
   if (window.ReviewGitHub && globalThis.ReviewTools.githubLink(snapshot, review, {general: true})) { window.ReviewGitHub.connect(ghProvider); loadGitHub(); }
 
   // --- Comment on GitHub: read it first ---------------------------------------------------------
@@ -1072,12 +1081,11 @@
   if (artifacts) { new MutationObserver(decorateRecordings).observe(artifacts, {childList: true}); decorateRecordings(); }
 
   // --- rows in "Your review" ---------------------------------------------------------------------
-  // Your review is a list. A row with a conversation shows who answered last and how the answer
-  // starts; opening it shows that one conversation in place of the list, as a chat: a back button,
-  // the comment it started from and every message, scrolling, and one reply field pinned to the
-  // bottom. The row's title still jumps to the code.
+  // Your review is a list. A row is its place in the code (a link there), then the comment as a chat
+  // message, and with a conversation a line of who replied, how often and when last. A click on the
+  // row opens that one conversation in place of the list, as a chat: a back button, the comment it
+  // started from and every message, scrolling, and one reply field pinned to the bottom.
   const STATE = {sent: 'sent', delivered: 'sent', answered: 'answered'};
-  const plain = tools.snippet;
   const unseenIn = thread => (thread?.messages || []).some(message => message.author === 'agent' && !seen.has(message.id));
   const weighedIn = thread => !!thread && ((thread.waiting_on || []).length > 0 || Object.keys(thread.opinions || {}).length > 0);
   const hasConversation = thread => !!thread && (thread.live || thread.delivery !== 'draft' || thread.messages?.length > 0 || weighedIn(thread));
@@ -1089,18 +1097,9 @@
   };
   // A row from an earlier revision says where the comment was, as its folded card does.
   const wasWhere = comment => { const was = globalThis.ReviewTools.outdatedWhere(comment); return globalThis.ReviewTools.pathFit(was.path, ` · ${was.lines}${was.revision ? ` in revision ${was.revision}` : ''}`); };
-  const rowFor = (comment, earlier = false) => `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-conversation="1"${earlier ? ' data-earlier="1"' : ''}><button type="button" class="ledger-jump" data-ledger-jump="${tools.escape(comment.id)}"><span class="ledger-where">${earlier ? wasWhere(comment) : whereOf(comment)}</span><span class="ledger-subject">${tools.escape(comment.subject)}</span></button><div class="ledger-meta"></div></li>`;
-  // The faces of every agent that weighed in, each ringed with what it thinks.
-  // The other agents that weighed in, beside the one already named: small marks, the tally on hover.
-  const facesHTML = (thread, named) => {
-    const others = tools.verdicts(thread).filter(entry => entry.agent !== named);
-    if (!others.length) return '';
-    const counts = tools.tally(thread);
-    return `<span class="dcr-faces" title="${tools.escape(`${tools.consensus(counts)}: ${tools.verdicts(thread).map(entry => `${tools.agentInfo(entry.agent).name} ${tools.VERDICTS[entry.verdict].label.toLowerCase()}`).join(', ')}`)}"><span class="dcr-faces-plus">+</span>${others.map(entry => tools.avatarHTML(entry.agent, 'dcr-face-xs')).join('')}</span>`;
-  };
+  const rowFor = (comment, earlier = false) => `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-conversation="1"${earlier ? ' data-earlier="1"' : ''}><button type="button" class="ledger-place" data-ledger-jump="${tools.escape(comment.id)}" title="Show in the code">${earlier ? wasWhere(comment) : whereOf(comment)}${ico('arrow-up-right')}</button><div class="ledger-msg">${tools.avatarHTML(comment.agent || null)}<b class="ledger-name">${comment.agent ? tools.escape(tools.agentInfo(comment.agent).name) : 'Review'}</b><span class="ledger-subject">${tools.escape(comment.subject)}</span></div><div class="ledger-meta"></div></li>`;
   const chevron = '<svg class="dcr-peek-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
-  // The latest answer, flat under the row: who said it (and what they think), then its first lines.
-  // The faces of the others who weighed in show only when there is more than one voice.
+  // Under the row, the replies in a line (who, how many, when last).
   // A comment whose code changed says what became of it, as its card does. What an agent thought
   // of the comment back then is not the news, and its chip beside today's outcome misleads.
   const peekHTML = (thread, id, earlier) => {
@@ -1111,11 +1110,14 @@
       const note = against.length ? `${tools.names(against.map(row => tools.agentInfo(row.agent).name))} ${against.length === 1 ? 'says' : 'say'} ${closing.side === 'dealt' ? 'it still applies' : 'it is dealt with'}. You decide.` : '';
       return `<span class="dcr-peek-who"><span class="dcr-earlier-outcome dcr-c-${state}">${tools.escape(label)}</span><span class="dcr-peek-end">${chevron}</span></span>${note ? `<span class="dcr-peek-text">${tools.escape(note)}</span>` : ''}`;
     }
-    const last = [...(thread.messages || [])].reverse().find(message => message.author === 'agent');
-    const faces = facesHTML(thread, last?.agent || listener);
-    if (!last) return `<span class="dcr-peek-who"><span class="dcr-peek-note">Open conversation</span><span class="dcr-peek-end">${faces}${chevron}</span></span>`;
-    const who = tools.escape(tools.agentInfo(last.agent || listener).name);
-    return `<span class="dcr-peek-who">${tools.avatarHTML(last.agent || listener, 'dcr-face-xs')}<b>${who}</b>${last.role === 'adversary' ? tools.verdictHTML(last.verdict) : ''}<time data-at="${tools.escape(last.at || '')}">${tools.escape(tools.relativeTime(last.at))}</time><span class="dcr-peek-end">${faces}${chevron}</span></span><span class="dcr-peek-text">${tools.escape(plain(last.body))}</span>`;
+    // As a chat app's thread: who replied, how many replies, and when the last came. The replies
+    // themselves are in the conversation it opens; the row does not repeat any of them.
+    const replies = [...(thread.messages || []), ...tools.opinionMessages(thread)].sort((a, b) => (Date.parse(a.at) || 0) - (Date.parse(b.at) || 0));
+    if (!replies.length) return `<span class="dcr-peek-who"><span class="dcr-peek-note">Open conversation</span><span class="dcr-peek-end">${chevron}</span></span>`;
+    const voices = [...new Set(replies.map(reply => reply.author === 'agent' ? reply.agent || listener || 'agent' : 'you'))].slice(-3);
+    const faces = voices.map(voice => voice === 'you' ? tools.youHTML(me) : tools.avatarHTML(voice === 'agent' ? null : voice, 'dcr-face-xs')).join('');
+    const last = replies.at(-1);
+    return `<span class="dcr-peek-who"><span class="dcr-peek-faces">${faces}</span><b>${replies.length} ${replies.length === 1 ? 'reply' : 'replies'}</b><span class="dcr-peek-when">last <time data-at="${tools.escape(last.at || '')}">${tools.escape(tools.relativeTime(last.at))}</time></span><span class="dcr-peek-end">${chevron}</span></span>`;
   };
   const decoratePeek = (item, comment, thread) => {
     let peek = item.querySelector(':scope > .dcr-peek');
@@ -1124,7 +1126,9 @@
       peek = Object.assign(document.createElement('button'), {type: 'button', className: 'dcr-peek'});
       peek.dataset.dcrOpen = item.dataset.ledger;
       peek.setAttribute('aria-label', `Open the conversation about ${comment?.subject || 'this comment'}`);
-      item.append(peek);
+      // The answer follows what it answers; the row's actions come after both.
+      const meta = item.querySelector(':scope > .ledger-meta');
+      meta ? meta.before(peek) : item.append(peek);
     }
     const html = peekHTML(thread, item.dataset.ledger, !!item.dataset.earlier);
     if (peek.dataset.html !== html) { peek.innerHTML = html; peek.dataset.html = html; }
@@ -1147,6 +1151,7 @@
     current = id;
     view.querySelector('.dcr-detail-title .ledger-where').innerHTML = whereOf(comment);
     view.querySelector('.dcr-detail-title strong').textContent = comment.subject;
+    view.querySelector('.dcr-detail-title strong').hidden = !!comment.personal; // it is the first message below
     view.querySelector('[data-ledger-jump]').dataset.ledgerJump = id;
     const block = cardBlock(id, 'ledger', comment);
     view.querySelector('.dcr-detail-slot').replaceChildren(block);
@@ -1196,7 +1201,9 @@
     const mine = new Set(comments().filter(comment => comment.personal).map(comment => comment.id));
     const joined = comments().filter(comment => !mine.has(comment.id) && hasConversation(threads[comment.id]) && (threads[comment.id].delivery !== 'draft' || threads[comment.id].messages?.length || weighedIn(threads[comment.id])));
     let section = body.querySelector(':scope > .dcr-convos');
-    if (!joined.length) section?.remove();
+    // What changed since sits last, under everything that is about the code as it is.
+    let earlierGroup = body.querySelector(':scope > .dcr-earlier-group');
+    if (!joined.length) { section?.remove(); earlierGroup?.remove(); }
     else {
       if (!section) { section = document.createElement('section'); section.className = 'ledger-group dcr-convos'; body.prepend(section); }
       // Only the list of rows decides the markup; states and answers are filled in below.
@@ -1206,10 +1213,18 @@
       const now = joined.filter(comment => !before.includes(comment));
       // The same words as the Overview when nothing is open, so the two never disagree.
       const idle = !now.length && !comments().some(comment => comment.personal && !resolved().includes(comment.id));
-      const html = `${idle ? '<p class="dcr-idle">Nothing is waiting on you.</p>' : ''}${now.length ? `<h3>Conversations with your agent</h3><ul class="ledger-list">${now.map(comment => rowFor(comment)).join('')}</ul>` : ''}${before.length ? `<details class="dcr-convos-earlier"${ledgerEarlierOpen ? ' open' : ''}><summary>From earlier revisions <span class="badge neutral">${before.length}</span>${ico('chevron-down')}</summary><ul class="ledger-list">${before.map(comment => rowFor(comment, true)).join('')}</ul></details>` : ''}`;
-      if (section.dataset.html !== html) {
-        section.innerHTML = html; section.dataset.html = html;
-        section.querySelector('.dcr-convos-earlier')?.addEventListener('toggle', event => { ledgerEarlierOpen = event.target.open; });
+      const html = `${idle ? '<p class="dcr-idle">Nothing is waiting on you.</p>' : ''}${now.length ? `<h3 class="ledger-title">Conversations with your agent</h3><ul class="ledger-list">${now.map(comment => rowFor(comment)).join('')}</ul>` : ''}`;
+      if (section.dataset.html !== html) { section.innerHTML = html; section.dataset.html = html; }
+      if (!before.length) earlierGroup?.remove();
+      else {
+        if (!earlierGroup) { earlierGroup = document.createElement('section'); earlierGroup.className = 'ledger-group dcr-earlier-group'; }
+        const previews = body.querySelector(':scope > .ledger-previews');
+        if (earlierGroup.nextElementSibling !== previews || earlierGroup.parentElement !== body) previews ? previews.before(earlierGroup) : body.append(earlierGroup);
+        const fold = `<details class="dcr-convos-earlier"${ledgerEarlierOpen ? ' open' : ''}><summary>From earlier revisions <span class="badge neutral">${before.length}</span>${ico('chevron-down')}</summary><ul class="ledger-list">${before.map(comment => rowFor(comment, true)).join('')}</ul></details>`;
+        if (earlierGroup.dataset.html !== fold) {
+          earlierGroup.innerHTML = fold; earlierGroup.dataset.html = fold;
+          earlierGroup.querySelector('.dcr-convos-earlier').addEventListener('toggle', event => { ledgerEarlierOpen = event.target.open; });
+        }
       }
     }
     // The agent's comments you put on GitHub (pending or posted), so the panel shows your whole GitHub review.
@@ -1288,15 +1303,23 @@
 
   // The composer in the code gets its Ask agent mode: save, then hand the comment to your agent.
   // Its + belongs to the comment it is about to make, so a tick moves to that comment when it is sent.
-  const composerForm = window.ReviewComposer?.setSender(async id => {
+  // A change goes as a fix of what the comment says, as Fix this does; the adversaries only give opinions, so not to them.
+  const composerForm = window.ReviewComposer?.setSender(async (id, kind) => {
+    if (kind === 'change') {
+      const comment = comments().find(entry => entry.id === id);
+      try { if (comment) await askFix(id, {kind: 'fix'}, comment, null); } catch (error) { flash(`Saved, but not sent: ${error.message}`); }
+      decorate();
+      return;
+    }
     if (withAdversaries.delete(COMPOSER)) withAdversaries.add(id);
     syncComposerAdv();
     try { const asked = await sendComment(id); flash(sentWith(tools.statusModel(threads[id], listening)?.text || 'Saved and sent to your agent.', asked)); }
     catch (error) { flash(`Saved, but not sent: ${error.message}`); }
   });
   const composerSend = composerForm?.querySelector?.('[data-composer-send]');
-  composerSend?.insertAdjacentHTML('beforebegin', advToggleHTML);
-  const syncComposerAdv = () => { if (composerSend) syncAdvToggles([composerSend.previousElementSibling], COMPOSER, true); };
+  const composerSplit = composerSend?.closest('[data-composer-agent]');
+  composerSplit?.insertAdjacentHTML('beforebegin', advToggleHTML);
+  const syncComposerAdv = () => { if (composerSplit) syncAdvToggles([composerSplit.previousElementSibling], COMPOSER, true); };
 
   // 2. A quiet reminder wherever you are, until the comment is sent. Your review shows the same
   //    action itself, so the reminder steps aside while that panel is open.

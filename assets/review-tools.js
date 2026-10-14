@@ -472,16 +472,16 @@ globalThis.ReviewTools = (() => {
   // Agent-written text (comments, findings, answers) as a small, safe subset of Markdown: paragraphs,
   // lists, fenced code, `code`, **bold**, *italic* and https links. Everything is escaped first, so
   // nothing a message contains can become markup.
+  // Code is set aside first, so **bold**, *italic* and links can hold it, and then put back as it was.
   const inline = text => {
-    const parts = String(text).split(/(`[^`]+`)/);
-    return parts.map(part => {
-      if (/^`[^`]+`$/.test(part)) return `<code>${escapeHTML(part.slice(1, -1).replace(/\s*\n\s*/g, ' '))}</code>`;
-      return escapeHTML(part)
-        .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
-        .replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,;:!?]|$)/g, '$1<em>$2</em>')
-        .replace(/\[([^\]\n]+)\]\((https:\/\/[^\s)]+)\)/g, (match, label, url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`)
-        .replace(/\n/g, '<br>');
-    }).join('');
+    const codes = [];
+    const held = String(text).replace(/\u0000/g, '').replace(/`([^`]+)`/g, (match, code) => `\u0000${codes.push(code) - 1}\u0000`);
+    return escapeHTML(held)
+      .replace(/\*\*((?:[^*\n]|\*(?!\*))+)\*\*/g, '<strong>$1</strong>') // a bold line may hold *italic*
+      .replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,;:!?]|$)/g, '$1<em>$2</em>')
+      .replace(/\[([^\]\n]+)\]\((https:\/\/[^\s)\u0000]+)\)/g, (match, label, url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`)
+      .replace(/\n/g, '<br>')
+      .replace(/\u0000(\d+)\u0000/g, (match, index) => `<code>${escapeHTML(codes[index].replace(/\s*\n\s*/g, ' '))}</code>`);
   };
   function markdown(text) {
     const lines = String(text ?? '').replace(/\r\n?/g, '\n').split('\n');

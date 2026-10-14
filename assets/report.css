@@ -123,15 +123,15 @@ main#content{position:relative;overflow-y:auto;scroll-behavior:smooth;min-width:
 .thread-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:12px 18px;border-top:1px solid var(--line-neutral-2);background:var(--bg-neutral-1)}
 .thread-footer .comment-actions{display:flex;flex-wrap:wrap;gap:8px;margin:0}
 .review-thread.is-resolved{background:var(--bg-neutral-2);border-color:var(--line-neutral-2)}
-.overview-earlier{margin-top:28px;border-top:1px solid var(--line-neutral-2)}
-.overview-earlier>summary{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 14px;padding:14px 2px;list-style:none;cursor:pointer;color:var(--ink-neutral-4)}
-.overview-earlier>summary::-webkit-details-marker{display:none}
-.overview-earlier-title{font-size:14px;font-weight:650;color:var(--ink-neutral-3)}
-.overview-earlier-note{flex:1 1 240px;font-size:12.5px;color:var(--muted)}
-.overview-earlier-note [data-earlier-outcomes]:not(:empty)::before{content:" "}
-.overview-earlier>summary>.review-icon{align-self:center;width:16px;height:16px;transition:transform .15s}
-.overview-earlier[open]>summary>.review-icon{transform:rotate(180deg)}
-.overview-earlier>summary:focus-visible{outline:2px solid var(--line-accent-6);outline-offset:2px}
+.overview-fold{margin:0 0 6px}
+.overview-fold>summary{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 14px;padding:10px 2px;list-style:none;cursor:pointer;color:var(--ink-neutral-4)}
+.overview-fold>summary::-webkit-details-marker{display:none}
+.overview-fold-title{margin:0;font-size:15px;font-weight:650;color:var(--ink-neutral-3)}
+.overview-fold-note{font-size:12.5px;color:var(--muted)}
+.overview-fold>summary>.review-icon{align-self:center;margin-left:auto;width:16px;height:16px;transition:transform .15s}
+.overview-fold[open]>summary>.review-icon{transform:rotate(180deg)}
+.overview-fold[open]>summary{margin-bottom:12px}
+.overview-fold>summary:focus-visible{outline:2px solid var(--line-accent-6);outline-offset:2px}
 .review-thread.is-earlier{background:var(--bg-neutral-2);border-color:var(--line-neutral-2)}
 /* Folded, a comment from an earlier revision is its file and its subject; opened, all of it. */
 .review-thread.is-earlier:has(>.thread-details:not([open]))>:is(.dcr-thread,.thread-footer){display:none}
@@ -252,7 +252,20 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 .overview-update{font-size:13px;line-height:1.6;color:var(--ink-neutral-5);margin:0 0 12px}
 .overview-update strong{font-weight:600;color:var(--ink-neutral-3)}
 .overview-status{margin:0 0 18px;font-size:14px;line-height:1.6;color:var(--ink-neutral-5)}.overview-status strong{font-weight:600;color:var(--ink-neutral-2)}.overview-status[hidden]{display:none}
-.overview-status+.overview-earlier{margin-top:0}.overview-earlier+.overview-status{margin-top:14px}
+.overview-fold+.overview-status{margin-top:14px}
+.comment-own{display:grid;grid-template-columns:32px minmax(0,1fr);column-gap:10px;align-items:start}
+.comment-avatar{display:grid;place-items:center;width:32px;height:32px;overflow:hidden;border-radius:calc(50% * var(--round));background:var(--bg-neutral-3);color:var(--ink-neutral-2);font-size:12px;font-weight:600}
+.comment-avatar>img{width:100%;height:100%;object-fit:cover}
+.comment-own-head{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:0 0 2px;font-size:12px;line-height:1.35}
+.comment-own-head strong{font-size:13px;font-weight:600;color:var(--ink-neutral-2)}
+.comment-own-main h4{margin:0;font-size:14px;font-weight:500;line-height:1.55}
+/* What is typed shows as typed. JetBrains Mono joins ... or => through its contextual alternates
+   (calt): the first characters become empty spacers and the last one is drawn wide over them, which a
+   field clips, so characters seem to vanish once the word is done. A field does not take the page's
+   font settings, a font shorthand on one resets them, and some browsers keep calt for
+   font-variant-ligatures:none, so the features are turned off by name too, and win over every field rule. */
+:is(textarea,input){font-variant-ligatures:none!important;font-feature-settings:"calt" 0,"liga" 0!important}
+.overview-clear{display:flex;gap:14px;align-items:flex-start;max-width:85ch;margin:0 0 18px;padding:18px 20px;border:1px solid var(--line-green-1);border-radius:calc(9px * var(--round));background:var(--bg-green-1)}.overview-clear[hidden]{display:none}.overview-clear>.review-icon{flex:none;width:22px;height:22px;margin-top:1px;color:var(--ink-green-1)}.overview-clear strong{font-size:15px;font-weight:650;color:var(--ink-green-1)}.overview-clear p{margin:4px 0 0;font-size:14px;line-height:1.6;color:var(--ink-neutral-5)}
 .since-note{margin:12px 16px}
 .since-outdated{padding:14px 16px;border-top:1px solid var(--line-neutral-2)}.since-outdated h3{margin:0 0 10px;font-size:12px;font-weight:600;color:var(--ink-neutral-5)}
 .overview-history{display:flex;flex-wrap:wrap;gap:18px;font-size:13px}
@@ -265,6 +278,13 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 .overview-reading .thread-summary>strong,.overview-reading .thread-details[open]>.thread-summary>strong{display:block;grid-column:1;grid-row:2;font-size:20px;line-height:1.4;font-weight:600}
 .overview-reading .thread-chevron{grid-column:2;grid-row:1 / 3;align-self:start}
 .overview-reading .thread-body{padding:0 28px 24px}
+/* The reader's own comment is a message, laid out as every message under it is: the face in a column
+   of its own, and the name, the words and what follows them all on one edge beside it (28px + 12px). */
+.overview-reading .review-thread.is-own .thread-summary,.overview-reading .review-thread.is-own .thread-details[open]>.thread-summary{position:relative;row-gap:2px;padding-left:70px}
+.overview-reading .review-thread.is-own .thread-badges>.comment-avatar{position:absolute;left:28px;top:22px;width:32px;height:32px;font-size:13px}
+.overview-reading .review-thread.is-own .thread-summary>strong{font-size:14px;font-weight:500;line-height:1.55}
+.overview-reading .review-thread.is-own .thread-body{padding-left:70px}
+.overview-reading .review-thread.is-own .thread-source{margin-left:70px}
 .overview-reading .comment-discussion{font-size:16px;line-height:1.65;color:var(--ink-neutral-3);max-width:none}
 .overview-reading .thread-footer{padding:14px 24px;background:var(--bg-neutral-2)}
 .thread-severity{font-size:12px;font-weight:600;color:var(--ink-neutral-5)}
@@ -283,6 +303,9 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
   .overview-reading .thread-summary,.overview-reading .thread-details[open]>.thread-summary{padding:20px 18px 16px}
   .overview-reading .thread-summary>strong,.overview-reading .thread-details[open]>.thread-summary>strong{font-size:18px}
   .overview-reading .thread-body{padding:0 18px 20px}
+  .overview-reading .review-thread.is-own .thread-summary,.overview-reading .review-thread.is-own .thread-details[open]>.thread-summary,.overview-reading .review-thread.is-own .thread-body{padding-left:60px}
+  .overview-reading .review-thread.is-own .thread-badges>.comment-avatar{left:18px;top:18px}
+  .overview-reading .review-thread.is-own .thread-source{margin-left:60px}
   .overview-reading .thread-footer{padding:12px 16px}
   .thread-source{margin:0 18px 18px}
 }
@@ -307,7 +330,7 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 .other-checks h2{font-size:18px;margin:0 0 14px}
 .other-checks h2 .badge{vertical-align:middle}
 @media(max-width:520px){.qa-preview,.qa-preview-compact{grid-template-columns:100px minmax(0,1fr)}.qa-preview-image,.qa-preview-compact .qa-preview-image{height:72px}.qa-evidence-modal>header{padding:16px 18px 12px}.qa-evidence-scroll{padding:14px 18px 20px}}
-#my-review{margin-top:40px;border-top:1px solid var(--line-neutral-2);padding-top:28px}
+#my-review{margin-top:24px;border-top:1px solid var(--line-neutral-2);padding-top:28px}
 #my-review .section-heading{flex-wrap:wrap;gap:16px}
 #my-review .section-heading p{font-size:14px;max-width:60ch;line-height:1.6}
 .thread-footer{flex-wrap:wrap;gap:12px}
@@ -764,6 +787,18 @@ body.ledger-open .ledger{display:flex}
 .ledger-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px}
 .ledger-head h2{margin:0;font-size:15px}
 .ledger-body{flex:1;overflow-y:auto;padding-bottom:12px}
+.ledger-title{margin:16px 0 4px;padding:0 16px;font-size:12px;font-weight:650;color:var(--ink-neutral-3)}
+/* A row as a chat message: its place in the code, a link, on top; then the face on the left, beside
+   the name and, under it, what was said; what comes after (replies, actions) lines up with the text. */
+.ledger-place{display:flex;align-items:center;gap:4px;max-width:100%;padding:12px 16px 0;border:0;background:transparent;color:var(--muted);font-size:12px;text-align:left;overflow-wrap:anywhere}
+.ledger-place>svg{flex:none;width:12px;height:12px;opacity:0;transition:opacity .12s}
+.ledger-place:hover{color:var(--accent)}.ledger-place:hover>svg,.ledger-place:focus-visible>svg{opacity:1}
+.ledger-msg{display:grid;grid-template-columns:24px minmax(0,1fr);column-gap:10px;row-gap:1px;padding:8px 16px 0;cursor:pointer}
+.ledger-msg>:is(.comment-avatar,.dcr-avatar){grid-row:span 2;width:24px;height:24px;font-size:11px}
+.ledger-name{align-self:center;font-size:12.5px;font-weight:600;line-height:1.3}
+.ledger-msg:hover .ledger-subject{text-decoration:underline}
+.thread-badges>.comment-avatar{width:22px;height:22px;font-size:11px}
+.thread-you{font-weight:600;color:var(--ink-neutral-2)}
 .ledger-group h3{margin:14px 0 2px;padding:0 16px;font-size:12px;font-weight:600;color:var(--muted);overflow-wrap:anywhere}
 .ledger-list{list-style:none;margin:0;padding:0}
 .ledger-item{position:relative;border-top:1px solid var(--line)}
@@ -775,7 +810,7 @@ body.ledger-open .ledger{display:flex}
 .ledger-jump:hover .ledger-subject{text-decoration:underline}
 .ledger-where{display:block;font-size:12px;color:var(--muted);overflow-wrap:anywhere}
 .ledger-subject{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;line-height:1.35;overflow-wrap:anywhere}
-.ledger-meta{display:flex;align-items:center;gap:12px;padding:0 16px 8px;font-size:12px;color:var(--muted)}
+.ledger-meta{display:flex;align-items:center;gap:12px;padding:2px 16px 10px 50px;font-size:12px;color:var(--muted)}
 .ledger-meta button{border:0;background:transparent;padding:6px 2px;color:var(--accent);font-size:12px;font-weight:500}
 .ledger-meta button:hover{text-decoration:underline}
 .ledger-reply{margin:0;padding:0 16px 8px;font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
@@ -1014,6 +1049,9 @@ dialog.stage::backdrop{background:color-mix(in srgb,var(--bg-neutral-8) 40%,tran
 .composer-mode input[value="agent"]:checked+span{color:var(--ink-accent-3)}
 .composer-mode input:focus-visible+span{outline:2px solid var(--line-accent-8);outline-offset:2px}
 .composer[data-mode="agent"] .composer-types,.composer[data-mode="agent"] .composer-blocking{display:none}
+.composer-split{display:inline-flex;align-items:center}.composer-split[hidden]{display:none}
+/* Its menu hangs from the button, opening upward: a file card's content-visibility would move a fixed one. */
+.composer-split>.more-menu>.more-list{position:absolute;inset:auto 0 calc(100% + 6px) auto!important;min-width:240px}
 .composer[data-mode="agent"] .composer-text{border-color:color-mix(in oklab,var(--line-accent-8) 45%,var(--line-neutral-3))}
 .act-agent{background:var(--bg-accent-5);color:var(--ink-neutral-9)}
 .act-agent:hover:not(:disabled){background:var(--bg-accent-5)}
@@ -1082,7 +1120,7 @@ dialog.stage::backdrop{background:color-mix(in srgb,var(--bg-neutral-8) 40%,tran
 
 /* Risk ranking: the changed files most likely to hurt, and why. A quiet card before the comments,
    in black, white and grey: the level is written, and the bar and its weight follow the score. */
-.risk-rank{margin:30px 0 6px;padding:16px 20px 12px;border:1px solid var(--line);border-radius:calc(12px * var(--round));background:var(--surface)}
+.risk-rank{margin:30px 0;padding:16px 20px 12px;border:1px solid var(--line);border-radius:calc(12px * var(--round));background:var(--surface)}
 .risk-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
 .risk-head h2,.risk-pending h2,.risk-none h2{margin:0;font-size:15px;letter-spacing:-.01em}
 .risk-head p{margin:0;color:var(--muted);font-size:13px}

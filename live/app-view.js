@@ -384,7 +384,7 @@
         <span class="dcr-app-row-where"><time data-at="${esc(row.at)}">${esc(time(row.at))}</time>${counted ? `<span>${counted}</span>` : ''}</span>
         ${!open && report ? `<span class="dcr-app-row-text">${esc(firstLine(report.body))}</span>` : ''}
       </button>
-      <p class="dcr-app-row-state"><span class="dcr-dot dcr-tone-${model?.tone || 'done'}" aria-hidden="true"></span>${esc(qaActive === row.id ? 'Running in this tab' : (model?.text || 'Finished'))}${model?.typing && qaActive === row.id ? '<span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span>' : ''}</p>
+      ${model?.tone === 'done' && report && qaActive !== row.id ? '' : `<p class="dcr-app-row-state"><span class="dcr-dot dcr-tone-${model?.tone || 'done'}" aria-hidden="true"></span>${esc(qaActive === row.id ? 'Running in this tab' : (model?.text || 'Finished'))}${model?.typing && qaActive === row.id ? '<span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span>' : ''}</p>`}
       ${body}</li>`;
   };
   const olderRowHTML = row => {
@@ -446,7 +446,7 @@
         ${!open && first ? `<span class="dcr-app-row-text">${esc(first)}</span>` : ''}
         ${!open && row.rec?.url ? `<span class="dcr-app-thumb">${recordingHTML(row.rec).replace(' controls', '')}</span>` : ''}
       </button>
-      <p class="dcr-app-row-state"><span class="dcr-dot dcr-tone-${state.tone}" aria-hidden="true"></span>${esc(state.text)}${state.typing ? '<span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span>' : ''}</p>`;
+      ${open && state.tone === 'done' && row.thread ? '' : `<p class="dcr-app-row-state"><span class="dcr-dot dcr-tone-${state.tone}" aria-hidden="true"></span>${esc(state.text)}${state.typing ? '<span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span>' : ''}</p>`}`;
     let body = '';
     if (open) {
       const anchor = row.thread?.anchor;

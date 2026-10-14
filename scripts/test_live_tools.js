@@ -84,6 +84,9 @@ for (const hostile of ['<img src=x onerror=alert(1)>', '`<script>alert(1)</scrip
   assert.ok(!/href="(?!https:)/.test(out), `non-https link for ${hostile}: ${out}`);
 }
 assert.equal(tools.markdown(''), '');
+assert.equal(tools.markdown('**Yes, only what we *forward*, never untrusted mail.**'), '<p><strong>Yes, only what we <em>forward</em>, never untrusted mail.</strong></p>', 'bold can hold italic');
+assert.equal(tools.markdown('**Why `id < log.id`:** it is'), '<p><strong>Why <code>id &lt; log.id</code>:</strong> it is</p>', 'bold can hold code');
+assert.equal(tools.markdown('`a**b**c` [x](https://e.com/`y`)'), '<p><code>a**b**c</code> [x](https://e.com/<code>y</code>)</p>', 'code is never formatted, nor put in a link address');
 assert.equal(tools.markdown('a\n\n\nb'), '<p>a</p><p>b</p>');
 assert.equal(tools.markdown('Call `phone_to\nnumber(@site)` once.'), '<p>Call <code>phone_to number(@site)</code> once.</p>', 'a code span wrapped across lines stays one span');
 console.log('PASS answers render paragraphs, lists, code and links, and hostile text stays inert');
@@ -135,6 +138,8 @@ assert.ok(!/dcr-new[\s\S]*dcr-new/.test(html) && !tools.messagesHTML({messages:[
 assert.deepEqual(tools.unseen({t:threadWith}, new Set(['m1'])), [{thread:'t', id:'m2'}]);
 assert.deepEqual(tools.unseen({t:threadWith}, new Set(['m2'])), []);
 assert.equal(tools.messagesHTML(undefined), '');
+assert.ok(tools.messagesHTML({messages:[{id:'y', author:'user', body:'hi'}]}, {now, me:{login:'r', avatar:'data:image/png;base64,UE5H'}}).includes('<img src="data:image/png;base64,UE5H"'), 'your messages show your avatar');
+assert.ok(tools.youHTML({avatar:'https://example.com/x.png'}).includes('>Y</span>') && tools.youHTML(null).includes('>Y</span>'), 'anything but a data image is a Y');
 console.log('PASS the conversation renders as an escaped thread with New on unseen agent messages only');
 
 // --- who wrote it, and what the other agents think ---------------------------------------------------
@@ -192,19 +197,18 @@ assert.deepEqual(tools.tally(differing), {total:2, agree:1, partly:0, disagree:1
 const settledThread = tools.messagesHTML(settled, {seen:new Set(['m1', 'm2', 'm3'])});
 assert.doesNotMatch(settledThread, /It is capped now|The cap is there/, 'what was said of the outcome is in the closing block, not in the conversation too');
 assert.match(settledThread, /data-msg="m1"/, 'the discussion before it stays');
+// The other agents speak in the conversation, when they spoke; beside it only who is still to answer.
+const chat = tools.messagesHTML(debated, {seen:new Set(['m1'])});
+assert.ok(chat.indexOf('data-msg="m1"') < chat.indexOf('data-msg="o1"'), 'an opinion is a message, in the order it was said');
+assert.match(chat, /data-msg="o1">.*<strong>Grok<\/strong><span class="dcr-verdict dcr-v-agree">.*Agrees<\/span>.*<p>Looks right to me\.<\/p>/s, 'with its name, what it thinks of the comment, and all it said');
+assert.doesNotMatch(chat, /Claude took longer/, 'a failed agent says nothing in the conversation');
 const side = tools.opinionsHTML(debated);
-assert.match(side, /Other opinions/);
-assert.match(side, /data-dcr-opinion="grok" aria-expanded="false">.*<strong>Grok<\/strong><span class="dcr-op-verdict dcr-v-agree">.*Agree<\/span>.*dcr-op-snippet">Looks right to me\.</s, 'a side opinion is one row: its mark, name, verdict and the start of its answer');
 assert.match(side, /is-waiting[^>]*>.*Gemini.*is reading the code/s, 'an agent still reading shows as waiting');
 assert.match(side, /is-failed[^>]*>.*Claude.*did not answer/s, 'a failed agent says so, quietly');
-assert.doesNotMatch(side, /data-dcr-opinion="codex"/, 'the second reviewer is in the conversation, not among the rows');
-assert.match(side, /dcr-consensus dcr-v-partly">1 agrees · 1 disagrees</, 'the heading says how the whole panel came out');
-const opened = tools.opinionsHTML(debated, {open:['grok']});
-assert.match(opened, /aria-expanded="true">.*<\/button><div class="dcr-op-body dcr-body"><p>Looks right to me\.<\/p>/s, 'an open row shows the full answer under it');
-assert.equal((opened.match(/data-agent="grok"/g) || []).length, 1, 'an open opinion shows its mark once');
-assert.equal((opened.match(/<strong>Grok<\/strong>/g) || []).length, 1, 'and its name once');
+assert.doesNotMatch(side, /Grok|Codex|Other opinions|dcr-consensus/, 'who answered is not repeated beside the conversation');
 assert.equal(tools.consensus({total:2, agree:2, partly:0, disagree:0}), 'Everyone agrees');
 assert.equal(tools.opinionsHTML({messages:[]}), '', 'no opinions, no section');
+assert.equal(tools.opinionsHTML({opinions:{grok:{id:'o', body:'Fine.', verdict:'agree'}}}), '', 'everyone answered: nothing beside the conversation');
 const checking = tools.statusModel({...debated, messages:[], waiting_on:['codex', 'gemini']}, true);
 assert.deepEqual([checking.text, checking.agent, checking.typing], ['Codex is checking this comment', 'codex', true]);
 const quiet = {...debated, messages:[], waiting_on:['codex', 'gemini'], asked_at:'2026-10-07T11:40:00Z'};
@@ -288,21 +292,18 @@ assert.equal(globalThis.ReviewTools.modelText('grok-4.7', 'high'), 'grok-4.7 · 
 assert.equal(globalThis.ReviewTools.modelText(null, 'high'), '', 'no model, no label');
 assert.match(tools.messagesHTML({messages:[{id:'m', author:'agent', agent:'grok', model:'grok-4.7', effort:'high', body:'ok'}]}), /<strong>Grok<\/strong><span class="dcr-model"[^>]*>grok-4\.7 · high<\/span>/);
 assert.doesNotMatch(tools.messagesHTML({messages:[{id:'m', author:'agent', agent:'grok', body:'ok'}]}), /dcr-model/, 'an agent that did not say shows no label');
-assert.match(tools.opinionsHTML({adversary:'codex', opinions:{opencode:{id:'o', body:'Fine.', verdict:'agree', model:'opencode/big-pickle'}}}), /<strong>opencode<\/strong><span class="dcr-model"[^>]*>big-pickle<\/span>/);
+assert.match(tools.messagesHTML({adversary:'codex', opinions:{opencode:{id:'o', body:'Fine.', verdict:'agree', model:'opencode/big-pickle'}}}), /<strong>opencode<\/strong><span class="dcr-model"[^>]*>big-pickle<\/span>/);
 console.log('PASS each agent is labelled with the model and effort it answered on, when known');
 // Answers to a question: the short answer whole under the name, the details one click away, and
 // how far each agrees with the review's agent once a judge compared them.
 const answered = {adversary:'codex', differ:'Grok would move it into the workers.', messages:[{id:'a1', author:'agent', agent:'codex', role:'adversary', verdict:'disagree', body:'No.'}], opinions:{
   codex:{id:'q1', of:'answer', verdict:'agree', short:'Yes, keep `match_state` here.', body:'Yes, keep `match_state` here.\n\n- It warms the cache.', at:'2026-10-09T11:59:00Z'},
   grok:{id:'q2', of:'answer', verdict:'agree', short:'Yes.', body:'Yes.', at:'2026-10-09T11:59:00Z'}}};
-const shortRows = tools.opinionsHTML(answered, {now: noon});
-assert.match(shortRows, /data-dcr-opinion="codex" aria-expanded="false">.*?<time[^>]*>1 min ago<\/time><\/span><svg class="dcr-op-chevron".*?<\/button><div class="dcr-op-body dcr-op-short dcr-body"><p>Yes, keep <code>match_state<\/code> here\.<\/p>\n?<\/div><\/li>/s, 'a short answer shows whole under the name, with a chevron when there is more');
-assert.doesNotMatch(shortRows, /warms the cache|dcr-op-snippet/, 'the details stay closed');
-assert.match(shortRows, /data-dcr-opinion="grok"[^>]*>(?:(?!dcr-op-chevron).)*<\/button><div class="dcr-op-body dcr-op-short/s, 'an answer with nothing more has no chevron');
-assert.match(shortRows, /dcr-consensus dcr-v-agree">Everyone agrees<\/span><\/header><p class="dcr-differ">Grok would move it into the workers\.<\/p>/, 'verdicts on the answers are counted apart from the one on the comment, and where they differ is said');
-assert.match(tools.opinionsHTML(answered, {open:['codex'], now: noon}), /<div class="dcr-op-body dcr-body"><p>Yes, keep <code>match_state<\/code> here\.<\/p>.*warms the cache/s, 'opened, the details follow the short answer');
+const answers = tools.messagesHTML(answered, {now: noon});
+assert.match(answers, /data-msg="q1">.*<strong>Codex<\/strong>.*Agrees.*warms the cache/s, 'an answer to a question is a message, whole');
+assert.match(tools.opinionsHTML(answered, {now: noon}), /<p class="dcr-differ">Grok would move it into the workers\.<\/p>/, 'where the answers differ is said beside the conversation');
 assert.match(tools.sendText(snapshot, review, comments[0], '', answered), /- Codex \(agrees\): Yes, keep `match_state` here\.\n/, 'the short answer is what is sent along');
-console.log('PASS an answer to a question shows its short answer, opens to its details, and says how far it agrees with the review\'s agent');
+console.log('PASS the other agents answer in the conversation, in order, and only who is still to answer shows beside it');
 
 
 // --- JevMyPR's verdict: the strip above the review, and the word a file's row ends with ---

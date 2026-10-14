@@ -28,6 +28,10 @@ globalThis.LiveTools = (() => {
     const face = agent.mark || (slug ? `<b>${escape(agent.name.charAt(0))}</b>` : SPARK);
     return `<span class="dcr-avatar dcr-face${extra ? ` ${extra}` : ''}" data-agent="${escape(agent.slug)}" title="${escape(agent.company ? `${agent.name} · ${agent.company}` : agent.name)}" aria-hidden="true">${face}</span>`;
   }
+  // The reader's own face: their GitHub avatar when the server found it, else a Y.
+  const youHTML = me => /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(me?.avatar || '')
+    ? `<span class="dcr-avatar" title="${escape(me.login ? `@${me.login}` : 'You')}" aria-hidden="true"><img src="${me.avatar}" alt=""></span>`
+    : '<span class="dcr-avatar" aria-hidden="true">Y</span>';
   // The model and effort behind an agent's words, tiny and muted; nothing when it did not say.
   const modelHTML = item => {
     const text = globalThis.ReviewTools?.modelText(item?.model, item?.effort);
@@ -234,12 +238,24 @@ globalThis.LiveTools = (() => {
   // The conversation under a comment: a plain thread, no boxes. Messages the reader has not
   // seen yet carry a New marker. Each agent message names its agent; the second reviewer's says
   // what it thinks of the comment. `agent` names unnamed agent messages (the one listening).
-  function messagesHTML(thread, {seen = new Set(), now = Date.now(), agent: fallback = null} = {}) {
-    const messages = thread?.messages || [];
-    if (!messages.length) return '';
+  // The other agents asked about a comment speak in the same conversation, when they spoke: an
+  // answered opinion is a message of theirs, with what they think of the comment. The second
+  // reviewer's are messages already; one about the outcome is in the closing block instead.
+  function opinionMessages(thread) {
+    const closing = !!OUTCOMES[thread?.outcome?.verdict];
+    return Object.entries(thread?.opinions || {})
+      .filter(([, opinion]) => opinion && !opinion.error && opinion.body && opinion.role !== 'adversary' && !(closing && opinion.about === 'outcome'))
+      .map(([agent, opinion]) => ({...opinion, id: opinion.id || `opinion-${agent}`, author: 'agent', agent, opinion: true}));
+  }
+  function messagesHTML(thread, {seen = new Set(), now = Date.now(), agent: fallback = null, me = null} = {}) {
     // What the agents said became of the comment is in its closing block, not here.
     const closing = !!OUTCOMES[thread?.outcome?.verdict];
-    return messages.filter(message => !closing || !(message.about === 'outcome' || (message.author === 'agent' && !message.role && message.outcome))).map(message => {
+    const said = (thread?.messages || []).filter(message => !closing || !(message.about === 'outcome' || (message.author === 'agent' && !message.role && message.outcome)));
+    // In the order it was said; a message without a time keeps its place.
+    const messages = [...said, ...opinionMessages(thread)].map((message, index) => ({message, index}))
+      .sort((a, b) => (Date.parse(a.message.at) || 0) - (Date.parse(b.message.at) || 0) || a.index - b.index).map(entry => entry.message);
+    if (!messages.length) return '';
+    return messages.map(message => {
       const agent = message.author === 'agent';
       const fresh = agent && !seen.has(message.id);
       const slug = agent ? message.agent || fallback : null;
@@ -248,8 +264,8 @@ globalThis.LiveTools = (() => {
       const model = agent ? modelHTML(message) : '';
       const role = adversary ? `<span class="dcr-role">second reviewer${message.about === 'outcome' || message.about === 'earlier-outcome' ? ', on what became of it' : ''}</span>` : '';
       const outcome = OUTCOMES[message.outcome] ? `<span class="dcr-verdict dcr-o-${escape(message.outcome)}">${OUTCOMES[message.outcome]}</span>` : '';
-      const avatar = agent ? avatarHTML(slug) : '<span class="dcr-avatar" aria-hidden="true">Y</span>';
-      return `<article class="dcr-msg ${agent ? 'dcr-agent' : 'dcr-you'}${adversary ? ` dcr-adversary dcr-v-${escape(message.verdict || 'none')}` : ''}" data-msg="${escape(message.id)}">${avatar}<div class="dcr-msg-main"><header class="dcr-msg-head"><strong>${who}</strong>${model}${adversary ? verdictHTML(message.verdict) : outcome}${role}<time datetime="${escape(message.at || '')}" data-at="${escape(message.at || '')}">${escape(relativeTime(message.at, now))}</time>${fresh ? '<span class="dcr-new">New</span>' : ''}</header><div class="dcr-body">${markdown(message.body)}</div></div></article>`;
+      const avatar = agent ? avatarHTML(slug) : youHTML(me);
+      return `<article class="dcr-msg ${agent ? 'dcr-agent' : 'dcr-you'}${adversary ? ` dcr-adversary dcr-v-${escape(message.verdict || 'none')}` : ''}" data-msg="${escape(message.id)}">${avatar}<div class="dcr-msg-main"><header class="dcr-msg-head"><strong>${who}</strong>${model}${adversary || message.opinion ? verdictHTML(message.verdict) : outcome}${role}<time datetime="${escape(message.at || '')}" data-at="${escape(message.at || '')}">${escape(relativeTime(message.at, now))}</time>${fresh ? '<span class="dcr-new">New</span>' : ''}</header><div class="dcr-body">${markdown(message.body)}</div></div></article>`;
     }).join('');
   }
 
@@ -286,10 +302,9 @@ globalThis.LiveTools = (() => {
   // The other agents' opinions, under the conversation rather than in it: one row per agent with
   // its mark, name and verdict once, then its short answer, or the start of its answer when it gave
   // no short one. A row opens in place to the full answer. `open`: the agents whose answers are open.
-  function opinionsHTML(thread, {open = [], seen = new Set(), now = Date.now()} = {}) {
+  function opinionsHTML(thread, {now = Date.now()} = {}) {
     const opinions = thread?.opinions || {};
     const adversary = thread?.adversary;
-    const opened = new Set(typeof open === 'string' ? [open] : open || []);
     // The second reviewer answers in the conversation; it shows here only when it could not answer.
     // Once the comment has a closing block, what is said of the outcome, and who is still to say, is there.
     const closing = !!OUTCOMES[thread?.outcome?.verdict];
@@ -300,7 +315,7 @@ globalThis.LiveTools = (() => {
     // Verdicts a judge gave on answers to a question are counted apart from those on the comment.
     const onAnswer = Object.entries(opinions).filter(([, opinion]) => opinion.of === 'answer');
     const counts = tally(onAnswer.length ? {opinions: Object.fromEntries(onAnswer)} : thread, closing ? 'comment' : null);
-    const summary = consensus(counts);
+    // Who has answered speaks in the conversation (opinionMessages); here only who is still to answer, or could not.
     const rows = agents.map(agent => {
       const opinion = opinions[agent];
       const name = escape(agentInfo(agent).name);
@@ -309,20 +324,11 @@ globalThis.LiveTools = (() => {
       if (asked && lostOpinion(thread, now)) return `<li class="dcr-op is-failed" title="Asked ${escape(relativeTime(thread.asked_at, now))}; the check may have been interrupted">${avatarHTML(agent, 'dcr-face-sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">did not answer</span></span></li>`;
       if (asked || !opinion) return `<li class="dcr-op is-waiting">${avatarHTML(agent, 'dcr-face-sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">is reading the code</span><span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span></span></li>`;
       if (opinion.error) return `<li class="dcr-op is-failed" title="${escape(opinion.error)}">${avatarHTML(agent, 'dcr-face-sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">did not answer</span></span></li>`;
-      const isOpen = opened.has(agent);
-      const fresh = opinion.id && !seen.has(opinion.id);
-      const verdict = VERDICTS[opinion.verdict] ? `<span class="dcr-op-verdict dcr-v-${opinion.verdict}">${verdictIcon(opinion.verdict)}${VERDICTS[opinion.verdict].short}</span>` : '';
-      const chevron = '<svg class="dcr-op-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
-      // An answer that came with a short one shows it whole under the name; the row opens only when there is more.
-      const short = opinion.short && String(opinion.short).trim();
-      const more = !short || String(opinion.body).trim() !== short;
-      const after = isOpen || short ? `<time data-at="${escape(opinion.at || '')}">${escape(relativeTime(opinion.at, now))}</time>` : `<span class="dcr-op-snippet">${escape(snippet(opinion.body))}</span>`;
-      const under = isOpen ? `<div class="dcr-op-body dcr-body">${markdown(opinion.body)}</div>` : short ? `<div class="dcr-op-body dcr-op-short dcr-body">${markdown(short)}</div>` : '';
-      return `<li class="dcr-op${isOpen ? ' is-open' : ''}"><button type="button" class="dcr-op-toggle" data-dcr-opinion="${escape(agent)}" aria-expanded="${isOpen}">${avatarHTML(agent, 'dcr-face-sm')}<span class="dcr-op-line"><strong>${name}</strong>${modelHTML(opinion)}${verdict}${fresh ? '<span class="dcr-op-new" aria-label="New"></span>' : ''}${after}</span>${more ? chevron : ''}</button>${under}</li>`;
+      return '';
     }).join('');
     // On a question a judge compared the answers with the review's agent's: where they part, in a sentence.
     const differ = thread.differ && counts.total ? `<p class="dcr-differ">${escape(thread.differ)}</p>` : '';
-    return `<section class="dcr-opinions" aria-label="Other opinions"><header class="dcr-opinions-head"><span class="dcr-opinions-title">Other opinions</span>${summary ? `<span class="dcr-consensus dcr-v-${consensusTone(counts)}">${escape(summary)}</span>` : ''}</header>${differ}<ul class="dcr-ops">${rows}</ul></section>`;
+    return rows || differ ? `<section class="dcr-opinions" aria-label="Other agents">${differ}${rows ? `<ul class="dcr-ops">${rows}</ul>` : ''}</section>` : '';
   }
 
   // Agent messages in a thread map that are not in `seen`.
@@ -532,6 +538,6 @@ globalThis.LiveTools = (() => {
   }
 
   return {emojiToken, emojiMatches, escape, progressKey, allComments, sendText, drafts, statusText, statusModel, actionLabel, markdown, snippet, relativeTime, messagesHTML, unseen, agentModel, summary,
-    agentInfo, avatarHTML, modelHTML, verdictHTML, verdicts, closure, closureHTML, confirmed, outcomeWord, outcomeSide: word => SIDES[word], OUTCOMES, commentAction, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
+    agentInfo, avatarHTML, youHTML, opinionMessages, modelHTML, verdictHTML, verdicts, closure, closureHTML, confirmed, outcomeWord, outcomeSide: word => SIDES[word], OUTCOMES, commentAction, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
     activeAdversaries, facesHTML, agentStatus, modelOptionsHTML, effortLevels, effortOptionsHTML, chosenModel, chosenEffort, settle, adversaryPanelHTML, adversaryIntroHTML, jevBannerHTML};
 })();

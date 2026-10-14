@@ -17,7 +17,7 @@
       const thread = data.threads[id];
       const all = new Set(Object.values(thread?.opinions || {}).map(opinion => opinion.id)); // nothing is new in a copy
       const messages = tools.messagesHTML(thread, {seen: new Set((thread?.messages || []).map(message => message.id))});
-      const opinions = tools.opinionsHTML(thread, {open: [...(open.get(id) || [])], seen: all});
+      const opinions = tools.opinionsHTML(thread);
       const html = messages || opinions ? `<div class="dcr-convo">${messages}</div>${opinions}` : '';
       let block = card.querySelector(':scope > .dcr-thread');
       if (!html) { block?.remove(); return; }

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'json'
+require 'net/http'
 require 'open3'
 require 'timeout'
 
@@ -16,11 +17,25 @@ module DCR
     BODY_LIMIT = 65_000 # GitHub's limit is 65,536 characters
     CALL_SECONDS = 12   # below the server's per-request limit
     STATUS_SECONDS = 60
+    AVATAR_HOST = 'avatars.githubusercontent.com'
+    AVATAR_BYTES = 200_000
+    # The avatar's type and bytes, or nil. Small, from GitHub's own avatar host only.
+    AVATAR = lambda do |url|
+      uri = URI(url)
+      return nil unless uri.scheme == 'https' && uri.host == AVATAR_HOST
 
-    # gh: the GitHub CLI executable (DCR_GH lets tests stand one in).
-    def initialize(series_dir, gh: ENV.fetch('DCR_GH', 'gh'))
+      uri.query = [uri.query, 's=64'].compact.join('&')
+      response = Net::HTTP.start(uri.host, 443, use_ssl: true, open_timeout: CALL_SECONDS, read_timeout: CALL_SECONDS) { |http| http.get(uri.request_uri, 'User-Agent' => 'dynamic-code-reviews') }
+      type = response['Content-Type'].to_s[%r{\Aimage/(png|jpeg|gif|webp)}]
+      [type, response.body] if response.is_a?(Net::HTTPSuccess) && type && response.body.bytesize <= AVATAR_BYTES
+    end
+
+    # gh: the GitHub CLI executable (DCR_GH lets tests stand one in). avatar: fetches an avatar.
+    def initialize(series_dir, gh: ENV.fetch('DCR_GH', 'gh'), avatar: AVATAR)
       @series_dir = series_dir
       @gh = gh
+      @avatar = avatar
+      @me = nil
       @targets = {}
       @status = {}
       @lock = Mutex.new
@@ -36,11 +51,28 @@ module DCR
         login = api('GET', 'user')['login']
         pull = api('GET', "repos/#{target[:repo]}/pulls/#{target[:number]}")
         {'ready' => true, 'login' => login, 'repo' => target[:repo], 'number' => target[:number], 'url' => target[:url],
-         'author' => pull.dig('user', 'login'), 'state' => pull['merged_at'] ? 'merged' : pull['state']}
+         'author' => pull.dig('user', 'login'), 'state' => pull['merged_at'] ? 'merged' : pull['state'], 'unpushed' => target[:unpushed]}
       rescue Error => error
         {'ready' => false, 'reason' => error.message}
       end
       @lock.synchronize { @status[key] = {at: Time.now, value: value} }
+      value
+    end
+
+    # Who the GitHub CLI is signed in as, with their avatar as a data: image the page can show
+    # under its own rules. Needs no pull request. Kept once found; a failure is asked again after a minute.
+    def me
+      cached = @lock.synchronize { @me }
+      return cached[:value] if cached && (cached[:value]['login'] || Time.now - cached[:at] < STATUS_SECONDS)
+
+      value = begin
+        user = api('GET', 'user')
+        type, bytes = (@avatar.call(user['avatar_url'].to_s) rescue nil)
+        {'login' => user['login'], 'avatar' => type && "data:#{type};base64,#{[bytes].pack('m0')}"}.compact
+      rescue Error
+        {}
+      end
+      @lock.synchronize { @me = {at: Time.now, value: value} }
       value
     end
 

@@ -27,7 +27,7 @@ FAKE_GH = <<~'RUBY'
   fail_with = ->(code, message) { puts JSON.generate('message' => message); warn "gh: #{message} (HTTP #{code})"; exit 1 }
   fail_with.(401, 'Bad credentials') if ENV['GH_SIGNED_OUT']
   case [method, path]
-  when %w[GET user] then puts JSON.generate('login' => 'reviewer')
+  when %w[GET user] then puts JSON.generate('login' => 'reviewer', 'avatar_url' => 'https://avatars.githubusercontent.com/u/1?v=4')
   when ['GET', 'repos/acme/web/pulls/7'] then puts JSON.generate('user' => {'login' => 'author'}, 'state' => 'open', 'merged_at' => nil)
   when ['POST', 'repos/acme/web/pulls/7/comments']
     fail_with.(422, 'Validation Failed') if input['line'] == 12 && !input['subject_type'] # GitHub's diff is narrower
@@ -64,10 +64,19 @@ Dir.mktmpdir('dcr-github-test') do |directory|
   github = DCR::GitHub.new(series, gh: gh)
 
   status = github.status(KEY)
-  assert(status == {'ready' => true, 'login' => 'reviewer', 'repo' => 'acme/web', 'number' => 7, 'url' => 'https://github.com/acme/web/pull/7', 'author' => 'author', 'state' => 'open'}, "Status is wrong: #{status}")
+  assert(status == {'ready' => true, 'login' => 'reviewer', 'repo' => 'acme/web', 'number' => 7, 'url' => 'https://github.com/acme/web/pull/7', 'author' => 'author', 'state' => 'open', 'unpushed' => []}, "Status is wrong: #{status}")
   github.status(KEY)
   assert(calls.().length == 2, 'Status must be cached, not asked again at once')
   puts 'PASS status says who posts where, read from the saved revision and cached'
+
+  asked = []
+  faces = DCR::GitHub.new(File.join(directory, 'no-review'), gh: gh, avatar: ->(url) { asked << url; ['image/png', 'PNG'] })
+  assert(faces.me == {'login' => 'reviewer', 'avatar' => 'data:image/png;base64,UE5H'} && faces.me && asked.length == 1, "The reader's avatar is wrong or asked twice: #{faces.me}")
+  ENV['GH_SIGNED_OUT'] = '1'
+  signed_out = DCR::GitHub.new(series, gh: gh, avatar: ->(_) { raise 'not asked' }).me
+  ENV.delete('GH_SIGNED_OUT')
+  assert(signed_out == {}, 'Signed out, there is no avatar to show')
+  puts "PASS the reader's avatar needs no pull request, is asked once, and is nothing when signed out"
 
   posted = github.comment(KEY, {'id' => 'mine-1', 'body' => 'note: x', 'path' => 'app/a.rb', 'side' => 'RIGHT', 'line' => 14, 'start_line' => 11})
   call = calls.().last

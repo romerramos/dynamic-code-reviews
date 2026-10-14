@@ -84,6 +84,7 @@ module DCR
       when ['POST', '/api/verdict'] then [200, verdict(json(body))]
       when ['POST', '/api/finish'] then [200, {'entry' => @state.finish(json(body)['key'])}]
       when ['GET', '/api/github'] then [200, @github.status(key)]
+      when ['GET', '/api/github/me'] then [200, @github.me]
       when ['POST', '/api/github/comment'] then github_comment(json(body))
       when ['POST', '/api/github/pending'] then (input = json(body); [200, @state.github_pending(input['key'], input['id'], input['pending'] == true, input['body'])])
       when ['POST', '/api/github/draft'] then [200, github_draft(json(body))]

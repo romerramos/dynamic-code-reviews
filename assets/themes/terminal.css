@@ -248,6 +248,7 @@
 [data-theme^="terminal-"] :is(h1,h2,h3){font-weight:700}
 [data-theme^="terminal-"] main h1::before{content:"# ";color:var(--terminal-hot)}
 [data-theme^="terminal-"] main h2::before{content:"## ";color:var(--terminal-overlay0)}
+[data-theme^="terminal-"] main .overview-fold-title::before{content:"### ";color:var(--terminal-overlay0)}
 
 /* --- boxes: one line around what sits in the page, a double line around what floats over it,
    and never a second box inside either ------------------------------------------------------------- */
