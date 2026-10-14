@@ -128,7 +128,7 @@
     if (!comment) return '';
     const text = (comment.personal ? [comment.subject, comment.discussion] : [comment.discussion]).filter(Boolean).join('\n\n').trim();
     const avatar = comment.personal ? tools.youHTML(me) : tools.avatarHTML(comment.agent || null);
-    const who = comment.personal ? 'You' : comment.agent ? tools.escape(tools.agentInfo(comment.agent).name) : 'Review';
+    const who = comment.personal ? `<span class="you-name">${tools.escape(tools.youName(me))}</span>` : comment.agent ? tools.escape(tools.agentInfo(comment.agent).name) : 'Review';
     // Asking your own agent needs no label: the conversation is with it.
     const kind = (comment.audience === 'agent' ? '' : [comment.label, comment.decoration].filter(Boolean).join(' · ')).replace(/^./, letter => letter.toUpperCase());
     const long = text.length > 320 || text.split(/\n\s*\n/).length > 2;
@@ -780,7 +780,10 @@
   api('/api/github/me').then(found => {
     me = found;
     window.ReviewMe = me; // the page draws the reader's face with it too
+    // What was drawn before it came takes the reader's face and name now.
     if (me?.avatar) document.querySelectorAll('.dcr-you > .dcr-avatar').forEach(node => { node.outerHTML = tools.youHTML(me); });
+    if (me?.avatar) document.querySelectorAll('.comment-avatar').forEach(node => { node.innerHTML = `<img src="${me.avatar}" alt="">`; });
+    document.querySelectorAll('.you-name').forEach(node => { node.textContent = tools.youName(me); });
   }).catch(() => {});
   if (window.ReviewGitHub && globalThis.ReviewTools.githubLink(snapshot, review, {general: true})) { window.ReviewGitHub.connect(ghProvider); loadGitHub(); }
 

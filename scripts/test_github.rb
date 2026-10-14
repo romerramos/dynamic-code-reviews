@@ -27,7 +27,7 @@ FAKE_GH = <<~'RUBY'
   fail_with = ->(code, message) { puts JSON.generate('message' => message); warn "gh: #{message} (HTTP #{code})"; exit 1 }
   fail_with.(401, 'Bad credentials') if ENV['GH_SIGNED_OUT']
   case [method, path]
-  when %w[GET user] then puts JSON.generate('login' => 'reviewer', 'avatar_url' => 'https://avatars.githubusercontent.com/u/1?v=4')
+  when %w[GET user] then puts JSON.generate('login' => 'reviewer', 'name' => 'Rae Viewer', 'avatar_url' => 'https://avatars.githubusercontent.com/u/1?v=4')
   when ['GET', 'repos/acme/web/pulls/7'] then puts JSON.generate('user' => {'login' => 'author'}, 'state' => 'open', 'merged_at' => nil)
   when ['POST', 'repos/acme/web/pulls/7/comments']
     fail_with.(422, 'Validation Failed') if input['line'] == 12 && !input['subject_type'] # GitHub's diff is narrower
@@ -71,7 +71,7 @@ Dir.mktmpdir('dcr-github-test') do |directory|
 
   asked = []
   faces = DCR::GitHub.new(File.join(directory, 'no-review'), gh: gh, avatar: ->(url) { asked << url; ['image/png', 'PNG'] })
-  assert(faces.me == {'login' => 'reviewer', 'avatar' => 'data:image/png;base64,UE5H'} && faces.me && asked.length == 1, "The reader's avatar is wrong or asked twice: #{faces.me}")
+  assert(faces.me == {'login' => 'reviewer', 'name' => 'Rae Viewer', 'avatar' => 'data:image/png;base64,UE5H'} && faces.me && asked.length == 1, "The reader's avatar is wrong or asked twice: #{faces.me}")
   ENV['GH_SIGNED_OUT'] = '1'
   signed_out = DCR::GitHub.new(series, gh: gh, avatar: ->(_) { raise 'not asked' }).me
   ENV.delete('GH_SIGNED_OUT')

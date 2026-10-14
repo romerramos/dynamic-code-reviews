@@ -422,7 +422,7 @@
   };
   const messagesHTML = (thread, unread) => thread.messages.map(message => {
     const agent = message.author === 'agent';
-    return `<li class="dcr-app-msg${agent ? ' is-agent' : ''}"><p class="dcr-app-msg-head"><strong>${agent ? 'Your agent' : 'You'}</strong>${agent && tools ? tools.modelHTML(message) : ''}<time datetime="${esc(message.at)}" data-at="${esc(message.at)}">${esc(time(message.at))}</time>${agent && unread.has(message.id) ? '<span class="dcr-app-new">New</span>' : ''}</p>
+    return `<li class="dcr-app-msg${agent ? ' is-agent' : ''}"><p class="dcr-app-msg-head"><strong>${agent ? 'Your agent' : esc(tools ? tools.youName(window.ReviewMe) : 'You')}</strong>${agent && tools ? tools.modelHTML(message) : ''}<time datetime="${esc(message.at)}" data-at="${esc(message.at)}">${esc(time(message.at))}</time>${agent && unread.has(message.id) ? '<span class="dcr-app-new">New</span>' : ''}</p>
       <div class="dcr-app-msg-body">${agent && tools ? tools.markdown(message.body) : `<p>${esc(message.body).replace(/\n/g, '<br>')}</p>`}</div></li>`;
   }).join('');
   const recordingHTML = rec => rec?.url ? (rec.kind === 'clip' ? `<video src="${rec.url}" controls muted playsinline preload="metadata"></video>` : `<img src="${rec.url}" alt="Still of ${esc(rec.page)}">`) : '';

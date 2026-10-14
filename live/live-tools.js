@@ -28,9 +28,11 @@ globalThis.LiveTools = (() => {
     const face = agent.mark || (slug ? `<b>${escape(agent.name.charAt(0))}</b>` : SPARK);
     return `<span class="dcr-avatar dcr-face${extra ? ` ${extra}` : ''}" data-agent="${escape(agent.slug)}" title="${escape(agent.company ? `${agent.name} · ${agent.company}` : agent.name)}" aria-hidden="true">${face}</span>`;
   }
+  // The reader by name: their GitHub name, else their login, else You when the server could not tell.
+  const youName = me => me?.name || me?.login || 'You';
   // The reader's own face: their GitHub avatar when the server found it, else a Y.
   const youHTML = me => /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(me?.avatar || '')
-    ? `<span class="dcr-avatar" title="${escape(me.login ? `@${me.login}` : 'You')}" aria-hidden="true"><img src="${me.avatar}" alt=""></span>`
+    ? `<span class="dcr-avatar" title="${escape(me.login ? `@${me.login}` : youName(me))}" aria-hidden="true"><img src="${me.avatar}" alt=""></span>`
     : '<span class="dcr-avatar" aria-hidden="true">Y</span>';
   // The model and effort behind an agent's words, tiny and muted; nothing when it did not say.
   const modelHTML = item => {
@@ -260,7 +262,7 @@ globalThis.LiveTools = (() => {
       const fresh = agent && !seen.has(message.id);
       const slug = agent ? message.agent || fallback : null;
       const adversary = message.role === 'adversary';
-      const who = agent ? escape(agentInfo(slug).name) : 'You';
+      const who = agent ? escape(agentInfo(slug).name) : `<span class="you-name">${escape(youName(me))}</span>`;
       const model = agent ? modelHTML(message) : '';
       const role = adversary ? `<span class="dcr-role">second reviewer${message.about === 'outcome' || message.about === 'earlier-outcome' ? ', on what became of it' : ''}</span>` : '';
       const outcome = OUTCOMES[message.outcome] ? `<span class="dcr-verdict dcr-o-${escape(message.outcome)}">${OUTCOMES[message.outcome]}</span>` : '';
@@ -538,6 +540,6 @@ globalThis.LiveTools = (() => {
   }
 
   return {emojiToken, emojiMatches, escape, progressKey, allComments, sendText, drafts, statusText, statusModel, actionLabel, markdown, snippet, relativeTime, messagesHTML, unseen, agentModel, summary,
-    agentInfo, avatarHTML, youHTML, opinionMessages, modelHTML, verdictHTML, verdicts, closure, closureHTML, confirmed, outcomeWord, outcomeSide: word => SIDES[word], OUTCOMES, commentAction, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
+    agentInfo, avatarHTML, youHTML, youName, opinionMessages, modelHTML, verdictHTML, verdicts, closure, closureHTML, confirmed, outcomeWord, outcomeSide: word => SIDES[word], OUTCOMES, commentAction, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
     activeAdversaries, facesHTML, agentStatus, modelOptionsHTML, effortLevels, effortOptionsHTML, chosenModel, chosenEffort, settle, adversaryPanelHTML, adversaryIntroHTML, jevBannerHTML};
 })();
