@@ -222,6 +222,13 @@ html[data-mode="dark"] .dcr-send:not(:disabled){background:var(--color-primary)}
 .dcr-send:disabled{background:var(--line);color:var(--muted);cursor:default;filter:none}
 .dcr-compose:has(textarea:placeholder-shown) .dcr-send:not(:disabled){background:color-mix(in oklab,var(--accent) 14%,transparent);color:var(--accent)}
 .dcr-send:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* Make this change: beside the arrow, quieter than it, since a reply is what the box is mostly for. */
+.dcr-change{flex:none;display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:calc(8px * var(--round));background:none;color:var(--muted);cursor:pointer}
+.dcr-change svg{width:15px;height:15px}
+.dcr-change:hover:not(:disabled){background:var(--bg-neutral-3);color:var(--ink)}
+.dcr-change:disabled{opacity:.4;cursor:default}
+.dcr-change:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.dcr-reply .btn[data-dcr-change] svg{width:13px;height:13px}
 .dcr-reply.dcr-compose[hidden]{display:none}
 .range-actions:not([hidden])~#dcr-arrival{bottom:170px}
 .act-count{min-width:20px;height:20px;padding:0 6px;border-radius:calc(10px * var(--round));background:color-mix(in srgb,var(--bg-neutral-1) 22%,transparent);font-size:12px;font-weight:600;line-height:20px;text-align:center}

@@ -235,7 +235,7 @@ module DCR
 
     FIX_ASKS = {'fix' => 'fix what the comment says.',
                 'apply' => 'do what the comment suggests.',
-                'answer' => 'act on the comment as their message under it says: it is their answer to what the comment asked.'}.freeze
+                'answer' => 'do what their latest message under the comment says, in the light of the conversation: it may answer what the comment asked, or choose one of the changes proposed there.'}.freeze
 
     def fix_request(entry, flags)
       id = entry['thread_ids'].first

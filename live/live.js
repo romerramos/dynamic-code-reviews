@@ -136,14 +136,14 @@
     return `<article class="dcr-msg dcr-origin${comment.personal ? ' dcr-you' : ' dcr-agent'}">${avatar}<div class="dcr-msg-main"><header class="dcr-msg-head"><strong>${who}</strong>${comment.personal ? '' : tools.modelHTML(comment)}${kind ? `<span class="dcr-role">${tools.escape(kind)}</span>` : ''}</header>${body}</div></article>`;
   };
   const advToggleHTML = '<button type="button" class="dcr-adv-toggle" data-dcr-adv hidden aria-pressed="false"></button>';
-  const composeHTML = () => `<form class="dcr-reply dcr-compose" hidden><textarea rows="1" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea>${advToggleHTML}<button type="submit" class="dcr-send" aria-label="Send reply" title="Send reply (⌘ Enter)">${ico('send')}</button></form>`;
+  const composeHTML = () => `<form class="dcr-reply dcr-compose" hidden><textarea rows="1" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea>${advToggleHTML}<button type="button" class="dcr-change" data-dcr-change hidden aria-label="Make this change">${ico('wrench')}</button><button type="submit" class="dcr-send" aria-label="Send reply" title="Send reply (⌘ Enter)">${ico('send')}</button></form>`;
   const cardBlock = (id, variant, comment) => {
     const block = document.createElement('div');
     block.className = `dcr-thread dcr-${variant}`;
     block.dataset.dcr = id;
     block.innerHTML = variant === 'ledger'
       ? `<div class="dcr-scroll">${quoteHTML(comment)}<div class="dcr-convo"></div><div class="dcr-state" role="status" aria-live="polite"></div><div class="dcr-opinions-slot"></div></div>${composeHTML()}`
-      : `<div class="dcr-state" role="status" aria-live="polite"></div><details class="dcr-stage" open><summary class="dcr-stage-head" hidden></summary><div class="dcr-convo"></div><div class="dcr-opinions-slot"></div></details><form class="dcr-reply" hidden><textarea rows="3" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea><div class="dcr-actions"><span class="dcr-send-hint"><kbd>${/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'}</kbd> <kbd>Enter</kbd> sends</span>${advToggleHTML}<button type="button" class="btn btn-sm btn-ghost" data-dcr-cancel>Cancel</button><button type="submit" class="btn btn-sm btn-primary">Send reply</button></div></form>${variant === 'popover' ? `<div class="dcr-actions"><button type="button" class="btn btn-sm btn-primary" data-dcr-act data-dcr-for="${tools.escape(id)}"></button></div>` : ''}`;
+      : `<div class="dcr-state" role="status" aria-live="polite"></div><details class="dcr-stage" open><summary class="dcr-stage-head" hidden></summary><div class="dcr-convo"></div><div class="dcr-opinions-slot"></div></details><form class="dcr-reply" hidden><textarea rows="3" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea><div class="dcr-actions"><span class="dcr-send-hint"><kbd>${/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'}</kbd> <kbd>Enter</kbd> sends</span>${advToggleHTML}<button type="button" class="btn btn-sm btn-ghost" data-dcr-cancel>Cancel</button><button type="button" class="btn btn-sm btn-ghost" data-dcr-change hidden>${ico('wrench')}Make this change</button><button type="submit" class="btn btn-sm btn-primary">Send reply</button></div></form>${variant === 'popover' ? `<div class="dcr-actions"><button type="button" class="btn btn-sm btn-primary" data-dcr-act data-dcr-for="${tools.escape(id)}"></button></div>` : ''}`;
     block.querySelector('textarea').value = drafts.get(id) || '';
     return block;
   };
@@ -207,6 +207,13 @@
       set(field, 'placeholder', online ? 'Reply to your agent' : 'The review server stopped');
       set(form.querySelector('.dcr-send'), 'disabled', !online);
     } else if (!sent && !form.hidden && !form.dataset.mode) form.hidden = true;
+    const change = form.querySelector('[data-dcr-change]');
+    if (change) {
+      const busy = fixingId();
+      set(change, 'hidden', !sent || !!form.dataset.mode || !changeOf(id));
+      set(change, 'disabled', !online || !!busy);
+      set(change, 'title', busy ? 'Your agent is changing the code for a comment. One at a time, so each shows as its own change.' : 'Have your agent make the change your message asks for, in your checkout. The next revision shows that change and nothing else.');
+    }
     block.classList.toggle('has-content', !!(html || status || opinions || !form.hidden));
     const slot = block.querySelector('.dcr-opinions-slot');
     if (slot.dataset.html !== opinions) { slot.innerHTML = opinions; slot.dataset.html = opinions; }
@@ -299,6 +306,16 @@
   // Its first action, by what the comment is (tools.commentAction); null on one that is not the agent's to act on.
   const actionOf = id => fixable(id) ? tools.commentAction(comments().find(entry => entry.id === id).label) : null;
   const mine = id => comments().find(entry => entry.id === id)?.personal !== false;
+  // A reply sent as a change, on your own comment too: the agent does what the message asks, in
+  // the light of the conversation. On the agent's own issue or suggestion the message is a note
+  // to its Fix this or Apply this.
+  const CHANGE = {kind: 'answer', act: 'Make this change', busy: 'Working on it…'};
+  const changeOf = id => {
+    const comment = comments().find(entry => entry.id === id);
+    if (!comment || comment.outdated || resolved().includes(id)) return null;
+    const action = comment.personal ? null : actionOf(id);
+    return action && (action.kind === 'fix' || action.kind === 'apply') ? action : CHANGE;
+  };
   // The card's one text box, for a reply, an answer to the agent's question, or what to add to a fix.
   const openForm = (block, mode, action = null) => {
     const form = block?.querySelector('.dcr-reply');
@@ -510,6 +527,19 @@
     const closed = event.target.closest('.thread-footer > [data-resolve].btn-soft');
     const closedOn = closed && tools.closure(threads[closed.dataset.resolve]);
     if (closedOn) api('/api/closure', {key, id: closed.dataset.resolve, side: closedOn.side}).catch(() => {});
+    const changing = event.target.closest('[data-dcr-change]');
+    if (changing) {
+      const form = changing.closest('.dcr-reply');
+      const action = changeOf(form.closest('.dcr-thread').dataset.dcr);
+      const field = form.querySelector('textarea');
+      // Acting on the conversation needs to know what to do.
+      if (!action || (action.kind === 'answer' && !field.value.trim())) { field.focus(); field.placeholder = 'Say what to change, then Make this change'; return; }
+      if (form.querySelector('[type="submit"]').disabled) return; // the last reply is still sending
+      form.dataset.mode = 'act';
+      form.dataset.change = '1';
+      form.requestSubmit();
+      return;
+    }
     const dismissed = event.target.closest('[data-dcr-refusal]');
     if (dismissed) { refusals.delete(dismissed.dataset.dcrRefusal); document.querySelectorAll('.dcr-thread').forEach(refreshBlock); return; }
     // Fix this, Apply this, Act on this: the box opens for what to add, and sends from there.
@@ -563,7 +593,8 @@
     const field = form.querySelector('textarea');
     const text = field.value.trim();
     const mode = form.dataset.mode;
-    const action = mode === 'act' ? actionOf(id) : null;
+    const change = !!form.dataset.change;
+    const action = mode === 'act' ? (change ? changeOf(id) : actionOf(id)) : null;
     // A fix needs nothing added; an answer, and acting on a question, need the answer.
     if (!text && !(action && action.kind !== 'answer')) { field.focus(); return; }
     if (form.querySelector('[type="submit"]').disabled) return; // ⌘ Enter while the last reply is still sending
@@ -581,7 +612,11 @@
         delete form.dataset.mode;
         if (mode === 'answer') { await refresh(); flash(`Sent to your agent.${listening === false ? ' No agent is listening yet; it starts when your agent picks it up.' : ''}`); }
       } catch (error) { mode === 'act' ? refuse(id, error.message) : flash(error.message); }
-      finally { form.querySelector('[type="submit"]').disabled = !online; decorate(); }
+      finally {
+        if (change) { delete form.dataset.mode; delete form.dataset.change; }
+        form.querySelector('[type="submit"]').disabled = !online;
+        decorate();
+      }
       return;
     }
     try {
