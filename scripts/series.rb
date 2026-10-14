@@ -696,11 +696,25 @@ module ReviewSeries
         end
         current = current_snapshot(repo, history, previous, working_tree: true, checkout: pr)
       end
-      next({'status' => 'unchanged', 'revision' => entry['number']}) if code_key(previous['snapshot']) == code_key(current)
+      # The verified head is what GitHub takes comments against.
+      verified = ->(review) { review['comparison'] = review['comparison'].merge('base' => current['base'], 'head' => current['head']) if head && review['comparison'] }
+      if code_key(previous['snapshot']) == code_key(current)
+        next({'status' => 'unchanged', 'revision' => entry['number']}) unless head && previous.dig('review', 'history', 'local')
+        # The checkout it showed was pushed: the same code is the pull request's now, so the
+        # revision becomes the pull request's and GitHub takes comments on all of it.
+        review = previous['review']
+        keep_posted(path, history, review)
+        verified.call(review)
+        summary = 'This review shows the pull request as pushed, which has the same code as your checkout.'
+        amend(path, history, current, review, summary, was: review['history'])
+        next({'status' => 'updated', 'revision' => entry['number'], 'summary' => summary, 'unreviewed' => [], 'outdated_comments' => [],
+              'key' => DCR::State.review_key(entry['fingerprint'], name, entry['number'])})
+      end
       changes = compare(previous['snapshot'], current)
       history['base'] = current['base'] # where the branch starts now, when it took in its base branch
       in_progress = previous.dig('review', 'status') == 'in_progress'
       review = draft_review(previous['review'], current, changes, unexplained: true)
+      verified.call(review)
       place_unexplained(review, current)
       ranges = review['groups'].flat_map { |group| group['layers'] }.flat_map { |layer| layer['items'] }.flat_map { |item| item.fetch('summaries', {}).select { |_, prose| prose.strip.empty? }.keys }
       review['unreviewed'] = ranges unless in_progress || ranges.empty?

@@ -165,7 +165,10 @@ module DCR
     # The pull request and commit a revision reviewed, from its saved page.
     def target(key)
       number = key.to_s[/:(\d+)\z/, 1] or raise Error, 'Posting needs a saved review revision.'
-      @lock.synchronize { @targets[number] } || begin
+      # A revision saved again (the pull request caught up with the checkout it showed) is read again.
+      page = File.join(@series_dir, 'revisions', format('%03d.html', number.to_i))
+      cached = [number, File.file?(page) && File.mtime(page).to_f]
+      @lock.synchronize { @targets[cached] } || begin
         snapshot, review = saved(number.to_i)
         raise Error, 'This review revision is not saved.' unless snapshot
         comparison = review['comparison'] || {}
@@ -181,7 +184,7 @@ module DCR
         same = patches.call(snapshot).select { |path, diff| patches.call(pushed)[path] == diff }.keys
         hunks = snapshot['files'].select { |file| same.include?(file['path']) }.to_h { |file| [file['path'], file['hunks'].map { |hunk| hunk.slice('old_start', 'old_count', 'new_start', 'new_count') }] }
         value = {repo: "#{match[1]}/#{match[2]}", number: match[3].to_i, url: comparison['pr_url'], commit: pushed['head'], hunks: hunks, unpushed: snapshot['files'].map { |file| file['path'] } - same}
-        @lock.synchronize { @targets[number] = value }
+        @lock.synchronize { @targets[cached] = value }
       end
     end
 

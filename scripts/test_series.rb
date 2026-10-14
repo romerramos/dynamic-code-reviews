@@ -288,6 +288,19 @@ module SeriesChecks
           assert(api.call('POST', {'follow' => true})['revision'] == 3 && ReviewSeries.manifest(series)['follows'] == 'checkout', 'The checkout was not followed when asked')
           assert(api.call('POST', {'from' => 'pr'})['revision'] == 4 && !ReviewSeries.manifest(series).key?('follows'), 'An update from the pull request did not take the review back to it')
           assert(DynamicReviews.extract(File.join(series, 'current.html'))['snapshot']['head'] == third, 'The review went back to something other than the pushed head')
+          target = ->(revision) { DCR::GitHub.new(series, gh: gh).send(:target, DCR::State.review_key(DynamicReviews.extract(File.join(series, 'current.html'))['snapshot']['fingerprint'], 'pushed', revision)) }
+          assert(target.call(4).values_at(:commit, :unpushed) == [third, []], 'GitHub refused comments on the pull request it was updated to')
+          # The reader pushes what the checkout showed: Update makes that revision the pull request's.
+          assert(api.call('POST', {'follow' => true})['revision'] == 5 && target.call(5)[:unpushed].include?('local.rb'), 'The checkout was not followed again')
+          git.call('add', 'extra.rb', 'local.rb')
+          fourth = git.call('commit-tree', git.call('write-tree'), '-p', third, '-m', 'test: push the checkout')
+          git.call('update-ref', 'HEAD', fourth)
+          at.call(fourth)
+          assert(api.call('GET')['remote'].slice('head', 'changed') == {'head' => fourth, 'changed' => 0}, "A push of the checkout was not noticed: #{api.call('GET')}")
+          assert(api.call('POST', {'from' => 'pr'}).values_at('status', 'revision') == ['updated', 5], 'A push of the checkout left the revision showing the checkout')
+          saved = DynamicReviews.extract(File.join(series, 'current.html'))
+          assert(saved['snapshot']['head'] == fourth && !saved['review']['history'].key?('local') && !ReviewSeries.manifest(series).key?('follows'), 'The revision does not show the pull request as pushed')
+          assert(target.call(5).values_at(:commit, :unpushed) == [fourth, []], 'GitHub still refused comments on pushed code')
         end
       end
     end
