@@ -71,7 +71,7 @@ Dir.mktmpdir('dcr-github-test') do |directory|
 
   asked = []
   faces = DCR::GitHub.new(File.join(directory, 'no-review'), gh: gh, avatar: ->(url) { asked << url; ['image/png', 'PNG'] })
-  assert(faces.me == {'login' => 'reviewer', 'name' => 'Rae Viewer', 'avatar' => 'data:image/png;base64,UE5H'} && faces.me && asked.length == 1, "The reader's avatar is wrong or asked twice: #{faces.me}")
+  assert(faces.me == {'login' => 'reviewer', 'avatar' => 'data:image/png;base64,UE5H'} && faces.me && asked.length == 1, "The reader's avatar is wrong or asked twice: #{faces.me}")
   ENV['GH_SIGNED_OUT'] = '1'
   signed_out = DCR::GitHub.new(series, gh: gh, avatar: ->(_) { raise 'not asked' }).me
   ENV.delete('GH_SIGNED_OUT')

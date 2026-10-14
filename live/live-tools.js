@@ -28,8 +28,8 @@ globalThis.LiveTools = (() => {
     const face = agent.mark || (slug ? `<b>${escape(agent.name.charAt(0))}</b>` : SPARK);
     return `<span class="dcr-avatar dcr-face${extra ? ` ${extra}` : ''}" data-agent="${escape(agent.slug)}" title="${escape(agent.company ? `${agent.name} · ${agent.company}` : agent.name)}" aria-hidden="true">${face}</span>`;
   }
-  // The reader by name: their GitHub name, else their login, else You when the server could not tell.
-  const youName = me => me?.name || me?.login || 'You';
+  // The reader by their GitHub handle, else You when the server could not tell.
+  const youName = me => me?.login || 'You';
   // The reader's own face: their GitHub avatar when the server found it, else a Y.
   const youHTML = me => /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(me?.avatar || '')
     ? `<span class="dcr-avatar" title="${escape(me.login ? `@${me.login}` : youName(me))}" aria-hidden="true"><img src="${me.avatar}" alt=""></span>`

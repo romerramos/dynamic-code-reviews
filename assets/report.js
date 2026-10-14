@@ -1187,8 +1187,8 @@
     const avatar = window.ReviewMe?.avatar;
     return `<span class="comment-avatar" aria-hidden="true">${/^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(avatar || '') ? `<img src="${avatar}" alt="">` : 'Y'}</span>`;
   };
-  // The reader by name once the served review knows it (window.ReviewMe), else You.
-  const youName = () => escape(window.ReviewMe?.name || window.ReviewMe?.login || 'You');
+  // The reader by their GitHub handle once the served review knows it (window.ReviewMe), else You.
+  const youName = () => escape(window.ReviewMe?.login || 'You');
   // In the diff's popover the lines go with the file, path:88, as in an editor; the reader's own comment
   // reads as their message, in a chat: their face, You, then what they wrote.
   function commentHTML(comment) {

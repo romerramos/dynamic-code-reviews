@@ -68,7 +68,7 @@ module DCR
       value = begin
         user = api('GET', 'user')
         type, bytes = (@avatar.call(user['avatar_url'].to_s) rescue nil)
-        {'login' => user['login'], 'name' => user['name'].to_s.strip.then { |name| name.empty? ? nil : name }, 'avatar' => type && "data:#{type};base64,#{[bytes].pack('m0')}"}.compact
+        {'login' => user['login'], 'avatar' => type && "data:#{type};base64,#{[bytes].pack('m0')}"}.compact
       rescue Error
         {}
       end
