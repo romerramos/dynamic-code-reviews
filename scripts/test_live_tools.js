@@ -139,8 +139,8 @@ assert.deepEqual(tools.unseen({t:threadWith}, new Set(['m1'])), [{thread:'t', id
 assert.deepEqual(tools.unseen({t:threadWith}, new Set(['m2'])), []);
 assert.equal(tools.messagesHTML(undefined), '');
 assert.ok(tools.messagesHTML({messages:[{id:'y', author:'user', body:'hi'}]}, {now, me:{login:'r', avatar:'data:image/png;base64,UE5H'}}).includes('<img src="data:image/png;base64,UE5H"'), 'your messages show your avatar');
-assert.match(tools.messagesHTML({messages:[{id:'y', author:'user', body:'hi'}]}, {me:{login:'romer', name:'Romer Ramos'}}), /<strong><span class="you-name">Romer Ramos<\/span><\/strong>/, 'your messages carry your GitHub name');
-assert.deepEqual([tools.youName({login:'romer'}), tools.youName(null)], ['romer', 'You'], 'else your login, else You');
+assert.match(tools.messagesHTML({messages:[{id:'y', author:'user', body:'hi'}]}, {me:{login:'ada', name:'Ada Lovelace'}}), /<strong><span class="you-name">Ada Lovelace<\/span><\/strong>/, 'your messages carry your GitHub name');
+assert.deepEqual([tools.youName({login:'ada'}), tools.youName(null)], ['ada', 'You'], 'else your login, else You');
 assert.ok(tools.youHTML({avatar:'https://example.com/x.png'}).includes('>Y</span>') && tools.youHTML(null).includes('>Y</span>'), 'anything but a data image is a Y');
 console.log('PASS the conversation renders as an escaped thread with New on unseen agent messages only');
 
