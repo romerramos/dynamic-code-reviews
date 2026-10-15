@@ -230,8 +230,9 @@ References: [review JSON](references/report-schema.md), [incremental reviews](re
   the first answers in the conversation, the others are kept as opinions beside it. The reviewer's
   own question asks them too only when its **+** is ticked: each answers on its own, a short answer
   and then details, and once the review's agent has answered, the first adversary compares the
-  answers by letter, not by name, and says how far each agrees with it. Claude, Codex, Grok, Antigravity (`agy`),
-  Gemini and opencode CLIs are asked headless and read-only; an agent checks the review it runs only
+  answers by letter, not by name, and says how far each agrees with it. Claude, Codex, Grok,
+  Gemini and opencode CLIs are asked headless and read-only (Antigravity is not asked: headless, it
+  is refused even reading a file); an agent checks the review it runs only
   on a model the reviewer named.
 - **JevMyPR's verdict** (`lib/dcr/jevmypr.rb`) is the strip above a served review: whether the
   change needs a human review, an LLM review or none, with the confidence and a link to the verdict

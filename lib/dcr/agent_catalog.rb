@@ -80,13 +80,6 @@ module DCR
       entry['default_model'] = entry['models'].find { |model| model['default'] }&.dig('id')
     end
 
-    def probe_antigravity(entry)
-      out, ok = capture('antigravity', %w[agy models])
-      # Its list never says who is signed in, only that nobody is.
-      entry['ready'] = false if signed_in(out, ok) == false
-      entry['models'] = agy_models(out) if ok
-    end
-
     def probe_opencode(entry)
       out, ok = capture('opencode', %w[opencode models])
       entry['models'] = opencode_models(out) if ok
@@ -125,13 +118,6 @@ module DCR
       text.to_s.lines.filter_map do |line|
         match = line.match(/\A\s*[*-]\s+(\S+)(\s+\(default\))?/) or next
         {'id' => match[1], 'default' => match[2] ? true : nil}.compact
-      end
-    end
-
-    def agy_models(text)
-      text.to_s.lines.filter_map do |line|
-        id, label = line.strip.split("\t", 2)
-        {'id' => id, 'label' => label&.strip}.compact if label && id.match?(/\A[\w.:-]+\z/)
       end
     end
 

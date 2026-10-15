@@ -44,7 +44,7 @@ chosen = [{'agent' => 'grok', 'model' => nil, 'effort' => nil}, {'agent' => 'cod
 with_agents('codex' => 'exit 0', 'grok' => 'exit 0', 'claude' => 'exit 0', 'agy' => 'exit 0') do
   assert(DCR::Agents.panel('claude', []) == [], 'Nobody is asked until the reviewer chooses adversaries')
   assert(DCR::Agents.panel('claude', chosen).map { |entry| entry['agent'] } == %w[grok codex], 'The chosen adversaries answer in their order; one not installed is left out, and so is the author')
-  assert(DCR::Agents.panel('claude', chosen + [{'agent' => 'antigravity'}]).last['agent'] == 'antigravity', 'Antigravity is found by its `agy` command')
+  assert(DCR::Agents.panel('claude', chosen + [{'agent' => 'antigravity'}]).none? { |entry| entry['agent'] == 'antigravity' }, 'Antigravity is never asked, even installed and chosen: headless, it is refused even reading a file')
   on_opus = chosen.map { |entry| entry['agent'] == 'claude' ? entry.merge('model' => 'opus') : entry }
   assert(DCR::Agents.panel('claude', on_opus).map { |entry| entry['agent'] } == %w[grok codex claude], 'An agent checks its own comments only on a model the reviewer named')
 end
@@ -80,7 +80,6 @@ Dir.mktmpdir('dcr-ask') do |dir|
     assert(DCR::Agents.ask('codex', 'q', dir: dir) == "Disagree\nNo.", 'Codex is read from its last-message file, not its log')
     assert(DCR::Agents::RUNNERS['codex'].call('q', '/o', 'gpt-x', 'high')[0].each_cons(2).to_a.include?(['-c', 'model_reasoning_effort="high"']) && DCR::Agents::RUNNERS['codex'].call('q', '/o', 'gpt-x', nil)[0].include?('gpt-x'), 'Codex runs on the chosen model and effort')
     assert(DCR::Agents::RUNNERS['claude'].call('q', nil, nil, nil)[0] == %w[claude -p --tools Read,Grep,Glob], 'No model or effort chosen: the CLI keeps its own')
-    assert(DCR::Agents::RUNNERS['antigravity'].call('q', nil, 'gemini-x-high', 'medium')[0] == %w[agy -p q --mode plan --model gemini-x-high], 'Antigravity gets no --effort: its model names carry it')
     assert(DCR::Agents::RUNNERS['opencode'].call('q', nil, 'opencode/big-pickle', nil)[0] == %w[opencode run --agent plan -m opencode/big-pickle q], 'opencode answers through its read-only plan agent')
     begin
       DCR::Agents.ask('claude', 'q', dir: dir, timeout: 1)
@@ -198,7 +197,6 @@ codex_catalog = JSON.generate('models' => [{'slug' => 'gpt-a', 'display_name' =>
 assert(DCR::AgentCatalog.codex_models(codex_catalog) == [{'id' => 'gpt-a', 'label' => 'GPT-A', 'efforts' => %w[low high], 'default_effort' => 'medium'}], 'Codex lists its visible models with their efforts')
 assert(DCR::AgentCatalog.grok_models("You are logged in with grok.com.\n\nAvailable models:\n  * grok-4.7 (default)\n  - grok-4.6\n") == [{'id' => 'grok-4.7', 'default' => true}, {'id' => 'grok-4.6'}], 'Grok lists its models and its default')
 assert(DCR::AgentCatalog.signed_in("You are logged in with grok.com.", true) == true && DCR::AgentCatalog.signed_in('Error: not logged in', false) == false && DCR::AgentCatalog.signed_in('models', true).nil?, 'Signed in is read only where the CLI says it')
-assert(DCR::AgentCatalog.agy_models("Fetching available models...\ngemini-x-high\tGemini X (High)\n") == [{'id' => 'gemini-x-high', 'label' => 'Gemini X (High)'}], 'Antigravity lists its models by id and name')
 assert(DCR::AgentCatalog.opencode_models("opencode/big-pickle\nopencode/exo-free\nopenai/gpt-5.5\nnoise line\n") == [{'id' => 'opencode/big-pickle', 'free' => true}, {'id' => 'opencode/exo-free', 'free' => true}, {'id' => 'openai/gpt-5.5'}], 'opencode lists its models, the free ones marked')
 assert(DCR::AgentCatalog.codex_defaults(%(model = "gpt-b"\nmodel_reasoning_effort = "xhigh"\n[profiles.fast]\nmodel = "gpt-a"\n)) == %w[gpt-b xhigh], "Codex's default model and effort come from the top of its config, not a profile")
 assert(DCR::AgentCatalog.codex_defaults('') == [nil, nil], 'No config, no default')
