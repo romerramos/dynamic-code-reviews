@@ -859,7 +859,7 @@ body.ledger-resizing iframe{pointer-events:none}
 body.zen .app-header,body.zen .sidebar,body.zen .toolbar-options,body.zen #nav-toggle{display:none}
 body.zen .workspace{height:calc(100dvh - var(--status-h));grid-template-columns:minmax(0,1fr)}
 body.zen .review-toolbar{min-height:48px;padding:8px 24px;justify-content:flex-start}
-body.zen main#content{max-width:1280px;width:100%;margin:0 auto}
+body.zen main#content{width:100%}
 body.zen.ledger-open .ledger{position:fixed;z-index:18;top:0;right:0;bottom:var(--status-h);width:var(--ledger-w,420px);max-width:92vw;box-shadow:-8px 0 28px color-mix(in srgb,var(--shade) 14.9%,transparent)}
 body.zen.ledger-open .workspace,body.zen.ledger-open.sidebar-collapsed .workspace{grid-template-columns:minmax(0,1fr)}
 @media print{.ledger,.zen-exit{display:none!important}}
