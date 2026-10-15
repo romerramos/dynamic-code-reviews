@@ -285,15 +285,17 @@
   // The file being read: the one shown in file-by-file mode, the one scrolled to in a walkthrough step.
   const readingFile = () => files.get(fileReadingActive() ? focusOrder[focusIndex]?.file : state.navFile);
   // The next or previous stop in the sidebar, from the top: Overview, All changes, then every file
-  // in reading order across the steps, each opened where it is read.
-  function stepFile(delta) {
+  // in reading order across the steps, each opened where it is read. onlyFiles: from file to file,
+  // never on to Overview or All changes, and nothing from there.
+  function stepFile(delta, onlyFiles = false) {
     const OVERVIEW = -2, ALL = -1;
     const at = focusOrder.findIndex(entry => entry.layer.id === state.view && entry.file === state.navFile);
     const first = focusOrder.findIndex(entry => entry.layer.id === state.view);
     // On a step with no file reached yet, J opens its first and K the one before it.
     const from = state.view === 'overview' ? OVERVIEW : state.view === 'files' ? ALL
       : fileReadingActive() ? focusIndex : at >= 0 ? at : first - (delta > 0 ? 1 : 0);
-    const to = Math.max(OVERVIEW, Math.min(focusOrder.length - 1, from + delta));
+    if (onlyFiles && (state.view === 'overview' || state.view === 'files')) return;
+    const to = Math.max(onlyFiles ? 0 : OVERVIEW, Math.min(focusOrder.length - 1, from + delta));
     if (to === from && (at >= 0 || from < 0 || fileReadingActive())) return;
     if (to === OVERVIEW) select('overview');
     else if (to === ALL) select('files');
@@ -3536,7 +3538,9 @@
       else if (pane !== 'ledger' && event.shiftKey && key === typed) { const at = pane; stepFile(key === 'l' ? 1 : -1); setPane(at); if (at === 'nav') currentNavRow()?.scrollIntoView({block:'nearest'}); }
       // In focus mode there is one thing on the page, so from it H and L are the file before and the next.
       else if (pane !== 'ledger' && document.body.classList.contains('zen')) { const by = key === 'l' ? 1 : -1; if (pane !== 'main') setPane('main'); if (!fileReadingActive() || focusOrder[focusIndex + by]) step(by); }
-      // Anywhere else H and L do nothing: only the arrows go to the pane on that side.
+      // From the reading area H and L are the file before and the next, never Overview or All changes.
+      else if (pane === 'main' && key === typed) { stepFile(key === 'l' ? 1 : -1, true); setPane('main'); }
+      // In the sidebar H and L do nothing: only the arrows go to the pane on that side.
       else if (pane !== 'ledger' && key === typed) { /* nothing */ }
       else movePane(key === 'l' ? 1 : -1);
       return;
