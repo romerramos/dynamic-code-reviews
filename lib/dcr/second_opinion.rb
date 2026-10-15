@@ -222,7 +222,7 @@ module DCR
         return if opinions.empty?
         main = state.answers(key, id).reject { |message| heard.include?(message['id']) }.last&.fetch('body')
         if main
-          answer = ask.call(judge['agent'], judge_prompt(question: thread['messages'].reverse.find { |message| message['author'] == 'user' }&.fetch('body') || text, main: main, answers: opinions.values.map { |opinion| opinion['short'] || opinion['body'] }), dir: repo, model: judge['model'], effort: judge['effort'])
+          answer = ask.call(judge['agent'], judge_prompt(question: thread['messages'].reverse.find { |message| message['author'] == 'user' }&.fetch('body') || text, main: main, answers: opinions.values.map { |opinion| opinion['short'] || opinion['body'] }), dir: repo, model: judge['model'], effort: judge['effort'], adversary: true)
           verdicts, differ = judged(answer, opinions.length)
           # The judge knew the answers by letter; the reviewer reads who it was.
           differ = differ&.gsub(/\banswer ([A-Z])\b/i) { (agent = opinions.keys[Regexp.last_match(1).upcase.ord - 65]) ? Agents.name(agent) : Regexp.last_match(0) }
@@ -305,9 +305,13 @@ module DCR
         agent, model, effort = adversary.values_at('agent', 'model', 'effort')
         adversarial = on_comment && index.zero?
         Thread.new do
-          answer = ask.call(agent, yield(agent, adversarial), dir: repo, model: model, effort: effort)
+          answer = ask.call(agent, yield(agent, adversarial), dir: repo, model: model, effort: effort, adversary: true)
           word, body = on_comment ? parse.call(answer) : [nil, nil]
+          # An answer without its word, or a question's without `Answer:`, stopped before it was given
+          # ("I'll check..."): not an answer.
+          raise ArgumentError, "#{Agents.name(agent)} stopped before giving its verdict" if on_comment && !word
           short, body = structured(answer) unless on_comment
+          raise ArgumentError, "#{Agents.name(agent)} stopped before giving its answer" unless on_comment || short
           state.add_opinion(key, id, agent, body, verdict: word, short: short, adversary: adversarial, model: model, effort: effort, about: about)
           AgentCatalog::Results.record(agent)
           [agent, word || 'answered']

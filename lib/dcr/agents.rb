@@ -41,6 +41,16 @@ module DCR
       'opencode' => ->(prompt, _out, model, _effort) { [['opencode', 'run', '--agent', 'plan'] + flag('-m', model) + [prompt], nil] }
     }.freeze
 
+    # Added when an agent is asked as an adversary: only its reading tools, so it reads and searches
+    # to its answer. A Grok that reached for the shell ended its turn there, at "I'll check...".
+    ADVERSARY = {
+      'grok' => %w[--tools read_file,grep,list_dir]
+    }.freeze
+
+    # The exit code an agent's CLI gives when one of its tools failed but it answered all the same
+    # (opencode, after a web search it could not run).
+    ANSWERED_ANYWAY = {'opencode' => 1}.freeze
+
     # The efforts an agent's CLI takes, where they are not listed per model (Codex lists them per
     # model; opencode builds them into the model's name).
     EFFORTS = {
@@ -81,19 +91,31 @@ module DCR
 
     # One question to one agent, run in `dir`. Returns the answer, or raises ArgumentError with a
     # sentence the page can show.
-    def ask(slug, prompt, dir:, model: nil, effort: nil, timeout: TIMEOUT)
+    # adversary: asked to check another's work, with only what ADVERSARY leaves it.
+    def ask(slug, prompt, dir:, model: nil, effort: nil, timeout: TIMEOUT, adversary: false)
       runner = RUNNERS[slug] or raise ArgumentError, "#{name(slug)} cannot be asked from here yet"
       raise ArgumentError, "#{name(slug)} is not signed in. Run `#{bin(slug)}` once to sign in." unless READY.fetch(slug, -> { true }).call
       out = File.join(Dir.tmpdir, "dcr-#{slug}-#{Process.pid}-#{rand(1 << 30)}.txt")
       command, input = runner.call(prompt, out, model, effort)
+      command += ADVERSARY.fetch(slug, []) if adversary
       env = NESTED.to_h { |key| [key, nil] }
       stdout, stderr, status = run(env, command, input, dir, timeout, slug)
-      answer = File.file?(out) ? File.read(out) : stdout
-      raise ArgumentError, "#{name(slug)} is not signed in. Run `#{bin(slug)}` once to sign in." if (stdout + stderr).match?(/authenticat|sign in|log ?in|oauth_creds/i) && (!status.success? || answer.strip.empty?)
-      raise ArgumentError, "#{name(slug)} did not answer (#{(stderr.lines.last || 'exit ' + status.exitstatus.to_s).strip[0, 160]})" unless status.success? && !answer.strip.empty?
+      # A model that thinks aloud on stdout (opencode's big-pickle) closes its thinking with </think>.
+      answer = (File.file?(out) ? File.read(out) : stdout).sub(%r{\A.*</think>}m, '')
+      ok = status.success? || status.exitstatus == ANSWERED_ANYWAY[slug]
+      raise ArgumentError, "#{name(slug)} is not signed in. Run `#{bin(slug)}` once to sign in." if (stdout + stderr).match?(/authenticat|sign in|log ?in|oauth_creds/i) && (!ok || answer.strip.empty?)
+      raise ArgumentError, "#{name(slug)} did not answer (#{failure(stderr, status)})" unless ok && !answer.strip.empty?
       answer.strip
     ensure
       File.unlink(out) if out && File.exist?(out)
+    end
+
+    # Why a CLI failed, in a sentence: the API's own message when it printed one as JSON (Codex's
+    # `ERROR: {"error":{"message":"The 'x' model is not supported..."}}`), else its last line.
+    def failure(stderr, status)
+      said = stderr.scan(/"message"\s*:\s*"((?:[^"\\]|\\.)*)"/).last&.first
+      said = said.gsub(/\\(["\\])/, '\\1') if said
+      (said || stderr.lines.last || "exit #{status.exitstatus}").strip[0, 240]
     end
 
     def run(env, command, input, dir, timeout, slug)

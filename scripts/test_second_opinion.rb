@@ -78,6 +78,32 @@ Dir.mktmpdir('dcr-ask') do |dir|
               'claude' => 'sleep 5', 'gemini' => 'echo "Opening authentication page in your browser"; exit 1') do
     assert(DCR::Agents.ask('grok', 'q', dir: dir) == "Agree\nFine as is.", 'A CLI that answers on stdout is read')
     assert(DCR::Agents.ask('codex', 'q', dir: dir) == "Disagree\nNo.", 'Codex is read from its last-message file, not its log')
+  end
+  # Grok as an adversary only reads and searches files: one that reached for the shell ended its turn there.
+  with_agents('grok' => 'echo "$@"') do
+    assert(DCR::Agents.ask('grok', 'q', dir: dir, adversary: true).end_with?('--tools read_file,grep,list_dir'), 'An adversary Grok gets only its reading tools')
+    assert(!DCR::Agents.ask('grok', 'q', dir: dir).include?('--tools'), 'Asked for anything else, Grok keeps all its tools')
+  end
+  # opencode exits 1 when a tool failed, after answering; a model may think aloud before </think>.
+  with_agents('opencode' => 'printf "Let me fetch it.</think>Agree\\nFine."; echo "Web search cancelled" >&2; exit 1',
+              'grok' => 'echo "Error: Web search cancelled" >&2; exit 1',
+              'codex' => %(echo 'ERROR: {"type":"error","status":400,"error":{"message":"The \\"gpt-x\\" model is not supported when using Codex with a ChatGPT account."}}' >&2; exit 1)) do
+    assert(DCR::Agents.ask('opencode', 'q', dir: dir) == "Agree\nFine.", 'opencode answered despite its failed tool, and its thinking is left out')
+    begin
+      DCR::Agents.ask('grok', 'q', dir: dir)
+      assert(false, 'Another CLI that failed was trusted')
+    rescue ArgumentError => error
+      assert(error.message == 'Grok did not answer (Error: Web search cancelled)', error.message)
+    end
+    begin
+      DCR::Agents.ask('codex', 'q', dir: dir)
+      assert(false, 'A refused model was trusted')
+    rescue ArgumentError => error
+      assert(error.message == 'Codex did not answer (The "gpt-x" model is not supported when using Codex with a ChatGPT account.)', "The API's own sentence is shown, not its JSON: #{error.message}")
+    end
+  end
+  with_agents('grok' => 'echo "Agree"; echo "Fine as is."', 'codex' => 'while [ $# -gt 0 ]; do [ "$1" = -o ] && out=$2; shift; done; cat > /dev/null; printf "Disagree\\nNo." > "$out"; echo noise',
+              'claude' => 'sleep 5', 'gemini' => 'echo "Opening authentication page in your browser"; exit 1') do
     assert(DCR::Agents::RUNNERS['codex'].call('q', '/o', 'gpt-x', 'high')[0].each_cons(2).to_a.include?(['-c', 'model_reasoning_effort="high"']) && DCR::Agents::RUNNERS['codex'].call('q', '/o', 'gpt-x', nil)[0].include?('gpt-x'), 'Codex runs on the chosen model and effort')
     assert(DCR::Agents::RUNNERS['claude'].call('q', nil, nil, nil)[0] == %w[claude -p --tools Read,Grep,Glob], 'No model or effort chosen: the CLI keeps its own')
     assert(DCR::Agents::RUNNERS['opencode'].call('q', nil, 'opencode/big-pickle', nil)[0] == %w[opencode run --agent plan -m opencode/big-pickle q], 'opencode answers through its read-only plan agent')
@@ -105,8 +131,8 @@ Dir.mktmpdir('dcr-opinions') do |series|
   key = DCR::State.review_key('f00d', 'job', 1)
   state.post_comments(key, [comment.merge('agent' => 'claude')])
   asked = Queue.new
-  ask = lambda do |agent, question, dir:, model:, effort:|
-    asked << [agent, question, dir, model, effort]
+  ask = lambda do |agent, question, dir:, model:, effort:, adversary:|
+    asked << [agent, question, dir, model, effort] if adversary
     raise ArgumentError, 'Grok did not answer (exit 1)' if agent == 'grok'
     "Disagree\nTen is the documented retry limit."
   end
@@ -129,6 +155,13 @@ Dir.mktmpdir('dcr-opinions') do |series|
   assert(thread['messages'].length == 1 && message.values_at('author', 'agent', 'role', 'verdict', 'body') == ['agent', 'codex', 'adversary', 'disagree', 'Ten is the documented retry limit.'], "The second reviewer answers in the conversation: #{message}")
   assert(thread['delivery'] == 'draft' && !thread['live'], 'A second opinion is not an answer to the reviewer and sends nothing')
   assert(thread['adversary'] == 'codex' && thread['waiting_on'] == [] && thread.dig('opinions', 'grok', 'error').include?('did not answer'), 'Nobody is left waiting, and a failure is kept beside the conversation')
+  # An agent whose turn ended before its verdict ("I'll check...") has not answered.
+  halfway = ->(agent, _question, dir:, model:, effort:, adversary:) { "I'll check the retry limit against the docs." }
+  with_agents('codex' => 'exit 0', 'grok' => 'exit 0') do
+    result = DCR::SecondOpinion.run(series_dir: series, comment_ids: ['c1'], author: 'claude', ask: halfway)
+    assert(result['c1']['grok'] == 'failed: Grok stopped before giving its verdict', "A verdict-less answer is a failure: #{result}")
+  end
+  assert(state.read.dig('threads', key, 'c1', 'opinions', 'grok').values_at('body', 'error') == [nil, 'Grok stopped before giving its verdict'], 'Its narration is not shown as its opinion')
   state.add_opinion(key, 'c1', 'codex', 'Agreed after all.', verdict: 'agree', adversary: true)
   state.add_opinion(key, 'c1', 'grok', 'Fine.', verdict: 'agree')
   state.opinion_failed(key, 'c1', 'grok', 'Grok took longer than 5 minutes')
@@ -140,7 +173,7 @@ Dir.mktmpdir('dcr-opinions') do |series|
   before = state.read.dig('threads', key, 'c1', 'messages').count { |message| message['role'] == 'adversary' }
   state.agent_reply('c1', 'The limit is read from the README now.', key: key, agent: 'claude', outcome: 'addressed')
   heard = Queue.new
-  found = ->(agent, question, dir:, model:, effort:) { heard << question; agent == 'codex' ? "Still applies\nThe limit is still ten." : "I'll check where the limit comes from.No longer relevant. The limit is not in this file any more." }
+  found = ->(agent, question, dir:, model:, effort:, adversary:) { heard << question; agent == 'codex' ? "Still applies\nThe limit is still ten." : "I'll check where the limit comes from.No longer relevant. The limit is not in this file any more." }
   with_agents('codex' => 'exit 0', 'grok' => 'exit 0') do
     result = DCR::SecondOpinion.outcome(series_dir: series, id: 'c1', author: 'claude', ask: found)
     assert(result == {'codex' => 'disagree', 'grok' => 'agree'}, "Each agent's own finding is held against the review agent's: #{result}")
@@ -233,18 +266,19 @@ Dir.mktmpdir('dcr-question') do |series|
   text = DCR::SecondOpinion.follow_up(state.read, key, 'mine-1')
   assert(text.start_with?("File: app/job.rb\n\nWhy ten?") && text.include?('Claude: It matches the retry limit.') && text.end_with?("The reviewer now asks:\n\nIs that limit documented?"), "A follow-up carries what was first sent and the conversation since:\n#{text}")
   asked = Queue.new
-  ask = ->(agent, question, dir:, model:, effort:) { asked << [agent, question]; "Agree\nIt is in the README." }
+  ask = ->(agent, question, dir:, model:, effort:, adversary:) { asked << [agent, question]; agent == 'codex' ? 'Answer: It is in the README.' : "I'll check the README first." }
   with_agents('codex' => 'exit 0', 'opencode' => 'exit 0', 'claude' => 'exit 0') do
     result = DCR::SecondOpinion.question(state: state, key: key, id: 'mine-1', text: text, author: 'claude', repo: series, ask: ask, patience: 0,
                                          adversaries: [{'agent' => 'claude'}, {'agent' => 'codex'}, {'agent' => 'opencode', 'model' => 'opencode/big-pickle'}])
-    assert(result.keys.sort == %w[codex opencode], "The review's own agent is not asked again: #{result}")
+    assert(result == {'codex' => 'answered', 'opencode' => 'failed: opencode stopped before giving its answer'}, "The review's own agent is not asked again, and one that stops before its answer has not answered: #{result}")
   end
   questions = Array.new(asked.size) { asked.pop }
   assert(questions.all? { |_, question| question.include?('independent answer') && question.include?('Is that limit documented?') }, 'Each adversary answers the question itself')
   thread = state.read.dig('threads', key, 'mine-1')
   assert(thread['messages'].none? { |message| message['role'] == 'adversary' } && thread['adversary'].nil?, 'On a question nobody takes the second reviewer\'s place in the conversation')
-  assert(thread.dig('opinions', 'codex', 'body') == "Agree\nIt is in the README." && thread.dig('opinions', 'codex', 'verdict').nil? && thread['waiting_on'] == [], 'Answers to a question sit beside the conversation, with no verdict')
-  assert(questions.length == 2 && thread.dig('opinions', 'codex', 'short').nil?, "What the review's agent said before the question is not its answer, so nothing is compared; an unmarked answer has no short one")
+  assert(thread.dig('opinions', 'codex').values_at('body', 'short', 'verdict') == ['It is in the README.', 'It is in the README.', nil] && thread['waiting_on'] == [], 'Answers to a question sit beside the conversation, with no verdict')
+  assert(thread.dig('opinions', 'opencode').values_at('body', 'error') == [nil, 'opencode stopped before giving its answer'], 'Its narration is not shown as its answer')
+  assert(questions.length == 2, "What the review's agent said before the question is not its answer, so nothing is compared")
 end
 puts 'PASS a question asked with adversaries ticked: each answers it beside the review\'s agent, knowing what it was sent'
 
@@ -262,7 +296,7 @@ Dir.mktmpdir('dcr-judge') do |series|
   first, second = [1, 2].map { |number| DCR::State.review_key('f00d', 'job', number) }
   state.send_items(first, [{'id' => 'mine-1', 'text' => 'File: app/job.rb', 'message' => 'Is this the best way?'}])
   asked = Queue.new
-  ask = lambda do |agent, question, dir:, model:, effort:|
+  ask = lambda do |agent, question, dir:, model:, effort:, adversary:|
     asked << [agent, question, model]
     # The answers are lettered in the order they arrived.
     next "#{question[/Answer ([AB]):\nYes, keep it\./, 1]}: Agree\n#{question[/Answer ([AB]):\nNo, move/, 1]}: Disagree\nDiffer: Answer #{question[/Answer ([AB]):\nNo, move/, 1]} would move the work into the workers." if question.include?('The main answer:')
