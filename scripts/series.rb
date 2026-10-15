@@ -971,6 +971,10 @@ module ReviewSeries
     output = revision_path(path, entry['number'])
     # A pull request's review that shows the checkout says so: its code may not be on the pull request.
     increment = increment.merge('local' => true) if history['origin_mode'] == 'pr' && history['follows'] == 'checkout' && snapshot['working_tree']
+    # Labels are trusted only for the code they name (a carried-over one is not), so labels given
+    # without it are this code's: the agent wrote them for this snapshot.
+    comparison = review['comparison']
+    review['comparison'] = comparison.merge('base' => snapshot['base'], 'head' => snapshot['head']) if comparison.is_a?(Hash) && !comparison.key?('base') && !comparison.key?('head')
     review['history'] = increment.merge('series' => history['name'], 'revision' => entry['number'], 'save' => Array(entry['saves']).length, 'entries' => history['revisions'], 'origin_mode' => history['origin_mode'])
     html = DynamicReviews.review_html(snapshot, review)
     # The revision's page is durable first; the manifest is the commit point.

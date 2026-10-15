@@ -453,13 +453,14 @@ module SeriesChecks
           snapshot = DynamicReviews.collect(repo: root)
           file = snapshot['files'].first
           hid = file['hunks'].first['id']
-          outline = {'title' => 'Sample review', 'summary' => '', 'groups' => [{'title' => 'Values', 'summary' => 'Values.', 'layers' => [{'title' => 'Return a value', 'items' => [{'file' => file['id']}]}]}]}
+          outline = {'title' => 'Sample review', 'summary' => '', 'comparison' => {'pr_url' => 'https://github.com/acme/shop/pull/7', 'base_label' => 'main'}, 'groups' => [{'title' => 'Values', 'summary' => 'Values.', 'layers' => [{'title' => 'Return a value', 'items' => [{'file' => file['id']}]}]}]}
           File.write(File.join(out, 'snapshot.json'), JSON.generate(snapshot))
           File.write(File.join(out, 'outline.json'), JSON.generate(outline))
           rejects('An unexplained review was saved as finished') { ReviewSeries.start(repo: root, name: 'live-check', snapshot: File.join(out, 'snapshot.json'), review: File.join(out, 'outline.json')) }
           first = ReviewSeries.start(repo: root, name: 'live-check', snapshot: File.join(out, 'snapshot.json'), review: File.join(out, 'outline.json'), in_progress: true)
           opened = DynamicReviews.extract(first)['review']
           assert(opened['status'] == 'in_progress', 'The outline was not marked in progress')
+          assert(opened['comparison'].values_at('base', 'head') == snapshot.values_at('base', 'head') && opened.dig('comparison', 'pr_url').end_with?('/pull/7'), "Labels given without the code they name were not bound to it, so the page would ignore them: #{opened['comparison']}")
           assert(opened.dig('groups', 0, 'layers', 0, 'items', 0, 'summaries') == {hid => ''}, 'The outline did not give the walkthrough its ranges')
           series = File.dirname(File.dirname(first))
           state = DCR::State.new(series)
