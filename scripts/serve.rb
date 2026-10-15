@@ -10,7 +10,7 @@ require_relative '../lib/dcr/server'
 $stdout.sync = true
 options = {port: 0}
 OptionParser.new do |parser|
-  parser.banner = 'Usage: dcr serve (--repo <root> --name <series> | --report <review.html>) [--out <capture-directory>] [--port 0] [--app URL [--app-ca PATH]]'
+  parser.banner = 'Usage: dcr serve (--repo <root> --name <series> | --report <review.html>) [--out <capture-directory>] [--port 0] [--app URL [--app-ca PATH] | --without-app REASON]'
   parser.on('--out PATH', 'Where recordings are saved; a temporary directory when omitted') { |value| options[:directory] = value }
   parser.on('--report PATH') { |value| options[:report] = value }
   parser.on('--repo PATH', 'With --name: serve that series\' current review') { |value| options[:repo] = value }
@@ -18,9 +18,12 @@ OptionParser.new do |parser|
   parser.on('--port NUMBER', Integer) { |value| options[:port] = value }
   parser.on('--app URL', 'The running app to show inside the review, like http://localhost:3000 or https://app.myproject.test; with --name in a Conductor workspace, its App preview URL when omitted') { |value| options[:app] = value }
   parser.on('--app-ca PATH', 'A local CA certificate the app\'s HTTPS uses (mkcert\'s root is found automatically)') { |value| options[:app_ca] = value }
+  parser.on('--without-app REASON', 'Why this change needs no running app (no UI in it), in a few words; the Overview says so') { |value| options[:no_app] = value.strip }
   parser.on('--share', 'Also serve it on your tailnet with Tailscale Serve, for your own login; stays local when Tailscale cannot') { options[:share] = true }
   parser.on('--share-with LOGIN', 'Another tailnet login allowed to open the shared review (repeatable)') { |value| (options[:share_with] ||= []) << value }
 end.parse!
+abort 'Use either --app or --without-app' if options[:app] && options[:no_app]
+abort '--without-app is a short reason, like \'no UI in this change\'' if options.key?(:no_app) && !options[:no_app].length.between?(1, 200)
 if (name = options.delete(:name))
   abort 'Use a short lowercase series slug' unless name.match?(/\A[a-z0-9]+(?:-[a-z0-9]+)*\z/)
   repo = options.fetch(:repo, Dir.pwd)
@@ -33,7 +36,7 @@ if (name = options.delete(:name))
     ReviewSeries.refresh(repo: repo, name: name)
     warn 'Refreshed the saved report with the current review UI. Saved revisions are unchanged.'
   end
-  unless options[:app]
+  unless options[:app] || options[:no_app]
     require_relative '../lib/dcr/harness_app'
     options[:app], source = DCR::HarnessApp.find(File.expand_path(repo))
     puts "No --app given: using #{options[:app]}, #{source}." if options[:app]
@@ -44,12 +47,13 @@ options[:directory] ||= Dir.mktmpdir('dcr-capture-')
 server = DCR::Server.new(**options)
 if options[:report] && File.basename(options[:report]) == 'current.html'
   require_relative '../lib/dcr/activity'
-  DCR::Activity.record(File.dirname(options[:report]), 'serve', 'ok', options[:app] ? 'with the app' : 'without an app')
+  DCR::Activity.record(File.dirname(options[:report]), 'serve', 'ok', options[:app] ? 'with the app' : options[:no_app] ? "no app needed: #{options[:no_app]}" : 'without an app')
 end
 puts options[:report] ? "Review with QA panel: #{server.url}/#overview" : "QA recorder: #{server.url}"
 puts "App inside the review: #{server.url}/?app#overview (proxying #{options[:app]} through #{server.app_url})" if server.app_url
 puts 'Open the review in a tab your browser tool controls (Claude in Chrome: its tab group), so you can act in it when the reviewer presses Start QA review.' if server.app_url
-puts 'No --app: the review shows the older recorder card and has no Start QA review. Find the running app and serve again with --app <url>, or tell the reviewer why it is missing.' if options[:report] && !server.app_url
+puts 'No --app: the review shows the older recorder card and has no Start QA review. Find the running app and serve again with --app <url>, or, when the change has no UI, with --without-app \'<why>\' so the review says so.' if options[:report] && !server.app_url && !options[:no_app]
+puts "No app needed, as the Overview says: #{options[:no_app]}" if options[:no_app]
 puts "On your tailnet: #{server.shared_origin}/#overview (only for your Tailscale login#{options[:share_with] ? ' and the ones you shared it with' : ''})" if server.shared_origin
 puts server.share_note if server.share_note
 puts "Local capture files: #{File.expand_path(options[:directory])}"

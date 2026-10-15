@@ -19,13 +19,14 @@ module DCR
     # report: the series' current.html. capture_dir: where the recorder saves, which the agent
     # attaches from. origin: the review's loopback address. app: the AppProxy, or nil.
     # on_first_view: called the first time the review page is loaded.
-    def initialize(report:, capture_dir:, token:, origin:, app: nil, on_first_view: nil)
+    def initialize(report:, capture_dir:, token:, origin:, app: nil, no_app: nil, on_first_view: nil)
       @report = report
       @series = File.dirname(report)
       @capture_dir = capture_dir
       @token = token
       @origin = origin
       @app = app
+      @no_app = no_app
       @on_first_view = on_first_view
       @live = LiveAPI.new(@series, evidence: method(:attach))
     end
@@ -71,7 +72,7 @@ module DCR
     def review_page(request)
       @on_first_view&.call
       @on_first_view = nil
-      served = Page::Served.new(token: @token, progress: @live.progress, app: @app&.describe(shared: request.shared?))
+      served = Page::Served.new(token: @token, progress: @live.progress, app: @app&.describe(shared: request.shared?), no_app: @no_app)
       HTTP.html(Page.review(Page.payload(File.read(@report, encoding: 'UTF-8')), served: served), csp: served.csp)
     end
 

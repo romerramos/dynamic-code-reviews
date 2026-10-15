@@ -138,3 +138,18 @@ Dir.mktmpdir('qa-capture-report') do |directory|
     thread.join
   end
 end
+
+Dir.mktmpdir('qa-no-app') do |directory|
+  report = File.join(directory, 'current.html')
+  File.write(report, DCR::Page.review({'snapshot' => {}, 'review' => {'title' => 'Jobs only'}}))
+  server = DCR::Server.new(directory: File.join(directory, 'captures'), report: report, no_app: 'only background jobs change')
+  thread = Thread.new { server.run }
+  begin
+    page = Net::HTTP.new('127.0.0.1', server.port).get('/').body
+    assert(page.include?('<meta name="dcr-no-app" content="only background jobs change">') && !page.include?('name="dcr-app"'), 'A review served with --without-app does not say why it has no app')
+    puts 'PASS a review served with --without-app tells the page why it needs no app'
+  ensure
+    server.close
+    thread.join
+  end
+end

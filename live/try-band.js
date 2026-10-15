@@ -13,6 +13,9 @@
   const token = document.querySelector('meta[name="qa-token"]')?.content;
   const appMeta = document.querySelector('meta[name="dcr-app"]');
   const app = appMeta ? JSON.parse(appMeta.content) : null;
+  // Served with --no-app: the agent judged the change has nothing to see in the app, and says why.
+  const noApp = app ? null : document.querySelector('meta[name="dcr-no-app"]')?.content || null;
+  if (noApp) document.body.classList.add('dcr-no-app');
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[char]));
 
   // Changed templates, one entry per component (its class and template together).
@@ -24,7 +27,7 @@
     seenNames.add(name);
     templates.push({name, path: file.path});
   });
-  if (!app && !templates.length) return;
+  if (!app && !noApp && !templates.length) return;
   const reviewed = new Set((review.previews || []).filter(preview => preview.status === 'rendered').flatMap(preview => preview.files || []));
   let livePreviews = {};
 
@@ -46,6 +49,10 @@
           <button type="button" class="act act-quiet" data-try="comment">Comment on it</button>
         </div>
       </div>
+    </div>` : noApp ? `
+    <div class="dcr-try-none">
+      <h3>No running app needed</h3>
+      <p>${esc(noApp.charAt(0).toUpperCase() + noApp.slice(1).replace(/[.\s]+$/, ''))}. Your agent left the app out of this review, so it has no QA review and no screenshots.</p>
     </div>` : '';
   const previewsHTML = templates.length ? `
     <div class="dcr-try-previews">
@@ -54,7 +61,7 @@
       <ul class="dcr-try-templates"></ul>
       ${templates.length > 4 ? `<button type="button" class="dcr-try-link" data-try-all>All ${templates.length} in Previews</button>` : ''}
     </div>` : '';
-  band.innerHTML = `<h2 id="dcr-try-title">Try the change</h2><div class="dcr-try-body${app && templates.length ? ' has-both' : ''}">${appHTML}${previewsHTML}</div>`;
+  band.innerHTML = `<h2 id="dcr-try-title">Try the change</h2><div class="dcr-try-body${(app || noApp) && templates.length ? ' has-both' : ''}">${appHTML}${previewsHTML}</div>`;
 
   const stateOf = template => {
     const preview = livePreviews[template.path];

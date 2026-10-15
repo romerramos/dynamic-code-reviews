@@ -21,9 +21,10 @@ module DCR
     # QA panel, so the reader starts capture from the review instead of a separate page.
     # directory: where the recorder saves captures.
     # app: the running app's URL, shown inside the review through a proxy.
+    # no_app: otherwise, why this review needs no running app, which the Overview says.
     # share: also serve the review (and the running app inside it) on the tailnet with Tailscale Serve,
     # answering only the tailnet logins in share_with plus the computer's own user.
-    def initialize(directory:, port: 0, report: nil, app: nil, app_ca: nil, share: false, share_with: [])
+    def initialize(directory:, port: 0, report: nil, app: nil, app_ca: nil, no_app: nil, share: false, share_with: [])
       directory = File.expand_path(directory)
       raise ArgumentError, 'Capture output must not be a symlink' if File.symlink?(directory)
       if report
@@ -47,7 +48,7 @@ module DCR
       @recorder = Recorder.new(directory: directory, token: @token, url: @origin)
       if report
         require_relative 'review_site'
-        @site = ReviewSite.new(report: report, capture_dir: directory, token: @token, origin: @origin, app: @app, on_first_view: method(:bring_forward))
+        @site = ReviewSite.new(report: report, capture_dir: directory, token: @token, origin: @origin, app: @app, no_app: (no_app unless @app), on_first_view: method(:bring_forward))
       end
     end
 

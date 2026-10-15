@@ -255,6 +255,10 @@ body.dcr-has-app #qa-panel{display:none}
 .dcr-try-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .dcr-try-actions kbd{margin-left:6px;padding:0 5px;border:1px solid var(--line);border-radius:calc(4px * var(--round));color:var(--muted);font:11px var(--mono)}
 .dcr-try-rec{display:inline-block;width:8px;height:8px;margin-right:6px;border-radius:calc(50% * var(--round));background:var(--bg-red-2);vertical-align:1px}
+.dcr-try-none h3{margin:0 0 6px;font-size:16px;font-weight:600}
+.dcr-try-none p{max-width:58ch;margin:0;color:var(--muted);font-size:14px;line-height:1.55}
+/* No app needed: the recorder card and the video QA prompt would only offer what does not apply. */
+body.dcr-no-app #qa-panel,body.dcr-no-app .visual-qa-option,body.dcr-no-app .evidence-strip:not(:has(.btn:not(.visual-qa-option))){display:none}
 .dcr-try-previews{padding:16px 18px;border:1px solid var(--line);border-radius:calc(14px * var(--round));background:var(--surface)}
 .dcr-try-templates{display:grid;gap:2px;margin:0 0 6px;padding:0;list-style:none}
 .dcr-try-templates li{display:grid;grid-template-columns:10px minmax(0,1fr) auto auto;align-items:center;gap:10px;min-height:34px;padding:0 4px;border-top:1px solid var(--line)}

@@ -96,6 +96,8 @@
   <link rel="stylesheet" href="/live.css"><script src="/live-tools.js"></script><script src="/live.js"></script>
 <%- if served.app -%>
   <meta name="dcr-app" content="<%= h JSON.generate(served.app) %>"><link rel="stylesheet" href="/app-view.css"><script src="/app-view.js"></script>
+<%- elsif served.no_app -%>
+  <meta name="dcr-no-app" content="<%= h served.no_app %>">
 <%- end -%>
   <script src="/try-band.js"></script>
 <%- end -%>

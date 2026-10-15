@@ -27,8 +27,9 @@ module DCR
     SERVED_CSP = "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 
     # What a served page needs from the server: its token, the browser progress to seed (the server's
-    # copy wins over a stale browser one), and the running app it may frame, if any.
-    Served = Struct.new(:token, :progress, :app, keyword_init: true) do
+    # copy wins over a stale browser one), the running app it may frame, if any, and otherwise why the
+    # review needs none (dcr serve --without-app).
+    Served = Struct.new(:token, :progress, :app, :no_app, keyword_init: true) do
       def csp = Page.served_csp(app && app[:origin])
     end
 
