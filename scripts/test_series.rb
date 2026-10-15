@@ -445,6 +445,18 @@ module SeriesChecks
         end
       end
     end
+    checks['offers no update for a file it cannot compare, once that is saved'] = lambda do
+      ReviewChecks.fixture do |root, _commit|
+        Dir.mktmpdir('review-symlink-') do |out|
+          ReviewSeries.start(repo: root, name: 'link', report: initial(root))
+          File.symlink('sample.rb', File.join(root, 'linked.rb'))
+          assert(ReviewSeries.stale(repo: root, name: 'link') == {'changed' => 1}, 'A new untracked symlink was not noticed')
+          assert(ReviewSeries.sync(repo: root, name: 'link')['status'] == 'updated', 'The symlink was not saved')
+          # Before, Update still said 1 file here, and found nothing to do.
+          assert(ReviewSeries.stale(repo: root, name: 'link') == {'changed' => 0}, "A saved symlink was still offered as an update: #{ReviewSeries.stale(repo: root, name: 'link')}")
+        end
+      end
+    end
     checks['updates a review to the current code: comments follow their lines or become outdated'] = lambda do
       require_relative '../lib/dcr/live_cli'
       ReviewChecks.fixture do |root, _commit|

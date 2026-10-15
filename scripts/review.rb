@@ -141,14 +141,17 @@ module DynamicReviews
     raise ArgumentError, 'Unresolved conflicts: resolve them or choose a committed scope' if working_tree && !git(root, 'ls-files', '-u').empty?
     compare = working_tree ? [base] : [base, head]
     paths = git(root, 'diff', '--name-only', '-z', '--no-renames', *compare).split("\0")
-    paths += git(root, 'ls-files', '--others', '--exclude-standard', '-z').split("\0") if working_tree
+    # Untracked: what git lists as others. A file deleted since the base is not in the index either,
+    # and is a deletion to show, not an untracked file.
+    untracked = working_tree ? git(root, 'ls-files', '--others', '--exclude-standard', '-z').split("\0").to_set : Set.new
+    paths += untracked.to_a
     files = paths.uniq.sort.reject { |path| path == '.reviews' || path.start_with?('.reviews/') }.map.with_index do |path, index|
       file = {'id' => "f#{index + 1}", 'path' => text(path), 'note' => '', 'patch' => '', 'hunks' => []}
       target = File.join(root, path)
       if sensitive?(path)
         file['note'] = 'Excluded: potentially sensitive file'
         file['content_digest'] = sensitive_identity(root, path, working_tree: working_tree, head: head) if File.extname(path) == '.enc'
-      elsif working_tree && git(root, 'ls-files', '--error-unmatch', '--', path, allowed: [0, 1]).empty?
+      elsif untracked.include?(path)
         if File.symlink?(target) || !File.file?(target)
           file['note'] = 'Untracked symlink or non-regular file; content omitted'
         else

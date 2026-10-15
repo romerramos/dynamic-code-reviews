@@ -809,13 +809,17 @@ module ReviewSeries
     # A pull request's review is updated from GitHub, so a checkout that cannot be compared (it
     # does not have the reviewed commits yet) only rules out updating from the checkout.
     changes = begin
-      compare(previous['snapshot'], current_snapshot(repo, history, previous, working_tree: true, checkout: pr))
+      current = current_snapshot(repo, history, previous, working_tree: true, checkout: pr)
+      compare(previous['snapshot'], current)
     rescue ArgumentError => error
       raise unless pr
       behind = error.message
       {'files' => []}
     end
-    result = {'changed' => changes['files'].count { |file| file['state'] != 'unchanged' }, 'behind' => behind}
+    # The same code is nothing to update, as Update finds: a file it cannot compare (an untracked
+    # symlink) is no change.
+    same = !behind && code_key(previous['snapshot']) == code_key(current)
+    result = {'changed' => same ? 0 : changes['files'].count { |file| file['state'] != 'unchanged' }, 'behind' => behind}
     # pinned: it shows the pull request's head, and the reader has not chosen the checkout yet.
     result['pinned'] = true if pr && history['follows'] != 'checkout'
     result['pr'] = true if pr

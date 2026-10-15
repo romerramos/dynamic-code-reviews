@@ -71,6 +71,16 @@ module ReviewChecks
       deletion = DynamicReviews.hunks("@@ -4,1 +3,0 @@\n-gone\n", 'f2').first
       assert(DynamicReviews.diff_rows(deletion)['split'].first['new'].nil?, 'Deletion has phantom new number')
     end
+    checks['shows a staged or committed deletion as a deletion, not an untracked file'] = lambda do
+      fixture do |root, commit|
+        DynamicReviews.git(root, 'rm', '-q', 'delete.txt')
+        staged = DynamicReviews.collect(repo: root)['files'].find { |file| file['path'] == 'delete.txt' }
+        assert(staged['patch'].include?('-old') && staged['note'].empty?, "A staged deletion was not shown: #{staged['note']}")
+        DynamicReviews.git(root, 'commit', '-q', '-m', 'Delete it')
+        committed = DynamicReviews.collect(repo: root, mode: 'series', base: commit)['files'].find { |file| file['path'] == 'delete.txt' }
+        assert(committed['patch'].include?('-old') && committed['note'].empty?, "A committed deletion was not shown: #{committed['note']}")
+      end
+    end
     checks['collects net staged, unstaged, untracked and omitted content'] = lambda do
       fixture do |root, _commit|
         File.write(File.join(root, 'sample.rb'), "staged\n")
