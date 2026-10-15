@@ -494,20 +494,12 @@
     return null;
   }
   const rowsOf = table => [...table.rows].filter(isRow);
-  // Moves it by lines, into the next or previous file's diff when one runs out. Says whether it moved.
+  // Moves it by lines, stopping at the file's first or last line: H and L change the file. Says whether it moved.
   function moveCursor(lines) {
     const from = cursor();
     if (!from) return false;
-    let table = from.closest('table');
-    let rows = rowsOf(table);
-    let index = rows.indexOf(from) + lines;
-    const tables = diffTables();
-    while (index >= rows.length || index < 0) {
-      const next = tables[tables.indexOf(table) + (index < 0 ? -1 : 1)];
-      if (!next) { index = Math.max(0, Math.min(rows.length - 1, index)); break; }
-      index = index < 0 ? index + rowsOf(next).length : index - rows.length;
-      table = next; rows = rowsOf(table);
-    }
+    const rows = rowsOf(from.closest('table'));
+    const index = Math.max(0, Math.min(rows.length - 1, rows.indexOf(from) + lines));
     if (rows[index] === from) return false;
     setCursor(rows[index]);
     return true;
@@ -518,12 +510,11 @@
     if (key === 'g') { const rows = cursor() && rowsOf(cursorRow.closest('table')); if (rows) setCursor(rows[shift ? rows.length - 1 : 0]); return; }
     const lines = key === 'j' ? 1 : key === 'k' ? -1 : key === 'd' ? page : -page;
     if (moveCursor(lines) || held || visual) return;
-    // A tap with nowhere left to go: up to the top of the page first, then on to the next file or back.
-    if (lines < 0 && content.scrollTop > 0) { glideTo(content, 0); return; }
-    stopGlide(content); step(Math.sign(lines)); $('content').focus({preventScroll:true}); cursor();
+    // A tap up from the first line shows the top of the page.
+    if (lines < 0 && content.scrollTop > 0) glideTo(content, 0);
   }
   // { and } as in a modal editor: to the blank line before or after this block of code, or to the
-  // file's first or last line when there is none; from there, on into the next file's diff.
+  // file's first or last line when there is none; it goes no further.
   function moveByBlock(direction) {
     const from = cursor();
     if (!from) return;
