@@ -38,6 +38,7 @@ module DCR
         - Talk about this code only. Name the file and line when it helps.
         - If you would change the comment, say how in one sentence.
         - You may read files in this repository to check. Do not change anything.
+        - You may search the web for what this repository cannot tell you, such as how a library or an API behaves; the code here decides.
 
         What the change is about:
         #{context.to_s.strip.empty? ? '(not given)' : context.strip}
@@ -170,6 +171,7 @@ module DCR
         - Then 2 to 4 short sentences in plain, simple words: what in the new code makes you say so. Name the file and line when it helps.
         - Say so if the change broke or left out something the comment was about.
         - You may read files in this repository to check; they are the new code. Do not change anything.
+        - You may search the web for what this repository cannot tell you, such as how a library or an API behaves; the code here decides.
 
         The comment#{" by #{Agents.name(author)}" if author} (#{[comment['label'], comment['decoration']].compact.join(', ')}):
         #{comment['subject']}
@@ -280,6 +282,7 @@ module DCR
         - Check first, without writing. Write nothing before `Answer:`, and never say what you are about to do, are checking or have looked at.
         - Plain, simple words. Name the file and line when it helps.
         - You may read files in this repository to check. Do not change anything.
+        - You may search the web for what this repository cannot tell you, such as how a library or an API behaves; the code here decides.
 
         ---
 

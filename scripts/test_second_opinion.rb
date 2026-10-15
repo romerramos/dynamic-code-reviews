@@ -79,9 +79,9 @@ Dir.mktmpdir('dcr-ask') do |dir|
     assert(DCR::Agents.ask('grok', 'q', dir: dir) == "Agree\nFine as is.", 'A CLI that answers on stdout is read')
     assert(DCR::Agents.ask('codex', 'q', dir: dir) == "Disagree\nNo.", 'Codex is read from its last-message file, not its log')
   end
-  # Grok as an adversary only reads and searches files: one that reached for the shell ended its turn there.
+  # Grok as an adversary only reads and searches: one that reached for the shell ended its turn there.
   with_agents('grok' => 'echo "$@"') do
-    assert(DCR::Agents.ask('grok', 'q', dir: dir, adversary: true).end_with?('--tools read_file,grep,list_dir'), 'An adversary Grok gets only its reading tools')
+    assert(DCR::Agents.ask('grok', 'q', dir: dir, adversary: true).end_with?('--tools read_file,grep,list_dir,web_search,web_fetch --allow web_search --allow web_fetch'), 'An adversary Grok gets only its reading and web tools')
     assert(!DCR::Agents.ask('grok', 'q', dir: dir).include?('--tools'), 'Asked for anything else, Grok keeps all its tools')
   end
   # opencode exits 1 when a tool failed, after answering; a model may think aloud before </think>.
@@ -105,7 +105,8 @@ Dir.mktmpdir('dcr-ask') do |dir|
   with_agents('grok' => 'echo "Agree"; echo "Fine as is."', 'codex' => 'while [ $# -gt 0 ]; do [ "$1" = -o ] && out=$2; shift; done; cat > /dev/null; printf "Disagree\\nNo." > "$out"; echo noise',
               'claude' => 'sleep 5', 'gemini' => 'echo "Opening authentication page in your browser"; exit 1') do
     assert(DCR::Agents::RUNNERS['codex'].call('q', '/o', 'gpt-x', 'high')[0].each_cons(2).to_a.include?(['-c', 'model_reasoning_effort="high"']) && DCR::Agents::RUNNERS['codex'].call('q', '/o', 'gpt-x', nil)[0].include?('gpt-x'), 'Codex runs on the chosen model and effort')
-    assert(DCR::Agents::RUNNERS['claude'].call('q', nil, nil, nil)[0] == %w[claude -p --tools Read,Grep,Glob], 'No model or effort chosen: the CLI keeps its own')
+    assert(DCR::Agents::RUNNERS['claude'].call('q', nil, nil, nil)[0] == %w[claude -p --tools Read,Grep,Glob,WebSearch,WebFetch --allowedTools WebSearch,WebFetch], 'No model or effort chosen: the CLI keeps its own; it may search the web')
+    assert(DCR::Agents::RUNNERS['codex'].call('q', '/o', nil, nil)[0].first(3) == %w[codex --search exec], 'Codex may search the web: --search goes before exec')
     assert(DCR::Agents::RUNNERS['opencode'].call('q', nil, 'opencode/big-pickle', nil)[0] == %w[opencode run --agent plan -m opencode/big-pickle q], 'opencode answers through its read-only plan agent')
     begin
       DCR::Agents.ask('claude', 'q', dir: dir, timeout: 1)

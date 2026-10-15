@@ -31,9 +31,9 @@ module DCR
     # Each returns [command, stdin]; the answer is stdout, or the file named by `out`.
     # Antigravity is not here: headless, it is refused even reading a file, so it never answers.
     RUNNERS = {
-      'claude' => ->(prompt, _out, model, effort) { [%w[claude -p --tools Read,Grep,Glob] + flag('--model', model) + flag('--effort', effort), prompt] },
+      'claude' => ->(prompt, _out, model, effort) { [%w[claude -p --tools Read,Grep,Glob,WebSearch,WebFetch --allowedTools WebSearch,WebFetch] + flag('--model', model) + flag('--effort', effort), prompt] },
       'codex' => lambda do |prompt, out, model, effort|
-        [['codex', 'exec', '--sandbox', 'read-only', '--skip-git-repo-check', '--ephemeral', '--color', 'never', '-o', out] + flag('-m', model) + flag('-c', effort && "model_reasoning_effort=\"#{effort}\"") + ['-'], prompt]
+        [['codex', '--search', 'exec', '--sandbox', 'read-only', '--skip-git-repo-check', '--ephemeral', '--color', 'never', '-o', out] + flag('-m', model) + flag('-c', effort && "model_reasoning_effort=\"#{effort}\"") + ['-'], prompt]
       end,
       'gemini' => ->(prompt, _out, model, _effort) { [['gemini', '-p', prompt, '--approval-mode', 'plan', '-o', 'text'] + flag('-m', model), nil] },
       'grok' => ->(prompt, _out, model, effort) { [['grok', '-p', prompt, '--permission-mode', 'plan'] + flag('-m', model) + flag('--reasoning-effort', effort), nil] },
@@ -41,10 +41,10 @@ module DCR
       'opencode' => ->(prompt, _out, model, _effort) { [['opencode', 'run', '--agent', 'plan'] + flag('-m', model) + [prompt], nil] }
     }.freeze
 
-    # Added when an agent is asked as an adversary: only its reading tools, so it reads and searches
-    # to its answer. A Grok that reached for the shell ended its turn there, at "I'll check...".
+    # Added when an agent is asked as an adversary: only its reading and web tools, so it reads and
+    # searches to its answer. A Grok that reached for the shell ended its turn there, at "I'll check...".
     ADVERSARY = {
-      'grok' => %w[--tools read_file,grep,list_dir]
+      'grok' => %w[--tools read_file,grep,list_dir,web_search,web_fetch --allow web_search --allow web_fetch]
     }.freeze
 
     # The exit code an agent's CLI gives when one of its tools failed but it answered all the same
