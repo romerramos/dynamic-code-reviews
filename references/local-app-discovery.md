@@ -10,7 +10,12 @@ local CA behind a reverse proxy shared by several checkouts (Caddy or Traefik in
 Docker, `https://app.<checkout>.test`).
 
 1. Use a URL the user or the invoking session already gave, or one verified in this
-   session. Otherwise read the project's own run configuration for host, domain, port
+   session. A harness that runs the app often declares it: in Conductor
+   (`CONDUCTOR_WORKSPACE_PATH` is set), the `[[preview_urls]]` entry named App in
+   `.conductor/settings.local.toml` or `.conductor/settings.toml`, in the workspace or
+   `CONDUCTOR_ROOT_PATH`, with `$CONDUCTOR_WORKSPACE_NAME` and the other variables filled
+   in from the environment. `dcr serve --name` uses it by itself when `--app` is left out.
+   Otherwise read the project's own run configuration for host, domain, port
    and start command: `Procfile*`, `bin/dev`, `config/puma.rb`, package scripts,
    compose files and their proxy labels, `Makefile`, `.env*`, framework host lists
    (such as Rails `config.hosts`) and repository instructions. A per-checkout domain

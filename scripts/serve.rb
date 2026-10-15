@@ -7,6 +7,7 @@ require 'optparse'
 require 'tmpdir'
 require_relative '../lib/dcr/server'
 
+$stdout.sync = true
 options = {port: 0}
 OptionParser.new do |parser|
   parser.banner = 'Usage: dcr serve (--repo <root> --name <series> | --report <review.html>) [--out <capture-directory>] [--port 0] [--app URL [--app-ca PATH]]'
@@ -15,7 +16,7 @@ OptionParser.new do |parser|
   parser.on('--repo PATH', 'With --name: serve that series\' current review') { |value| options[:repo] = value }
   parser.on('--name SLUG') { |value| options[:name] = value }
   parser.on('--port NUMBER', Integer) { |value| options[:port] = value }
-  parser.on('--app URL', 'The running app to show inside the review, like http://localhost:3000 or https://app.myproject.test') { |value| options[:app] = value }
+  parser.on('--app URL', 'The running app to show inside the review, like http://localhost:3000 or https://app.myproject.test; with --name in a Conductor workspace, its App preview URL when omitted') { |value| options[:app] = value }
   parser.on('--app-ca PATH', 'A local CA certificate the app\'s HTTPS uses (mkcert\'s root is found automatically)') { |value| options[:app_ca] = value }
   parser.on('--share', 'Also serve it on your tailnet with Tailscale Serve, for your own login; stays local when Tailscale cannot') { options[:share] = true }
   parser.on('--share-with LOGIN', 'Another tailnet login allowed to open the shared review (repeatable)') { |value| (options[:share_with] ||= []) << value }
@@ -32,6 +33,11 @@ if (name = options.delete(:name))
     ReviewSeries.refresh(repo: repo, name: name)
     warn 'Refreshed the saved report with the current review UI. Saved revisions are unchanged.'
   end
+  unless options[:app]
+    require_relative '../lib/dcr/harness_app'
+    options[:app], source = DCR::HarnessApp.find(File.expand_path(repo))
+    puts "No --app given: using #{options[:app]}, #{source}." if options[:app]
+  end
 end
 options.delete(:repo)
 options[:directory] ||= Dir.mktmpdir('dcr-capture-')
@@ -40,7 +46,6 @@ if options[:report] && File.basename(options[:report]) == 'current.html'
   require_relative '../lib/dcr/activity'
   DCR::Activity.record(File.dirname(options[:report]), 'serve', 'ok', options[:app] ? 'with the app' : 'without an app')
 end
-$stdout.sync = true
 puts options[:report] ? "Review with QA panel: #{server.url}/#overview" : "QA recorder: #{server.url}"
 puts "App inside the review: #{server.url}/?app#overview (proxying #{options[:app]} through #{server.app_url})" if server.app_url
 puts 'Open the review in a tab your browser tool controls (Claude in Chrome: its tab group), so you can act in it when the reviewer presses Start QA review.' if server.app_url

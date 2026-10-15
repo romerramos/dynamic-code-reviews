@@ -182,7 +182,7 @@ commands. Everything runs as `<skill>/bin/dcr <command>`, with Ruby 3.1+ (under 
 | `screenshot` | Post screenshots of the running app to the review: in the Overview's Seen in the app, or on a comment. A later QA clip of the same thing takes a screenshot's place. |
 | `log` | What the agent's commands did to a review, one line each: what ran, what was refused and why, who ran it and with which copy of the skill. |
 | `sync` | Update a review to the code as it is now, with no new analysis: comments follow their lines or become outdated. The served page's Update button does the same. A pull request's review is updated from GitHub: `--pull-request` (and Update in the page) takes its head as pushed now; it shows the checkout only when its reviewer asks (`--follow-checkout`, or Update from my checkout behind Update's arrow). A review of the checkout becomes its branch's pull request's once there is one (`--switch-to-pull-request`, or Switch to pull request behind Update's arrow), keeping comments, conversations and progress. |
-| `serve [--share] [--app <url>]` | Serve a review live: conversation, previews, the running app, tailnet sharing. |
+| `serve [--share] [--app <url>]` | Serve a review live: conversation, previews, the running app, tailnet sharing. In a Conductor workspace, `--app` defaults to the App preview URL it declares. |
 | `focus` / `link` | Bring the review's browser tab to the front; print its local and tailnet addresses. |
 | `comment` | Post a review comment to a review in progress. With `"follows"`, it takes up an outdated comment on the new lines. |
 | `reply --outcome` | After the code changed, say what became of a comment: `addressed`, `still-applies` or `not-relevant`. The adversaries then check it on their own. |
