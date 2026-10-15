@@ -205,6 +205,8 @@ body.qa-live .evidence-strip:not(:has(button:not(.visual-qa-option))){display:no
 .dcr-ledger .dcr-msg-head strong{font-size:12.5px}
 .dcr-ledger .dcr-agent .dcr-msg-head strong{color:var(--accent)}
 .dcr-ledger .dcr-msg-head time{font-size:12px}
+/* The panel is as wide as the reader drags it, so its messages take that width. */
+.dcr-ledger .dcr-body,.dcr-detail .dcr-body{max-width:none}
 .dcr-ledger .dcr-body{margin:0;font-size:13.5px;line-height:1.55}
 .dcr-ledger .dcr-body code{font-size:12px}
 .dcr-ledger .dcr-body pre{padding:8px 10px;font-size:12px}
