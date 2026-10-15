@@ -671,7 +671,9 @@ module ReviewSeries
   # progress and conversations come along. Returns what changed, for whoever reviews it next.
   # head, base: the pull request as pushed now, verified by the caller; the review then shows
   # that head, and no longer follows the checkout if it did.
-  def sync(repo:, name:, follow: false, head: nil, base: nil, **_unused)
+  # comparison: what to record of the pull request in the revision (`switch`), the same code saved
+  # into the latest revision as the pull request's.
+  def sync(repo:, name:, follow: false, head: nil, base: nil, comparison: nil, **_unused)
     path = directory(repo, name)
     locked(path) do
       history = manifest(path)
@@ -697,15 +699,18 @@ module ReviewSeries
         current = current_snapshot(repo, history, previous, working_tree: true, checkout: pr)
       end
       # The verified head is what GitHub takes comments against.
-      verified = ->(review) { review['comparison'] = review['comparison'].merge('base' => current['base'], 'head' => current['head']) if head && review['comparison'] }
+      verified = lambda do |review|
+        review['comparison'] = (review['comparison'] || {}).merge(comparison) if comparison
+        review['comparison'] = review['comparison'].merge('base' => current['base'], 'head' => current['head']) if head && review['comparison']
+      end
       if code_key(previous['snapshot']) == code_key(current)
-        next({'status' => 'unchanged', 'revision' => entry['number']}) unless head && previous.dig('review', 'history', 'local')
+        next({'status' => 'unchanged', 'revision' => entry['number']}) unless head && (previous.dig('review', 'history', 'local') || comparison)
         # The checkout it showed was pushed: the same code is the pull request's now, so the
         # revision becomes the pull request's and GitHub takes comments on all of it.
         review = previous['review']
         keep_posted(path, history, review)
         verified.call(review)
-        summary = 'This review shows the pull request as pushed, which has the same code as your checkout.'
+        summary = comparison ? "This review is pull request ##{comparison['pr_number']}'s now, which has the same code." : 'This review shows the pull request as pushed, which has the same code as your checkout.'
         amend(path, history, current, review, summary, was: review['history'])
         next({'status' => 'updated', 'revision' => entry['number'], 'summary' => summary, 'unreviewed' => [], 'outdated_comments' => [],
               'key' => DCR::State.review_key(entry['fingerprint'], name, entry['number'])})
@@ -734,7 +739,7 @@ module ReviewSeries
       placed = review['comments'].reject { |comment| comment['outdated'] }.map { |comment| comment['id'] }
       shots, dropped = with_screenshots(path, history, previous['review']).partition { |shot| (shot['paths'] - kept).empty? && (!shot['comment_id'] || placed.include?(shot['comment_id'])) }
       review['screenshots'] = shots if shots.any?
-      summary = "Updated to #{head ? 'the pull request as pushed' : 'the code as it is now'}: #{count(changed.length, 'file')} changed since revision #{entry['number']}"
+      summary = "#{"This review is pull request ##{comparison['pr_number']}'s now. " if comparison}Updated to #{head ? 'the pull request as pushed' : 'the code as it is now'}: #{count(changed.length, 'file')} changed since revision #{entry['number']}"
       summary += in_progress || ranges.empty? ? '.' : ", #{count(ranges.length, 'range')} not reviewed yet."
       summary += " #{count(outdated.length, 'comment')} #{outdated.length == 1 ? 'is' : 'are'} outdated." if outdated.any?
       summary += " #{count(dropped.length, 'screenshot')} of changed files #{dropped.length == 1 ? 'was' : 'were'} dropped." if dropped.any?
@@ -776,6 +781,48 @@ module ReviewSeries
   OUTDATED_LINES = 80 # of what changed in an outdated comment's file
 
   # What an update changed, for the agent that comments on it: the ranges nobody has reviewed, as patches.
+  # A review of the checkout becomes its pull request's, once there is one: it is compared from
+  # where the pull request starts, takes the pull request as pushed as a revision (into the latest
+  # one when the code is the same), and goes on showing the checkout when that has more, as a
+  # pull request's review that follows the checkout does. Comments, conversations and progress go
+  # with it, as in any update. pull: the branch's pull request, fetched (GitHub#branch_pull).
+  def switch(repo:, name:, pull:, **_unused)
+    path = directory(repo, name)
+    was = nil
+    pushed = locked(path) do
+      history = manifest(path)
+      was = JSON.pretty_generate(history)
+      raise ArgumentError, 'This review already follows its pull request' if history['origin_mode'] == 'pr'
+      raise ArgumentError, 'Branch changed; choose the correct series or start a new one' unless history['branch'] == branch(repo)
+      head, base = pull.values_at('head', 'base').map { |sha| DynamicReviews.sha(repo, sha) }
+      # pinned_head: what the pull request is compared with, not the checkout it showed so far,
+      # which may be ahead of it.
+      history.merge!('origin_mode' => 'pr', 'base' => DynamicReviews.git(repo, 'merge-base', base, head).strip, 'pinned_head' => head)
+      atomic_write(File.join(path, 'manifest.json'), JSON.pretty_generate(history))
+      head
+    end
+    comparison = {'pr_url' => pull['url'], 'pr_number' => pull['number'], 'pr_title' => pull['title'], 'base_label' => pull['base_label'], 'head_label' => pull['head_label']}.compact
+    begin
+      result = sync(repo: repo, name: name, head: pushed, base: pull['base'], comparison: comparison)
+    rescue StandardError
+      # Nothing was saved (a revision is saved last): the review stays the checkout's.
+      locked(path) { atomic_write(File.join(path, 'manifest.json'), was) }
+      raise
+    end
+    locked(path) do
+      history = manifest(path)
+      history.delete('pinned_head')
+      atomic_write(File.join(path, 'manifest.json'), JSON.pretty_generate(history))
+    end
+    # The checkout has more than the pull request: it goes on being what the review shows.
+    ahead = stale(repo: repo, name: name)['changed'].positive?
+    if ahead
+      result = sync(repo: repo, name: name, follow: true).merge('pull_request' => result)
+      result['summary'] = "This review is pull request ##{pull['number']}'s now. It goes on showing your checkout, which differs from the pull request in #{count(result['files'].length, 'file')}: GitHub takes comments on the others."
+    end
+    result.merge('followed' => ahead)
+  end
+
   def sync_brief(result)
     out = ["CODE UPDATE: #{result['summary']}", result['files'].map { |file| "#{file['state']}: #{file['path']}" }.join("\n")]
     Array(result['outdated_comments']).each do |comment|

@@ -77,6 +77,7 @@ module DCR
       when ['GET', '/api/screenshot'] then [200, screenshot(key, query['id'])]
       when ['GET', '/api/sync'] then [200, stale]
       when ['POST', '/api/sync'] then [200, sync(json(body))]
+      when ['POST', '/api/switch'] then [200, switch]
       when ['POST', '/api/risk-ranking'] then (@state.request_risk_ranking(json(body)['key']); [200, {'requested' => true}])
       when ['GET', '/api/adversaries'] then [200, adversaries]
       when ['GET', '/api/agents'] then [200, adversaries.merge('agents' => @catalog.call(query['fresh'] == '1'))]
@@ -246,9 +247,42 @@ module DCR
     def stale
       require_relative '../../scripts/series'
       result = ReviewSeries.stale(repo: manifest.fetch('repo'), name: manifest.fetch('name'))
-      result['pr'] ? result.merge(remote_status(wait: 6)) : result
+      result['pr'] ? result.merge(remote_status(wait: 6)) : result.merge(branch_pull(wait: 6))
     rescue ArgumentError, KeyError => error
       {'unavailable' => error.message}
+    end
+
+    # A review of the checkout, whose branch has a pull request now: {'pull' => {number, url,
+    # title}}, which the page offers to switch to. Asked of GitHub at most once a minute, in the
+    # background; {} when there is none, GitHub could not be asked, or there is no answer yet.
+    def branch_pull(wait:)
+      @pull_lock ||= Mutex.new
+      thread = @pull_lock.synchronize do
+        stale = @pull.nil? || Time.now - @pull[:at] > REMOTE_SECONDS
+        @pull_thread = Thread.new { ask_branch_pull } if stale && !@pull_thread&.alive?
+        @pull_thread
+      end
+      thread&.join(wait) if @pull.nil?
+      @pull_lock.synchronize { @pull ? @pull[:value] : {} }
+    end
+
+    def ask_branch_pull
+      pull = (@github.branch_pull(manifest.fetch('repo'), manifest.fetch('branch')) rescue nil)
+      value = pull ? {'pull' => pull.slice('number', 'url', 'title')} : {}
+      @pull_lock.synchronize { @pull = {at: Time.now, value: value} }
+    end
+
+    # Switch to the pull request: the review becomes the branch's pull request's, asked of GitHub
+    # now, and the listening agent is handed what that changed.
+    def switch
+      require_relative '../../scripts/series'
+      repo, name = manifest.fetch('repo'), manifest.fetch('name')
+      pull = @github.branch_pull(repo, manifest.fetch('branch')) or raise ArgumentError, 'This branch has no open pull request on GitHub yet.'
+      result = ReviewSeries.switch(repo: repo, name: name, pull: pull)
+      [result['pull_request'], result].compact.each { |saved| @state.code_updated(saved['key'], ReviewSeries.sync_brief(saved)) if saved['status'] == 'updated' && Array(saved['unreviewed']).any? }
+      @pull_lock&.synchronize { @pull = nil }
+      @remote_lock&.synchronize { @remote = nil }
+      result.slice('status', 'revision', 'summary', 'followed').merge('pull' => pull.slice('number', 'url'))
     end
 
     REMOTE_SECONDS = 60

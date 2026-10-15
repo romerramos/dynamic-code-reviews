@@ -84,18 +84,38 @@ module DCR
       _, review = saved_page(File.join(@series_dir, 'current.html'))
       match = review&.dig('comparison', 'pr_url').to_s.match(PR_URL) or raise Error, 'This review has no GitHub pull request.'
       slug = "#{match[1]}/#{match[2]}"
-      pull = api('GET', "repos/#{slug}/pulls/#{match[3]}")
+      fetched(root, slug, api('GET', "repos/#{slug}/pulls/#{match[3]}")).slice('head', 'base', 'number')
+    end
+
+    GITHUB_REMOTE = %r{github\.com[:/]([\w.-]+)/([\w.-]+?)(?:\.git)?/?\z}
+
+    # The open pull request of a branch, from the GitHub repository the checkout's remote names, with
+    # its head and base fetched as for #pushed: what a review of the checkout needs to become the
+    # pull request's (`comparison` and the head and base it was verified at). nil when there is none.
+    def branch_pull(root, branch)
+      remotes, = Open3.capture2('git', '-C', root, 'remote', '-v')
+      urls = remotes.lines.map(&:split).sort_by { |name, _| name == 'origin' ? 0 : 1 }.map { |_, url| url }
+      match = urls.lazy.filter_map { |url| url.to_s.match(GITHUB_REMOTE) }.first or raise Error, 'This checkout has no GitHub remote.'
+      slug = "#{match[1]}/#{match[2]}"
+      pull = Array(api('GET', "repos/#{slug}/pulls?state=open&head=#{URI.encode_www_form_component("#{match[1]}:#{branch}")}")).first or return nil
+      fetched(root, slug, pull)
+    end
+
+    # The pull request with its head and base in the repository: fetched (no branch or file of the
+    # checkout is touched) when they are not there yet.
+    def fetched(root, slug, pull)
       head, base = pull.dig('head', 'sha'), pull.dig('base', 'sha')
       raise Error, 'GitHub did not say where the pull request is.' unless head && base
       have = ->(sha) { Open3.capture2e('git', '-C', root, 'cat-file', '-e', "#{sha}^{commit}").last.success? }
       unless have.call(head) && have.call(base)
         remotes, = Open3.capture2('git', '-C', root, 'remote', '-v')
         remote = remotes.lines.find { |line| line.downcase.include?("#{slug.downcase}.git") || line.downcase.match?(/#{Regexp.escape(slug.downcase)}\s/) }&.split&.first || 'origin'
-        fetch = ['git', '-C', root, 'fetch', '--quiet', '--no-tags', remote, "refs/pull/#{match[3]}/head", "refs/heads/#{pull.dig('base', 'ref')}"]
+        fetch = ['git', '-C', root, 'fetch', '--quiet', '--no-tags', remote, "refs/pull/#{pull['number']}/head", "refs/heads/#{pull.dig('base', 'ref')}"]
         _, status = Timeout.timeout(FETCH_SECONDS) { Open3.capture2e(*fetch) }
         raise Error, 'The pull request could not be fetched from GitHub. Check your connection and try again.' unless status.success? && have.call(head) && have.call(base)
       end
-      {'head' => head, 'base' => base, 'number' => match[3].to_i}
+      {'head' => head, 'base' => base, 'number' => pull['number'].to_i, 'url' => pull['html_url'], 'title' => pull['title'],
+       'head_label' => pull.dig('head', 'ref'), 'base_label' => pull.dig('base', 'ref')}.compact
     rescue Timeout::Error
       raise Error, 'Fetching the pull request from GitHub took too long. Try again.'
     end

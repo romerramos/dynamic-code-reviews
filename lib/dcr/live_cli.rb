@@ -70,7 +70,7 @@ module DCR
     TEXT
 
     USAGE = {
-      'sync' => 'dcr sync (--repo ROOT --name SERIES | --dir DIR) [--pull-request | --follow-checkout]   (--pull-request: a pull request\'s review is updated to its head as pushed now, asked of GitHub and fetched; --follow-checkout: a pull request\'s review shows its pushed head; with this, only when the reviewer asks, it shows the checkout from now on) (updates the review to the code as it is now: a new revision with the current diff, comments moved to their lines or marked outdated, and the changed ranges printed for you to comment on)',
+      'sync' => 'dcr sync (--repo ROOT --name SERIES | --dir DIR) [--pull-request | --follow-checkout | --switch-to-pull-request]   (--switch-to-pull-request: a review of the checkout becomes its branch\'s pull request\'s, found on GitHub; --pull-request: a pull request\'s review is updated to its head as pushed now, asked of GitHub and fetched; --follow-checkout: a pull request\'s review shows its pushed head; with this, only when the reviewer asks, it shows the checkout from now on) (updates the review to the code as it is now: a new revision with the current diff, comments moved to their lines or marked outdated, and the changed ranges printed for you to comment on)',
       'wait' => 'dcr wait (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--model ID] [--effort LEVEL] [--timeout SECONDS] [--json]',
       'comments' => 'dcr comments (--repo ROOT --name SERIES | --dir DIR) [--thread ID] [--json]   (--thread prints that one conversation in full: the comment as sent, then every message)',
       'preview' => 'dcr preview submit (--repo ROOT --name SERIES | --dir DIR) --path <template path> [--file FILE] [--title TITLE] [--css STYLESHEET]... [--page-class CLASSES] [--image-map JSON] | dcr preview fail ... --path <template path> --reason TEXT',
@@ -109,6 +109,7 @@ module DCR
         p.on('--all') { options[:all] = true }
         p.on('--follow-checkout') { options[:follow] = true }
         p.on('--pull-request') { options[:pull_request] = true }
+        p.on('--switch-to-pull-request') { options[:switch] = true }
         p.on('--replace MODE', %w[previous-qa all]) { |v| options[:replace] = v.tr('-', '_').to_sym }
         p.on('--agent NAME', 'Who you are: claude, codex, gemini, grok... (detected when omitted)') { |v| options[:agent] = Agents.check(v) }
         p.on('--model ID', 'The model you run on, as you know it (claude-opus-5-5, gpt-6.1-sol...)') { |v| options[:model] = model_option(v, 'model') }
@@ -468,6 +469,7 @@ module DCR
     def sync(options, directory)
       require_relative '../../scripts/series'
       history = ReviewSeries.manifest(directory)
+      return switch(history, directory, options) if options[:switch]
       pull = {}
       if options[:pull_request]
         require_relative 'github'
@@ -479,6 +481,20 @@ module DCR
       result = ReviewSeries.sync(repo: history.fetch('repo'), name: history.fetch('name'), follow: options[:follow] == true, head: pull['head'], base: pull['base'])
       return puts("Revision #{result['revision']} already shows the code as it is. Nothing to update.") if result['status'] == 'unchanged'
       puts [ReviewSeries.sync_brief(result), SYNC_RULE, sync_commands(flags(options)), 'The open page offers the new revision by itself. Comments and progress came along.'].join("\n\n")
+    end
+
+    # A review of the checkout becomes its branch's pull request's, found on GitHub (Switch to the
+    # pull request in the page).
+    def switch(history, directory, options)
+      require_relative 'github'
+      pull = begin GitHub.new(directory).branch_pull(history.fetch('repo'), history.fetch('branch'))
+             rescue GitHub::Error => error
+               raise ArgumentError, error.message
+             end
+      raise ArgumentError, 'This branch has no open pull request on GitHub yet. Push it and open one first.' unless pull
+      result = ReviewSeries.switch(repo: history.fetch('repo'), name: history.fetch('name'), pull: pull)
+      briefs = [result['pull_request'], result].compact.select { |saved| Array(saved['unreviewed']).any? }.map { |saved| ReviewSeries.sync_brief(saved) }
+      puts [result['summary'], *briefs, (SYNC_RULE if briefs.any?), (sync_commands(flags(options)) if briefs.any?), 'The open page offers the new revision by itself. Comments and progress came along.'].compact.join("\n\n")
     end
 
     # The Risk ranking: the open page shows it at once. While the review is in progress `dcr series

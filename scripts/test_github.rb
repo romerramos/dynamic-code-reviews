@@ -33,6 +33,10 @@ FAKE_GH = <<~'RUBY'
     fail_with.(422, 'Validation Failed') if input['line'] == 12 && !input['subject_type'] # GitHub's diff is narrower
     puts JSON.generate('html_url' => "https://github.com/acme/web/pull/7#discussion_r#{input['line'] || 'file'}")
   when ['DELETE', 'repos/acme/web/pulls/comments/13'] then puts '{}'
+  when ['GET', 'repos/acme/web/pulls?state=open&head=acme%3Afeat%2Fvalue']
+    puts JSON.generate([{'number' => 7, 'html_url' => 'https://github.com/acme/web/pull/7', 'title' => 'Keep the value',
+                         'head' => {'sha' => ENV.fetch('GH_PULL_HEAD'), 'ref' => 'feat/value'}, 'base' => {'sha' => ENV.fetch('GH_PULL_BASE'), 'ref' => 'main'}}])
+  when ['GET', 'repos/acme/web/pulls?state=open&head=acme%3Afeat%2Fother'] then puts '[]'
   when ['POST', 'repos/acme/web/issues/7/comments'] then puts JSON.generate('html_url' => 'https://github.com/acme/web/pull/7#issuecomment-1')
   when ['POST', 'repos/acme/web/pulls/7/reviews'] then puts JSON.generate('id' => 5, 'html_url' => 'https://github.com/acme/web/pull/7#pullrequestreview-5')
   when ['GET', 'repos/acme/web/pulls/7/reviews/5/comments?per_page=100']
@@ -220,4 +224,32 @@ Dir.mktmpdir('dcr-github-draft-') do |root|
   assert(kept['bodies'] == {'c1' => 'My own words'} && kept['pending'].key?('c1'), 'The approved text was not kept with the pending comment')
   assert(api.call('POST', '/api/github/pending', body.({'key' => KEY, 'id' => 'c1', 'pending' => false}))[1]['bodies'].empty?, 'The approved text outlived its pending comment')
   puts 'PASS a comment is rewritten in the reviewer\'s voice in the background, and the text they approve is kept'
+end
+
+Dir.mktmpdir('dcr-github-pull-') do |directory|
+  gh = File.join(directory, 'gh')
+  File.write(gh, "#!#{RbConfig.ruby}\n#{FAKE_GH}")
+  File.chmod(0o755, gh)
+  ENV['GH_LOG'] = File.join(directory, 'gh.log')
+  # A review of the checkout finds its branch's pull request through the checkout's GitHub remote.
+  repo = File.join(directory, 'repo')
+  git = ->(*args) { out = IO.popen(['git', '-C', repo, *args], err: File::NULL, &:read); raise "git #{args.first} failed" unless $?.success?; out.strip }
+  FileUtils.mkdir_p(repo)
+  git.('init', '-q')
+  git.('-c', 'user.name=Rae Viewer', '-c', 'user.email=rae@example.com', 'commit', '-q', '--allow-empty', '-m', 'base')
+  ENV['GH_PULL_BASE'] = git.('rev-parse', 'HEAD')
+  git.('-c', 'user.name=Rae Viewer', '-c', 'user.email=rae@example.com', 'commit', '-q', '--allow-empty', '-m', 'head')
+  ENV['GH_PULL_HEAD'] = git.('rev-parse', 'HEAD')
+  lookup = DCR::GitHub.new(File.join(directory, 'checkout-review'), gh: gh)
+  begin
+    lookup.branch_pull(repo, 'feat/value')
+    assert(false, 'A checkout with no GitHub remote was asked about')
+  rescue DCR::GitHub::Error => error
+    assert(error.message == 'This checkout has no GitHub remote.', error.message)
+  end
+  git.('remote', 'add', 'origin', 'git@github.com:acme/web.git')
+  found = lookup.branch_pull(repo, 'feat/value')
+  assert(found == {'head' => ENV['GH_PULL_HEAD'], 'base' => ENV['GH_PULL_BASE'], 'number' => 7, 'url' => 'https://github.com/acme/web/pull/7', 'title' => 'Keep the value', 'head_label' => 'feat/value', 'base_label' => 'main'}, "The branch's pull request is wrong: #{found}")
+  assert(lookup.branch_pull(repo, 'feat/other').nil?, 'A branch with no pull request found one')
+  puts 'PASS a checkout finds its branch\'s pull request through its GitHub remote'
 end

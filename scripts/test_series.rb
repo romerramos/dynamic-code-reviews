@@ -201,6 +201,75 @@ module SeriesChecks
         end
       end
     end
+    checks['a review of the checkout switches to its pull request, keeping what the reader has, and goes on showing the checkout when that has more'] = lambda do
+      require_relative '../lib/dcr/github'
+      [false, true].each do |ahead|
+        ReviewChecks.fixture do |root, first|
+          DynamicReviews.git(root, 'branch', 'main', first) unless DynamicReviews.git(root, 'branch', '--show-current').strip == 'main'
+          DynamicReviews.git(root, 'checkout', '-q', '-b', 'feat/value')
+          ReviewSeries.start(repo: root, name: 'mine', report: initial(root))
+          series = File.join(root, '.reviews/mine')
+          state = DCR::State.new(series)
+          before = DynamicReviews.extract(File.join(series, 'current.html'))['snapshot']
+          state.user_message(DCR::State.review_key(before['fingerprint'], 'mine', 1), 'value-note', 'Why two?')
+          DynamicReviews.git(root, 'add', 'sample.rb')
+          second = DynamicReviews.git(root, 'commit-tree', DynamicReviews.git(root, 'write-tree').strip, '-p', first, '-m', 'test: push the change').strip
+          DynamicReviews.git(root, 'update-ref', 'HEAD', second)
+          File.write(File.join(root, 'extra.rb'), "EXTRA = 1\n") if ahead
+          pull = {'head' => second, 'base' => first, 'number' => 7, 'url' => 'https://github.com/acme/app/pull/7', 'title' => 'Keep the value', 'head_label' => 'feat/value', 'base_label' => 'main'}
+          result = ReviewSeries.switch(repo: root, name: 'mine', pull: pull)
+          history = ReviewSeries.manifest(series)
+          assert(history['origin_mode'] == 'pr' && history['base'] == first && !history.key?('pinned_head') == !ahead, "The review is not the pull request's: #{history.except('revisions')}")
+          # The pull request has the code revision 1 showed, so revision 1 became the pull request's.
+          pushed = DynamicReviews.extract(File.join(series, 'revisions', '001.html'))
+          assert(pushed['review']['comparison'].values_at('pr_url', 'pr_number', 'base', 'head', 'head_label') == ['https://github.com/acme/app/pull/7', 7, first, second, 'feat/value'], "Revision 1 does not name the pull request: #{pushed['review']['comparison']}")
+          key = DCR::State.review_key(pushed['snapshot']['fingerprint'], 'mine', 1)
+          assert(DCR::GitHub.new(series).send(:target, key).values_at(:commit, :unpushed) == [second, []], 'GitHub does not take comments on the pull request')
+          assert(state.read.dig('threads', key, 'value-note', 'messages').map { |message| message['body'] } == ['Why two?'], 'The conversation was lost')
+          if ahead
+            assert(result.values_at('status', 'revision', 'followed') == ['updated', 2, true] && history['follows'] == 'checkout', "The checkout's extra file was not shown: #{result.except('unreviewed')}")
+            local = DynamicReviews.extract(File.join(series, 'current.html'))
+            target = DCR::GitHub.new(series).send(:target, DCR::State.review_key(local['snapshot']['fingerprint'], 'mine', 2))
+            assert(local['review']['history']['local'] && target.values_at(:commit, :unpushed) == [second, ['extra.rb']], 'Comments could reach GitHub on code that is not pushed')
+            assert(ReviewSeries.stale(repo: root, name: 'mine') == {'changed' => 0, 'pr' => true}, 'The checkout it shows was offered as an update')
+          else
+            assert(result.values_at('status', 'revision', 'followed') == ['updated', 1, false] && !history.key?('follows'), "The same code was saved as another revision: #{result.except('unreviewed')}")
+            assert(ReviewSeries.stale(repo: root, name: 'mine') == {'changed' => 0, 'pinned' => true, 'pr' => true}, 'The review does not follow its pull request')
+          end
+          rejects('A review was switched twice') { ReviewSeries.switch(repo: root, name: 'mine', pull: pull) }
+        end
+      end
+    end
+    checks['the page offers a review of the checkout its branch\'s pull request, and switches to it'] = lambda do
+      require_relative '../lib/dcr/live_api'
+      ReviewChecks.fixture do |root, first|
+        Dir.mktmpdir('review-switch-') do |out|
+          DynamicReviews.git(root, 'branch', 'main', first) unless DynamicReviews.git(root, 'branch', '--show-current').strip == 'main'
+          DynamicReviews.git(root, 'checkout', '-q', '-b', 'feat/value')
+          DynamicReviews.git(root, 'remote', 'add', 'origin', 'git@github.com:acme/app.git')
+          ReviewSeries.start(repo: root, name: 'mine', report: initial(root))
+          series = File.join(root, '.reviews/mine')
+          DynamicReviews.git(root, 'add', 'sample.rb')
+          second = DynamicReviews.git(root, 'commit-tree', DynamicReviews.git(root, 'write-tree').strip, '-p', first, '-m', 'test: push the change').strip
+          DynamicReviews.git(root, 'update-ref', 'HEAD', second)
+          gh = File.join(out, 'gh')
+          File.write(gh, "#!/bin/sh\ncat #{File.join(out, 'pulls.json')}\n")
+          File.chmod(0o755, gh)
+          pulls = ->(list) { File.write(File.join(out, 'pulls.json'), JSON.generate(list)) }
+          api = -> { DCR::LiveAPI.new(series, github: DCR::GitHub.new(series, gh: gh)) }
+          pulls.call([])
+          assert(!api.call.call('GET', '/api/sync', nil)[1].key?('pull'), 'A branch with no pull request was offered one')
+          assert(api.call.call('POST', '/api/switch', -> { '{}' })[1]['error'].include?('no open pull request'), 'A switch went ahead with no pull request')
+          pulls.call([{'number' => 7, 'html_url' => 'https://github.com/acme/app/pull/7', 'title' => 'Keep the value', 'head' => {'sha' => second, 'ref' => 'feat/value'}, 'base' => {'sha' => first, 'ref' => 'main'}}])
+          offered = api.call.call('GET', '/api/sync', nil)[1]
+          assert(offered['pull'] == {'number' => 7, 'url' => 'https://github.com/acme/app/pull/7', 'title' => 'Keep the value'}, "The branch's pull request was not offered: #{offered}")
+          switched = api.call.call('POST', '/api/switch', -> { '{}' })
+          assert(switched[0] == 200 && switched[1].values_at('status', 'revision', 'followed') == ['updated', 1, false], "The switch did not save the pull request: #{switched}")
+          after = api.call.call('GET', '/api/sync', nil)[1]
+          assert(after.slice('pr', 'pinned', 'pull') == {'pr' => true, 'pinned' => true}, "The review does not follow its pull request: #{after}")
+        end
+      end
+    end
     checks['a pull request review follows the checkout only once its reviewer says so, and returns to the verified head'] = lambda do
       require_relative '../lib/dcr/github'
       ReviewChecks.fixture do |root, first|

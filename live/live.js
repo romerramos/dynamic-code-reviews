@@ -1842,7 +1842,8 @@
   const updateButton = Object.assign(document.createElement('button'), {type: 'button', id: 'dcr-update', className: 'header-button', hidden: true});
   document.getElementById('revision-navigation')?.before(updateButton);
   // Update takes what the review shows: a pull request's review asks GitHub, and one the reader
-  // has following the checkout reads the checkout. The menu holds only the other one.
+  // has following the checkout reads the checkout. The menu holds only the other one; on a review
+  // of the checkout whose branch has a pull request now, switching to it.
   const updateMore = document.createElement('details');
   updateMore.className = 'more-menu dcr-update-more';
   updateMore.hidden = true;
@@ -1854,7 +1855,7 @@
   const renderUpdate = () => {
     // A newer save of the review has its own button.
     set(updateButton, 'hidden', !stale || newer());
-    set(updateMore, 'hidden', updateButton.hidden || !stale.pr || !!stale.unavailable || updating);
+    set(updateMore, 'hidden', updateButton.hidden || !(stale.pr || stale.pull) || !!stale.unavailable || updating);
     if (updateButton.hidden) return;
     // A review that cannot be updated right now says why, rather than losing its button.
     if (stale.unavailable) {
@@ -1872,7 +1873,8 @@
     const count = updating ? 0 : pushed ? pushed.changed || 0 : stale.pinned ? 0 : stale.changed || 0;
     const other = updateMore.querySelector('[data-update-other]');
     const differs = stale.changed ? ` · ${stale.changed} ${stale.changed === 1 ? 'file' : 'files'}` : '';
-    const face = stale.pinned ? ['folder-git-2', `Update from my checkout${differs}`, stale.behind || 'Show your files as they are, pushed or not'] : ['git-pull-request', 'Update from the pull request', 'Take the review back to the pull request as pushed'];
+    const face = !stale.pr && stale.pull ? ['git-pull-request', `Switch to pull request #${stale.pull.number}`, `This branch has pull request #${stale.pull.number}${stale.pull.title ? `, ${stale.pull.title}` : ''}. Switch the review to it, and GitHub takes your comments.`]
+      : stale.pinned ? ['folder-git-2', `Update from my checkout${differs}`, stale.behind || 'Show your files as they are, pushed or not'] : ['git-pull-request', 'Update from the pull request', 'Take the review back to the pull request as pushed'];
     if (other.dataset.face !== face.join('|')) { other.dataset.face = face.join('|'); other.firstElementChild.innerHTML = ico(face[0]); other.lastElementChild.textContent = face[1]; }
     set(other, 'disabled', !!stale.pinned && !!stale.behind);
     set(other, 'title', face[2]);
@@ -1914,9 +1916,20 @@
     followDialog.showModal();
     followDialog.querySelector('[data-follow-close]:not(.act-icon)').focus();
   };
+  // Switch to the pull request: the review of the checkout becomes the branch's pull request's.
+  const askSwitch = () => {
+    const pull = stale.pull;
+    followDialog.innerHTML = `<form method="dialog" class="modal-box dcr-gh-box">
+      <header><div><h2 id="dcr-follow-title">Switch to pull request #${pull.number}</h2></div><button type="button" class="act act-quiet act-icon" data-follow-close aria-label="Close" title="Close (Esc)">${ico('x')}</button></header>
+      <div class="dcr-follow-text">${pull.title ? `<p><b>${tools.escape(pull.title)}</b></p>` : ''}<p>The review becomes the pull request's, so GitHub takes your comments. Your comments, conversations and progress are kept.</p><p class="muted">When your checkout has more than the pull request, the review goes on showing it, and GitHub takes comments on the files that match the pull request.</p></div>
+      <footer class="dcr-gh-actions"><button type="button" class="act act-quiet" data-follow-close>Cancel</button><button type="button" class="act act-primary" data-switch-go>Switch to the pull request</button></footer></form>`;
+    followDialog.showModal();
+    followDialog.querySelector('[data-follow-close]:not(.act-icon)').focus();
+  };
   followDialog.addEventListener('click', event => {
     if (event.target.closest('[data-follow-close]')) followDialog.close();
     else if (event.target.closest('[data-follow-go]')) { followDialog.close(); runUpdate('checkout', !!stale?.pinned); }
+    else if (event.target.closest('[data-switch-go]')) { followDialog.close(); runUpdate('switch'); }
   });
   // Update on a pull request's review asks GitHub; the checkout is what it shows only when the
   // reader says so, here or in the menu. A review that already follows the checkout goes on doing so.
@@ -1929,16 +1942,17 @@
   updateMore.addEventListener('click', event => {
     if (!event.target.closest('[data-update-other]:not(:disabled)')) return;
     updateMore.open = false;
-    if (stale?.pinned) askFollow();
+    if (!stale?.pr && stale?.pull) askSwitch();
+    else if (stale?.pinned) askFollow();
     else runUpdate('pr');
   });
   // from 'pr': the pull request as pushed. 'checkout': the files as they are; follow says the
-  // reader chose that for a pull request's review.
+  // reader chose that for a pull request's review. 'switch': to the branch's pull request.
   const runUpdate = async (from, follow = false) => {
     updating = true;
     renderUpdate();
     try {
-      const result = await api('/api/sync', from === 'pr' ? {from: 'pr'} : {follow});
+      const result = from === 'switch' ? await api('/api/switch', {}) : await api('/api/sync', from === 'pr' ? {from: 'pr'} : {follow});
       if (result.status === 'updated') {
         try { sessionStorage.setItem(updatedKey, result.summary); } catch { /* the Overview says it too */ }
         history.replaceState(null, '', `/${location.hash}`); // the new revision, on the page the reader was on

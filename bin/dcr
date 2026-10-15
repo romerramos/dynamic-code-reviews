@@ -23,7 +23,8 @@ USAGE = <<~TEXT
     comment                        Post a review comment to a review in progress; the open page shows it at once,
                                    and another installed agent checks it
     sync                           Update a review to the code as it is now: comments follow their lines or become outdated,
-                                   and the changed ranges are printed for you to comment on
+                                   and the changed ranges are printed for you to comment on; --switch-to-pull-request
+                                   takes a review of the checkout to its branch's pull request
     screenshot                     Post screenshots of the running app to the review: under UI changes, or on a comment
     log                            What the agent's commands did to a review, one line each: what ran, what was refused and why
     risk-ranking                   Post the Overview's Risk ranking of the changed files (or --none)
