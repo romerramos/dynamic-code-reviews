@@ -136,7 +136,7 @@
     return `<article class="dcr-msg dcr-origin${comment.personal ? ' dcr-you' : ' dcr-agent'}">${avatar}<div class="dcr-msg-main"><header class="dcr-msg-head"><strong>${who}</strong>${comment.personal ? '' : tools.modelHTML(comment)}${kind ? `<span class="dcr-role">${tools.escape(kind)}</span>` : ''}</header>${body}</div></article>`;
   };
   const advToggleHTML = '<button type="button" class="dcr-adv-toggle" data-dcr-adv hidden aria-pressed="false"></button>';
-  const composeHTML = () => `<form class="dcr-reply dcr-compose" hidden><textarea rows="1" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea>${advToggleHTML}<button type="button" class="dcr-change" data-dcr-change hidden aria-label="Make this change">${ico('wrench')}</button><button type="submit" class="dcr-send" aria-label="Send reply" title="Send reply (⌘ Enter)">${ico('send')}</button></form>`;
+  const composeHTML = () => `<form class="dcr-reply dcr-compose" hidden><textarea rows="1" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea>${advToggleHTML}<button type="button" class="dcr-change dcr-gh" data-dcr-github hidden aria-label="Sum this conversation up for GitHub" title="Sum this conversation up as a comment for GitHub">${window.ReviewGitHub?.mark || ''}</button><button type="button" class="dcr-change" data-dcr-change hidden aria-label="Make this change">${ico('wrench')}</button><button type="submit" class="dcr-send" aria-label="Send reply" title="Send reply (⌘ Enter)">${ico('send')}</button></form>`;
   const cardBlock = (id, variant, comment) => {
     const block = document.createElement('div');
     block.className = `dcr-thread dcr-${variant}`;
@@ -206,6 +206,9 @@
       set(field, 'disabled', !online);
       set(field, 'placeholder', online ? 'Reply to your agent' : 'The review server stopped');
       set(form.querySelector('.dcr-send'), 'disabled', !online);
+      const github = form.querySelector('[data-dcr-github]');
+      const entry = comments().find(found => found.id === id);
+      set(github, 'hidden', !(ghStatus.phase === 'ready' && ghProvider.talked(id) && entry && globalThis.ReviewTools.githubLink(snapshot, review, entry) && !['posted', 'posting'].includes(ghProvider.stateOf(id).state)));
     } else if (!sent && !form.hidden && !form.dataset.mode) form.hidden = true;
     const change = form.querySelector('[data-dcr-change]');
     if (change) {
@@ -741,12 +744,14 @@
   const ghPosting = new Set();
   const ghFailed = new Map();
   const ghPendingIds = () => { const known = new Set(comments().map(comment => comment.id)); return Object.keys(ghData.pending || {}).filter(id => known.has(id) && !ghData.posted?.[id]); };
-  const ghRefresh = () => { decorateLedger(); window.ReviewGitHub?.refresh(); renderPanel(); renderUnsent(); };
+  const ghRefresh = () => { decorateLedger(); document.querySelectorAll('.dcr-ledger').forEach(refreshBlock); window.ReviewGitHub?.refresh(); renderPanel(); renderUnsent(); };
   const ghProvider = {
     status: () => !online ? {phase: 'offline', text: 'The review server stopped. Restart `dcr serve` to post to GitHub.'} : ghStatus,
     stateOf: id => ghData.posted?.[id] ? {state: 'posted', ...ghData.posted[id]} : ghPosting.has(id) ? {state: 'posting'}
       : ghFailed.has(id) ? {state: 'failed', error: ghFailed.get(id)} : ghData.pending?.[id] ? {state: 'pending'} : {state: 'note'},
     pendingCount: () => ghPendingIds().length,
+    // Your question to the agent becomes a comment for the PR once the agent has answered: the conversation is what it sums up.
+    talked: id => !!threads[id] && ((threads[id].messages || []).some(message => message.author === 'agent') || tools.opinionMessages(threads[id]).length > 0),
     // What the agent wrote is read, in the reader's voice, before it goes: the preview. What the
     // reader wrote themselves goes as they wrote it; the box they typed it in was the preview.
     post(id) { if (own(id)) ghSend.post(id, written(id)); else openPreview(id); },
@@ -774,7 +779,8 @@
       } catch (error) { ghNotice('error', error.message); }
     }
   };
-  const own = id => !!comments().find(entry => entry.id === id)?.personal;
+  // What the reader wrote for the PR goes as written. A question for the agent goes summed up, like what the agent wrote.
+  const own = id => { const comment = comments().find(entry => entry.id === id); return !!comment?.personal && comment.audience !== 'agent'; };
   const written = id => globalThis.ReviewTools.githubItem(snapshot, comments().find(entry => entry.id === id), review.qa).body;
   const ghSend = {
     async post(id, body) {
@@ -1211,6 +1217,7 @@
     return id;
   };
   view.addEventListener('click', event => {
+    if (event.target.closest('[data-dcr-github]')) ghProvider.open(current);
     if (event.target.closest('[data-dcr-back]')) {
       const id = closeConversation();
       decorateLedger();

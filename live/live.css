@@ -229,6 +229,7 @@ html[data-mode="dark"] .dcr-send:not(:disabled){background:var(--color-primary)}
 .dcr-change svg{width:15px;height:15px}
 .dcr-change:hover:not(:disabled){background:var(--bg-neutral-3);color:var(--ink)}
 .dcr-change:disabled{opacity:.4;cursor:default}
+.dcr-change[hidden]{display:none}
 .dcr-change:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .dcr-reply .btn[data-dcr-change] svg{width:13px;height:13px}
 .dcr-reply.dcr-compose[hidden]{display:none}
