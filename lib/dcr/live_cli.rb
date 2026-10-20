@@ -8,6 +8,7 @@ require 'shellwords'
 require 'uri'
 require_relative 'activity'
 require_relative 'export'
+require_relative 'review_report'
 require_relative 'agents'
 require_relative 'previews'
 require_relative 'state'
@@ -75,6 +76,7 @@ module DCR
       'comments' => 'dcr comments (--repo ROOT --name SERIES | --dir DIR) [--thread ID] [--json]   (--thread prints that one conversation in full: the comment as sent, then every message)',
       'preview' => 'dcr preview submit (--repo ROOT --name SERIES | --dir DIR) --path <template path> [--file FILE] [--title TITLE] [--css STYLESHEET]... [--page-class CLASSES] [--image-map JSON] | dcr preview fail ... --path <template path> --reason TEXT',
       'export' => 'dcr export (--repo ROOT --name SERIES | --dir DIR) [--out FILE]',
+      'report' => 'dcr report (--repo ROOT --name SERIES | --dir DIR) [--json] [--publish]   (what is left before the review can go to its pull request, and the short report it posts; --publish posts it as one comment, updated in place later, and marks the reviewed commit, only when nothing is left)',
       'risk-ranking' => 'dcr risk-ranking (--repo ROOT --name SERIES | --dir DIR) (--file RANKING.json | --none REASON)   (the Overview\'s Risk ranking: {summary, files: [{file, score, tags, reason, line}]}, as in the review JSON\'s risk_ranking; --none when no file stands out)',
       'comment' => 'dcr comment (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--model ID] [--effort LEVEL] [--no-second-opinion] [--file COMMENTS.json]   (one review comment or an array, as in the review JSON: id, label, decoration, subject, discussion, hunk, side, start, end, plus an optional context: one or two plain sentences on what the change tries to do, for the second opinion; stdin when --file is omitted)',
       'log' => 'dcr log (--repo ROOT --name SERIES | --dir DIR) [--json]   (what the agent\'s commands did to this review, oldest first: the command, ok or the sentence it failed with, who ran it and which copy of the skill)',
@@ -119,6 +121,7 @@ module DCR
         p.on('--no-second-opinion') { options[:second_opinion] = false }
         p.on('--outcome WORD', 'reply: what became of the comment after the code changed (addressed, still-applies, not-relevant)') { |v| options[:outcome] = v }
         p.on('--none REASON') { |v| options[:none] = v }
+        p.on('--publish') { options[:publish] = true }
       end
       parser.parse!(argv)
       return stop(options, parser) if command == 'stop'
@@ -139,11 +142,12 @@ module DCR
       when 'focus' then focus(directory(options, parser))
       when 'link' then link(directory(options, parser))
       when 'export' then export(options, directory(options, parser))
+      when 'report' then report(options, directory(options, parser))
       when 'preview' then preview(state, options, argv, parser)
       when 'evidence' then evidence(options, directory(options, parser), argv, parser)
       when 'second-opinion' then second_opinion(options, directory(options, parser), parser)
       end
-      Activity.record(series, said, 'ok', (options[:none] if command == 'screenshot')) unless %w[comments link].include?(command)
+      Activity.record(series, said, 'ok', (options[:none] if command == 'screenshot')) unless %w[comments link].include?(command) || (command == 'report' && !options[:publish])
     rescue ArgumentError, KeyError, SystemCallError, JSON::ParserError => error
       Activity.record(series, said, 'failed', error.message) if series
       abort error.message
@@ -344,6 +348,30 @@ module DCR
       File.write(out, html, perm: 0o600)
       warnings.each { |warning| warn warning }
       puts out
+    end
+
+    # The report, from the saved review alone: no page needs to be open. --publish posts it when
+    # nothing is left, as the page's Publish does.
+    def report(options, directory)
+      require_relative 'live_api'
+      key = ReviewReport.latest(directory).first
+      api = LiveAPI.new(directory)
+      code, data = options[:publish] ? api.call('POST', '/api/publish', -> { JSON.generate('key' => key) }) : api.call('GET', "/api/publish?key=#{URI.encode_www_form_component(key)}&fresh=1", nil)
+      raise ArgumentError, data['error'] unless code == 200
+      return puts(JSON.pretty_generate(data)) if options[:json]
+      if options[:publish]
+        posted = data['published']
+        puts "Published: #{posted['url']}"
+        warn "The commit was not marked as reviewed: #{posted['status_error']}" if posted['status_error']
+        return
+      end
+      facts = data['facts']
+      said = {'files' => ->(step) { step['done'] ? 'Every file that needs a person is reviewed.' : "#{step['left'].length} of #{facts['files']['yours']} files that need a person are not reviewed: #{step['left'].first(5).join(', ')}#{' …' if step['left'].length > 5}" },
+              'comments' => ->(step) { step['done'] ? 'Every comment is settled.' : "#{step['open'].length} comments are open: #{step['open'].first(5).join(', ')}" },
+              'code' => ->(step) { step['done'] ? "The review shows #{step['repo']} ##{step['number']} as pushed." : step['text'] }}
+      puts data['ready'] ? 'Ready to publish (dcr report --publish).' : 'Not ready to publish:'
+      data['steps'].each { |step| puts "  #{step['done'] ? '✓' : '✗'} #{said.fetch(step['id']).call(step)}" }
+      puts "\nThe pull request gets:\n\n#{data['markdown']}"
     end
 
     # `dcr preview submit` takes the agent's HTML from --file or stdin and shows it in the review.

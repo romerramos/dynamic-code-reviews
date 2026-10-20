@@ -446,6 +446,12 @@ module DCR
     end
 
     # A posted comment was taken back from GitHub: the review holds it as unposted again.
+    # The review's report as last published ({id, url, head, at}), so the next publish updates it.
+    def github_report(key, published)
+      check_key(key)
+      update { |state| github_entry(state, key)['report'] = published.merge('at' => Time.now.utc.iso8601) }
+    end
+
     def github_unposted(key, id)
       check_key(key)
       update do |state|

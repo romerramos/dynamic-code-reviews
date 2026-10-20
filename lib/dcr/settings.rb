@@ -58,8 +58,8 @@ module DCR
     def adversaries_decided? = saved['adversariesDecided'] == true || !adversaries.empty?
 
     # Whether this repository's diffs may be sent to JevMyPR for a verdict: true, false, or nil
-    # until the reviewer has answered. Per repository (all its worktrees), because it sends code
-    # to an outside service: yes for one project is not yes for another.
+    # until the reviewer has chosen (the server treats that as on). Per repository (all its
+    # worktrees), because it sends code to an outside service: turning it off for one project leaves the others as they are.
     def jevmypr(repo) = [true, false].include?(choice = jevmypr_choices[self.class.repo_key(repo)]) ? choice : nil
 
     def save_jevmypr(repo, on)

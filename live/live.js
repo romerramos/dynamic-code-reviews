@@ -80,12 +80,14 @@
       try { api('/api/settings', JSON.parse(localStorage.getItem(settingsKey))).catch(() => {}); } catch { /* nothing valid to save */ }
     }, 400);
   };
+  let progressChanged = () => {}; // this review's progress was saved: Publish counts again
   const realSetItem = Storage.prototype.setItem;
   Storage.prototype.setItem = function (name, value) {
     realSetItem.call(this, name, value);
     if (this !== localStorage) return;
     if (pushable(name)) push(name);
     else if (name === settingsKey) pushSettings();
+    if (name === key) progressChanged();
   };
   try { Object.keys(localStorage).filter(pushable).forEach(push); } catch { /* storage unavailable */ }
 
@@ -2108,6 +2110,7 @@
     if (jevStrip.innerHTML !== html) jevStrip.innerHTML = html;
     set(jevStrip, 'hidden', !html);
     set(jevSwitch.querySelector('input'), 'checked', jev.enabled === true);
+    renderPublish();
   };
   const showVerdict = verdict => { if (jev) { jev.verdict = verdict || null; renderVerdict(); } };
   const askVerdict = async extra => {
@@ -2120,8 +2123,143 @@
   });
   jevSwitch.addEventListener('change', event => askVerdict({enabled: event.target.checked}));
 
+  // --- Publish: the review, on its pull request -----------------------------------------------
+  // One button at the header's end says what is left before the review can go to GitHub, and
+  // counts down while the reader works: the files that need them, then the open comments, then
+  // the code being the pull request's as pushed. Done, it publishes a short report as one comment
+  // (updated in place later) and a check on the reviewed commit. The server checks it all again.
+  const publishButton = Object.assign(document.createElement('button'), {type: 'button', id: 'dcr-publish', className: 'header-button'});
+  document.querySelector('.header-actions')?.append(publishButton);
+  let publishCheck = null, publishAsked = 0, publishTimer = null, publishing = false, wasLeft = null;
+  const ring = (done, total) => {
+    const around = 2 * Math.PI * 7, part = total ? Math.min(1, done / total) : 1;
+    return `<svg class="dcr-ring" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="7"/><circle class="dcr-ring-fill" cx="9" cy="9" r="7" stroke-dasharray="${(around * part).toFixed(2)} ${around.toFixed(2)}" transform="rotate(-90 9 9)"/></svg>`;
+  };
+  // The files that need the reader, as the page has them now: those JevMyPR wants a person on, or all.
+  const filesNeed = () => {
+    const said = jev?.enabled === true && jev.verdict?.status === 'ready' ? jev.verdict.files || {} : null;
+    const yours = snapshot.files.map(file => file.path).filter(path => !said || said[path] === 'human');
+    const viewed = saved().viewedFiles || [];
+    return {yours, left: yours.filter(path => !viewed.includes(path)), verdict: !!said};
+  };
+  const stepOf = id => publishCheck?.steps?.find(step => step.id === id);
+  const PUBLISH_NEXT = {switch: 'Switch to the PR', open: 'Open a PR', update: 'Update first', push: 'Push to publish', error: 'Publish'};
+  const publishFace = () => {
+    const need = filesNeed();
+    const plural = (number, one) => `${number} ${one}${number === 1 ? '' : 's'}`;
+    if (need.left.length) return {tone: 'todo', icon: ring(need.yours.length - need.left.length, need.yours.length), text: `${plural(need.left.length, 'file')} left`, hint: `${plural(need.left.length, 'file')} still ${need.left.length === 1 ? 'needs' : 'need'} you. Read ${need.left.length === 1 ? 'it' : 'them'}, then publish your review to GitHub.`};
+    // Until the server has checked the comments and the code, nothing says ready.
+    if (!publishCheck) return {tone: 'idle', icon: window.ReviewGitHub?.mark || ico('send'), text: 'Publish', hint: 'Checking whether your review can be published…'};
+    const open = stepOf('comments')?.open?.length || 0;
+    if (open) return {tone: 'todo', icon: ico('message-square'), text: `${plural(open, 'comment')} open`, hint: `Resolve ${open === 1 ? 'it' : 'them'}, or have ${open === 1 ? 'it' : 'them'} fixed, then publish your review to GitHub.`};
+    const code = stepOf('code');
+    if (code && !code.done) return {tone: 'todo', icon: ico('git-pull-request'), text: PUBLISH_NEXT[code.kind] || 'Publish', hint: code.text};
+    const published = publishCheck?.published;
+    if (published && published.body === publishCheck.markdown) return {tone: 'done', icon: ico('check'), text: 'Published', hint: 'Your review is on the pull request. Open to see it.'};
+    return {tone: 'ready', icon: window.ReviewGitHub?.mark || ico('send'), text: published ? 'Publish again' : 'Publish', hint: publishCheck ? 'Publish your review to the pull request' : 'Checking whether your review can be published…'};
+  };
+  const renderPublish = () => {
+    const face = publishFace();
+    const html = `${face.icon}<span>${tools.escape(face.text)}</span>`;
+    if (publishButton.innerHTML !== html) publishButton.innerHTML = html;
+    publishButton.dataset.tone = face.tone;
+    set(publishButton, 'title', face.hint);
+    publishButton.setAttribute('aria-label', `${face.text}. ${face.hint}`);
+    // The last file read is worth a word: what comes next.
+    const left = filesNeed().left.length;
+    if (wasLeft && !left) flash('Every file that needs you is reviewed. Publish your review to GitHub from the top right.');
+    wasLeft = left;
+    if (publishDialog.open && !publishing) renderPublishDialog();
+  };
+  // Asked again a moment after anything changes (a file marked, a comment resolved), and on coming back to the tab.
+  const askPublish = async (fresh = false) => {
+    const asked = ++publishAsked;
+    try {
+      const check = await api(`/api/publish?key=${encodeURIComponent(key)}${fresh ? '&fresh=1' : ''}`);
+      if (asked === publishAsked) publishCheck = check;
+    } catch (error) {
+      if (asked === publishAsked) publishCheck = {steps: [{id: 'code', done: false, kind: 'error', text: error.message === 'Not found' ? 'This review\'s server is older than its page: restart `dcr serve`.' : error.message}]};
+    }
+    renderPublish();
+  };
+  const laterPublish = () => { clearTimeout(publishTimer); publishTimer = setTimeout(() => { if (!document.hidden) askPublish(); }, 1500); };
+
+  const publishDialog = document.createElement('dialog');
+  publishDialog.id = 'dcr-publish-dialog';
+  publishDialog.className = 'modal dcr-gh-finish';
+  publishDialog.setAttribute('aria-labelledby', 'dcr-publish-title');
+  document.body.append(publishDialog);
+  const publishStepsHTML = () => {
+    const need = filesNeed();
+    const comments = stepOf('comments'), code = stepOf('code');
+    const total = publishCheck?.facts?.comments?.total || 0;
+    const next = window.ReviewVerdict?.order?.(need.left)?.[0] || need.left[0];
+    const open = comments?.open?.[0];
+    const fix = {switch: '<button type="button" class="act act-secondary" data-publish-do="switch">Switch</button>', update: '<button type="button" class="act act-secondary" data-publish-do="update">Update</button>'}[code?.kind] || (code && !code.done ? '<button type="button" class="act act-quiet" data-publish-do="again">Check again</button>' : '');
+    const files = need.left.length
+      ? `${need.verdict ? `JevMyPR says ${need.yours.length} ${need.yours.length === 1 ? 'needs' : 'need'} a person. ` : ''}${need.left.length} left.`
+      : need.verdict ? (need.yours.length ? `JevMyPR said ${need.yours.length} needed a person: all read.` : 'JevMyPR says none needs a person.') : `All ${need.yours.length} read.`;
+    const rows = [
+      {done: !need.left.length, title: 'Read the files that need you', text: files, action: next ? `<button type="button" class="act act-secondary" ${window.ReviewVerdict?.openAttributes?.(next) || ''} data-publish-close>Open next</button>` : ''},
+      {done: !!comments?.done, title: 'Settle every comment', text: !comments ? 'Checking…' : comments.open.length ? `${comments.open.length} still open: resolve each, or have it fixed.` : total ? `All ${total} settled.` : 'No comments to settle.', action: open ? `<button type="button" class="act act-secondary" data-ledger-jump="${tools.escape(open)}" data-publish-close>Show</button>` : ''},
+      {done: !!code?.done, title: 'Review the code that is on the pull request', text: !code ? 'Checking…' : code.done ? `${tools.escape(code.repo)} #${tools.escape(code.number)}, as pushed.` : tools.escape(code.text), action: fix}
+    ];
+    return rows.map((row, index) => `<li class="${row.done ? 'is-done' : ''}"><span class="dcr-step-mark" aria-hidden="true">${row.done ? ico('check') : index + 1}</span><span class="dcr-step-text"><b>${row.title}</b><small>${row.text}</small></span>${row.done ? '' : row.action}</li>`).join('');
+  };
+  const renderPublishDialog = () => {
+    const ready = !!publishCheck?.ready && !filesNeed().left.length;
+    const published = publishCheck?.published;
+    const code = stepOf('code');
+    const where = code?.done ? `${tools.escape(code.repo)} #${tools.escape(code.number)}${me?.login ? ` · as <b>@${tools.escape(me.login)}</b>` : ''}` : 'The pull request gets a short report: counts and outcomes, never what anyone wrote.';
+    const preview = publishCheck?.markdown ? tools.markdown(publishCheck.markdown.replace(/^<!--.*?-->\n/, '')) : '';
+    publishDialog.innerHTML = `<form method="dialog" class="modal-box dcr-gh-box dcr-publish-box">
+      <header><div><h2 id="dcr-publish-title">Publish your review</h2><p class="muted">${where}</p></div><button type="button" class="act act-quiet act-icon" data-publish-close aria-label="Close" title="Close (Esc)">${ico('x')}</button></header>
+      <ol class="dcr-publish-steps">${publishStepsHTML()}</ol>
+      ${preview ? `<section class="dcr-publish-preview" aria-label="What the pull request shows"><h3>On the pull request</h3><div class="dcr-body">${preview}</div></section>` : ''}
+      <p class="gh-finish-state" role="status" aria-live="polite" hidden></p>
+      <footer class="dcr-gh-actions">${published?.url ? `<a class="act act-quiet" href="${tools.escape(published.url)}" target="_blank" rel="noopener noreferrer">Last published ${ico('arrow-up-right')}</a>` : ''}<button type="button" class="act act-quiet" data-publish-close>Cancel</button><button type="button" class="act act-gh" data-publish-go ${ready ? '' : 'disabled'} title="${ready ? 'Post the report and mark the commit as reviewed' : 'Finish the steps above first'}">${window.ReviewGitHub?.mark || ''}<span>${published ? 'Publish again' : 'Publish to GitHub'}</span></button></footer></form>`;
+  };
+  const publishState = (tone, html) => {
+    const line = publishDialog.querySelector('.gh-finish-state');
+    line.dataset.tone = tone;
+    line.innerHTML = html;
+    line.hidden = !html;
+  };
+  publishButton.addEventListener('click', () => {
+    renderPublishDialog();
+    publishDialog.showModal();
+    publishDialog.querySelector('form').focus({preventScroll: true});
+    askPublish(true);
+  });
+  publishDialog.addEventListener('click', async event => {
+    if (event.target.closest('[data-publish-close]')) { publishDialog.close(); return; }
+    const action = event.target.closest('[data-publish-do]')?.dataset.publishDo;
+    if (action === 'again') { event.target.closest('button').disabled = true; await askPublish(true); return; }
+    if (action === 'switch' || action === 'update') { publishDialog.close(); runUpdate(action === 'switch' ? 'switch' : 'pr'); return; }
+    const go = event.target.closest('[data-publish-go]');
+    if (!go || go.disabled) return;
+    publishing = true;
+    publishDialog.querySelectorAll('button').forEach(button => { button.disabled = true; });
+    go.innerHTML = '<span class="gh-spinner" aria-hidden="true"></span>Publishing…';
+    publishState('busy', '');
+    try {
+      publishCheck = await api('/api/publish', {key});
+      const posted = publishCheck.published;
+      publishDialog.querySelector('.dcr-gh-actions').innerHTML = `<button type="button" class="act act-quiet" data-publish-close>Close</button><a class="act act-secondary" href="${tools.escape(posted.url)}" target="_blank" rel="noopener noreferrer">View on GitHub ${ico('arrow-up-right')}</a>`;
+      publishState('done', `<span class="gh-mark">${ico('check')}</span><span><b>Published.</b> The report is on the pull request${posted.status_error ? `, but the check on the commit was not set: ${tools.escape(posted.status_error)}` : ', and the commit is marked as reviewed'}.</span>`);
+    } catch (error) {
+      publishDialog.querySelectorAll('button').forEach(button => { button.disabled = false; });
+      go.innerHTML = `${window.ReviewGitHub?.mark || ''}<span>Try again</span>`;
+      publishState('error', `<span class="gh-mark">${ico('circle-alert')}</span><span>Not published. ${tools.escape(error.message)}</span>`);
+    } finally { publishing = false; renderPublish(); }
+  });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) askPublish(); });
+  progressChanged = () => { renderPublish(); laterPublish(); };
+  renderPublish();
+
   // --- sync ----------------------------------------------------------------------------------
   const apply = data => {
+    if (data.rev !== rev) laterPublish();
     threads = data.threads; rev = data.rev; latest = data.latest_revision; latestSave = data.latest_save || 0; listening = data.listening; listener = data.agent || listener; listenerModel = data.agent_model || (data.agent ? null : listenerModel); online = true; previews = data.previews || {};
     const ghNext = {pending: data.github?.pending || {}, posted: data.github?.posted || {}, bodies: data.github?.bodies || {}, drafts: data.github?.drafts || {}, voice: data.github?.voice};
     if (JSON.stringify(ghNext) !== JSON.stringify({pending: ghData.pending, posted: ghData.posted, bodies: ghData.bodies, drafts: ghData.drafts, voice: ghData.voice})) { ghData = ghNext; settleDraft(); }
@@ -2158,5 +2296,6 @@
   mount();
   poll();
   askVerdict();
+  askPublish();
   api('/api/adversaries').then(data => { adversaries = data.adversaries; decorate(); renderAgent(); if (data.decided === false) openIntro(); }).catch(() => { /* none until the card lists them */ });
 })();

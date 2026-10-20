@@ -52,7 +52,7 @@
   const fileViewed = file => state.viewedFiles.includes(file.path);
   const fileOpen = file => Object.hasOwn(state.fileOpen, file.path) ? state.fileOpen[file.path] : !fileViewed(file);
   const progress = items => ReviewTools.fileProgress(items.map(item => files.get(item.file).path), state.viewedFiles);
-  const progressText = value => `${value.viewed} of ${value.total} files viewed`;
+  const progressText = value => `${value.viewed} of ${value.total} files reviewed`;
   state.resolvedComments = Array.isArray(state.resolvedComments) ? state.resolvedComments.filter(id => typeof id === 'string') : [];
   state.personalComments = Array.isArray(state.personalComments) ? state.personalComments.filter(comment => typeof comment.id === 'string' && comment.id.startsWith('mine-') && typeof comment.subject === 'string' && (comment.general === true || ReviewTools.anchor(snapshot, comment))) : [];
   function refreshComments() { comments = [...generatedComments.map(comment => ({...comment, personal:false})), ...state.personalComments.map(comment => ({...comment, personal:true}))].map(comment => ({...comment, resolved:state.resolvedComments.includes(comment.id)})); }
@@ -223,7 +223,7 @@
       {key:'/', label:'Find a file or a line of code', run: findInSidebar},
       {key:',', label:'Settings', run: () => $('settings-toggle').click()},
       {key:'?', label:'Every key', run: () => $('keys-dialog').showModal()},
-      {key:' ', label:'Mark the file viewed, or not', run: markFile}
+      {key:' ', label:'Mark the file reviewed, or not', run: markFile}
     ].filter(Boolean);
   }
   // What is open over the page: a dialog, or a menu or popover that floats.
@@ -721,7 +721,7 @@
       const slash = file.path.lastIndexOf('/');
       const filename = file.path.slice(slash + 1);
       const directory = slash < 0 ? '' : file.path.slice(0, slash);
-      return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" aria-current="${state.navFile === id && state.view === layer.id ? 'location' : 'false'}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}"><span class="file-status" aria-hidden="true" title="${fileViewed(file) ? 'Viewed. Click to unmark' : 'Mark as viewed'}">${fileViewed(file) ? icon('check') : ''}</span><span class="nav-file-label"><span class="nav-file-name">${escape(filename)}</span>${directory ? `<small class="nav-file-directory">${pathFit(directory)}</small>` : ''}</span>${needMark(file)}${navPreviewMark(file)}</button></li>${query ? matchList(id, layer, query) : ''}`;
+      return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" aria-current="${state.navFile === id && state.view === layer.id ? 'location' : 'false'}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', reviewed' : ', not reviewed'}`)}"><span class="file-status" aria-hidden="true" title="${fileViewed(file) ? 'Reviewed. Click to unmark' : 'Mark as reviewed'}">${fileViewed(file) ? icon('check') : ''}</span><span class="nav-file-label"><span class="nav-file-name">${escape(filename)}</span>${directory ? `<small class="nav-file-directory">${pathFit(directory)}</small>` : ''}</span>${needMark(file)}${navPreviewMark(file)}</button></li>${query ? matchList(id, layer, query) : ''}`;
     };
     // With something typed the sidebar is what search found, not the walkthrough: first the files
     // whose name has it (the file's own name before its folders'), then the files with it in their
@@ -758,7 +758,7 @@
           const viewed = progress(component.items);
           return `<li class="nav-component ${current ? 'is-current' : ''}"><button class="nav-component-title" data-component-link="${escape(component.key)}" data-file-layer="${layer.id}" aria-current="${current ? 'location' : 'false'}" title="${escape(component.directory)}" aria-label="${escape(`Open ${component.namespace}::${component.name}, ${component.directory}`)}"><span class="nav-file-label"><strong>${escape(component.name)}</strong>${component.namespace ? `<small class="nav-file-directory">${escape(component.namespace)}</small>` : ''}</span><small class="nav-component-count" aria-label="${progressText(viewed)}">${viewed.viewed}/${viewed.total}</small></button><div class="nav-component-files" role="group" aria-label="${escape(component.name)} files">${component.items.map(item => {
             const file = files.get(item.file);
-            return `<button data-file-link="${item.file}" data-file-layer="${layer.id}" title="${escape(file.path)}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', viewed' : ', not viewed'}`)}" aria-current="${current && activeComponentFile(layer, component) === item.file ? 'location' : 'false'}"><span class="file-status ${fileViewed(file) ? 'is-viewed' : ''}" aria-hidden="true" title="${fileViewed(file) ? 'Viewed. Click to unmark' : 'Mark as viewed'}">${fileViewed(file) ? icon('check') : ''}</span>${file.path.endsWith('.rb') ? 'Ruby' : 'Template'}</button>`;
+            return `<button data-file-link="${item.file}" data-file-layer="${layer.id}" title="${escape(file.path)}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', reviewed' : ', not reviewed'}`)}" aria-current="${current && activeComponentFile(layer, component) === item.file ? 'location' : 'false'}"><span class="file-status ${fileViewed(file) ? 'is-viewed' : ''}" aria-hidden="true" title="${fileViewed(file) ? 'Reviewed. Click to unmark' : 'Mark as reviewed'}">${fileViewed(file) ? icon('check') : ''}</span>${file.path.endsWith('.rb') ? 'Ruby' : 'Template'}</button>`;
           }).join('')}</div></li>`;
         }).join('');
         const testLinks = ordered.tests.map(id => fileLink(id, layer)).join('');
@@ -1777,7 +1777,7 @@
     const summary = [!repeated && item.summary, file.note].filter(Boolean).map(escape).join(' · ');
     // A rendered preview is its own disclosure; only the request control sits in the card.
     const request = previewToggle(file);
-    return `<details class="file-card ${fileViewed(file) ? 'is-viewed' : ''}" data-file="${file.id}" ${fileOpen(file) ? 'open' : ''}><summary><span class="file-icon" aria-hidden="true">&lt;/&gt;</span><span class="filename">${pathFit(file.path)}</span><span class="badge success">+${added}</span><span class="badge blocking">−${removed}</span><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" aria-label="${escape(`Mark ${file.path} as viewed`)}" ${fileViewed(file) ? 'checked' : ''}> Viewed</label></summary>${summary || request || notVisualNote(file) ? `<div class="file-summary">${summary ? `<span>${summary}</span>` : ''}${request}${notVisualNote(file)}</div>` : ''}${hunks.length ? table : `<div class="file-summary"><pre>${escape(file.patch || 'No text diff available.')}</pre></div>`}</details>`;
+    return `<details class="file-card ${fileViewed(file) ? 'is-viewed' : ''}" data-file="${file.id}" ${fileOpen(file) ? 'open' : ''}><summary><span class="file-icon" aria-hidden="true">&lt;/&gt;</span><span class="filename">${pathFit(file.path)}</span><span class="badge success">+${added}</span><span class="badge blocking">−${removed}</span><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" aria-label="${escape(`Mark ${file.path} as reviewed`)}" ${fileViewed(file) ? 'checked' : ''}> Reviewed</label></summary>${summary || request || notVisualNote(file) ? `<div class="file-summary">${summary ? `<span>${summary}</span>` : ''}${request}${notVisualNote(file)}</div>` : ''}${hunks.length ? table : `<div class="file-summary"><pre>${escape(file.patch || 'No text diff available.')}</pre></div>`}</details>`;
   }
 
   const commentTypes = {
@@ -2276,8 +2276,8 @@
   let verdict = null; // JevMyPR's, on the served page once the reviewer turned it on (ReviewVerdict.set)
   const needOf = file => ReviewTools.fileNeed(verdict?.files?.[file.path], riskOf(file.id));
   const needTip = need => `data-tip="${escape(need.lines.join('\n'))}" aria-label="${escape(need.lines.join('. '))}"`;
-  // The label beside a file's viewed box; a phone has room for the second word only.
-  const viewedLabel = viewed => viewed ? 'Viewed' : '<span class="focus-step-label">Mark </span>viewed';
+  // The label beside a file's reviewed box; a phone has room for the second word only.
+  const viewedLabel = viewed => viewed ? 'Reviewed' : '<span class="focus-step-label">Mark </span>reviewed';
   function needMark(file, spelled = false) {
     const need = needOf(file);
     const word = need?.word ? `<span class="need need-${need.tone}" ${needTip(need)}>${need.word}</span>` : '';
@@ -2290,10 +2290,24 @@
       const rows = layers.flatMap(layer => layer.items.map(item => [layer, files.get(item.file)])).filter(([, file]) => verdict?.files?.[file.path] === 'human');
       return rows.map(([layer, file]) => `<li><button type="button" data-file-link="${file.id}" data-file-layer="${layer.id}"><span>${escape(file.path)}</span>${needMark(file)}</button></li>`).join('');
     },
+    // What opens a file by its path, in reading order, for a link drawn elsewhere: '' when it is not here.
+    openAttributes(path) {
+      const file = filesByPath.get(path);
+      const layer = file && layers.find(entry => entry.items.some(item => item.file === file.id));
+      return layer ? `data-file-link="${file.id}" data-file-layer="${layer.id}"` : '';
+    },
+    // The paths still to read, in reading order.
+    order: paths => focusOrder.map(item => files.get(item.file).path).filter((path, index, all) => paths.includes(path) && all.indexOf(path) === index),
     set(next) {
       const ready = next?.status === 'ready' ? next : null;
       if (JSON.stringify(ready) === JSON.stringify(verdict)) return;
       verdict = ready;
+      // Reviewed by default: a file JevMyPR says an LLM can review, or needs none, starts reviewed,
+      // since the agents read it. Once: a file the reader unmarks stays unmarked.
+      state.autoReviewed = Array.isArray(state.autoReviewed) ? state.autoReviewed : [];
+      const cleared = snapshot.files.filter(file => ['llm', 'none'].includes(ready?.files?.[file.path]) && !state.autoReviewed.includes(file.path));
+      cleared.forEach(file => { state.autoReviewed.push(file.path); if (!fileViewed(file)) showViewed(file, true); });
+      if (cleared.length) persist();
       renderNavigation();
       document.querySelectorAll('#content [data-need]').forEach(mark => { const file = files.get(mark.dataset.need); if (file) mark.outerHTML = needMark(file, true); });
     }
@@ -2885,16 +2899,24 @@
   }
   function toast(message) { $('toast').hidden = false; $('toast').textContent = message; setTimeout(() => { $('toast').hidden = true; }, 3500); }
   function context() {
-    $('review-details').innerHTML = `<div class="details-section"><span class="badge neutral">${escape(snapshot.mode)} snapshot</span><p class="muted">Captured ${escape(snapshot.created)}</p><h3>Scope and coverage</h3><p>${escape(review.coverage)}</p><small>Before → after</small><pre>${escape(snapshot.base)}\n${escape(snapshot.head)}</pre></div><div class="details-section"><h3>Verification</h3>${bulletList(review.validation)}</div><details class="details-extra"><summary>Review effort and history</summary><p>Effort ${review.effort.score} / 5 · ${escape(review.effort.reason)}</p>${renderIncrement()}</details>${review.qa ? `<details class="details-extra"><summary>Visual checks</summary><p>${escape(review.qa.summary)}</p><p class="muted">${escape(review.qa.environment || "")}</p></details>` : ''}${review.sections?.length ? `<details class="details-extra"><summary>Additional context</summary>${renderSections()}</details>` : ''}<p class="muted">Comments, conversation resolution and viewed marks stay in this browser for this snapshot. Resolving a conversation does not verify a code fix. Use Copy for LLMs or Export local notes to keep a portable copy.</p>`;
+    $('review-details').innerHTML = `<div class="details-section"><span class="badge neutral">${escape(snapshot.mode)} snapshot</span><p class="muted">Captured ${escape(snapshot.created)}</p><h3>Scope and coverage</h3><p>${escape(review.coverage)}</p><small>Before → after</small><pre>${escape(snapshot.base)}\n${escape(snapshot.head)}</pre></div><div class="details-section"><h3>Verification</h3>${bulletList(review.validation)}</div><details class="details-extra"><summary>Review effort and history</summary><p>Effort ${review.effort.score} / 5 · ${escape(review.effort.reason)}</p>${renderIncrement()}</details>${review.qa ? `<details class="details-extra"><summary>Visual checks</summary><p>${escape(review.qa.summary)}</p><p class="muted">${escape(review.qa.environment || "")}</p></details>` : ''}${review.sections?.length ? `<details class="details-extra"><summary>Additional context</summary>${renderSections()}</details>` : ''}<p class="muted">Comments, conversation resolution and reviewed marks stay in this browser for this snapshot. Resolving a conversation does not verify a code fix. Use Copy for LLMs or Export local notes to keep a portable copy.</p>`;
     $('details-dialog').showModal();
   }
 
   // Marks a file viewed or not, wherever it was asked from: its own checkbox, or its box in the sidebar.
   function markViewed(file, viewed) {
+    closeComments(); clearSelection();
+    showViewed(file, viewed);
+    if (!persist()) toast('Browser storage is unavailable. Export local notes to keep your file progress.');
+    const scroll = $('navigation').parentElement.scrollTop;
+    renderNavigation();
+    $('navigation').parentElement.scrollTop = scroll;
+  }
+  // The mark itself, on every control and card that shows it.
+  function showViewed(file, viewed) {
     state.viewedFiles = state.viewedFiles.filter(path => path !== file.path);
     if (viewed) state.viewedFiles.push(file.path);
     state.fileOpen[file.path] = !viewed;
-    closeComments(); clearSelection();
     document.querySelectorAll(`[data-file-viewed="${file.id}"]`).forEach(control => {
       control.checked = viewed;
       if (control.closest('.focus-reader')) control.parentElement.querySelector('span').innerHTML = viewedLabel(viewed);
@@ -2911,10 +2933,6 @@
       const component = components(layer).find(pair => pair.key === card.dataset.component);
       card.querySelector('.component-progress').textContent = progressText(progress(component.items));
     });
-    if (!persist()) toast('Browser storage is unavailable. Export local notes to keep your file progress.');
-    const scroll = $('navigation').parentElement.scrollTop;
-    renderNavigation();
-    $('navigation').parentElement.scrollTop = scroll;
   }
   $('content').addEventListener('change', event => {
     const control = event.target.closest('[data-file-viewed]');

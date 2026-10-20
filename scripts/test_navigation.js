@@ -100,7 +100,7 @@ get('search').value='LongMessageComponent';
 ui.renderNavigation();
 assert(get('navigation').innerHTML.includes('data-file-link="f0"')&&get('navigation').innerHTML.includes('data-file-link="f1"'),'Component-name search must find its files');
 const searched=get('navigation').innerHTML;
-const listed=[...searched.matchAll(/aria-label="Open ([^",]+), (?:not )?viewed"/g)].map(match=>match[1]);
+const listed=[...searched.matchAll(/aria-label="Open ([^",]+), (?:not )?reviewed"/g)].map(match=>match[1]);
 assert(listed.length&&listed.every(path=>/long_message_component/i.test(path)),`Search must list only the matching files, got ${listed.join(', ')}`);
 get('search').value='no-such-file';
 ui.renderNavigation();

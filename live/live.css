@@ -670,3 +670,34 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 #dcr-emoji li{display:flex;align-items:center;gap:10px;padding:6px 9px;border-radius:calc(5px * var(--round));color:var(--muted);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #dcr-emoji li span{flex:none;width:20px;font-size:16px;line-height:1;text-align:center}
 #dcr-emoji li[aria-selected="true"]{background:var(--accent-soft);color:var(--ink)}
+
+/* Publish: the header's last button counts down what is left, then publishes. Its ring fills as
+   the files that need the reader are read; ready, it turns the GitHub green. */
+#dcr-publish{white-space:nowrap}
+#dcr-publish svg{flex:none;width:16px;height:16px}
+#dcr-publish .dcr-ring circle{fill:none;stroke:var(--line);stroke-width:2.4}
+#dcr-publish .dcr-ring .dcr-ring-fill{stroke:var(--accent);stroke-linecap:round}
+#dcr-publish[data-tone="todo"]{color:var(--ink)}
+#dcr-publish[data-tone="todo"]>svg:not(.dcr-ring){color:var(--accent)}
+#dcr-publish[data-tone="ready"]{background:var(--bg-green-5);color:var(--ink-neutral-9);font-weight:650}
+#dcr-publish[data-tone="ready"]:hover{background:color-mix(in oklab,var(--bg-green-5) 88%,var(--ink))}
+#dcr-publish[data-tone="done"]{color:var(--ink-green-1)}
+#dcr-publish[data-tone="done"] svg{color:var(--ink-green-1)}
+.dcr-publish-box{max-width:560px;width:min(560px,calc(100vw - 32px));outline:0}
+.dcr-publish-steps{display:grid;gap:12px;margin:0;padding:0;list-style:none}
+.dcr-publish-steps li{display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:10px}
+.dcr-step-mark{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:color-mix(in oklab,var(--ink) 7%,var(--surface));font-size:12px;font-weight:650;color:var(--muted)}
+.dcr-publish-steps li.is-done .dcr-step-mark{background:var(--bg-green-2);color:var(--ink-green-1)}
+.dcr-step-mark svg{width:13px;height:13px}
+.dcr-step-text{display:grid;gap:2px;min-width:0}
+.dcr-step-text b{font-size:14px;font-weight:600}
+.dcr-step-text small{font-size:12.5px;color:var(--muted);line-height:1.4}
+.dcr-publish-steps li.is-done b{color:var(--muted);font-weight:550}
+.dcr-publish-steps .act{white-space:nowrap}
+.dcr-publish-preview{padding-top:12px;border-top:1px solid var(--line)}
+.dcr-publish-preview h3{margin:0 0 6px;font-size:11.5px;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.dcr-publish-preview .dcr-body{font-size:13.5px;line-height:1.55}
+.dcr-publish-preview .dcr-body ul{margin:6px 0 0;padding-left:18px}
+.dcr-publish-preview .dcr-body p{margin:0}
+@media(max-width:520px){.dcr-publish-steps li{grid-template-columns:24px minmax(0,1fr)}.dcr-publish-steps li>.act{grid-column:2;justify-self:start}}
+.dcr-publish-box [data-publish-go]:disabled{opacity:.45;cursor:not-allowed}

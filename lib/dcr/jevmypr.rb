@@ -9,7 +9,7 @@ require 'uri'
 module DCR
   # Asks JevMyPR, an outside service, how much review a diff needs: a human's, an LLM's or none.
   # The request carries the review's title and every changed file's name and patch, so the review
-  # server only calls this for a repository whose reviewer turned it on (Settings#jevmypr).
+  # server never calls this for a repository whose reviewer turned it off (Settings#jevmypr).
   class JevMyPR
     URL = 'https://jevmypr.romerramos.me/api/verdicts'
     VERDICTS = %w[human llm none].freeze

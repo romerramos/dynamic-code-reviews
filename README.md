@@ -24,6 +24,11 @@ files that open offline.
   the page; it explains and suggests, and never changes your code from the review.
 - **Straight to the PR.** On a pull request review, Comment on GitHub copies a comment and opens its
   lines in the PR's Files changed tab, ready to paste. Nothing is posted for you.
+- **Publish when you are done.** The header's last button counts down what is left: the files that
+  need you (those JevMyPR says need a person; it marks the others reviewed for you), the open
+  comments, and the code being the pull request's as pushed. Then it posts a short report to the
+  pull request, a few lines of counts and outcomes and never what anyone wrote, and marks the
+  reviewed commit with a `dynamic-code-reviews` check. Publishing again updates the same comment.
 - **Template previews.** For a changed Rails view or ViewComponent, ask for a preview: the agent draws
   it from the code with the app's real stylesheet, then checks it before handing it over. Show it at
   phone, tablet or desktop width, wrapped to its content or fitted to the screen.
@@ -162,7 +167,9 @@ Reviews live in the reviewed repository:
 ```
 
 The helpers add `/.reviews/` to Git's local `info/exclude`; your tracked `.gitignore` is not touched.
-"Publish" in the commands means saving a local revision; nothing is posted to GitHub or anywhere else.
+"Publish" in the `series` commands means saving a local revision. Only the page's **Publish** and
+`dcr report --publish` post anything about a review: one short comment of counts and outcomes, and a
+check on the reviewed commit. Neither carries code, comments or anything said in a conversation.
 
 **Share this skill, not your reviews.** A review contains your source code, analysis, repository paths
 and commit IDs. Obviously sensitive files are left out, but this is not a secret scanner. Check a
@@ -191,6 +198,7 @@ commands. Everything runs as `<skill>/bin/dcr <command>`, with Ruby 3.1+ (under 
 | `record` / `evidence attach` | Record and attach visual QA evidence. |
 | `stop [--all]` | Stop a served review and its wait, and remove its tailnet share. |
 | `export` | One offline HTML file with the comments, replies and recordings. |
+| `report [--publish]` | What is left before the review can go to its pull request, and the short report it posts, read from the saved review with no page open. `--publish` posts it (one comment, updated in place later) and marks the reviewed commit, only when nothing is left. The page's Publish does the same. |
 
 References: [review JSON](references/report-schema.md), [incremental reviews](references/incremental-reviews.md),
 [finding the running app](references/local-app-discovery.md), [template previews](references/previews.md),
@@ -240,8 +248,8 @@ References: [review JSON](references/report-schema.md), [incremental reviews](re
   what JevMyPR thinks of it; the sidebar only carries the risk word (`CRIT`, `HIGH`, `MED`) on
   the files the Risk ranking calls out, and the tip on that word says both. It comes from
   [JevMyPR's open API](https://github.com/romerramos/jevmypr#open-api), an outside service, so it is
-  off until the reviewer turns it on in the strip, per repository (kept in
-  `~/.config/dcr/settings.json`; Settings turns it off again). Turned on, the server sends the
+  on by default, and the reviewer can turn it off per repository in Settings (kept in
+  `~/.config/dcr/settings.json`). While it is on, the server sends the
   review's title and every changed file's name and patch, once per diff, and keeps the answer in the
   series' `state.json`. When JevMyPR is unreachable or refuses (rate limit, budget, too big), the
   strip shows its message and the review works as usual. Exports never carry it.
@@ -277,8 +285,9 @@ ruby scripts/test_live.rb          # live server state, threads, focus, tailnet 
 ruby scripts/test_server.rb        # the served page, the recorder's command queue and uploads
 ruby scripts/test_themes.rb       # the theme contract: tokens, light and dark for every theme, no stray colours
 ruby scripts/test_second_opinion.rb # adversaries: the panel, model lists, the questions, headless runs (stand-in CLIs)
-ruby scripts/test_jevmypr.rb       # JevMyPR's verdict: what is sent, only when turned on, errors and no network (a stand-in service)
+ruby scripts/test_jevmypr.rb       # JevMyPR's verdict: what is sent, on unless turned off, errors and no network (a stand-in service)
 ruby scripts/test_github.rb        # posting to the pull request through gh (a stand-in gh, nothing reaches GitHub)
+ruby scripts/test_publish.rb       # the review's report: what it counts, what it leaves out, publishing it once and in place
 ruby scripts/test_live_previews.rb # preview requests, stylesheets, stand-ins
 ruby scripts/test_app_proxy.rb     # the running app inside the review
 node scripts/test_ui.js            # the review page's own logic

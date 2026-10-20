@@ -64,7 +64,7 @@ assert(jev.ask(request)['status'] == 'error', 'An unknown verdict is not a verdi
 end
 puts 'ask: a verdict, JevMyPR saying no, and no network all come back as something to show'
 
-# The server: nothing is sent until the reviewer turns it on, for this repository only.
+# The server: on by default; nothing is sent for a repository whose reviewer turned it off.
 Dir.mktmpdir('dcr-jev-test') do |directory|
   series = File.join(directory, 'repo', '.reviews', 'feature')
   FileUtils.mkdir_p(File.join(series, 'revisions'))
@@ -78,26 +78,25 @@ Dir.mktmpdir('dcr-jev-test') do |directory|
   post = ->(input) { api.call('POST', '/api/verdict', -> { JSON.generate(input) }) }
   verdict = -> { api.call('GET', "/api/state?key=#{KEY}", nil)[1]['verdict'] }
 
-  code, opened = post.({'key' => KEY})
-  assert(code == 200 && opened == {'enabled' => nil, 'host' => 'jevmypr.romerramos.me', 'verdict' => nil}, "Opening a review before answering asks nothing: #{opened}")
-  post.({'key' => KEY, 'again' => true})
+  # Off for this repository: nothing is sent.
+  assert(post.({'key' => KEY, 'enabled' => false})[1]['enabled'] == false && post.({'key' => KEY, 'again' => true})[1]['verdict'].nil?, 'No is remembered')
   sleep 0.1
-  assert(sent.empty? && verdict.call.nil?, 'Nothing may be sent before the reviewer turned it on')
-  assert(post.({'key' => KEY, 'enabled' => false})[1]['enabled'] == false && post.({'key' => KEY})[1]['verdict'].nil?, 'No is remembered')
-  sleep 0.1
-  assert(sent.empty?, 'Nothing may be sent after a no')
+  assert(sent.empty? && verdict.call.nil?, 'Nothing may be sent for a repository whose reviewer turned it off')
 
-  _, on = post.({'key' => KEY, 'enabled' => true})
-  assert(on['enabled'] == true && on['verdict']['status'] == 'asking', "Turning it on asks at once: #{on}")
+  # On by default: a repository nobody answered for asks when the review opens.
+  fresh = DCR::LiveAPI.new(series, settings: DCR::Settings.new(File.join(directory, 'fresh-config')), jevmypr: DCR::JevMyPR.new(post: ->(_uri, json) { sent << JSON.parse(json); reply }))
+  code, on = fresh.call('POST', '/api/verdict', -> { JSON.generate('key' => KEY) })
+  assert(code == 200 && on['enabled'] == true && on['verdict']['status'] == 'asking', "Opening a review asks at once, unless turned off: #{on}")
   wait_for('The verdict never arrived') { verdict.call&.fetch('status') == 'ready' }
   assert(sent == [request], "The revision's diff and title are what is sent: #{sent}")
   assert(verdict.call.values_at('verdict', 'confidence') == ['human', 0.8], 'Every open page gets the verdict with the state')
+  assert(post.({'key' => KEY, 'enabled' => true})[1]['enabled'] == true, 'Turning it on again is remembered')
   post.({'key' => KEY})
   post.({'key' => "dynamic-review:#{FP}:feature:2"})
   sleep 0.1
   assert(sent.length == 1, 'A diff that has its verdict is not sent again, in any revision of the same code')
   assert(DCR::Settings.new(File.join(directory, 'config')).jevmypr(repo) == true, 'The choice survives a restart')
-  assert(settings.jevmypr(File.join(directory, 'other')).nil?, 'Yes for one repository is not yes for another')
+  assert(settings.jevmypr(File.join(directory, 'other')).nil?, 'A choice for one repository is not one for another')
   settings.write('theme' => 'aida'); settings.save_adversaries([])
   assert(settings.jevmypr(repo) == true, 'Other settings keep the choice')
 
@@ -121,4 +120,4 @@ Dir.mktmpdir('dcr-jev-test') do |directory|
   code, bad = post.({'key' => 'bad key!'})
   assert(code == 400 && bad['error'].include?('Invalid review key'), 'A bad key is refused')
 end
-puts 'server: nothing is sent until turned on for the repository; one request per diff; errors reach the page'
+puts 'server: on unless turned off for the repository; one request per diff; errors reach the page'

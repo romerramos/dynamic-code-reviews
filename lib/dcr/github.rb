@@ -176,6 +176,32 @@ module DCR
       {'deleted' => true, 'gone' => true}
     end
 
+    STATUS_CONTEXT = 'dynamic-code-reviews'
+
+    # The review's report on the pull request: one comment, updated in place on every publish
+    # (earlier: what the last publish kept, {'id'}), and a commit status on the reviewed commit
+    # that links to it. A status GitHub refuses (no push access) leaves the comment posted and says why.
+    def publish(key, body, description, earlier = nil)
+      target = target(key)
+      raise ArgumentError, 'The report is limited to 65,000 characters' if body.length > BODY_LIMIT
+      # A push since the review is code nobody reviewed yet.
+      head = api('GET', "repos/#{target[:repo]}/pulls/#{target[:number]}").dig('head', 'sha')
+      raise Error, 'The pull request has a newer push than this review. Update the review to it, then publish.' unless head == target[:commit]
+      posted = begin
+        api('PATCH', "repos/#{target[:repo]}/issues/comments/#{Integer(earlier['id'])}", {'body' => body}) if earlier&.dig('id')
+      rescue NotFound
+        nil # deleted on GitHub: post it again
+      end
+      posted ||= api('POST', "repos/#{target[:repo]}/issues/#{target[:number]}/comments", {'body' => body})
+      result = {'id' => posted['id'], 'url' => posted['html_url'], 'head' => target[:commit]}
+      begin
+        api('POST', "repos/#{target[:repo]}/statuses/#{target[:commit]}", {'state' => 'success', 'context' => STATUS_CONTEXT, 'description' => description, 'target_url' => posted['html_url']})
+      rescue Error => error
+        result['status_error'] = error.message
+      end
+      result
+    end
+
     private
 
     Unplaceable = Class.new(StandardError)

@@ -9,6 +9,7 @@ require_relative 'github_draft'
 require_relative 'jevmypr'
 require_relative 'page'
 require_relative 'progress_archive'
+require_relative 'review_report'
 require_relative 'second_opinion'
 require_relative 'settings'
 require_relative 'state'
@@ -93,6 +94,8 @@ module DCR
       when ['GET', '/api/github/voice'] then [200, github_voice]
       when ['POST', '/api/github/voice'] then (input = json(body); @settings.save_github_voice(GitHubDraft.own_voice(input['voice']), input['emojis']); [200, github_voice])
       when ['POST', '/api/github/review'] then github_review(json(body))
+      when ['GET', '/api/publish'] then [200, publish_check(key, fresh: query['fresh'] == '1')]
+      when ['POST', '/api/publish'] then [200, publish(json(body)['key'])]
       else [404, {'error' => 'Not found'}]
       end
     rescue ArgumentError, KeyError, JSON::ParserError, TypeError => error
@@ -123,9 +126,9 @@ module DCR
     ASKING_SECONDS = 180 # a request still out after this was lost (the server stopped mid-call)
     RETRY_SECONDS = 120  # JevMyPR takes one call every two minutes
 
-    # The page's one call about JevMyPR: {key}, with enabled: true/false when the reviewer answers
-    # the offer, and again: true for Try again. Only when the reviewer turned it on for this
-    # repository is a diff with no verdict yet sent, once, in the background; the answer reaches
+    # The page's one call about JevMyPR: {key}, with enabled: true/false when the reviewer turns it
+    # on or off, and again: true for Try again. It is on until the reviewer turns it off for this
+    # repository: a diff with no verdict yet is sent, once, in the background; the answer reaches
     # every open page through the poll. Returns where it stands.
     def verdict(input)
       key = input['key']
@@ -133,7 +136,7 @@ module DCR
       fingerprint = key.split(':')[1].to_s
       repo = manifest['repo'] || Dir.pwd
       @settings.save_jevmypr(repo, input['enabled']) if input.key?('enabled')
-      enabled = @settings.jevmypr(repo)
+      enabled = @settings.jevmypr(repo) != false # on unless the reviewer turned it off for this repository
       saved = @state.read['verdicts'][fingerprint]
       saved = ask_jevmypr(key, fingerprint) if enabled == true && due?(saved, input['again'] == true)
       {'enabled' => enabled, 'host' => @jevmypr.host, 'verdict' => saved}
@@ -239,6 +242,56 @@ module DCR
       result = @github.review(key, input['event'].to_s, input['body'], items)
       entry = @state.github_posted(key, result['comments'], review: {'url' => result['url'], 'event' => result['event']})
       [200, {'posted' => entry['posted'].slice(*result['comments'].keys), 'review' => result['url']}]
+    end
+
+    # What publishing the review to its pull request waits on, in the order the reader does it:
+    # the files that need them read, every comment settled, and the reviewed code being the pull
+    # request's as pushed. With the report it would post and the last one posted.
+    # fresh: ask GitHub again now, after the reader pushed.
+    def publish_check(key, fresh: false)
+      raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
+      latest, snapshot, review, state = ReviewReport.latest(File.dirname(@state.path))
+      raise ArgumentError, 'This page shows an earlier revision. Open the latest one to publish it.' unless latest == key
+      state['verdicts'] = {} if @settings.jevmypr(manifest['repo'] || Dir.pwd) == false # turned off: every file needs the reader, as the page counts
+      facts = ReviewReport.facts(snapshot, review, state, key)
+      steps = [{'id' => 'files', 'done' => facts['left'].empty?, 'left' => facts['left']},
+               {'id' => 'comments', 'done' => facts['open'].empty?, 'open' => facts['open']},
+               code_check(key, fresh).merge('id' => 'code')]
+      {'ready' => steps.all? { |step| step['done'] }, 'steps' => steps, 'facts' => facts,
+       'markdown' => ReviewReport.markdown(facts, login: @github.me['login']), 'published' => state.dig('github', key, 'report')}
+    end
+
+    # Publishing checks everything again, and posts only a review that is ready.
+    def publish(key)
+      check = publish_check(key)
+      waiting = check['steps'].reject { |step| step['done'] }.map { |step| step['text'] || {'files' => 'Some files still need you.', 'comments' => 'Some comments are still open.'}[step['id']] }
+      raise ArgumentError, "Not ready to publish. #{waiting.join(' ')}" unless check['ready']
+      published = @github.publish(key, check['markdown'], ReviewReport.description(check['facts']), check['published'])
+      check.merge('published' => @state.github_report(key, published.merge('body' => check['markdown'])))
+    end
+
+    # Whether the review shows the pull request as pushed: {'done' => true} or what to do first,
+    # as kind (error, open, switch, update, push) and a sentence.
+    def code_check(key, fresh)
+      require_relative '../../scripts/series'
+      moved = begin
+        ReviewSeries.stale(repo: manifest.fetch('repo'), name: manifest.fetch('name'))
+      rescue ArgumentError, KeyError => error
+        return {'done' => false, 'kind' => 'error', 'text' => error.message}
+      end
+      unless moved['pr']
+        pull = branch_pull(wait: 6)['pull']
+        return pull ? {'done' => false, 'kind' => 'switch', 'pull' => pull, 'text' => "Switch the review to pull request ##{pull['number']}."}
+                    : {'done' => false, 'kind' => 'open', 'text' => 'Push your branch and open a pull request on GitHub.'}
+      end
+      remote = remote_status(wait: fresh ? 12 : 6, fresh: fresh)
+      return {'done' => false, 'kind' => 'error', 'text' => remote['remote_error']} if remote['remote_error']
+      return {'done' => false, 'kind' => 'update', 'text' => 'The pull request has a newer push. Update the review to it.'} if remote['remote']
+      github = @github.status(key)
+      return {'done' => false, 'kind' => 'error', 'text' => github['reason']} unless github['ready']
+      local = Array(github['unpushed']).length + moved['changed'].to_i
+      return {'done' => false, 'kind' => 'push', 'text' => 'Your checkout has changes that are not on the pull request. Commit and push them, then Update.'} if local.positive?
+      {'done' => true, 'repo' => github['repo'], 'number' => github['number'], 'url' => github['url']}
     end
 
     # Whether the code moved on since the review's latest revision. A series that cannot be
