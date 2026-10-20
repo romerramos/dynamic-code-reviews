@@ -113,6 +113,12 @@ globalThis.LiveTools = (() => {
     const checks = closing?.rows.slice(1) || [];
     return closing?.state === 'settled' && checks.length > 0 && checks.every(row => SIDES[row.word] === 'dealt');
   }
+  // A review comment closes by itself once its code changed and every agent confirms it is dealt
+  // with: an update changed its lines (outdated), or the agent fixed it on request, which may
+  // leave the commented lines as they were.
+  function closesItself(comment, thread) {
+    return !comment.personal && (!!comment.outdated || thread?.fix?.state === 'done') && confirmed(thread);
+  }
   // The closing block of a comment's thread. It tells it as it happened: what the review's agent
   // did or found, in its own words, then who checked that on their own, a few words each. A
   // check that confirms stays a name on one line (it opens to its reasons); one that does not
@@ -545,6 +551,6 @@ globalThis.LiveTools = (() => {
   }
 
   return {emojiToken, emojiMatches, escape, progressKey, allComments, sendText, drafts, statusText, statusModel, actionLabel, markdown, snippet, relativeTime, messagesHTML, unseen, agentModel, summary,
-    agentInfo, avatarHTML, youHTML, youName, personHTML, personName, opinionMessages, modelHTML, verdictHTML, verdicts, closure, closureHTML, confirmed, outcomeWord, outcomeSide: word => SIDES[word], OUTCOMES, commentAction, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
+    agentInfo, avatarHTML, youHTML, youName, personHTML, personName, opinionMessages, modelHTML, verdictHTML, verdicts, closure, closureHTML, confirmed, closesItself, outcomeWord, outcomeSide: word => SIDES[word], OUTCOMES, commentAction, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
     activeAdversaries, facesHTML, agentStatus, modelOptionsHTML, effortLevels, effortOptionsHTML, chosenModel, chosenEffort, settle, adversaryPanelHTML, adversaryIntroHTML, jevBannerHTML};
 })();

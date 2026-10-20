@@ -186,6 +186,10 @@ assert.match(tools.closureHTML(agreed, {open:['grok']}), /class="dcr-check-body"
 assert.doesNotMatch(tools.closureHTML(differing, {open:['grok']}), /dcr-check-body/, 'a check that does not agree is open until the reader closes it');
 assert.match(tools.closureHTML({...agreed, outcome:{verdict:'addressed', revision:3, agent:'claude'}, fix:{state:'done'}}), /Fixed<\/strong>.*<strong>Claude<\/strong><\/p>/s, 'after a fix the reader asked for, it says who fixed it');
 assert.equal(tools.confirmed(agreed), true, 'dealt with and every check agrees: it closes by itself');
+assert.equal(tools.closesItself({id:'c-1', outdated:true}, agreed), true, 'an update changed its lines and every check agrees: it closes by itself');
+assert.equal(tools.closesItself({id:'c-1'}, {...agreed, fix:{state:'done'}}), true, 'so does a comment fixed on request whose own lines did not change');
+assert.equal(tools.closesItself({id:'c-1'}, agreed), false, 'a comment whose code did not change stays open');
+assert.equal(tools.closesItself({id:'c-1', personal:true, outdated:true}, agreed), false, 'the reader\'s own comment is theirs to close');
 assert.equal(tools.confirmed({...agreed, opinions:{grok:{id:'o2', body:'I will look at the cap.', about:'outcome'}}}), false, 'a check with no clear answer leaves it to the reader');
 assert.equal(tools.confirmed({...agreed, messages:agreed.messages.filter(message => message.id !== 'm3'), opinions:{}}), false, 'so does the agent\'s word alone');
 assert.equal(tools.confirmed(differing), false);

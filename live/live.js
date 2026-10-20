@@ -445,7 +445,7 @@
   let autoResolved = new Set();
   try { autoResolved = new Set(JSON.parse(localStorage.getItem(autoKey) || '[]')); } catch { /* resolved again at worst */ }
   const autoResolve = () => {
-    const due = comments().filter(comment => comment.outdated && !comment.personal && !autoResolved.has(comment.id) && !resolved().includes(comment.id) && tools.confirmed(threads[comment.id]));
+    const due = comments().filter(comment => !autoResolved.has(comment.id) && !resolved().includes(comment.id) && tools.closesItself(comment, threads[comment.id]));
     if (!due.length) return;
     due.forEach(comment => autoResolved.add(comment.id));
     try { localStorage.setItem(autoKey, JSON.stringify([...autoResolved])); } catch { /* this session only */ }
