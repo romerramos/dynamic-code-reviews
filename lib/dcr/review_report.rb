@@ -41,7 +41,8 @@ module DCR
       paths = Array(snapshot['files']).map { |file| file['path'] }
       yours = verdict ? paths.select { |path| verdict.dig('files', path) == 'human' } : paths
       comments = all_comments(review, state, key, progress)
-      actionable = comments.reject { |comment| comment['mine'] || QUIET.include?(comment['label']) }
+      # Counted are the agents' comments; a teammate's from GitHub must be settled too, but is not the review's.
+      actionable = comments.reject { |comment| comment['mine'] || comment['author'] || QUIET.include?(comment['label']) }
       # Open is what the Overview's All clear waits on: the review's own comments on the code as it is.
       # The reader's questions to the agent are not something to resolve.
       waiting = comments.reject { |comment| comment['mine'] || comment['outdated'] || resolved.include?(comment['id']) || threads.dig(comment['id'], 'closed') }

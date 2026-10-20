@@ -143,7 +143,8 @@ module DCR
     # on diff lines go into the review's own text under their file and lines, and say so.
     def review(key, event, body, items)
       raise ArgumentError, "Choose #{EVENTS.join(', ')}" unless EVENTS.include?(event)
-      raise ArgumentError, 'Nothing to submit' unless items.is_a?(Array) && !items.empty? && items.length <= 100
+      # An approval, or a review's own text, may go with no comment on lines.
+      raise ArgumentError, 'Nothing to submit' unless items.is_a?(Array) && items.length <= 100 && (items.any? || event != 'COMMENT' || !body.to_s.strip.empty?)
       target = target(key)
       items = items.map { |item| clean(item, target) }
       placed, loose = items.partition { |item| !item['general'] && in_diff?(target, item) }
@@ -174,6 +175,49 @@ module DCR
       {'deleted' => true}
     rescue NotFound
       {'deleted' => true, 'gone' => true}
+    end
+
+    PAGES = 10 # of 100: the comments of any pull request people still talk on
+
+    # What people said on the pull request, oldest first: comments on lines (kind 'line', with
+    # reply_to when they answer one), in the conversation ('issue') and the text of a submitted
+    # review ('review'). commit: the commit lines are placed on; files: those whose diff is the
+    # pull request's in the revision.
+    def conversation(key)
+      target = target(key)
+      pull = "repos/#{target[:repo]}/pulls/#{target[:number]}"
+      person = ->(raw) { {'login' => raw.dig('user', 'login').to_s, 'avatar_url' => raw.dig('user', 'avatar_url'), 'bot' => raw.dig('user', 'type') == 'Bot'} }
+      lines = pages("#{pull}/comments").map do |raw|
+        person.(raw).merge('kind' => 'line', 'id' => raw['id'], 'body' => raw['body'].to_s, 'at' => raw['created_at'], 'url' => raw['html_url'],
+                           'review' => raw['pull_request_review_id'], 'reply_to' => raw['in_reply_to_id'], 'path' => raw['path'], 'file' => raw['subject_type'] == 'file',
+                           'side' => raw['side'], 'start_line' => raw['start_line'], 'line' => raw['line'], 'commit' => raw['commit_id'],
+                           'original_start_line' => raw['original_start_line'], 'original_line' => raw['original_line'], 'original_commit' => raw['original_commit_id'])
+      end
+      talk = pages("repos/#{target[:repo]}/issues/#{target[:number]}/comments").map do |raw|
+        person.(raw).merge('kind' => 'issue', 'id' => raw['id'], 'body' => raw['body'].to_s, 'at' => raw['created_at'], 'url' => raw['html_url'])
+      end
+      reviews = pages("#{pull}/reviews").reject { |raw| raw['state'] == 'PENDING' || raw['body'].to_s.strip.empty? }.map do |raw|
+        person.(raw).merge('kind' => 'review', 'id' => raw['id'], 'body' => raw['body'].to_s, 'at' => raw['submitted_at'], 'url' => raw['html_url'], 'state' => raw['state'])
+      end
+      {'commit' => target[:commit], 'files' => target[:hunks].keys, 'items' => (lines + talk + reviews).sort_by { |item| item['at'].to_s }}
+    end
+
+    # A person's avatar as a data: image the page can show, or nil. Kept once found.
+    def avatar(url)
+      @lock.synchronize { return @avatars[url] if (@avatars ||= {}).key?(url) }
+      type, bytes = (@avatar.call(url.to_s) rescue nil)
+      value = type && "data:#{type};base64,#{[bytes].pack('m0')}"
+      @lock.synchronize { @avatars[url] = value }
+    end
+
+    # The reader's answer in a thread on the pull request's lines: a reply under its first comment.
+    def reply(key, comment_id, body)
+      target = target(key)
+      body = body.to_s.strip
+      raise ArgumentError, 'A comment cannot be empty' if body.empty?
+      raise ArgumentError, 'A comment is limited to 65,000 characters' if body.length > BODY_LIMIT
+      posted = api('POST', "repos/#{target[:repo]}/pulls/#{target[:number]}/comments/#{Integer(comment_id)}/replies", {'body' => body})
+      {'url' => posted['html_url'], 'where' => 'reply'}
     end
 
     STATUS_CONTEXT = 'dynamic-code-reviews'
@@ -309,6 +353,16 @@ module DCR
       end.compact
     rescue Error
       {}
+    end
+
+    # Every page of a list, up to PAGES of them.
+    def pages(path)
+      (1..PAGES).each_with_object([]) do |page, all|
+        batch = api('GET', "#{path}?per_page=100&page=#{page}")
+        batch = batch.is_a?(Array) ? batch.grep(Hash) : []
+        all.concat(batch)
+        break all if batch.length < 100
+      end
     end
 
     # One `gh api` call. Errors become sentences the page can show as they are.

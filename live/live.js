@@ -129,14 +129,17 @@
   const quoteHTML = comment => {
     if (!comment) return '';
     const text = (comment.personal ? [comment.subject, comment.discussion] : [comment.discussion]).filter(Boolean).join('\n\n').trim();
-    const avatar = comment.personal ? tools.youHTML(me) : tools.avatarHTML(comment.agent || null);
-    const who = comment.personal ? `<span class="you-name">${tools.escape(tools.youName(me))}</span>` : comment.agent ? tools.escape(tools.agentInfo(comment.agent).name) : 'Review';
+    const avatar = comment.personal ? tools.youHTML(me) : comment.author ? tools.personHTML(comment.author) : tools.avatarHTML(comment.agent || null);
+    const who = comment.personal ? `<span class="you-name">${tools.escape(tools.youName(me))}</span>` : tools.escape(byName(comment));
     // Asking your own agent needs no label: the conversation is with it.
     const kind = (comment.audience === 'agent' ? '' : [comment.label, comment.decoration].filter(Boolean).join(' · ')).replace(/^./, letter => letter.toUpperCase());
     const long = text.length > 320 || text.split(/\n\s*\n/).length > 2;
     const body = text ? `<div class="dcr-body${long ? ' is-clamped' : ''}">${tools.markdown(text)}</div>${long ? '<button type="button" class="dcr-more">Show more</button>' : ''}` : '';
     return `<article class="dcr-msg dcr-origin${comment.personal ? ' dcr-you' : ' dcr-agent'}">${avatar}<div class="dcr-msg-main"><header class="dcr-msg-head"><strong>${who}</strong>${comment.personal ? '' : tools.modelHTML(comment)}${kind ? `<span class="dcr-role">${tools.escape(kind)}</span>` : ''}</header>${body}</div></article>`;
   };
+  // Who wrote a review comment: a teammate on GitHub, the agent, or the review itself.
+  const byName = comment => comment.author ? tools.personName(comment.author) : comment.agent ? tools.agentInfo(comment.agent).name : 'Review';
+  const byFace = (comment, extra) => comment.author ? tools.personHTML(comment.author, extra) : tools.avatarHTML(comment.agent || null, extra);
   const advToggleHTML = '<button type="button" class="dcr-adv-toggle" data-dcr-adv hidden aria-pressed="false"></button>';
   const composeHTML = () => `<form class="dcr-reply dcr-compose" hidden><textarea rows="1" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea>${advToggleHTML}<button type="button" class="dcr-change dcr-gh" data-dcr-github hidden aria-label="Sum this conversation up for GitHub" title="Sum this conversation up as a comment for GitHub">${window.ReviewGitHub?.mark || ''}</button><button type="button" class="dcr-change" data-dcr-change hidden aria-label="Make this change">${ico('wrench')}</button><button type="submit" class="dcr-send" aria-label="Send reply" title="Send reply (⌘ Enter)">${ico('send')}</button></form>`;
   const cardBlock = (id, variant, comment) => {
@@ -189,7 +192,7 @@
     const html = tools.messagesHTML(thread, {seen, agent: listener, me});
     const opinions = tools.opinionsHTML(thread);
     // Keyed on the messages, not their text: "2 min ago" changes by itself and must not redraw.
-    const signature = [...(thread?.messages || []), ...tools.opinionMessages(thread)].map(message => message.id + (message.author === 'agent' && !seen.has(message.id) ? '!' : '')).join('|');
+    const signature = [...(thread?.messages || []), ...tools.opinionMessages(thread)].map(message => message.id + ((message.author === 'agent' || message.author === 'person') && !seen.has(message.id) ? '!' : '')).join('|');
     const model = online ? tools.statusModel(thread, listening, Date.now(), listener) : {tone: 'off', text: 'The review server stopped. Restart `dcr serve` to send or receive.'};
     // Under a thread the status line only says what is still happening; an answer is shown, not announced.
     // What became of the comment once its code changed: each agent's word, and the reader's closing buttons.
@@ -794,7 +797,7 @@
         const result = await api('/api/github/comment', {key, item: {...globalThis.ReviewTools.githubItem(snapshot, comment, review.qa), body}});
         const posted = result.posted[id];
         ghData.posted = {...ghData.posted, [id]: posted};
-        ghNotice('done', {lines: `Posted on ${where(comment)}.`, file: 'Posted on the file: those lines are not in the pull request\'s diff.', conversation: 'Posted in the pull request\'s conversation.'}[posted.where] || 'Posted on GitHub.', posted.url);
+        ghNotice('done', {reply: `Posted as a reply to ${byName(comment)} on GitHub.`, lines: `Posted on ${where(comment)}.`, file: 'Posted on the file: those lines are not in the pull request\'s diff.', conversation: 'Posted in the pull request\'s conversation.'}[posted.where] || 'Posted on GitHub.', posted.url);
       } catch (error) {
         ghFailed.set(id, error.message);
         ghNotice('error', `Not posted. ${error.message}`);
@@ -855,7 +858,7 @@
     renderPreview();
     if (!ask) return; // one is already being written
     ghData = {...ghData, drafts: {...ghData.drafts, [id]: {status: 'writing', at: preview.before}}};
-    try { await api('/api/github/draft', {key, id, author: comment.agent || listener || undefined, context: globalThis.ReviewTools.commentText(snapshot, comment, review.qa)}); }
+    try { await api('/api/github/draft', {key, id, author: comment.agent || listener || undefined, reply_to: comment.author?.login, context: globalThis.ReviewTools.commentText(snapshot, comment, review.qa)}); }
     catch (error) {
       // A page newer than its server: the route is not there until the server restarts.
       const why = error.message === 'Not found' ? 'This review\'s server is older than its page: restart `dcr serve`.' : error.message;
@@ -1132,7 +1135,7 @@
   // row opens that one conversation in place of the list, as a chat: a back button, the comment it
   // started from and every message, scrolling, and one reply field pinned to the bottom.
   const STATE = {sent: 'sent', delivered: 'sent', answered: 'answered'};
-  const unseenIn = thread => (thread?.messages || []).some(message => message.author === 'agent' && !seen.has(message.id));
+  const unseenIn = thread => (thread?.messages || []).some(message => (message.author === 'agent' || message.author === 'person') && !seen.has(message.id));
   const weighedIn = thread => !!thread && ((thread.waiting_on || []).length > 0 || Object.keys(thread.opinions || {}).length > 0);
   const hasConversation = thread => !!thread && (thread.live || thread.delivery !== 'draft' || thread.messages?.length > 0 || weighedIn(thread));
   const whereOf = comment => {
@@ -1143,7 +1146,7 @@
   };
   // A row from an earlier revision says where the comment was, as its folded card does.
   const wasWhere = comment => { const was = globalThis.ReviewTools.outdatedWhere(comment); return globalThis.ReviewTools.pathFit(was.path, ` · ${was.lines}${was.revision ? ` in revision ${was.revision}` : ''}`); };
-  const rowFor = (comment, earlier = false) => `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-conversation="1"${earlier ? ' data-earlier="1"' : ''}><button type="button" class="ledger-place" data-ledger-jump="${tools.escape(comment.id)}" title="Show in the code">${earlier ? wasWhere(comment) : whereOf(comment)}${ico('arrow-up-right')}</button><div class="ledger-msg">${tools.avatarHTML(comment.agent || null)}<b class="ledger-name">${comment.agent ? tools.escape(tools.agentInfo(comment.agent).name) : 'Review'}</b><span class="ledger-subject">${tools.escape(comment.subject)}</span></div><div class="ledger-meta"></div></li>`;
+  const rowFor = (comment, earlier = false) => `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-conversation="1"${earlier ? ' data-earlier="1"' : ''}><button type="button" class="ledger-place" data-ledger-jump="${tools.escape(comment.id)}" title="Show in the code">${earlier ? wasWhere(comment) : whereOf(comment)}${ico('arrow-up-right')}</button><div class="ledger-msg">${byFace(comment)}<b class="ledger-name">${tools.escape(byName(comment))}</b><span class="ledger-subject">${tools.escape(comment.subject)}</span></div><div class="ledger-meta"></div></li>`;
   const chevron = '<svg class="dcr-peek-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
   // Under the row, the replies in a line (who, how many, when last).
   // A comment whose code changed says what became of it, as its card does. What an agent thought
@@ -1160,8 +1163,9 @@
     // themselves are in the conversation it opens; the row does not repeat any of them.
     const replies = [...(thread.messages || []), ...tools.opinionMessages(thread)].sort((a, b) => (Date.parse(a.at) || 0) - (Date.parse(b.at) || 0));
     if (!replies.length) return `<span class="dcr-peek-who"><span class="dcr-peek-note">Open conversation</span><span class="dcr-peek-end">${chevron}</span></span>`;
-    const voices = [...new Set(replies.map(reply => reply.author === 'agent' ? reply.agent || listener || 'agent' : 'you'))].slice(-3);
-    const faces = voices.map(voice => voice === 'you' ? tools.youHTML(me) : tools.avatarHTML(voice === 'agent' ? null : voice, 'dcr-face-xs')).join('');
+    const people = new Map(replies.filter(reply => reply.author === 'person').map(reply => [`@${reply.person?.login}`, reply.person]));
+    const voices = [...new Set(replies.map(reply => reply.author === 'agent' ? reply.agent || listener || 'agent' : reply.author === 'person' ? `@${reply.person?.login}` : 'you'))].slice(-3);
+    const faces = voices.map(voice => voice === 'you' ? tools.youHTML(me) : people.has(voice) ? tools.personHTML(people.get(voice), 'dcr-face-xs') : tools.avatarHTML(voice === 'agent' ? null : voice, 'dcr-face-xs')).join('');
     const last = replies.at(-1);
     return `<span class="dcr-peek-who"><span class="dcr-peek-faces">${faces}</span><b>${replies.length} ${replies.length === 1 ? 'reply' : 'replies'}</b><span class="dcr-peek-when">last <time data-at="${tools.escape(last.at || '')}">${tools.escape(tools.relativeTime(last.at))}</time></span><span class="dcr-peek-end">${chevron}</span></span>`;
   };
@@ -1684,14 +1688,16 @@
     const first = comments().find(comment => comment.id === items[0].thread);
     const many = new Set(items.map(item => item.thread)).size > 1;
     const message = (threads[items[0].thread]?.messages || []).find(entry => entry.id === items[0].id);
-    const name = tools.agentInfo(message?.agent || listener).name;
-    const author = first?.agent ? tools.agentInfo(first.agent).name : null;
+    // A teammate's reply on GitHub is said as theirs.
+    const nameOf = said => said?.author === 'person' ? tools.personName(said.person) : tools.agentInfo(said?.agent || listener).name;
+    const name = nameOf(message);
+    const author = first?.author || first?.agent ? byName(first) : null;
     const verdict = message?.role === 'adversary' && tools.VERDICTS[message.verdict];
-    const repliers = [...new Set(items.map(item => (threads[item.thread]?.messages || []).find(entry => entry.id === item.id)?.agent || listener).map(slug => tools.agentInfo(slug).name))];
+    const repliers = [...new Set(items.map(item => nameOf((threads[item.thread]?.messages || []).find(entry => entry.id === item.id))))];
     const headline = many ? `${tools.names(repliers)} replied on ${new Set(items.map(item => item.thread)).size} comments`
       : verdict ? `${name} ${verdict.label.toLowerCase()} with ${author ? `${author}'s comment` : 'a comment'}`
       : message?.role === 'adversary' ? `${name} checked ${author ? `${author}'s comment` : 'a comment'}` : `${name} replied`;
-    arrival.innerHTML = `${tools.avatarHTML(message?.agent || listener)}<div><strong>${tools.escape(headline)}</strong>${!many && first ? `<span>${tools.escape(first.subject)}</span>` : ''}</div>${first ? `<button type="button" class="btn btn-sm btn-primary" data-dcr-show-convo="${tools.escape(first.id)}">View</button>` : ''}<button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
+    arrival.innerHTML = `${message?.author === 'person' ? tools.personHTML(message.person) : tools.avatarHTML(message?.agent || listener)}<div><strong>${tools.escape(headline)}</strong>${!many && first ? `<span>${tools.escape(first.subject)}</span>` : ''}</div>${first ? `<button type="button" class="btn btn-sm btn-primary" data-dcr-show-convo="${tools.escape(first.id)}">View</button>` : ''}<button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
     arrival.hidden = false;
     clearTimeout(arrivalTimer);
     arrivalTimer = setTimeout(() => { arrival.hidden = true; }, 12000);
@@ -1771,8 +1777,8 @@
   };
   const announceComments = list => {
     const first = list[0];
-    const name = first.agent ? tools.agentInfo(first.agent).name : 'Your agent';
-    arrival.innerHTML = `${tools.avatarHTML(first.agent || null)}<div><strong>${list.length === 1 ? `${tools.escape(name)} left a comment` : `${tools.escape(name)} left ${list.length} comments`}</strong><span>${tools.escape(first.subject)}</span></div><button type="button" class="btn btn-sm btn-primary" data-ledger-jump="${tools.escape(first.id)}">View</button><button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
+    const name = first.author || first.agent ? byName(first) : 'Your agent';
+    arrival.innerHTML = `${byFace(first)}<div><strong>${list.length === 1 ? `${tools.escape(name)} left a comment` : `${tools.escape(name)} left ${list.length} comments`}</strong><span>${tools.escape(first.subject)}</span></div><button type="button" class="btn btn-sm btn-primary" data-ledger-jump="${tools.escape(first.id)}">View</button><button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
     arrival.hidden = false;
     clearTimeout(arrivalTimer);
     arrivalTimer = setTimeout(() => { arrival.hidden = true; }, 12000);

@@ -30,6 +30,10 @@ globalThis.LiveTools = (() => {
   }
   // The reader by their GitHub handle, else You when the server could not tell.
   const youName = me => me?.login || 'You';
+  // Someone else, who wrote on the pull request on GitHub: their GitHub avatar, else their initial.
+  const AVATAR = /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/;
+  const personName = person => `@${person?.login || 'someone'}`;
+  const personHTML = (person, extra = '') => `<span class="dcr-avatar dcr-person${extra ? ` ${extra}` : ''}" title="${escape(`${personName(person)} on GitHub`)}" aria-hidden="true">${AVATAR.test(person?.avatar || '') ? `<img src="${person.avatar}" alt="">` : escape((person?.login || '?').charAt(0).toUpperCase())}</span>`;
   // The reader's own face: their GitHub avatar when the server found it, else a Y.
   const youHTML = me => /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(me?.avatar || '')
     ? `<span class="dcr-avatar" title="${escape(me.login ? `@${me.login}` : youName(me))}" aria-hidden="true"><img src="${me.avatar}" alt=""></span>`
@@ -259,15 +263,16 @@ globalThis.LiveTools = (() => {
     if (!messages.length) return '';
     return messages.map(message => {
       const agent = message.author === 'agent';
-      const fresh = agent && !seen.has(message.id);
+      const person = message.author === 'person' ? message.person || {} : null; // a teammate, on GitHub
+      const fresh = (agent || person) && !seen.has(message.id);
       const slug = agent ? message.agent || fallback : null;
       const adversary = message.role === 'adversary';
-      const who = agent ? escape(agentInfo(slug).name) : `<span class="you-name">${escape(youName(me))}</span>`;
+      const who = agent ? escape(agentInfo(slug).name) : person ? escape(personName(person)) : `<span class="you-name">${escape(youName(me))}</span>`;
       const model = agent ? modelHTML(message) : '';
       const role = adversary ? `<span class="dcr-role">second reviewer${message.about === 'outcome' || message.about === 'earlier-outcome' ? ', on what became of it' : ''}</span>` : '';
       const outcome = OUTCOMES[message.outcome] ? `<span class="dcr-verdict dcr-o-${escape(message.outcome)}">${OUTCOMES[message.outcome]}</span>` : '';
-      const avatar = agent ? avatarHTML(slug) : youHTML(me);
-      return `<article class="dcr-msg ${agent ? 'dcr-agent' : 'dcr-you'}${adversary ? ` dcr-adversary dcr-v-${escape(message.verdict || 'none')}` : ''}" data-msg="${escape(message.id)}">${avatar}<div class="dcr-msg-main"><header class="dcr-msg-head"><strong>${who}</strong>${model}${adversary || message.opinion ? verdictHTML(message.verdict) : outcome}${role}<time datetime="${escape(message.at || '')}" data-at="${escape(message.at || '')}">${escape(relativeTime(message.at, now))}</time>${fresh ? '<span class="dcr-new">New</span>' : ''}</header><div class="dcr-body">${markdown(message.body)}</div></div></article>`;
+      const avatar = agent ? avatarHTML(slug) : person ? personHTML(person) : youHTML(me);
+      return `<article class="dcr-msg ${agent || person ? 'dcr-agent' : 'dcr-you'}${adversary ? ` dcr-adversary dcr-v-${escape(message.verdict || 'none')}` : ''}" data-msg="${escape(message.id)}">${avatar}<div class="dcr-msg-main"><header class="dcr-msg-head"><strong>${who}</strong>${model}${adversary || message.opinion ? verdictHTML(message.verdict) : outcome}${role}<time datetime="${escape(message.at || '')}" data-at="${escape(message.at || '')}">${escape(relativeTime(message.at, now))}</time>${fresh ? '<span class="dcr-new">New</span>' : ''}</header><div class="dcr-body">${markdown(message.body)}</div></div></article>`;
     }).join('');
   }
 
@@ -337,7 +342,7 @@ globalThis.LiveTools = (() => {
   function unseen(threads, seen) {
     const out = [];
     Object.entries(threads || {}).forEach(([id, thread]) => (thread.messages || []).forEach(message => {
-      if (message.author === 'agent' && !seen.has(message.id)) out.push({thread: id, id: message.id});
+      if ((message.author === 'agent' || message.author === 'person') && !seen.has(message.id)) out.push({thread: id, id: message.id});
     }));
     return out;
   }
@@ -540,6 +545,6 @@ globalThis.LiveTools = (() => {
   }
 
   return {emojiToken, emojiMatches, escape, progressKey, allComments, sendText, drafts, statusText, statusModel, actionLabel, markdown, snippet, relativeTime, messagesHTML, unseen, agentModel, summary,
-    agentInfo, avatarHTML, youHTML, youName, opinionMessages, modelHTML, verdictHTML, verdicts, closure, closureHTML, confirmed, outcomeWord, outcomeSide: word => SIDES[word], OUTCOMES, commentAction, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
+    agentInfo, avatarHTML, youHTML, youName, personHTML, personName, opinionMessages, modelHTML, verdictHTML, verdicts, closure, closureHTML, confirmed, outcomeWord, outcomeSide: word => SIDES[word], OUTCOMES, commentAction, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
     activeAdversaries, facesHTML, agentStatus, modelOptionsHTML, effortLevels, effortOptionsHTML, chosenModel, chosenEffort, settle, adversaryPanelHTML, adversaryIntroHTML, jevBannerHTML};
 })();

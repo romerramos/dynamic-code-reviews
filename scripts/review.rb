@@ -321,6 +321,7 @@ module DynamicReviews
     raise ArgumentError, 'Comment must explicitly be blocking or non-blocking' unless %w[blocking non-blocking].include?(comment['decoration'])
     raise ArgumentError, 'Comment subject is required' unless comment['subject'].is_a?(String) && !comment['subject'].strip.empty?
     return if comment['outdated'].is_a?(Hash) && !comment.key?('hunk') # its lines changed in an update; it says where it was
+    return if comment['general'] == true && comment['author'] # someone's comment on the pull request itself, from GitHub
     side = comment.fetch('side')
     raise ArgumentError, 'Comment side must be old or new' unless %w[old new].include?(side)
     hunk = hunks.dig(comment['hunk'], 1)

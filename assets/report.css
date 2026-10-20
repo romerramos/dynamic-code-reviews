@@ -757,6 +757,7 @@ html[data-syntax="dracula"][data-mode="dark"]{--tok-comment:#6272a4;--tok-punct:
 :is(.agent-face,.dcr-face){display:inline-grid;place-items:center;flex:none;border-radius:calc(50% * var(--round));background:var(--agent-other-bg);color:var(--agent-other)}
 :is(.agent-face,.dcr-face) svg{width:58%;height:58%;fill:currentColor}
 :is(.agent-face,.dcr-face) b{font-weight:700;line-height:1}
+.agent-face>img{width:100%;height:100%;border-radius:inherit;object-fit:cover}
 :is(.agent-face,.dcr-face)[data-agent="claude"]{background:var(--agent-claude-bg);color:var(--agent-claude)}
 :is(.agent-face,.dcr-face)[data-agent="codex"]{background:var(--agent-codex-bg);color:var(--agent-codex)}
 :is(.agent-face,.dcr-face)[data-agent="gemini"]{background:var(--agent-gemini-bg);color:var(--agent-gemini)}

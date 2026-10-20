@@ -52,12 +52,18 @@ module DCR
 
     # context: the comment with its code and conversation, as Copy for LLMs gives it.
     # opinions: what other agents said beside the conversation, [{agent, body}].
-    def prompt(voice:, context:, opinions: [], emojis: DEFAULT_EMOJIS)
+    # reply_to: the GitHub login of the teammate whose comment it answers, when it is a reply.
+    def prompt(voice:, context:, opinions: [], emojis: DEFAULT_EMOJIS, reply_to: nil)
       others = opinions.map { |opinion| "#{Agents.name(opinion['agent'])}: #{opinion['body']}" }.join("\n\n")
+      task = if reply_to
+               "A teammate, @#{reply_to}, commented on a person's pull request on GitHub. Below is the comment, the code it is about, and what was said about it since: the teammate's and the person's messages, an AI review agent's answers and other agents' opinions.\n\n" \
+                 "Write the reply this person will post under @#{reply_to}'s comment on GitHub, under their own name. Answer what the teammate asked or said; where the person said in the conversation what they think or will do, say that."
+             else
+               "A person reviewed a code change with an AI review tool. Below is one of its review comments, the code it is about, and what was said about it: the person's questions, the review agent's answers and other agents' opinions.\n\n" \
+                 'Write the comment this person will post on the GitHub pull request under their own name, to the teammate who wrote the code.'
+             end
       <<~TEXT
-        A person reviewed a code change with an AI review tool. Below is one of its review comments, the code it is about, and what was said about it: the person's questions, the review agent's answers and other agents' opinions.
-
-        Write the comment this person will post on the GitHub pull request under their own name, to the teammate who wrote the code.
+        #{task}
 
         How they write:
         #{voice}
@@ -89,10 +95,10 @@ module DCR
 
     # Returns [text, agent]. One that cannot answer (signed out, a model its account does not have)
     # hands over to the next; when none can, raises ArgumentError with the last one's sentence.
-    def write(context:, opinions:, voice:, author:, adversaries:, repo:, emojis: DEFAULT_EMOJIS, ask: Agents.method(:ask), installed: Agents.method(:installed?))
+    def write(context:, opinions:, voice:, author:, adversaries:, repo:, emojis: DEFAULT_EMOJIS, reply_to: nil, ask: Agents.method(:ask), installed: Agents.method(:installed?))
       candidates = writers(author, adversaries, installed: installed)
       raise ArgumentError, 'No agent on this computer can write it: the review\'s agent is not installed here and no adversary is set up.' if candidates.empty?
-      text = prompt(voice: voice, context: context, opinions: opinions, emojis: emojis)
+      text = prompt(voice: voice, context: context, opinions: opinions, emojis: emojis, reply_to: reply_to)
       candidates.each_with_index do |chosen, index|
         return [tidy(ask.call(chosen['agent'], text, dir: repo, model: chosen['model'], effort: chosen['effort'], timeout: TIMEOUT)), chosen['agent']]
       rescue ArgumentError

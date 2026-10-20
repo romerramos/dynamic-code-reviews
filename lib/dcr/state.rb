@@ -17,7 +17,7 @@ module DCR
     MAX_BYTES = 8 * 1024 * 1024
     ID = /\A[A-Za-z0-9_.:-]{1,120}\z/
     KEY = /\A[A-Za-z0-9_.:-]{1,300}\z/
-    AUTHORS = %w[user agent].freeze
+    AUTHORS = %w[user agent].freeze # 'person' too: someone else, who said it on GitHub (see #github_arrived)
 
     def self.empty = {'version' => 1, 'rev' => 0, 'blobs' => {}, 'threads' => {}, 'previews' => {}, 'comments' => {}, 'screenshots' => {}, 'no_screenshots' => {}, 'risk_rankings' => {}, 'verdicts' => {}, 'github' => {}, 'outbox' => [], 'acked' => 0, 'seq' => 0}
 
@@ -469,6 +469,45 @@ module DCR
       state['github'][key]['bodies'] ||= {}
       state['github'][key]['drafts'] ||= {}
       state['github'][key]
+    end
+
+    # What people said on the pull request since the last look (GitHubInbox.plan): their comments
+    # join the review's, their replies the threads. The agent is handed each person's new comments
+    # as one message, and a reply in a thread it is part of; nothing already here is added twice.
+    # Returns the threads whose adversaries should hear the reply too.
+    def github_arrived(key, comments:, messages:, sends:)
+      check_key(key)
+      update do |state|
+        posted = (state['comments'][key] ||= [])
+        taken = posted.map { |comment| comment['id'] }
+        fresh = comments.reject { |comment| taken.include?(comment['id']) }.last([200 - posted.length, 0].max)
+        posted.concat(fresh)
+        added = fresh.map { |comment| comment['id'] }
+        sends.each do |ids, text|
+          ids &= added
+          next if ids.empty?
+          ids.each { |id| thread(state, key, id).merge!('delivery' => 'sent', 'live' => true) }
+          enqueue(state, 'send', key, ids, text)
+        end
+        asked = []
+        messages.each do |id, said|
+          thread = thread(state, key, id)
+          next if thread['messages'].any? { |message| message['github'] == said['github'] }
+          thread['messages'] << said.merge('id' => SecureRandom.hex(6))
+          next unless said['author'] == 'person'
+          # Their answer to the reader's reply: the reader may answer again.
+          entry = github_entry(state, key)
+          if entry.dig('posted', id, 'where') == 'reply'
+            entry['posted'].delete(id)
+            entry['drafts'].delete(id)
+          end
+          next unless thread['live']
+          thread['delivery'] = 'sent'
+          enqueue(state, 'send', key, [id], "Follow-up in thread #{id} from @#{said.dig('person', 'login')} on GitHub, a teammate, not the reviewer:\n\n#{said['body']}")
+          asked << id if thread['adversary'] || thread['opinions']
+        end
+        asked
+      end
     end
 
     # --- comments posted while the review is in progress --------------------------------

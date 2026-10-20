@@ -623,7 +623,7 @@ module ReviewSeries
       review['risk_ranking'] = ranked.except('posted_at') if ranked&.key?('files') && !review.key?('risk_ranking')
       # Comments written straight into the review are the finishing agent's, like the posted ones.
       author = DCR::Agents.detect
-      review['comments'].each { |comment| comment['agent'] ||= author } if author
+      review['comments'].each { |comment| comment['agent'] ||= author unless comment['author'] } if author # a teammate's, from GitHub, stays theirs
       review['context'] = contexts(snapshot, review.delete('context_paths')) if review['context_paths']
       states = Array(review['findings']).map { |f| {'id' => f['id'], 'status' => 'open', 'change' => 'new', 'title' => f['title'], 'reason' => 'Recorded in the full review.'} }
       summary = 'Full review ready: walkthrough explanations, findings and validation.'

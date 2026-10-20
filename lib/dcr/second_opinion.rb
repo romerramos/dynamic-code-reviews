@@ -295,20 +295,40 @@ module DCR
     def follow_up(state_data, key, id)
       first = state_data['outbox'].find { |entry| entry['kind'] == 'send' && entry['key'] == key && entry['thread_ids'] == [id] && !entry['text'].start_with?('Follow-up in thread') }
       *earlier, latest = state_data.dig('threads', key, id, 'messages') || []
-      said = earlier.reject { |message| message['role'] }.map { |message| "#{message['author'] == 'user' ? 'Reviewer' : Agents.name(message['agent'] || 'agent')}: #{message['body']}" }
-      [first&.fetch('text'), said.empty? ? nil : "The conversation so far:\n\n#{said.join("\n\n")}", "The reviewer now asks:\n\n#{latest&.fetch('body')}"].compact.join("\n\n")
+      who = ->(message) { message['author'] == 'user' ? 'Reviewer' : message['author'] == 'person' ? "@#{message.dig('person', 'login')} (a teammate, on GitHub)" : Agents.name(message['agent'] || 'agent') }
+      said = earlier.reject { |message| message['role'] }.map { |message| "#{who.(message)}: #{message['body']}" }
+      now = latest&.fetch('author') == 'person' ? "#{who.(latest)} now says:" : 'The reviewer now asks:'
+      [first&.fetch('text'), said.empty? ? nil : "The conversation so far:\n\n#{said.join("\n\n")}", "#{now}\n\n#{latest&.fetch('body')}"].compact.join("\n\n")
     end
 
     # Asks every adversary at once and posts each answer as it arrives. On a comment the first
     # answers in the conversation and each says what it thinks of the comment; on a question
     # (on_comment false) they all answer beside it, a short answer first. Returns {agent => verdict or what failed}.
     # about: what the answers are said of, when not the comment itself. parse: [verdict, body] of an answer.
+    AT_ONCE = 3 # adversary runs at a time: a review GitHub hands in at once must not start them all together
+    SLOTS = SizedQueue.new(AT_ONCE).tap { |slots| AT_ONCE.times { slots << true } }
+
+    # Runs the block when one of the slots is free; the rest wait their turn.
+    def turn
+      SLOTS.pop
+      begin
+        yield
+      ensure
+        SLOTS << true
+      end
+    end
+
     def consult(state, key, id, panel, repo, ask, on_comment: true, about: nil, parse: method(:verdict))
       panel.each_with_index.map do |adversary, index|
         agent, model, effort = adversary.values_at('agent', 'model', 'effort')
         adversarial = on_comment && index.zero?
         Thread.new do
-          answer = ask.call(agent, yield(agent, adversarial), dir: repo, model: model, effort: effort, adversary: true)
+          prompt = yield(agent, adversarial)
+          answer = turn do
+            # The page counts the wait from when the agent starts, not from when it queued.
+            state.update { |data| data.dig('threads', key, id)&.store('asked_at', Time.now.utc.iso8601) }
+            ask.call(agent, prompt, dir: repo, model: model, effort: effort, adversary: true)
+          end
           word, body = on_comment ? parse.call(answer) : [nil, nil]
           # An answer without its word, or a question's without `Answer:`, stopped before it was given
           # ("I'll check..."): not an answer.

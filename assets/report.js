@@ -1590,7 +1590,7 @@
   // A served review in progress receives the agent's comments as it writes them (live/live.js).
   function addLiveComments(list) {
     const known = new Set(generatedComments.map(comment => comment.id));
-    const added = list.filter(comment => !known.has(comment.id) && ReviewTools.anchor(snapshot, comment)).map(comment => ({...comment}));
+    const added = list.filter(comment => !known.has(comment.id) && (comment.general || ReviewTools.anchor(snapshot, comment))).map(comment => ({...comment}));
     if (!added.length) return [];
     generatedComments.push(...added);
     refreshComments();
@@ -1894,11 +1894,17 @@
     const model = ReviewTools.modelText(comment.model, comment.effort);
     return `<span class="thread-by" title="Written by ${escape(model ? `${name}, ${model}` : name)}">by<span class="agent-face" data-agent="${escape(slug)}" aria-hidden="true">${mark}</span>${escape(name)}${model ? `<span class="thread-model">${escape(model)}</span>` : ''}</span>`;
   }
+  // A teammate's comment, taken in from the pull request on GitHub: their avatar and login.
+  function personBadge(person) {
+    const login = person.login || 'someone';
+    const face = /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(person.avatar || '') ? `<img src="${person.avatar}" alt="">` : `<b>${escape(login.charAt(0).toUpperCase())}</b>`;
+    return `<span class="thread-by" title="Written on GitHub by @${escape(login)}">by<span class="agent-face person-face" aria-hidden="true">${face}</span>@${escape(login)}</span>`;
+  }
   // own: in a message already signed You, so it does not say Your comment.
   function threadBadges(comment, own = false) {
     if (comment.audience === 'agent') return `<span class="thread-type type-purple" title="A question for your agent. It stays in this review until you send its conversation to GitHub."><span class="thread-type-icon">${icon('sparkles')}</span>For your agent</span>${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${ghBadgeSlot(comment)}`;
     const [symbol, title, hint, tone] = commentTypes[comment.label] || commentTypes.note;
-    return `<span class="thread-type type-${tone}" title="${hint}"><span class="thread-type-icon">${icon(symbol)}</span>${title}</span><span class="thread-priority ${comment.decoration === 'blocking' ? 'is-blocking' : 'is-optional'}">${comment.decoration === 'blocking' ? `${icon('circle-alert')} Blocking` : 'Non-blocking'}</span>${comment.severity ? `<span class="thread-severity">${escape(comment.severity)}</span>` : ''}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${comment.personal ? own ? '' : '<span class="thread-author">Your comment</span>' : agentBadge(comment.agent, comment)}${ghBadgeSlot(comment)}`;
+    return `<span class="thread-type type-${tone}" title="${hint}"><span class="thread-type-icon">${icon(symbol)}</span>${title}</span><span class="thread-priority ${comment.decoration === 'blocking' ? 'is-blocking' : 'is-optional'}">${comment.decoration === 'blocking' ? `${icon('circle-alert')} Blocking` : 'Non-blocking'}</span>${comment.severity ? `<span class="thread-severity">${escape(comment.severity)}</span>` : ''}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${comment.personal ? own ? '' : '<span class="thread-author">Your comment</span>' : comment.author ? personBadge(comment.author) : agentBadge(comment.agent, comment)}${ghBadgeSlot(comment)}`;
   }
   // closed: the card starts folded to its subject (a comment from an earlier revision).
   function commentCard(comment, closed = false) {

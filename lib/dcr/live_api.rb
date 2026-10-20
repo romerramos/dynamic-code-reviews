@@ -6,6 +6,7 @@ require_relative 'agent_catalog'
 require_relative 'emojis'
 require_relative 'github'
 require_relative 'github_draft'
+require_relative 'github_inbox'
 require_relative 'jevmypr'
 require_relative 'page'
 require_relative 'progress_archive'
@@ -76,7 +77,7 @@ module DCR
       when ['POST', '/api/fix'] then [200, fix(json(body))]
       when ['POST', '/api/closure'] then (input = json(body); [200, {'closed' => @state.closed(input['key'], input['id'].to_s, input['side'].to_s)}])
       when ['GET', '/api/screenshot'] then [200, screenshot(key, query['id'])]
-      when ['GET', '/api/sync'] then [200, stale]
+      when ['GET', '/api/sync'] then (look_at_github; [200, stale])
       when ['POST', '/api/sync'] then [200, sync(json(body))]
       when ['POST', '/api/switch'] then [200, switch]
       when ['POST', '/api/risk-ranking'] then (@state.request_risk_ranking(json(body)['key']); [200, {'requested' => true}])
@@ -206,6 +207,8 @@ module DCR
     def github_draft(input)
       key, id, context = input.values_at('key', 'id', 'context')
       raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
+      # A teammate's comment from GitHub: what is written is the reader's reply to them.
+      reply_to = input['reply_to'].to_s[/\A[A-Za-z0-9-]{1,39}\z/]
       raise ArgumentError, 'Nothing to rewrite' unless context.is_a?(String) && !context.strip.empty? && context.length <= 200_000
       opinions = (@state.read.dig('threads', key, id.to_s, 'opinions') || {}).filter_map { |agent, opinion| {'agent' => agent, 'body' => opinion['body']} if opinion['body'] }
       voice, emojis = self.voice, self.emojis
@@ -215,7 +218,7 @@ module DCR
       author = @state.listener || (input['author'].to_s if input['author'].to_s.match?(Agents::SLUG))
       adversaries, repo = @settings.adversaries, manifest['repo'] || Dir.pwd
       Thread.new do
-        text, agent = @draft.call(context: context, opinions: opinions, voice: voice, emojis: emojis, author: author, adversaries: adversaries, repo: repo)
+        text, agent = @draft.call(context: context, opinions: opinions, voice: voice, emojis: emojis, author: author, adversaries: adversaries, repo: repo, reply_to: reply_to)
         @state.github_draft(key, id, {'status' => 'ready', 'body' => text, 'agent' => agent, 'voice' => written_under})
       rescue StandardError => error
         @state.github_draft(key, id, {'status' => 'failed', 'error' => error.message[0, 300]})
@@ -230,7 +233,7 @@ module DCR
       raise ArgumentError, 'Expected a comment' unless item.is_a?(Hash)
       done = @state.read.dig('github', key, 'posted', item['id'].to_s)
       return [200, {'posted' => {item['id'] => done}}] if done
-      entry = @state.github_posted(key, {item['id'] => @github.comment(key, item)})
+      entry = @state.github_posted(key, {item['id'] => reply_to(item['id']) ? @github.reply(key, reply_to(item['id']), item['body']) : @github.comment(key, item)})
       [200, {'posted' => {item['id'] => entry['posted'][item['id']]}}]
     end
 
@@ -239,9 +242,38 @@ module DCR
       raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
       posted = @state.read.dig('github', key, 'posted') || {}
       items = Array(input['items']).reject { |item| item.is_a?(Hash) && posted.key?(item['id'].to_s) }
-      result = @github.review(key, input['event'].to_s, input['body'], items)
-      entry = @state.github_posted(key, result['comments'], review: {'url' => result['url'], 'event' => result['event']})
-      [200, {'posted' => entry['posted'].slice(*result['comments'].keys), 'review' => result['url']}]
+      # Answers to a teammate's thread on lines go under it, as replies: a review cannot hold them.
+      replies, items = items.partition { |item| item.is_a?(Hash) && reply_to(item['id']) }
+      answered = replies.to_h { |item| [item['id'], @github.reply(key, reply_to(item['id']), item['body'])] }
+      @state.github_posted(key, answered) if answered.any?
+      result = items.empty? && input['event'] == 'COMMENT' && input['body'].to_s.strip.empty? ? {'comments' => {}} : @github.review(key, input['event'].to_s, input['body'], items)
+      entry = @state.github_posted(key, result['comments'], review: result['url'] && {'url' => result['url'], 'event' => result['event']})
+      [200, {'posted' => entry['posted'].slice(*result['comments'].keys, *answered.keys), 'review' => result['url'] || answered.values.first&.dig('url')}]
+    end
+
+    # The GitHub comment a thread answers on its lines: a teammate's comment the review took in (gh-<id>).
+    def reply_to(id) = id.to_s[/\Agh-(\d+)\z/, 1]
+
+    # What people said on the pull request since the last look joins the review, in the background,
+    # at most once a minute: the page asks whenever the reader comes back to it, as for a newer push.
+    def look_at_github
+      @inbox_lock ||= Mutex.new
+      @inbox_lock.synchronize do
+        return if @inbox_thread&.alive? || (@inbox_at && Time.now - @inbox_at < REMOTE_SECONDS)
+        @inbox_at = Time.now
+        @inbox_thread = Thread.new { take_from_github }
+      end
+    end
+
+    def take_from_github
+      key, snapshot, review, state = ReviewReport.latest(File.dirname(@state.path))
+      conversation = @github.conversation(key)
+      known = (Array(review['comments']) + Array(state.dig('comments', key))).map { |comment| comment['id'] }
+      plan = GitHubInbox.plan(conversation, snapshot, key, state, known, me: @github.me['login'], avatar: @github.method(:avatar))
+      asked = @state.github_arrived(key, **plan)
+      asked.each { |id| @ask_adversaries.call(key, id, SecondOpinion.follow_up(@state.read, key, id)) }
+    rescue StandardError => error # it runs on its own: whatever GitHub answers, the review goes on
+      warn "GitHub comments could not be read: #{error.message}" unless error.message.include?('no verified GitHub pull request') || error.message.include?('not saved')
     end
 
     # What publishing the review to its pull request waits on, in the order the reader does it:

@@ -348,3 +348,17 @@ Dir.mktmpdir('dcr-api') do |series|
   assert(asked.map { |job| job.first(2) } == [[key, 'mine-2'], [key, 'mine-1']] && asked[0][2] == 'Why five?' && asked[1][2].start_with?('Why ten?') && asked[1][2].end_with?('And eleven?'), "With the tick, adversaries get the same question: #{asked}")
 end
 puts 'PASS the page lists agents, saves adversaries, and asks them only when the reviewer ticks it'
+
+# Many comments at once (a review handed in on GitHub) never start every adversary together.
+running, most, lock = 0, 0, Mutex.new
+6.times.map do
+  Thread.new do
+    DCR::SecondOpinion.turn do
+      lock.synchronize { running += 1; most = [most, running].max }
+      sleep 0.05
+      lock.synchronize { running -= 1 }
+    end
+  end
+end.each(&:join)
+assert(most == DCR::SecondOpinion::AT_ONCE, "At most #{DCR::SecondOpinion::AT_ONCE} adversaries run at once, the rest wait: #{most}")
+puts 'PASS adversaries take turns, a few at a time'

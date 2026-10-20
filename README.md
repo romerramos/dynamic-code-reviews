@@ -24,6 +24,11 @@ files that open offline.
   the page; it explains and suggests, and never changes your code from the review.
 - **Straight to the PR.** On a pull request review, Comment on GitHub copies a comment and opens its
   lines in the PR's Files changed tab, ready to paste. Nothing is posted for you.
+- **Your teammates' GitHub comments, answered.** When you come back to a pull request's review, the
+  comments people left on GitHub since are in it: on their lines, with their name and avatar, and
+  replies in their thread. Your agent reads each person's review as one message and answers every
+  comment in its thread; adversaries already in a conversation answer a reply too. Nothing goes to
+  GitHub until you send it, and your answer to a teammate goes under their comment.
 - **Publish when you are done.** The header's last button counts down what is left: the files that
   need you (those JevMyPR says need a person; it marks the others reviewed for you), the open
   comments, and the code being the pull request's as pushed. Then it posts a short report to the
@@ -287,6 +292,7 @@ ruby scripts/test_themes.rb       # the theme contract: tokens, light and dark f
 ruby scripts/test_second_opinion.rb # adversaries: the panel, model lists, the questions, headless runs (stand-in CLIs)
 ruby scripts/test_jevmypr.rb       # JevMyPR's verdict: what is sent, on unless turned off, errors and no network (a stand-in service)
 ruby scripts/test_github.rb        # posting to the pull request through gh (a stand-in gh, nothing reaches GitHub)
+ruby scripts/test_github_inbox.rb  # teammates' GitHub comments taken in, handed to the agent, answered under them
 ruby scripts/test_publish.rb       # the review's report: what it counts, what it leaves out, publishing it once and in place
 ruby scripts/test_live_previews.rb # preview requests, stylesheets, stand-ins
 ruby scripts/test_app_proxy.rb     # the running app inside the review
