@@ -64,6 +64,30 @@ OpenCode also finds the Claude Code and Codex locations, so one clone can serve 
 the agent if the skill does not appear. For a single project, use the project's own folder instead
 (`.claude/skills/`, `.agents/skills/` or `.opencode/skills/`).
 
+### Browser for screenshots
+
+While you read, the agent takes screenshots of the running app as evidence. It needs a browser it
+drives in the background that saves full-size images: Chrome DevTools MCP (or Playwright). Claude in
+Chrome and computer use only save a shrunken copy, which reads blurry. Set Chrome DevTools MCP up
+with two flags:
+
+- `--isolated`: each session gets its own throwaway browser, so several sessions can take
+  screenshots at once. Without it, the second session finds the browser "already running" and
+  cannot take any. The agent signs in with the project's development account each time.
+- `--headless`: the browser stays off your screen.
+
+**Agents installing this skill:** this changes the person's agent configuration, so ask them first,
+showing the command. Replace any existing `chrome-devtools` server; keep its other flags if it has
+any. Then tell them to restart the agent.
+
+| Agent | Command |
+| --- | --- |
+| Claude Code | `claude mcp remove chrome-devtools -s user; claude mcp add -s user chrome-devtools -- npx -y chrome-devtools-mcp@latest --isolated --headless` |
+| Codex | `codex mcp remove chrome-devtools; codex mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest --isolated --headless` |
+| Others | Add `npx -y chrome-devtools-mcp@latest --isolated --headless` as a local (stdio) MCP server named `chrome-devtools`. |
+
+The remove command fails harmlessly when there is no such server yet. Needs Node.js 18+ and Chrome.
+
 **Update:** `git -C ~/.claude/skills/dynamic-code-reviews pull --ff-only` (use your install path). A
 copy that is not a Git clone is updated by replacing the folder with a fresh copy of this repository;
 keep `.reviews/` if the folder has one.
@@ -78,11 +102,12 @@ your projects keep working.
 | Ruby 3.1+ and Git on `PATH` | Everything. Ruby's standard library only, no gems. |
 | A browser | Reading the review. Chrome, Edge, Brave, Arc, Firefox or Safari. |
 | A browser tool for the agent (Claude in Chrome, or computer use) | Opening the review in a tab the agent can also use, for QA. Optional. |
+| Chrome DevTools MCP with `--isolated --headless`, or Playwright | Screenshots of the running app as evidence. See [Browser for screenshots](#browser-for-screenshots). |
 | macOS, or Linux with Hyprland (Omarchy), Sway or X11 (`wmctrl` or `xdotool`) | Bringing the browser to the front when the review opens and when it is ready (`dcr focus`). Elsewhere the agent tells you which tab. |
 | Tailscale | Optional. Opening reviews from your other devices. |
 | `gh`, or a GitHub or Linear connector | Optional. Reviewing a pull request with its real base and linked issues. |
 | `gh`, signed in | Optional. Posting comments and reviews to the pull request from the review page. Without it, Comment on GitHub copies the comment and opens its lines. |
-| Node.js 18+ | Only for the maintainer checks below. |
+| Node.js 18+ | Chrome DevTools MCP (screenshots), and the maintainer checks below. |
 
 No npm, Docker, database, API key or network connection is needed to collect and render a review.
 
