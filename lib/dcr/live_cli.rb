@@ -257,6 +257,7 @@ module DCR
         3. If the fix shows in the app and the review is served with it, post a screenshot of it with `dcr screenshot`.
         4. Say what you did: dcr reply #{flags} --outcome addressed #{id} '<what you changed and where, and how you checked it>'
            The reviewer's adversaries then check the fix on their own. Use `--outcome still-applies` instead if you could only fix part of it, and say what is left.
+           If no change is right (the comment is wrong, or the fix needs the reviewer's decision), change nothing and say why with: dcr reply #{flags} #{id} '<why>'
         Other outdated comments and unreviewed ranges the update lists are handled as in any code update.
       TEXT
     end

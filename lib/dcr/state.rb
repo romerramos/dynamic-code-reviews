@@ -262,10 +262,14 @@ module DCR
         key ||= state['threads'].select { |_, threads| threads.key?(id) }.keys.max_by { |name| name.split(':').last.to_i }
         raise ArgumentError, "No thread #{id}. Reply to an id printed by `dcr wait`." unless key
         message = add_message(state, key, id, 'agent', body, agent: agent, model: model, effort: effort, outcome: outcome)
+        thread = thread(state, key, id)
         if outcome
-          thread = thread(state, key, id)
           thread['outcome'] = {'verdict' => outcome, 'revision' => key.split(':').last.to_i, 'at' => message['at'], 'agent' => message['agent']}.compact
           thread['fix']['state'] = 'done' if thread['fix']
+        elsif thread.dig('fix', 'state') == 'requested'
+          # The agent answered without changing code (the comment is wrong, or the fix needs the
+          # reviewer's decision): the fix is over, so it no longer holds the others back.
+          thread['fix']['state'] = 'declined'
         end
         message
       end

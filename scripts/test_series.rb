@@ -620,8 +620,11 @@ module SeriesChecks
           assert(fix.call('value-note', ask: 'answer')[0] == 400 && fix.call('value-note', ask: 'rewrite')[0] == 400, 'A question was acted on without an answer, or an unknown request was taken')
           assert(fix.call('value-note', ask: 'answer', note: 'Yes, make it three.')[0] == 200, 'Acting on an answered question did not reach the agent')
           acted = DCR::LiveCLI.render(state.pending.last(1), '--repo r --name s')
-          assert(acted.include?('What the reviewer asks: act on the comment as their message under it says') && state.read.dig('threads', new_key, 'value-note', 'messages').last.values_at('author', 'body') == ['user', 'Yes, make it three.'], "The answer did not go with the request:\n#{acted}")
+          assert(acted.include?('What the reviewer asks: do what their latest message under the comment says') && state.read.dig('threads', new_key, 'value-note', 'messages').last.values_at('author', 'body') == ['user', 'Yes, make it three.'], "The answer did not go with the request:\n#{acted}")
           assert(asked.include?('What the reviewer asks: fix what the comment says.'), 'A plain fix does not say what is asked')
+          # An agent that changes nothing and says why ends the fix too, without counting it as fixed.
+          state.agent_reply('value-note', 'No change: the comment is wrong.', key: new_key)
+          assert(state.read.dig('threads', new_key, 'value-note', 'fix', 'state') == 'declined' && fix.call('value-note')[0] == 200, 'A reply without a change left the other fixes blocked')
           # A fix handed over with a conversation keeps the two apart: only the fix changes code.
           state.send_items(new_key, [{'id' => 'mine-kept', 'text' => 'Why this name?'}])
           both = DCR::LiveCLI.render(state.pending.last(2), '--repo r --name s')
