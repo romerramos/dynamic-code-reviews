@@ -19,6 +19,9 @@ module ReviewScreenshots
   TYPES = {'image/png' => 'png', 'image/jpeg' => 'jpg', 'image/webp' => 'webp'}.freeze
   FIELDS = %w[id path title caption page paths comment_id].freeze
   ID = /\A[a-zA-Z0-9-]{1,60}\z/
+  # A laptop viewport at 2x is 2880 wide and a tablet's 2048. A wide image narrower than this is the
+  # copy a screenshot tool shrinks for the model to see (Claude's is at most 1456 wide), not a capture.
+  SHARP = 2000
   module_function
 
   # The agent's items as records, their images saved in the series folder. comments: the review's,
@@ -68,7 +71,33 @@ module ReviewScreenshots
     raise ArgumentError, 'A screenshot is limited to 4 MiB; capture the part that matters, or save it as JPEG' if File.size(path) > LIMIT
     bytes = File.binread(path)
     raise ArgumentError, 'A screenshot is a PNG, JPEG or WebP image' unless TYPES.key?(ReviewQA.media_type(bytes))
+    width, height = size(bytes)
+    if width && width > height && width < SHARP
+      raise ArgumentError, "#{File.basename(path)} is #{width}x#{height}: the shrunken copy a screenshot tool shows you, which reads blurry as evidence. " \
+                           'Capture the 1440 by 900 viewport at 2x into a file (Chrome DevTools MCP take_screenshot with a file path, Playwright, or macOS screencapture of the window) and post that file.'
+    end
     bytes
+  end
+
+  # [width, height] in pixels from a PNG, JPEG or WebP header; nil when it cannot tell.
+  def size(bytes)
+    if bytes.start_with?("\x89PNG".b)
+      bytes.byteslice(16, 8)&.unpack('N2')
+    elsif bytes.start_with?("\xFF\xD8".b)
+      at = 2
+      while at + 9 <= bytes.bytesize && bytes.getbyte(at) == 0xFF
+        marker = bytes.getbyte(at + 1)
+        # Start of frame: any of C0-CF except C4 (Huffman tables), C8 (reserved) and CC (arithmetic coding).
+        return bytes.byteslice(at + 5, 4).unpack('n2').reverse if (0xC0..0xCF).cover?(marker) && ![0xC4, 0xC8, 0xCC].include?(marker)
+        at += 2 + bytes.byteslice(at + 2, 2).unpack1('n')
+      end
+    elsif bytes.byteslice(0, 4) == 'RIFF' && bytes.byteslice(8, 4) == 'WEBP' && bytes.bytesize >= 30
+      case bytes.byteslice(12, 4)
+      when 'VP8 ' then bytes.byteslice(26, 4).unpack('v2').map { |value| value & 0x3FFF }
+      when 'VP8L' then bits = bytes.byteslice(21, 4).unpack1('V'); [(bits & 0x3FFF) + 1, ((bits >> 14) & 0x3FFF) + 1]
+      when 'VP8X' then [bytes.byteslice(24, 3), bytes.byteslice(27, 3)].map { |three| (three + "\0").unpack1('V') + 1 }
+      end
+    end
   end
 
   def text(value, label, limit)

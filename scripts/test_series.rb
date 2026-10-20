@@ -675,7 +675,17 @@ module SeriesChecks
           rejects('A screenshot on an unknown comment was posted') { post.call(shown.merge('id' => 'lost', 'comment_id' => 'nobody')) }
           rejects('A file that is not an image was posted') { post.call(shown.merge('id' => 'text', 'path' => 'notes.txt')) }
           rejects('More screenshots than UI changes shows were posted') { post.call((1..6).map { |number| shown.merge('id' => "more-#{number}") }) }
-          post.call(shown.merge('title' => 'The home page'))
+          # The copy a screenshot tool shrinks for the model reads blurry as evidence; a capture at 2x is taken.
+          require 'zlib'
+          sized = lambda do |name, width, height|
+            chunk = ->(type, data) { [data.bytesize].pack('N') + type + data + [Zlib.crc32(type + data)].pack('N') }
+            File.binwrite(File.join(out, name), "\x89PNG\r\n\x1a\n".b + chunk.call('IHDR', [width, height, 8, 0, 0, 0, 0].pack('N2C5')) +
+                                                chunk.call('IDAT', Zlib::Deflate.deflate("\0" * ((width + 1) * height))) + chunk.call('IEND', ''))
+          end
+          sized.call('tool.png', 1456, 820)
+          sized.call('sharp.png', 2880, 1800)
+          rejects('The shrunken copy a screenshot tool shows was posted') { post.call(shown.merge('id' => 'blurry', 'path' => 'tool.png')) }
+          post.call(shown.merge('title' => 'The home page', 'path' => 'sharp.png'))
           # A QA clip of what a screenshot shows takes its place; the revision it is saved into keeps both.
           File.binwrite(File.join(out, 'clip.png'), png)
           DCR::Evidence.attach(series_dir: series, capture_dir: out, input: {'path' => File.join(out, 'clip.png'), 'title' => 'The value changes', 'observed' => 'It shows two.', 'result' => 'failed', 'comment_id' => 'value-note'})
