@@ -74,7 +74,9 @@ Dir.mktmpdir('dcr-publish-test') do |directory|
   assert(text.start_with?(DCR::ReviewReport::MARK) && text.include?("[Dynamic Code Reviews](#{DCR::ReviewReport::HOME})") && text.include?("[JevMyPR](#{DCR::ReviewReport::JEVMYPR})"), "The report lacks its mark or links:\n#{text}")
   assert(text.include?('1 needed a person, read by @reviewer') && text.include?('**2 agents** (Claude, Codex)') && text.include?('1 challenged by an adversary') && text.include?('**1 fixed** · 1 resolved as they were · 0 open') && text.include?('**1 conversation** with a person in the loop'), "The report says the wrong thing:\n#{text}")
   assert(!text.include?(question) && !text.include?('Leaks the token') && !text.include?('Not a leak'), "Nothing anyone wrote may reach the report:\n#{text}")
+  assert(text.include?('- **3 files** · ') && !text.include?('revision'), "A review of one revision counted it:\n#{text}")
   assert(text.lines.length <= 8, "The report must stay short:\n#{text}")
+  assert(DCR::ReviewReport.markdown(facts.merge('revisions' => 4)).include?('- **3 files** · 4 revisions · '), 'The report does not say how many revisions the review took')
   assert(DCR::ReviewReport.description(facts) == '3 files reviewed · 2 comments settled · 2 agents', "The status line is wrong: #{DCR::ReviewReport.description(facts)}")
   puts 'PASS the report counts files, agents, comments and conversations, and keeps what was said out'
 
@@ -87,7 +89,8 @@ Dir.mktmpdir('dcr-publish-test') do |directory|
   # The reader's own questions to the agent are conversations, never something left to resolve.
   saved['blobs'][KEY]['resolvedComments'] = %w[c1 c2 c3]
   saved['blobs'][KEY]['personalComments'] = [{'id' => 'mine-1', 'audience' => 'agent', 'label' => 'question', 'subject' => question}]
-  saved['threads'][KEY]['mine-1'] = {'messages' => [{'author' => 'user', 'body' => question}, {'author' => 'agent', 'agent' => 'claude', 'body' => 'Because.'}]}
+  # The comment is what the reader wrote; its thread holds only the answer.
+  saved['threads'][KEY]['mine-1'] = {'messages' => [{'author' => 'agent', 'agent' => 'claude', 'body' => 'Because.'}]}
   asked = DCR::ReviewReport.facts(shot, said, saved, key)
   assert(asked['open'].empty? && asked['comments']['total'] == 2 && asked['conversations'] == 2, "A question of the reader's is open, or counted as a comment: #{asked.slice('open', 'comments', 'conversations')}")
   puts 'PASS without a verdict every file needs the reader; unresolved comments are open, the reader\'s own questions never'

@@ -28,7 +28,7 @@ module DCR
       [key, payload['snapshot'], payload['review'], State.new(series_dir).read]
     end
 
-    # {files, verdict, agents, comments, conversations, left, open}: left, the files that still need
+    # {files, verdict, agents, comments, conversations, revisions, left, open}: left, the files that still need
     # the reader; open, the comments nobody settled yet. Both are empty when the review is done.
     def facts(snapshot, review, state, key)
       progress = state.dig('blobs', key) || {}
@@ -56,7 +56,8 @@ module DCR
         'agents' => agents.map { |slug| Agents.name(slug) },
         'comments' => {'total' => actionable.length, 'fixed' => fixed, 'kept' => settled.length - fixed, 'open' => (actionable & waiting).length,
                        'challenged' => actionable.count { |comment| challenged?(threads[comment['id']]) }},
-        'conversations' => comments.count { |comment| talked?(threads[comment['id']]) },
+        'conversations' => comments.count { |comment| talked?(threads[comment['id']], mine: comment['mine']) },
+        'revisions' => key.split(':').last.to_i,
         'left' => yours - viewed,
         'open' => waiting.map { |comment| comment['id'] }
       }
@@ -74,7 +75,8 @@ module DCR
                "#{files['read'] == files['total'] ? (files['total'] == 1 ? 'read' : 'all read') : "#{files['read']} read"}#{who}"
              end
       agents = facts['agents']
-      lines = ["- **#{count(files['total'], 'file')}** · #{read}"]
+      revisions = facts['revisions'].to_i > 1 ? " · #{count(facts['revisions'], 'revision')}" : ''
+      lines = ["- **#{count(files['total'], 'file')}**#{revisions} · #{read}"]
       if agents.any? || comments['total'].positive?
         said = [agents.any? ? "**#{count(agents.length, 'agent')}** (#{agents.join(', ')})" : nil, count(comments['total'], 'comment'),
                 comments['challenged'].positive? ? "#{comments['challenged']} challenged by an adversary" : nil].compact
@@ -114,10 +116,11 @@ module DCR
         (thread['opinions'] || {}).values.any? { |opinion| AGAINST.include?(opinion['verdict']) }
     end
 
-    # A person wrote in it and an agent answered.
-    def talked?(thread)
+    # A person wrote in it and an agent answered. mine: the reader's own comment, which is what they
+    # wrote, so an answer to it is enough.
+    def talked?(thread, mine: false)
       messages = Array(thread&.dig('messages'))
-      messages.any? { |message| message['author'] == 'user' } &&
+      (mine || messages.any? { |message| message['author'] == 'user' }) &&
         (messages.any? { |message| message['author'] == 'agent' } || (thread['opinions'] || {}).values.any? { |opinion| opinion['body'] })
     end
 
