@@ -301,6 +301,19 @@
     else if (to === ALL) select('files');
     else navigateFile(focusOrder[to].layer, focusOrder[to].file);
   }
+  // The file before or after this one that still needs you (not marked viewed), skipping the rest.
+  // From Overview or All changes it is the first such file, or the last.
+  function stepUnviewed(delta) {
+    const at = state.view === 'overview' || state.view === 'files' ? (delta > 0 ? -1 : focusOrder.length)
+      : fileReadingActive() ? focusIndex
+      : focusOrder.findIndex(entry => entry.layer.id === state.view && entry.file === state.navFile);
+    const from = at >= 0 || state.view === 'overview' || state.view === 'files' ? at
+      : focusOrder.findIndex(entry => entry.layer.id === state.view) - (delta > 0 ? 1 : 0);
+    for (let index = from + delta; index >= 0 && index < focusOrder.length; index += delta) {
+      if (!fileViewed(files.get(focusOrder[index].file))) { navigateFile(focusOrder[index].layer, focusOrder[index].file); return; }
+    }
+    toast(delta > 0 ? 'No file after this one still needs you' : 'No file before this one still needs you');
+  }
   // The page's own tip, in the theme: anything with data-tip shows its lines beside it on hover, and
   // a row holding one shows it when the keyboard reaches the row (a row, not a whole pane). The first line is the headline.
   const tip = document.createElement('div');
@@ -3501,8 +3514,8 @@
     if (event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && ['h', 'l'].includes(event.key.toLowerCase()) && !inText && !openOverlay()) { event.preventDefault(); movePane(event.key.toLowerCase() === 'l' ? 1 : -1); return; }
     // Only a text or a list being chosen from keeps the keys to itself; a checkbox or a radio button does not.
     if (textField(event.target) || event.target.tagName === 'SELECT' || event.target.isContentEditable || event.metaKey || event.ctrlKey || event.altKey) return;
-    // The arrows are H, J, K and L, but for the sidebar and the reading area, where only left and
-    // right go to the pane on that side.
+    // The arrows are H, J, K and L, but in the sidebar, where left and right go to the pane on
+    // that side.
     // (On a row of tabs they still choose the tab, and with Shift they select text.)
     const ARROWS = {ArrowLeft:'h', ArrowDown:'j', ArrowUp:'k', ArrowRight:'l'};
     const typed = event.key.toLowerCase();
@@ -3559,12 +3572,13 @@
       // In a conversation H goes back to the list first; on a comment L opens it.
       if (pane === 'ledger' && key === 'h' && conversation()) conversation().querySelector('[data-dcr-back]').click();
       else if (pane === 'ledger' && key === 'l') { if (!conversation() && ledgerRows().includes(document.activeElement)) document.activeElement.click(); }
-      // Shift+H and Shift+L are the file before and the next, as an editor's buffers; the keyboard stays where it is.
-      else if (pane !== 'ledger' && event.shiftKey && key === typed) { const at = pane; stepFile(key === 'l' ? 1 : -1); setPane(at); if (at === 'nav') currentNavRow()?.scrollIntoView({block:'nearest'}); }
+      // Shift+H and Shift+L skip to the file before or after that still needs you; the keyboard stays where it is.
+      else if (pane !== 'ledger' && event.shiftKey) { const at = pane; stepUnviewed(key === 'l' ? 1 : -1); setPane(at); if (at === 'nav') currentNavRow()?.scrollIntoView({block:'nearest'}); }
       // In focus mode there is one thing on the page, so from it H and L are the file before and the next.
       else if (pane !== 'ledger' && document.body.classList.contains('zen')) { const by = key === 'l' ? 1 : -1; if (pane !== 'main') setPane('main'); if (!fileReadingActive() || focusOrder[focusIndex + by]) step(by); }
-      // From the reading area H and L are the file before and the next, never Overview or All changes.
-      else if (pane === 'main' && key === typed) { stepFile(key === 'l' ? 1 : -1, true); setPane('main'); }
+      // From the reading area H and L, and the arrows, are the file before and the next, never Overview or All changes
+      // (there the arrows still go to the pane on that side).
+      else if (pane === 'main' && (key === typed || !['overview', 'files'].includes(state.view))) { stepFile(key === 'l' ? 1 : -1, true); setPane('main'); }
       // In the sidebar H and L do nothing: only the arrows go to the pane on that side.
       else if (pane !== 'ledger' && key === typed) { /* nothing */ }
       else movePane(key === 'l' ? 1 : -1);
