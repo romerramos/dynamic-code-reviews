@@ -51,11 +51,11 @@ widths, **Record** and a side panel with Recordings and Comments on the app.
   QA review replaces the previous one's recordings; the reader's own recordings stay.
 
 When you record QA yourself in the App view, open the served review through your own
-browser tool, chosen as SKILL.md's "Which browser to use" says (so you can act in the tab the reader shares), keep that tab in front, and
+browser tool (so you can act in the tab the reader shares), keep that tab in front, and
 drive the recorder only with `dcr record start|still|stop`. While those commands drive
 it, the review draws your pointer and a ring on each click inside the app, at the
 coordinates of the input events you send: tools that click through the DevTools
-protocol (ego lite, Claude in Chrome, Chrome DevTools MCP, Playwright) never move the system
+protocol (Claude in Chrome, Chrome DevTools MCP, Playwright) never move the system
 pointer, and this is how their clips stay readable. Hover before you click. A
 computer-use harness that moves the system pointer is recorded as it is. Never add a
 cursor after recording. With several review pages open, recorder commands go to the
@@ -95,8 +95,8 @@ older reports; new reports collect template selections locally and copy prompts.
    `wait-ready` detects this; do not ask the user to type “shared.” Chrome shows the
    share prompt only for a real click on a visible tab. A harness that clicks
    background tabs (Claude in Chrome does) cannot open it; a harness whose tab is
-   in the foreground (as in Codex), or ego lite, whose clicks count as the user's,
-   may click Choose QA tab itself so the user only answers the prompt. Do not promise silent, permission-free setup, launch
+   in the foreground (as in Codex) may click Choose QA tab itself so the user
+   only answers the prompt. Do not promise silent, permission-free setup, launch
    browsers with capture auto-approval flags, or install anything to skip it.
    The helper rejects desktop/window selections and disables audio.
 2. Chrome focuses the captured app tab after sharing. Keep it selected in its

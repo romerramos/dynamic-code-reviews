@@ -17,7 +17,7 @@ module DCR
     module_function
 
     # Chromium browsers that share Chrome's scripting dictionary, by their process name.
-    BROWSERS = ['ego lite', 'Google Chrome', 'Google Chrome Canary', 'Chromium', 'Brave Browser', 'Microsoft Edge', 'Arc'].freeze
+    BROWSERS = ['Google Chrome', 'Google Chrome Canary', 'Chromium', 'Brave Browser', 'Microsoft Edge', 'Arc'].freeze
     # Browser windows on Linux, by their class or app id.
     BROWSER_CLASS = /chrom|brave|edge|vivaldi|opera|firefox|librewolf|zen|floorp/i
 
