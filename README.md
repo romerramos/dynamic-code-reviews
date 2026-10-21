@@ -67,9 +67,10 @@ the agent if the skill does not appear. For a single project, use the project's 
 ### Browser for screenshots
 
 While you read, the agent takes screenshots of the running app as evidence. It needs a browser it
-drives in the background that saves full-size images: Chrome DevTools MCP (or Playwright). Claude in
-Chrome and computer use only save a shrunken copy, which reads blurry. Set Chrome DevTools MCP up
-with two flags:
+drives that saves full-size images. With [ego lite](https://lite.ego.app/) installed (`ego-browser` on `PATH`) the
+agent uses it, for screenshots and for everything else in a browser, and nothing below is needed.
+Otherwise it uses Chrome DevTools MCP (or Playwright): Claude in Chrome and computer use only save a
+shrunken copy, which reads blurry. Set Chrome DevTools MCP up with two flags:
 
 - `--isolated`: each session gets its own throwaway browser, so several sessions can take
   screenshots at once. Without it, the second session finds the browser "already running" and
@@ -101,8 +102,8 @@ your projects keep working.
 | --- | --- |
 | Ruby 3.1+ and Git on `PATH` | Everything. Ruby's standard library only, no gems. |
 | A browser | Reading the review. Chrome, Edge, Brave, Arc, Firefox or Safari. |
-| A browser tool for the agent (Claude in Chrome, or computer use) | Opening the review in a tab the agent can also use, for QA. Optional. |
-| Chrome DevTools MCP with `--isolated --headless`, or Playwright | Screenshots of the running app as evidence. See [Browser for screenshots](#browser-for-screenshots). |
+| A browser tool for the agent: ego lite when installed, else Claude in Chrome or computer use | Opening the review in a tab the agent can also use, for QA. Optional. |
+| ego lite, or else Chrome DevTools MCP with `--isolated --headless`, or Playwright | Screenshots of the running app as evidence. See [Browser for screenshots](#browser-for-screenshots). |
 | macOS, or Linux with Hyprland (Omarchy), Sway or X11 (`wmctrl` or `xdotool`) | Bringing the browser to the front when the review opens and when it is ready (`dcr focus`). Elsewhere the agent tells you which tab. |
 | Tailscale | Optional. Opening reviews from your other devices. |
 | `gh`, or a GitHub or Linear connector | Optional. Reviewing a pull request with its real base and linked issues. |

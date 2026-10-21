@@ -74,7 +74,7 @@ module ReviewScreenshots
     width, height = size(bytes)
     if width && width > height && width < SHARP
       raise ArgumentError, "#{File.basename(path)} is #{width}x#{height}: the shrunken copy a screenshot tool shows you, which reads blurry as evidence. " \
-                           'Claude in Chrome and computer use only give this copy. Capture with Chrome DevTools MCP (emulate 1440x900x2, then take_screenshot with a file path) or Playwright, and post that file.'
+                           'Claude in Chrome and computer use only give this copy. Capture with ego lite when it is installed (Page.captureScreenshot at 1440x900x2, as the skill says), else Chrome DevTools MCP (emulate 1440x900x2, then take_screenshot with a file path) or Playwright, and post that file.'
     end
     bytes
   end

@@ -51,7 +51,7 @@ if options[:report] && File.basename(options[:report]) == 'current.html'
 end
 puts options[:report] ? "Review with QA panel: #{server.url}/#overview" : "QA recorder: #{server.url}"
 puts "App inside the review: #{server.url}/?app#overview (proxying #{options[:app]} through #{server.app_url})" if server.app_url
-puts 'Open the review in a tab your browser tool controls (Claude in Chrome: its tab group), so you can act in it when the reviewer presses Start QA review.' if server.app_url
+puts 'Open the review in a tab your browser tool controls (ego lite when installed; Claude in Chrome: its tab group), so you can act in it when the reviewer presses Start QA review.' if server.app_url
 puts 'No --app: the review shows the older recorder card and has no Start QA review. Find the running app and serve again with --app <url>, or, when the change has no UI, with --without-app \'<why>\' so the review says so.' if options[:report] && !server.app_url && !options[:no_app]
 puts "No app needed, as the Overview says: #{options[:no_app]}" if options[:no_app]
 puts "On your tailnet: #{server.shared_origin}/#overview (only for your Tailscale login#{options[:share_with] ? ' and the ones you shared it with' : ''})" if server.shared_origin
