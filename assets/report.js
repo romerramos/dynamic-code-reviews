@@ -2393,8 +2393,10 @@
     const earlierSection = earlierCards ? fold('earlier', 'From earlier revisions', earlier.length, earlierCards, '<span class="overview-fold-note"><span data-earlier-outcomes></span></span>') : '';
     // A finding whose code changed is its comment under From earlier revisions, which says what
     // became of it. Only one with no comment is still said, in a line there and never a banner.
+    // Its comment is the one it names, or for an older review the one with its title.
     const subjects = new Set(generated.map(comment => comment.subject));
-    const pending = (review.history?.finding_states || []).filter(item => item.status === 'needs-rechecking' && !subjects.has(item.title)).length;
+    const shown = new Set(generated.map(comment => comment.id));
+    const pending = (review.history?.finding_states || []).filter(item => item.status === 'needs-rechecking' && !(item.comment_id ? shown.has(item.comment_id) : subjects.has(item.title))).length;
     const revision = review.history;
     // One sentence says what this revision is: what it changed and whether that is pushed. The
     // whole account of the update is in Review details.

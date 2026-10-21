@@ -23,7 +23,7 @@ module SeriesChecks
     review = {'title' => 'Sample review', 'summary' => 'Review the new value.', 'effort' => {'score' => 1, 'reason' => 'Small change'}, 'coverage' => 'Original review', 'validation' => ['Original test result'],
               'groups' => [{'title' => 'Values', 'summary' => 'Keep related values together.', 'layers' => [{'title' => 'Return a value', 'items' => [{'file' => file['id'], 'summaries' => {hid => 'Return two.'}}]}]}],
               'comments' => [{'id' => 'value-note', 'hunk' => hid, 'side' => 'new', 'start' => 3, 'end' => 3, 'label' => 'note', 'decoration' => 'non-blocking', 'subject' => 'A source range'}],
-              'findings' => [{'id' => 'F1', 'hunk' => hid, 'severity' => 'P2', 'title' => 'An example concern', 'body' => 'Synthetic concern'}],
+              'findings' => [{'id' => 'F1', 'hunk' => hid, 'severity' => 'P2', 'title' => 'An example concern', 'body' => 'Synthetic concern', 'comment_id' => 'value-note'}],
               'context' => ReviewSeries.contexts(snapshot, ['delete.txt'])}
     DynamicReviews.render(snapshot: snapshot, review: review, name: 'initial')
   end
@@ -607,6 +607,8 @@ module SeriesChecks
           assert(note['general'] && !note.key?('hunk') && note['outdated'] == {'side' => 'new', 'start' => 3, 'end' => 3, 'path' => 'sample.rb', 'lines' => ['    2'], 'revision' => 1}, 'A comment on a changed line was not kept as outdated')
           assert(review['unreviewed'] == %w[f2h1 f1h1] && review['groups'].last['id'] == 'updates', 'New code was not placed unexplained')
           assert(review['findings'].empty? && review['history']['finding_states'].first['status'] == 'needs-rechecking', 'A finding on changed code stayed open unchecked')
+          # Its comment is named, so the page knows it shows the finding (its title is not the comment's).
+          assert(review['history']['finding_states'].first['comment_id'] == 'value-note', 'A finding to recheck lost the comment that shows it')
           new_key = DCR::State.review_key(saved['snapshot']['fingerprint'], 'live', 2)
           blob = state.read['blobs'][new_key]
           kept, gone = blob['personalComments']

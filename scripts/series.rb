@@ -367,7 +367,9 @@ module ReviewSeries
         title = old && old['title'] || decision['title'] || known && known['title']
         raise ArgumentError, 'Finding needs a title' unless title
       end
-      states << {'id' => id, 'status' => status, 'change' => known ? (status == 'open' ? 'still open' : status) : 'new', 'title' => title, 'reason' => decision['reason']}
+      # The comment that says it, so the page can tell a finding it already shows from one it does not.
+      comment_id = decision.dig('finding', 'comment_id') || old&.dig('comment_id') || known&.dig('comment_id')
+      states << {'id' => id, 'status' => status, 'change' => known ? (status == 'open' ? 'still open' : status) : 'new', 'title' => title, 'reason' => decision['reason'], 'comment_id' => comment_id}.compact
     end
     # Unresolved unanchored concerns remain visible until explicitly reassessed.
     old_states.each { |entry| states << entry if !states.any? { |s| s['id'] == entry['id'] } }
@@ -576,7 +578,7 @@ module ReviewSeries
         review['context'] = contexts(snapshot, review.delete('context_paths'))
       end
       history = {'version' => 1, 'name' => name, 'repo' => root, 'branch' => branch(root), 'base' => snapshot['base'], 'origin_mode' => snapshot['mode'], 'revisions' => []}
-      states = Array(review['findings']).map { |f| {'id' => f['id'], 'status' => 'open', 'change' => 'new', 'title' => f['title'], 'reason' => 'Recorded in the original review.'} }
+      states = Array(review['findings']).map { |f| {'id' => f['id'], 'status' => 'open', 'change' => 'new', 'title' => f['title'], 'reason' => 'Recorded in the original review.', 'comment_id' => f['comment_id']}.compact }
       summary = if report then 'Original review imported. Its captured scope and validation remain historical.'
                 elsif in_progress then 'Review in progress: the changes are ready to read while the agent reviews them.'
                 else 'Initial review saved as the starting point for this series.'
@@ -635,7 +637,7 @@ module ReviewSeries
       author = DCR::Agents.detect
       review['comments'].each { |comment| comment['agent'] ||= author unless comment['author'] } if author # a teammate's, from GitHub, stays theirs
       review['context'] = contexts(snapshot, review.delete('context_paths')) if review['context_paths']
-      states = Array(review['findings']).map { |f| {'id' => f['id'], 'status' => 'open', 'change' => 'new', 'title' => f['title'], 'reason' => 'Recorded in the full review.'} }
+      states = Array(review['findings']).map { |f| {'id' => f['id'], 'status' => 'open', 'change' => 'new', 'title' => f['title'], 'reason' => 'Recorded in the full review.', 'comment_id' => f['comment_id']}.compact }
       summary = 'Full review ready: walkthrough explanations, findings and validation.'
       amend(path, history, snapshot, review, summary, {'summary' => summary, 'finding_states' => states}, was: payload.dig('review', 'history'))
     end
