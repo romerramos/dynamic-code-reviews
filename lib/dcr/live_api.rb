@@ -157,13 +157,13 @@ module DCR
     end
 
     # Ask when there is nothing yet, when a request was lost, or when an error may be tried again:
-    # at once if the reviewer asks and JevMyPR named no later time, else after its wait.
+    # at once if the reviewer asks (they may have lifted the limit), else after JevMyPR's wait.
     def due?(saved, again)
       return true unless saved
       age = Time.now - Time.parse(saved['at'].to_s)
       return age > ASKING_SECONDS if saved['status'] == 'asking'
       return false unless saved['status'] == 'error'
-      saved['retry_at'] ? Time.now >= Time.parse(saved['retry_at']) : again || age > RETRY_SECONDS
+      again || (saved['retry_at'] ? Time.now >= Time.parse(saved['retry_at']) : age > RETRY_SECONDS)
     rescue ArgumentError
       true
     end

@@ -108,14 +108,18 @@ Dir.mktmpdir('dcr-jev-test') do |directory|
   state = -> { api.call('GET', "/api/state?key=#{other}", nil)[1]['verdict'] }
   wait_for('The refusal never arrived') { state.call&.fetch('status') == 'error' }
   assert(state.call['message'] == 'Wait 2 minutes.', 'The page shows what JevMyPR said')
-  post.({'key' => other, 'again' => true})
-  sleep 0.1
-  assert(sent.length == 2, 'Try again waits until JevMyPR allows another call')
-  api.state.save_verdict('def456', state.call.merge('retry_at' => (Time.now - 1).utc.iso8601))
-  reply = [200, {}, JSON.generate(answer.merge('verdict' => 'none'))]
   post.({'key' => other})
-  wait_for('The retry never answered') { state.call&.fetch('status') == 'ready' }
-  assert(sent.length == 3 && state.call['verdict'] == 'none', 'Once the wait is over, opening the review asks again')
+  sleep 0.1
+  assert(sent.length == 2, 'Opening the review again waits until JevMyPR allows another call')
+  api.state.save_verdict('def456', state.call.merge('retry_at' => (Time.now - 1).utc.iso8601))
+  post.({'key' => other})
+  wait_for('The retry never answered') { sent.length == 3 && state.call&.fetch('status') == 'error' }
+  assert(Time.parse(state.call['retry_at']) > Time.now, 'Once the wait is over, opening the review asks again')
+  # The reviewer may have lifted the limit, so Try again asks at once, before the time JevMyPR named.
+  reply = [200, {}, JSON.generate(answer.merge('verdict' => 'none'))]
+  post.({'key' => other, 'again' => true})
+  wait_for('Try again never asked') { state.call&.fetch('status') == 'ready' }
+  assert(sent.length == 4 && state.call['verdict'] == 'none', 'Try again asks at once, even before the time JevMyPR named')
 
   code, bad = post.({'key' => 'bad key!'})
   assert(code == 400 && bad['error'].include?('Invalid review key'), 'A bad key is refused')
