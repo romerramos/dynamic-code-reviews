@@ -54,13 +54,18 @@ never present an old-base cumulative review as a current full PR review.
 it is, with no analysis, in seconds. Use it while the reviewer keeps changing the code with the
 review open; the page's **Update** button does the same. Unchanged ranges keep their
 explanations; the others are listed in the review's `unreviewed` and stay unexplained, and new
-files go to a last group, "Added since the review". Comments follow their lines (Git compares
+files go to a last group, "Added since the review", until the agent places them (below). Comments follow their lines (Git compares
 the file before and after) or become outdated, keeping the code they were written on. A finding
 on a changed range is marked needs-rechecking. A screenshot is kept while none of the files it
 shows changed and dropped otherwise; the command lists the dropped ones. Coverage, validation, QA, previews and the risk
 ranking are cleared, as in a draft. Recorded context is left as it was, so the next `prepare`
 still sees a dependency that changed. That `prepare` lists every unreviewed range under
-`ranges_to_inspect`. A pull request's series is updated from GitHub (`dcr sync --pull-request`, or Update in the
+`ranges_to_inspect`. After every update the agent runs it and publishes an increment that
+explains those ranges and rethinks the walkthrough for the new code: each new file goes into the
+step it belongs to, a new step or a new group, a file whose role changed moves, and `group_order`
+reorders groups when the reading order changed. `publish` refuses an update that leaves files in
+"Added since the review", and saves into the same revision. Changed files have already lost their
+viewed mark, so their steps read as not done again. A pull request's series is updated from GitHub (`dcr sync --pull-request`, or Update in the
 page): the head as pushed now is fetched and becomes the next revision. It is updated from the
 checkout only once its reviewer chose that (Update from my checkout in the page, or
 `--follow-checkout`): the manifest keeps `follows: checkout` and the last verified head, each

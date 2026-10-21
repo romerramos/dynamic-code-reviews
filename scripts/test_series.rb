@@ -527,6 +527,29 @@ module SeriesChecks
         end
       end
     end
+    checks['a written increment places the files an update parked at the end'] = lambda do
+      ReviewChecks.fixture do |root, _commit|
+        Dir.mktmpdir('review-place-') do |out|
+          first = ReviewSeries.start(repo: root, name: 'place', report: initial(root))
+          series = File.dirname(File.dirname(first))
+          File.write(File.join(root, 'extra.rb'), "EXTRA = 1\n")
+          ReviewSeries.sync(repo: root, name: 'place')
+          assert(DynamicReviews.extract(File.join(series, 'current.html'))['review']['groups'].last['id'] == 'updates', 'The update did not park the new file')
+          ReviewSeries.prepare(repo: root, name: 'place', out: out)
+          update = increment(out, finding: false)
+          parked = update.merge('items' => update['items'].map { |item| item['file'] == 'f1' ? item.merge('group' => 'updates', 'layer' => 'updates-step-1') : item })
+          error = begin ReviewSeries.publish(prepared: out, update: parked); nil
+                  rescue ArgumentError => e then e.message
+                  end
+          assert(error.to_s.include?('Added since the review'), "An increment kept new files parked at the end: #{error.inspect}")
+          ReviewSeries.publish(prepared: out, update: update)
+          groups = DynamicReviews.extract(File.join(series, 'current.html'))['review']['groups']
+          placed = groups.first['layers'].first['items'].map { |item| item['file'] }
+          assert(groups.none? { |group| group['id'] == 'updates' } && placed.include?('f1') && ReviewSeries.manifest(series)['revisions'].length == 2, 'The new file was not placed in its step, or placing it made another revision')
+        end
+      end
+    end
+
     checks['updates a review to the current code: comments follow their lines or become outdated'] = lambda do
       require_relative '../lib/dcr/live_cli'
       ReviewChecks.fixture do |root, _commit|

@@ -329,6 +329,10 @@ module ReviewSeries
     end
     ids = review['groups'].flat_map { |g| [g.fetch('id')] + g['layers'].map { |l| l.fetch('id') } }
     raise ArgumentError, 'Group/layer IDs must be unique' unless ids.uniq == ids
+    # An update only parks new files at the end; a written increment gives each its place.
+    if review['groups'].any? { |group| group['id'] == UPDATES }
+      raise ArgumentError, 'Place the files under "Added since the review" in the walkthrough: each in the step it belongs to, a new step or a new group. That group only holds what an update has not placed yet'
+    end
     review
   end
 
