@@ -550,6 +550,28 @@ module SeriesChecks
       end
     end
 
+    checks['a written increment keeps every comment, outdated ones included'] = lambda do
+      ReviewChecks.fixture do |root, _commit|
+        Dir.mktmpdir('review-keep-') do |out|
+          first = ReviewSeries.start(repo: root, name: 'keep', report: initial(root))
+          series = File.dirname(File.dirname(first))
+          comments = -> { DynamicReviews.extract(File.join(series, 'current.html'))['review']['comments'] }
+          File.write(File.join(root, 'sample.rb'), "class Sample\n  def value\n    3\n  end\nend\n")
+          ReviewSeries.prepare(repo: root, name: 'keep', out: out)
+          draft = ReviewSeries.read(File.join(out, 'draft.json'))['comments']
+          recheck = ReviewSeries.read(File.join(out, 'plan.json'))['comments_to_recheck']
+          assert(draft.map { |comment| comment['id'] } == ['value-note'] && draft.first.dig('outdated', 'lines') == ['    2'] && recheck.map { |comment| comment['id'] } == ['value-note'], "A comment on changed code was not kept as outdated and handed over: #{draft}")
+          ReviewSeries.publish(prepared: out, update: increment(out, finding: false))
+          assert(comments.call.map { |comment| comment['id'] } == ['value-note'], 'Publishing an increment dropped the outdated comment')
+          File.write(File.join(root, 'sample.rb'), "class Sample\n  def value\n    4\n  end\nend\n")
+          ReviewSeries.prepare(repo: root, name: 'keep', out: out)
+          assert(ReviewSeries.read(File.join(out, 'plan.json'))['comments_to_recheck'].empty?, 'A comment outdated earlier was handed over again')
+          ReviewSeries.publish(prepared: out, update: increment(out, finding: false).merge('finding_updates' => []))
+          assert(comments.call.map { |comment| comment.values_at('id', 'general') } == [['value-note', true]], 'A comment outdated in an earlier revision was dropped by the next increment')
+        end
+      end
+    end
+
     checks['updates a review to the current code: comments follow their lines or become outdated'] = lambda do
       require_relative '../lib/dcr/live_cli'
       ReviewChecks.fixture do |root, _commit|
@@ -620,7 +642,7 @@ module SeriesChecks
           assert(state.read.dig('comments', new_key).last.values_at('id', 'follows') == %w[extra-note value-note], 'A follow-up lost the comment it takes up')
           prepared = ReviewSeries.prepare(repo: root, name: 'live', out: out)
           assert(prepared['status'] == 'changed' && prepared['ranges_to_inspect'].map { |range| range['hunk'] }.sort == %w[f1h1 f2h1], 'Unreviewed ranges were not left to inspect')
-          assert(ReviewSeries.read(File.join(out, 'draft.json'))['comments'].map { |comment| comment['id'] } == ['extra-note'], 'A comment posted after the update was not kept')
+          assert(ReviewSeries.read(File.join(out, 'draft.json'))['comments'].map { |comment| comment['id'] } == %w[value-note extra-note], 'A comment posted after the update, or the outdated one it follows, was not kept')
           # Fix this: the one request that changes code, one at a time, so the revision a fix ends
           # in holds that fix and nothing else. For the same reason a review behind its code is
           # updated first, unasked: what was already different gets a revision of its own.

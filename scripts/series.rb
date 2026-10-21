@@ -239,10 +239,16 @@ module ReviewSeries
             'context_note' => old_context.empty? ? 'No dependency fingerprints recorded; inspect affected callers before trusting reuse.' : 'Tracked context compared; unrecorded dependencies still require judgment.',
             'changes' => changes, 'previous_findings' => previous['review'].fetch('findings', []),
             'previous_finding_states' => previous['review'].dig('history', 'finding_states') || [],
-            'comments_to_recheck' => Array(previous['review']['comments']).reject { |c| changes['mapping'].key?(c['hunk']) }}
+            'comments_to_recheck' => []}
+    draft = draft_review(previous['review'], current, changes)
+    # Every comment comes along, as an update brings it: on its lines when they are still there, else
+    # outdated with the code it was written on. One left out would be gone from the review and its report.
+    anchors = DCR::Anchors.new(previous['snapshot'], current, changes['mapping'], plan['revision'])
+    draft['comments'] = Array(previous['review']['comments']).map { |comment| anchors.carry(comment) }
+    plan['comments_to_recheck'] = draft['comments'].select { |comment| comment.dig('outdated', 'revision') == plan['revision'] }
     raise ArgumentError, 'Prepare output must be outside the repository' if File.expand_path(out).start_with?("#{current['repo']}/")
     FileUtils.mkdir_p(out)
-    {'snapshot' => current, 'plan' => plan, 'draft' => draft_review(previous['review'], current, changes)}.each do |label, value|
+    {'snapshot' => current, 'plan' => plan, 'draft' => draft}.each do |label, value|
       atomic_write(File.join(out, "#{label}.json"), JSON.pretty_generate(value))
     end
     { 'status' => status, 'previous_revision' => plan['revision'], 'files' => changes['files'],

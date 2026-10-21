@@ -23,7 +23,7 @@ Use a temporary directory outside the repository. This writes:
   previous findings and comments whose anchors need rechecking.
 - `snapshot.json`: the full current cumulative snapshot for the renderer.
 - `draft.json`: previous group/layer explanations and uniquely matched summaries
-  with current IDs. Unsafe comments are removed; matching ranges are remapped.
+  with current IDs. Comments come along on their lines or as outdated; matching ranges are remapped.
   Previous test results, findings, quality and issue conclusions are cleared.
 
 Read the compact printed manifest and relevant plan fields first. Do not dump
@@ -129,9 +129,12 @@ Update operations:
   Reauthor layer `related_tests` associations/summaries when their behavior changes;
   preparation remaps unchanged file references alongside ordinary items.
 - `comments`: add or replace by stable comment ID; `remove_comments` removes
-  IDs. Matching comments were only mechanically remapped: reassess their meaning
-  if connected behavior changed. Inspect `comments_to_recheck`; re-anchor or
-  explicitly account for relevant comments in the increment summary.
+  IDs. The draft already holds every comment: on its lines where they are still
+  in the code, else outdated with the code it was written on, as an update keeps
+  them. Placed comments were only mechanically moved: reassess their meaning if
+  connected behavior changed. `comments_to_recheck` lists the ones this code
+  outdated; say what became of each (`dcr reply --outcome`) and post one that
+  still applies again on its new lines. Never leave a comment out to drop it.
 - `finding_updates`: every previously open anchored finding requires a decision.
   `open` requires the full current finding object (`hunk`, severity, title,
   body, confidence where available); `resolved` requires concrete evidence in
