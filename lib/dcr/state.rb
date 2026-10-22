@@ -143,14 +143,17 @@ module DCR
 
     # The review was updated to changed code (`dcr sync`): the reader's progress, comments and
     # conversations go to the new revision. kept: the paths whose diff is the same, which stay
-    # viewed and keep a drawn preview. The block places one of the reader's comments on the new code.
+    # viewed and keep a drawn preview. A changed file is no longer one JevMyPR marked reviewed
+    # (autoReviewed), so its verdict on the new code marks it again. The block places one of the
+    # reader's comments on the new code.
     def carry_changed(from, to, kept)
       check_key(to)
       update do |state|
         if (blob = state['blobs'][from])
           state['blobs'][to] = Marshal.load(Marshal.dump(blob)).merge(
             'personalComments' => Array(blob['personalComments']).map { |comment| yield comment },
-            'viewedFiles' => Array(blob['viewedFiles']) & kept
+            'viewedFiles' => Array(blob['viewedFiles']) & kept,
+            'autoReviewed' => Array(blob['autoReviewed']) & kept
           )
         end
         %w[threads github].each { |part| state[part][to] = Marshal.load(Marshal.dump(state[part][from])) if state[part][from] }

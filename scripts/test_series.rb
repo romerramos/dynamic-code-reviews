@@ -583,7 +583,7 @@ module SeriesChecks
           hid = before['files'].first['hunks'].first['id']
           old_key = DCR::State.review_key(before['fingerprint'], 'live', 1)
           mine = ->(id, line) { {'id' => id, 'hunk' => hid, 'side' => 'new', 'start' => line, 'end' => line, 'label' => 'note', 'decoration' => 'non-blocking', 'subject' => id} }
-          state.save_blob(old_key, {'personalComments' => [mine.call('mine-kept', 2), mine.call('mine-gone', 3)], 'viewedFiles' => ['sample.rb'], 'notes' => {'group-1-step-1' => 'Mine'}})
+          state.save_blob(old_key, {'personalComments' => [mine.call('mine-kept', 2), mine.call('mine-gone', 3)], 'viewedFiles' => ['sample.rb'], 'autoReviewed' => ['sample.rb'], 'notes' => {'group-1-step-1' => 'Mine'}})
           state.user_message(old_key, 'mine-kept', 'Why this name?')
           state.await_opinions(old_key, 'value-note', 'codex')
           state.add_opinion(old_key, 'value-note', 'codex', 'It should be three.', verdict: 'disagree', adversary: true)
@@ -615,6 +615,8 @@ module SeriesChecks
           assert(kept.values_at('hunk', 'start', 'end') == ['f2h1', 3, 3], 'A comment on a line that only moved did not follow it')
           assert(gone['general'] && gone.dig('outdated', 'lines') == ['    2'], 'The reader\'s comment on a changed line was lost')
           assert(blob['viewedFiles'].empty? && blob['notes'] == {'group-1-step-1' => 'Mine'}, 'Progress did not come along as it should')
+          # JevMyPR's verdict on the changed file marks it reviewed again, as it did the first time.
+          assert(blob['autoReviewed'].empty?, 'A changed file stayed counted as marked by JevMyPR, so its new verdict could not mark it')
           assert(state.read.dig('threads', new_key, 'mine-kept', 'messages', 0, 'body') == 'Why this name?', 'The conversation did not come along')
           assert(ReviewSeries.sync(repo: root, name: 'live')['status'] == 'unchanged' && ReviewSeries.manifest(series)['revisions'].length == 2, 'A second update invented a revision')
           # What became of each comment the update outdated is the agent's to say. It is handed the
