@@ -963,7 +963,7 @@
       // Send change, behind the arrow: the agent is to do what the comment says, not answer it.
       const change = ask && !!event.submitter?.hasAttribute('data-composer-change');
       event.submitter?.closest('details.more-menu')?.removeAttribute('open');
-      const comment = {hunk: selection.hunk, side: selection.side, start: selection.start, end: selection.end, id: `mine-${crypto.randomUUID()}`,
+      const comment = {hunk: selection.hunk, side: selection.side, start: selection.start, end: selection.end, id: `mine-${crypto.randomUUID()}`, at: new Date().toISOString(),
         label: change ? 'todo' : ask ? 'question' : composer.label, decoration: !ask && composer.blocking ? 'blocking' : 'non-blocking', audience: ask ? 'agent' : 'pr', subject: entered.subject, discussion: entered.discussion};
       drafts.set(`line:${composer.shownFor}`, '');
       // ⌘ Enter means the main button: Add to my GitHub review.
@@ -2655,7 +2655,7 @@
     return comments.filter(comment => comment.personal).map(comment => {
       const found = comment.general ? null : ReviewTools.anchor(snapshot, comment);
       const was = ReviewTools.outdatedWhere(comment);
-      return {id:comment.id, path:found?.file.path || was?.path || 'General', resolved:comment.resolved, subject:comment.subject,
+      return {id:comment.id, path:found?.file.path || was?.path || 'General', resolved:comment.resolved, subject:comment.subject, at:comment.at || '',
               where:was ? `Outdated · ${was.lines}` : comment.general ? 'General comment' : `${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}`};
     });
   }
@@ -2673,11 +2673,11 @@
     $('ledger-count').textContent = waiting;
     $('ledger-toggle').setAttribute('aria-label', open ? 'Hide your review' : `Show your review${waiting ? `, ${plural(waiting, 'item')}` : ''}`);
     if (!open) return;
-    const groups = new Map();
-    entries.forEach(entry => { if (!groups.has(entry.path)) groups.set(entry.path, []); groups.get(entry.path).push(entry); });
-    const row = entry => `<li class="ledger-item" data-ledger="${escape(entry.id)}" data-state="${entry.resolved ? 'resolved' : 'draft'}"><button type="button" class="ledger-place" data-ledger-jump="${escape(entry.id)}" title="Show in the code">${escape(entry.where)}${icon('arrow-up-right')}</button><div class="ledger-msg">${youAvatar()}<b class="ledger-name you-name">${youName()}</b><span class="ledger-subject">${escape(entry.subject)}</span></div><div class="ledger-meta">${ghBadgeSlot(comments.find(comment => comment.id === entry.id) || {})}<button type="button" data-resolve="${escape(entry.id)}">${entry.resolved ? 'Reopen' : 'Resolve'}</button><button type="button" data-copy="${escape(entry.id)}">Copy for LLMs</button></div></li>`;
-    // Your own comments under a title of their own, as the agent's conversations are, then by file.
-    const byFile = (groups.size ? '<h3 class="ledger-title">Your comments</h3>' : '') + [...groups].map(([path, list]) => `<section class="ledger-group"><h3>${pathFit(path, '', true)}</h3><ul class="ledger-list">${list.map(row).join('')}</ul></section>`).join('');
+    // One list, in the order things were said: your comments here, and on the served page the
+    // conversations you joined and the comments on GitHub, each row drawn the same way (ledgerRow).
+    const ordered = entries.map((entry, index) => [entry, index]).sort(([a, i], [b, j]) => (Date.parse(a.at) || 0) - (Date.parse(b.at) || 0) || i - j).map(([entry]) => entry);
+    const row = entry => `<li class="ledger-item" data-ledger="${escape(entry.id)}" data-at="${escape(entry.at)}" data-state="${entry.resolved ? 'resolved' : 'draft'}">${ReviewTools.ledgerPlace(entry.id, entry.path === 'General' ? '' : entry.path, entry.where)}<div class="ledger-msg">${youAvatar()}${ReviewTools.ledgerBy(youName(), entry.at, 'you-name')}<span class="ledger-subject">${escape(entry.subject)}</span></div><div class="ledger-meta">${ghBadgeSlot(comments.find(comment => comment.id === entry.id) || {})}<button type="button" data-resolve="${escape(entry.id)}">${entry.resolved ? 'Reopen' : 'Resolve'}</button><button type="button" data-copy="${escape(entry.id)}">Copy for LLMs</button></div></li>`;
+    const byFile = ordered.length ? `<section class="ledger-group ledger-thread"><ul class="ledger-list" data-ledger-list>${ordered.map(row).join('')}</ul></section>` : '';
     const stepNotes = notes.length ? `<section class="ledger-group"><h3>Step notes</h3><ul class="ledger-list">${notes.map(note => `<li class="ledger-item" data-state="draft"><button type="button" class="ledger-jump" data-ledger-step="${escape(note.id)}"><span class="ledger-where">${escape(note.title)}</span><span class="ledger-subject">${escape(note.text)}</span></button></li>`).join('')}</ul></section>` : '';
     const empty = !entries.length && !notes.length ? '<p class="ledger-note">Select lines in a diff and write a comment. What you say, and what your agent answers, collects here.</p>' : '';
     const previews = previewsPossible ? `<section class="ledger-previews"><strong>Template previews</strong><p data-preview-summary>${previewSummary(lifecycle())}</p><button type="button" class="btn btn-sm btn-soft" data-open-previews>Open previews</button></section>` : '';
@@ -3469,8 +3469,9 @@
     if (!editingID) drafts.set(editorDraft(), '');
     const comment = {...editorRange, id:editingID || `mine-${crypto.randomUUID()}`, label:$('editor-label').value,
       decoration:$('editor-blocking').checked ? 'blocking' : 'non-blocking', subject, discussion:$('editor-discussion').value.trim()};
-    const audience = state.personalComments.find(existing => existing.id === editingID)?.audience;
-    if (audience) comment.audience = audience;
+    const existing = state.personalComments.find(entry => entry.id === editingID);
+    if (existing?.audience) comment.audience = existing.audience;
+    comment.at = existing?.at || new Date().toISOString(); // when it was first written: its place in Your review
     $('comment-editor').close();
     commitComment(comment);
   };

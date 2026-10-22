@@ -214,7 +214,7 @@ globalThis.LiveTools = (() => {
     if (minutes < 60) return `${minutes} min ago`;
     const hours = Math.round(minutes / 60);
     if (hours < 24) return `${hours} h ago`;
-    return new Date(then).toLocaleDateString();
+    return new Date(then).toLocaleString([], {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'});
   }
 
   // What a thread is doing, in words and as a tone the page can style. `listening` is whether an

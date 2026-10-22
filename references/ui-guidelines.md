@@ -233,13 +233,16 @@ from its original snapshot and analysis when refreshing presentation only.
   code is dealt with and every agent that checked on its own clearly agrees, it is resolved
   without the reader, once (reopened, it stays open). A check that failed or gave no clear
   answer, or no check at all, leaves Resolve to the reader.
-- **Your review folds them the same way.** Conversations on code that changed since leave
-  "Conversations with your agent" for a folded **From earlier revisions** under it, closed
-  until opened. Each row is where the comment was ("After L95 in revision 1"), its subject and
-  what became of it, in the words its card uses. Never the latest message with an agent's
-  Agrees or Disagrees chip: that is what it thought back then, and beside today's outcome it
-  reads as an open disagreement. One the agents differ on, or one sent back to be fixed, stays
-  in the list above and says "Not settled" with who differs.
+- **Your review is one list, in the order things were said**: your comments, the agent's
+  comments you joined, what people wrote on GitHub and the agent's comments you put there,
+  with no section titles. Every row is drawn the same: where it is (path and lines, or
+  "General comment") on top, then the face, the name and the day and time, then what was said,
+  the replies line and the row's actions (its GitHub state among them). A comment on code that
+  changed since keeps its place, says where it was ("After L95 in revision 1") and what became
+  of it, in the words its card uses. Never the latest message with an agent's Agrees or
+  Disagrees chip: that is what it thought back then, and beside today's outcome it reads as an
+  open disagreement. One the agents differ on, or one sent back to be fixed, says "Not settled"
+  with who differs.
 - **Since revision N** sits under All changes in the sidebar once a revision changed code:
   one card per changed file with that revision's own diff (split headings name the two
   revisions), a quiet badge when the file joined the change or went back to its base, and

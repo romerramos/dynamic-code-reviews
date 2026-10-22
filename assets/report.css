@@ -794,10 +794,19 @@ body.ledger-open .ledger{display:flex}
    the name and, under it, what was said; what comes after (replies, actions) lines up with the text. */
 .ledger-place{display:flex;align-items:center;gap:4px;max-width:100%;padding:12px 16px 0;border:0;background:transparent;color:var(--muted);font-size:12px;text-align:left;overflow-wrap:anywhere}
 .ledger-place>svg{flex:none;width:12px;height:12px;opacity:0;transition:opacity .12s}
+/* In Your review a path keeps one line at every width, cut as on a phone (pathFit): the lines it is on always show. */
+.ledger-place{min-width:0}
+.ledger-place .path-fit{display:flex;min-width:0;max-width:100%;overflow:hidden;white-space:nowrap}
+.ledger-place .path-parts{display:flex;flex:0 1 auto;min-width:0;overflow:hidden}
+.ledger-place .path-head,.ledger-place .path-rest{flex:none;white-space:pre}
+.ledger-place .path-mid{flex:0 100 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;direction:rtl;text-align:left}
+.ledger-place .path-name{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .ledger-place:hover{color:var(--accent)}.ledger-place:hover>svg,.ledger-place:focus-visible>svg{opacity:1}
 .ledger-msg{display:grid;grid-template-columns:24px minmax(0,1fr);column-gap:10px;row-gap:1px;padding:8px 16px 0;cursor:pointer}
 .ledger-msg>:is(.comment-avatar,.dcr-avatar){grid-row:span 2;width:24px;height:24px;font-size:11px}
-.ledger-name{align-self:center;font-size:12.5px;font-weight:600;line-height:1.3}
+.ledger-by{display:flex;align-items:baseline;gap:8px;min-width:0;align-self:center}
+.ledger-name{font-size:12.5px;font-weight:600;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ledger-when{flex:none;font-size:11.5px;color:var(--muted)}
 .ledger-msg:hover .ledger-subject{text-decoration:underline}
 .thread-you{font-weight:600;color:var(--ink-neutral-2)}
 .ledger-group h3{margin:14px 0 2px;padding:0 16px;font-size:12px;font-weight:600;color:var(--muted);overflow-wrap:anywhere}

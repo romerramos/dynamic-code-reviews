@@ -144,16 +144,9 @@ body.qa-live .evidence-strip:not(:has(button:not(.visual-qa-option))){display:no
 .ledger-status{display:inline-flex;align-items:center;gap:6px}
 .ledger-status .dcr-dot{width:7px;height:7px}
 /* With conversations listed, the how-to-start hint is no longer needed. */
-.dcr-convos~.ledger-note{display:none}
+.ledger-thread~.ledger-note{display:none}
 .dcr-idle{margin:0;padding:14px 16px;font-size:13px;font-weight:600;color:var(--ink)}
-/* Comments on code that changed since, folded under the current conversations. */
-.dcr-convos-earlier{border-top:1px solid var(--line)}
-.dcr-convos-earlier>summary{display:flex;align-items:center;gap:8px;padding:12px 16px;list-style:none;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted)}
-.dcr-convos-earlier>summary::-webkit-details-marker{display:none}
-.dcr-convos-earlier>summary svg{width:15px;height:15px;margin-left:auto;transition:transform .15s}.dcr-convos-earlier[open]>summary svg{transform:rotate(180deg)}
-.dcr-convos-earlier>summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .dcr-peek .dcr-earlier-outcome{margin:0;font-size:12px}
-@media(prefers-reduced-motion:reduce){.dcr-convos-earlier>summary svg{transition:none}}
 .dcr-peek{display:grid;gap:3px;width:100%;margin:0;padding:6px 16px 10px 50px;border:0;background:none;color:var(--ink);font:inherit;text-align:left;white-space:normal;cursor:pointer}
 .dcr-peek:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:calc(6px * var(--round))}
 .dcr-peek-who{display:flex;align-items:center;gap:6px;min-width:0;font-size:12px;color:var(--muted)}

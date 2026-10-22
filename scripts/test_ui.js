@@ -23,6 +23,21 @@ assert.deepEqual(pairs[0].items.map(item => item.file), ['ruby','erb']);
 assert.equal(tools.componentGroups([componentItems[0]], componentFiles).length, 0);
 assert.deepEqual(componentItems.map(item => item.file), ['erb','other','ruby','view']);
 console.log('PASS component pairs respect directory and layer boundaries without changing source order');
+{
+  // Every row of Your review names where it is and when it was said, whoever wrote it.
+  const place = tools.ledgerPlace('c1', 'app/models/order.rb', 'After L4');
+  assert.match(place, /data-ledger-jump="c1"/);
+  assert.match(place, /order\.rb/);
+  assert.match(place, / · After L4/);
+  assert.doesNotMatch(tools.ledgerPlace('c2', '', 'General comment'), /path-fit/);
+  const by = tools.ledgerBy('Claude', '2026-10-20T14:32:00Z');
+  assert.match(by, /Claude/);
+  assert.match(by, /data-when="2026-10-20T14:32:00Z"/);
+  assert.ok(tools.whenText('2026-10-20T14:32:00Z').includes('20'), 'the day is named');
+  assert.match(tools.whenText('2026-10-20T14:32:00Z'), /\d:\d\d/, 'the time is named');
+  assert.equal(tools.whenText(''), '');
+  console.log('PASS a row of Your review names where it is and the day and time it was said');
+}
 assert.equal(tools.category('app/views/rentals/show.html.erb'), 'Design / UI');
 assert.equal(tools.category('app/assets/stylesheets/rentals.scss'), 'Design / UI');
 assert.equal(tools.category('app/javascript/controllers/rental_controller.js'), 'Frontend');

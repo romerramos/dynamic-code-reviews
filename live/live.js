@@ -1144,9 +1144,19 @@
     const lines = was ? `Outdated · ${was.lines}` : comment.general ? 'General comment' : `${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}`;
     return globalThis.ReviewTools.pathFit(found?.file.path || was?.path || 'General', ` · ${lines}`);
   };
-  // A row from an earlier revision says where the comment was, as its folded card does.
-  const wasWhere = comment => { const was = globalThis.ReviewTools.outdatedWhere(comment); return globalThis.ReviewTools.pathFit(was.path, ` · ${was.lines}${was.revision ? ` in revision ${was.revision}` : ''}`); };
-  const rowFor = (comment, earlier = false) => `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-conversation="1"${earlier ? ' data-earlier="1"' : ''}><button type="button" class="ledger-place" data-ledger-jump="${tools.escape(comment.id)}" title="Show in the code">${earlier ? wasWhere(comment) : whereOf(comment)}${ico('arrow-up-right')}</button><div class="ledger-msg">${byFace(comment)}<b class="ledger-name">${tools.escape(byName(comment))}</b><span class="ledger-subject">${tools.escape(comment.subject)}</span></div><div class="ledger-meta"></div></li>`;
+  // The lines a row names: where the comment is, or for one from an earlier revision, where it was.
+  const placeLines = (comment, earlier) => {
+    const was = globalThis.ReviewTools.outdatedWhere(comment);
+    if (earlier && was) return `${was.lines}${was.revision ? ` in revision ${was.revision}` : ''}`;
+    return was ? `Outdated · ${was.lines}` : comment.general ? 'General comment' : `${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}`;
+  };
+  // When a comment was made: when it was posted, else its conversation's first message.
+  const startedAt = (comment, thread) => comment?.at || comment?.posted_at || [...(thread?.messages || [])].map(message => message.at).filter(Boolean).sort()[0] || '';
+  const rowFor = (comment, earlier = false) => {
+    const path = earlier ? globalThis.ReviewTools.outdatedWhere(comment)?.path : (globalThis.ReviewTools.anchor(snapshot, comment)?.file.path || globalThis.ReviewTools.outdatedWhere(comment)?.path);
+    const at = startedAt(comment, threads[comment.id]);
+    return `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-conversation="1" data-at="${tools.escape(at)}"${earlier ? ' data-earlier="1"' : ''}>${globalThis.ReviewTools.ledgerPlace(comment.id, comment.general && !comment.outdated ? '' : path, placeLines(comment, earlier))}<div class="ledger-msg">${byFace(comment)}${globalThis.ReviewTools.ledgerBy(tools.escape(byName(comment)), at)}<span class="ledger-subject">${tools.escape(comment.subject)}</span></div><div class="ledger-meta"></div></li>`;
+  };
   const chevron = '<svg class="dcr-peek-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
   // Under the row, the replies in a line (who, how many, when last).
   // A comment whose code changed says what became of it, as its card does. What an agent thought
@@ -1244,51 +1254,57 @@
   });
   // From an announced answer: open that conversation in Your review, rather than leaving the page.
   const showConversation = id => openConversation(id);
-  let ledgerEarlierOpen = false; // the reader opened From earlier revisions in Your review; a redraw keeps it so
   const decorateLedger = () => {
     const body = document.getElementById('ledger-body');
     if (!body) return;
-    // Conversations about the agent's own findings that you have joined, above your own comments.
+    // One list in the order things were said: your comments (drawn by the review), the agent's
+    // comments you joined, what people wrote on GitHub, and the agent's comments you put there.
+    // A comment on code that changed since stays in its place and says what became of it.
     const mine = new Set(comments().filter(comment => comment.personal).map(comment => comment.id));
     const joined = comments().filter(comment => !mine.has(comment.id) && hasConversation(threads[comment.id]) && (threads[comment.id].delivery !== 'draft' || threads[comment.id].messages?.length || weighedIn(threads[comment.id])));
-    let section = body.querySelector(':scope > .dcr-convos');
-    // What changed since sits last, under everything that is about the code as it is.
-    let earlierGroup = body.querySelector(':scope > .dcr-earlier-group');
-    if (!joined.length) { section?.remove(); earlierGroup?.remove(); }
-    else {
-      if (!section) { section = document.createElement('section'); section.className = 'ledger-group dcr-convos'; body.prepend(section); }
-      // Only the list of rows decides the markup; states and answers are filled in below.
-      // As in the Overview: what is read first is about the code as it is. Comments on code
-      // that changed since are folded under it, each with what became of it.
-      const before = joined.filter(comment => putAway(comment.id));
-      const now = joined.filter(comment => !before.includes(comment));
-      // The same words as the Overview when nothing is open, so the two never disagree.
-      const idle = !now.length && !comments().some(comment => comment.personal && !resolved().includes(comment.id));
-      const html = `${idle ? '<p class="dcr-idle">Nothing is waiting on you.</p>' : ''}${now.length ? `<h3 class="ledger-title">Conversations with your agent</h3><ul class="ledger-list">${now.map(comment => rowFor(comment)).join('')}</ul>` : ''}`;
-      if (section.dataset.html !== html) { section.innerHTML = html; section.dataset.html = html; }
-      if (!before.length) earlierGroup?.remove();
-      else {
-        if (!earlierGroup) { earlierGroup = document.createElement('section'); earlierGroup.className = 'ledger-group dcr-earlier-group'; }
-        const previews = body.querySelector(':scope > .ledger-previews');
-        if (earlierGroup.nextElementSibling !== previews || earlierGroup.parentElement !== body) previews ? previews.before(earlierGroup) : body.append(earlierGroup);
-        const fold = `<details class="dcr-convos-earlier"${ledgerEarlierOpen ? ' open' : ''}><summary>From earlier revisions <span class="badge neutral">${before.length}</span>${ico('chevron-down')}</summary><ul class="ledger-list">${before.map(comment => rowFor(comment, true)).join('')}</ul></details>`;
-        if (earlierGroup.dataset.html !== fold) {
-          earlierGroup.innerHTML = fold; earlierGroup.dataset.html = fold;
-          earlierGroup.querySelector('.dcr-convos-earlier').addEventListener('toggle', event => { ledgerEarlierOpen = event.target.open; });
-        }
-      }
-    }
-    // The agent's comments you put on GitHub (pending or posted), so the panel shows your whole GitHub review.
     const onGitHub = comments().filter(comment => !mine.has(comment.id) && (ghData.pending?.[comment.id] || ghData.posted?.[comment.id]));
-    let ghGroup = body.querySelector(':scope > .dcr-gh-group');
-    if (!onGitHub.length) ghGroup?.remove();
-    else {
-      if (!ghGroup) { ghGroup = document.createElement('section'); ghGroup.className = 'ledger-group dcr-gh-group'; section ? section.after(ghGroup) : body.prepend(ghGroup); }
-      const html = `<h3>On GitHub</h3><ul class="ledger-list">${onGitHub.map(comment => `<li class="ledger-item" data-gh-row data-state="${ghData.posted?.[comment.id] ? 'posted' : 'pending'}"><button type="button" class="ledger-jump" data-ledger-jump="${tools.escape(comment.id)}"><span class="ledger-where">${whereOf(comment)}</span><span class="ledger-subject">${tools.escape(comment.subject)}</span></button><div class="ledger-meta"><span class="gh-slot" data-gh-badge="${tools.escape(comment.id)}"></span></div></li>`).join('')}</ul>`;
-      if (ghGroup.dataset.html !== html) { ghGroup.innerHTML = html; ghGroup.dataset.html = html; window.ReviewGitHub?.refresh(); }
+    const theirs = [...new Map([...joined, ...onGitHub].map(comment => [comment.id, comment])).values()];
+    let list = body.querySelector('[data-ledger-list]');
+    if (!list && theirs.length) {
+      const section = Object.assign(document.createElement('section'), {className: 'ledger-group ledger-thread', innerHTML: '<ul class="ledger-list" data-ledger-list></ul>'});
+      body.prepend(section);
+      list = section.firstElementChild;
     }
+    if (list) {
+      const wanted = new Set(theirs.map(comment => comment.id));
+      list.querySelectorAll(':scope > li[data-conversation]').forEach(item => { if (!wanted.has(item.dataset.ledger)) item.remove(); });
+      theirs.forEach(comment => {
+        const html = rowFor(comment, putAway(comment.id));
+        const item = list.querySelector(`:scope > li[data-conversation][data-ledger="${CSS.escape(comment.id)}"]`);
+        if (item && item.dataset.row === html) return;
+        const fresh = document.createElement('template');
+        fresh.innerHTML = html;
+        const row = fresh.content.firstElementChild;
+        row.dataset.row = html;
+        item ? item.replaceWith(row) : list.append(row);
+      });
+      // Your own comments written before they carried a time take their conversation's.
+      list.querySelectorAll(':scope > li:not([data-conversation])').forEach(item => {
+        if (item.dataset.at) return;
+        const at = startedAt(null, threads[item.dataset.ledger]);
+        if (!at) return;
+        item.dataset.at = at;
+        const when = item.querySelector('.ledger-when');
+        if (when) { when.dataset.when = at; when.textContent = globalThis.ReviewTools.whenText(at); }
+      });
+      const rows = [...list.children];
+      const key = item => Date.parse(item.dataset.at || '') || 0;
+      const ordered = rows.map((item, index) => [item, index]).sort(([a, i], [b, j]) => key(a) - key(b) || i - j).map(([item]) => item);
+      if (ordered.some((item, index) => item !== rows[index])) list.append(...ordered);
+    }
+    // The same words as the Overview when nothing is open, so the two never disagree.
+    const idle = theirs.length > 0 && !joined.some(comment => !putAway(comment.id)) && !comments().some(comment => comment.personal && !resolved().includes(comment.id));
+    let idleNote = body.querySelector(':scope > .dcr-idle');
+    if (idle && !idleNote) { idleNote = Object.assign(document.createElement('p'), {className: 'dcr-idle', textContent: 'Nothing is waiting on you.'}); body.prepend(idleNote); }
+    if (!idle && idleNote) idleNote.remove();
     const byId = new Map(comments().map(comment => [comment.id, comment]));
     if (current && !hasConversation(threads[current])) closeConversation();
+    let badged = false;
     body.querySelectorAll('.ledger-item[data-ledger]').forEach(item => {
       const thread = threads[item.dataset.ledger];
       const own = !item.dataset.conversation;
@@ -1320,12 +1336,19 @@
       const canSend = own && !forPR && state === 'draft' && online;
       if (canSend && !send) { send = Object.assign(document.createElement('button'), {type: 'button', className: 'dcr-row-send', textContent: 'Send to agent'}); send.dataset.dcrRowSend = item.dataset.ledger; status.after(send); }
       if (!canSend && send) send.remove();
+      // The agent's comment you put on GitHub says so, as your own do.
+      if (ghRow !== 'draft' && !meta.querySelector('.gh-slot')) {
+        meta.append(Object.assign(document.createElement('span'), {className: 'gh-slot'}));
+        meta.lastElementChild.dataset.ghBadge = item.dataset.ledger;
+        badged = true;
+      }
       item.querySelector(':scope > .ledger-reply')?.remove(); // the peek replaces the old one-line answer
       // With the server connected the agent is one click away, so Copy for LLMs stays in the card's ⋯ menu.
       const copy = meta.querySelector('[data-copy]');
       if (copy) set(copy, 'hidden', online);
       decoratePeek(item, byId.get(item.dataset.ledger), thread);
     });
+    if (badged) window.ReviewGitHub?.refresh();
   };
 
   // --- send from where you write ---------------------------------------------------------------
