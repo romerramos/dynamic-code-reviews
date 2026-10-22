@@ -1360,3 +1360,11 @@ button.risk-path:hover .path-name{text-decoration:underline}
 @media(max-width:620px){.shot-stack{flex-wrap:wrap;gap:14px}.shot-pile{width:132px;height:84px}.shot-show>header{padding:14px 52px 12px 18px}.shot-show-stage{padding:12px}.shot-show-strip{display:none}}
 .ui-changes-none{margin:18px 0 0;font-size:13px;color:var(--muted)}
 .ui-changes-none strong{margin-right:8px;color:var(--ink-neutral-3);font-weight:600}
+/* A comment from an earlier revision is history: folded, it is one quiet line; open, that line stays and closes it again. */
+.review-thread.is-earlier>.thread-file{padding:8px 16px}
+.review-thread.is-earlier>.thread-details>.thread-summary,.overview-reading .review-thread.is-earlier>.thread-details>.thread-summary{display:flex;flex-wrap:nowrap;align-items:center;gap:10px;padding:9px 16px;background:transparent;border-bottom:0}
+.review-thread.is-earlier>.thread-details[open]>.thread-summary{border-bottom:1px solid var(--line-neutral-2)}
+.review-thread.is-earlier>.thread-details>.thread-summary>.thread-badges,.overview-reading .review-thread.is-earlier>.thread-details>.thread-summary>.thread-badges{display:flex;flex:none;flex-wrap:nowrap;font-size:12px}
+.review-thread.is-earlier>.thread-details>.thread-summary>strong,.overview-reading .review-thread.is-earlier>.thread-details>.thread-summary>strong{display:block;flex:1 1 auto;min-width:0;font-size:13px;line-height:1.5;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.review-thread.is-earlier>.thread-details>.thread-summary>.comment-avatar{flex:none}
+.review-thread.is-earlier>.thread-details>.thread-summary :is(.thread-priority,.thread-severity,.thread-resolved){display:none}
