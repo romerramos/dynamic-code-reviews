@@ -68,7 +68,7 @@ Dir.mktmpdir('dcr-publish-test') do |directory|
   assert(key == KEY, "The latest revision's key is wrong: #{key}")
   assert(facts['files'] == {'total' => 3, 'yours' => 1, 'read' => 1, 'viewed' => 3}, "Files are counted wrong: #{facts['files']}")
   assert(facts['agents'] == %w[Claude Codex], "Agents are wrong: #{facts['agents']}")
-  assert(facts['comments'] == {'total' => 2, 'fixed' => 1, 'kept' => 1, 'open' => 0, 'challenged' => 1}, "Comments are counted wrong: #{facts['comments']}")
+  assert(facts['comments'] == {'total' => 2, 'fixed' => 1, 'kept' => 1, 'open' => 0, 'quiet' => {'praise' => 1}, 'challenged' => 1}, "Comments are counted wrong: #{facts['comments']}")
   assert(facts['conversations'] == 1 && facts['left'].empty? && facts['open'].empty?, "Done is not done: #{facts}")
   text = DCR::ReviewReport.markdown(facts, login: 'reviewer')
   assert(text.start_with?(DCR::ReviewReport::MARK) && text.include?("[Dynamic Code Reviews](#{DCR::ReviewReport::HOME})") && text.include?("[JevMyPR](#{DCR::ReviewReport::JEVMYPR})"), "The report lacks its mark or links:\n#{text}")
@@ -94,6 +94,15 @@ Dir.mktmpdir('dcr-publish-test') do |directory|
   asked = DCR::ReviewReport.facts(shot, said, saved, key)
   assert(asked['open'].empty? && asked['comments']['total'] == 2 && asked['conversations'] == 2, "A question of the reader's is open, or counted as a comment: #{asked.slice('open', 'comments', 'conversations')}")
   puts 'PASS without a verdict every file needs the reader; unresolved comments are open, the reader\'s own questions never'
+
+  # A review whose only comment is a note: it asks nothing, but the adversaries who disagreed with it in part still count.
+  noted = {'comments' => [{'id' => 'n1', 'label' => 'note', 'subject' => 'Safe for every caller', 'agent' => 'claude', 'hunk' => 'f1h1'}]}
+  saved['threads'][KEY] = {'n1' => {'messages' => [{'author' => 'agent', 'agent' => 'codex', 'role' => 'adversary', 'verdict' => 'partly', 'body' => 'Mostly.'}],
+                                    'opinions' => {'grok' => {'verdict' => 'partly', 'body' => 'Mostly.'}}}}
+  note = DCR::ReviewReport.facts(shot, noted, saved, key)
+  line = DCR::ReviewReport.markdown(note).lines.find { |entry| entry.include?('agents') }
+  assert(note['comments']['challenged'] == 1 && line.include?('**3 agents** (Claude, Codex, Grok) · 1 note · 1 challenged by an adversary') && !line.include?('0 comments'), "A challenged note is missing from the report: #{line}")
+  puts 'PASS a note asks nothing, but an adversary challenging it is in the report'
 
   # --- publishing ------------------------------------------------------------------------------
   log = File.join(directory, 'gh.log')

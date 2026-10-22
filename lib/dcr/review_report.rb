@@ -42,7 +42,8 @@ module DCR
       yours = verdict ? paths.select { |path| verdict.dig('files', path) == 'human' } : paths
       comments = all_comments(review, state, key, progress)
       # Counted are the agents' comments; a teammate's from GitHub must be settled too, but is not the review's.
-      actionable = comments.reject { |comment| comment['mine'] || comment['author'] || QUIET.include?(comment['label']) }
+      reviews = comments.reject { |comment| comment['mine'] || comment['author'] }
+      actionable = reviews.reject { |comment| QUIET.include?(comment['label']) }
       # Open is what the Overview's All clear waits on: the review's own comments on the code as it is.
       # The reader's questions to the agent are not something to resolve.
       waiting = comments.reject { |comment| comment['mine'] || comment['outdated'] || resolved.include?(comment['id']) || threads.dig(comment['id'], 'closed') }
@@ -54,8 +55,10 @@ module DCR
         'files' => {'total' => paths.length, 'yours' => yours.length, 'read' => (yours & viewed).length, 'viewed' => (paths & viewed).length},
         'verdict' => verdict && verdict['verdict'],
         'agents' => agents.map { |slug| Agents.name(slug) },
+        # quiet: notes and praise, by label. They ask nothing, but an adversary can still challenge one.
         'comments' => {'total' => actionable.length, 'fixed' => fixed, 'kept' => settled.length - fixed, 'open' => (actionable & waiting).length,
-                       'challenged' => actionable.count { |comment| challenged?(threads[comment['id']]) }},
+                       'quiet' => (reviews - actionable).map { |comment| comment['label'] }.tally,
+                       'challenged' => reviews.count { |comment| challenged?(threads[comment['id']]) }},
         'conversations' => comments.count { |comment| talked?(threads[comment['id']], mine: comment['mine']) },
         'revisions' => key.split(':').last.to_i,
         'left' => yours - viewed,
@@ -77,8 +80,11 @@ module DCR
       agents = facts['agents']
       revisions = facts['revisions'].to_i > 1 ? " · #{count(facts['revisions'], 'revision')}" : ''
       lines = ["- **#{count(files['total'], 'file')}**#{revisions} · #{read}"]
-      if agents.any? || comments['total'].positive?
-        said = [agents.any? ? "**#{count(agents.length, 'agent')}** (#{agents.join(', ')})" : nil, count(comments['total'], 'comment'),
+      quiet = comments['quiet'] || {}
+      if agents.any? || comments['total'].positive? || quiet.any?
+        notes = quiet.map { |label, number| label == 'note' ? count(number, 'note') : "#{number} #{label}" }
+        said = [agents.any? ? "**#{count(agents.length, 'agent')}** (#{agents.join(', ')})" : nil,
+                comments['total'].positive? || notes.empty? ? count(comments['total'], 'comment') : nil, *notes,
                 comments['challenged'].positive? ? "#{comments['challenged']} challenged by an adversary" : nil].compact
         lines << "- #{said.join(' · ')}"
       end
