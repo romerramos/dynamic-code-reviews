@@ -126,13 +126,18 @@ module DCR
       said.merge((thread['opinions'] || {}).transform_values { |opinion| opinion['verdict'] }).values.select { |verdict| AGAINST.include?(verdict) }
     end
 
-    # "1 challenged in part by 2 adversaries": the comments challenged, by how many adversaries, and
-    # "in part" when none of them disagreed outright.
+    # "2 adversaries partly agreed" when none disagreed outright, otherwise "1 challenged by 2 adversaries".
+    # More than one comment challenged says on how many.
     def challenge_text(comments)
-      return unless comments['challenged'].to_i.positive?
+      challenged = comments['challenged'].to_i
+      return unless challenged.positive?
       verdicts = Array(comments['challenges'])
-      by = verdicts.length > 1 ? count(verdicts.length, 'adversary', 'adversaries') : 'an adversary'
-      "#{comments['challenged']} challenged#{verdicts.all?('partly') ? ' in part' : ''} by #{by}"
+      adversaries = count(verdicts.length, 'adversary', 'adversaries')
+      if verdicts.all?('partly')
+        "#{adversaries} partly agreed#{challenged > 1 ? " on #{count(challenged, 'comment')}" : ''}"
+      else
+        "#{challenged} challenged by #{verdicts.length == 1 ? 'an adversary' : adversaries}"
+      end
     end
 
     # A person wrote in it and an agent answered. mine: the reader's own comment, which is what they

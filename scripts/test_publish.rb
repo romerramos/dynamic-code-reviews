@@ -101,7 +101,7 @@ Dir.mktmpdir('dcr-publish-test') do |directory|
                                     'opinions' => {'grok' => {'verdict' => 'partly', 'body' => 'Mostly.'}}}}
   note = DCR::ReviewReport.facts(shot, noted, saved, key)
   line = DCR::ReviewReport.markdown(note).lines.find { |entry| entry.include?('agents') }
-  assert(note['comments']['challenged'] == 1 && line.include?('**3 agents** (Claude, Codex, Grok) · 1 note · 1 challenged in part by 2 adversaries') && !line.include?('0 comments'), "A challenged note is missing from the report: #{line}")
+  assert(note['comments']['challenged'] == 1 && line.include?('**3 agents** (Claude, Codex, Grok) · 1 note · 2 adversaries partly agreed') && !line.include?('0 comments'), "A challenged note is missing from the report: #{line}")
   puts 'PASS a note asks nothing, but an adversary challenging it is in the report'
 
   # --- publishing ------------------------------------------------------------------------------
