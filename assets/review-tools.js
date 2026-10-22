@@ -380,6 +380,7 @@ globalThis.ReviewTools = (() => {
   function scopeLabel(snapshot, review = {}) {
     const labels = comparisonLabels(snapshot, review);
     if (prReview(snapshot, review) && labels.pr_title) return `${labels.pr_number ? `#${labels.pr_number} · ` : ''}${labels.pr_title}`;
+    if (snapshot.paths) return `Critical code · ${snapshot.paths.length} file${snapshot.paths.length === 1 ? '' : 's'} · ${String(snapshot.head).slice(0, 8)}`;
     return `${snapshot.mode === 'series' ? (snapshot.working_tree ? 'Series + working tree' : 'Committed series') : snapshot.mode} · ${String(snapshot.head).slice(0, 8)}`;
   }
   // SHA-256 of a string's UTF-8 bytes, as hex. GitHub names a file's diff by it, and a saved
@@ -431,6 +432,8 @@ globalThis.ReviewTools = (() => {
     const labels = comparisonLabels(snapshot, review);
     const before = labels.base_label || short(snapshot.base);
     const after = labels.head_label || short(snapshot.head);
+    // A critical-code review: the repository's chosen files, each read whole as it is now.
+    if (snapshot.paths) return `Critical code review · ${snapshot.paths.length} chosen file${snapshot.paths.length === 1 ? '' : 's'} read whole, as they are in the working tree at ${short(snapshot.head)}`;
     if (snapshot.mode === 'uncommitted') return 'Uncommitted changes · staged and unstaged edits, plus non-ignored untracked files, compared with HEAD';
     if (snapshot.mode === 'series' && snapshot.working_tree) return `Cumulative review · committed and uncommitted changes compared with ${before}`;
     if (prReview(snapshot, review)) return `${labels.pr_number ? `PR #${labels.pr_number}` : 'PR review'} · ${after} compared with ${before} · branch changes since their merge base`;

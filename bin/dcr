@@ -15,6 +15,9 @@ USAGE = <<~TEXT
   Usage: dcr <command> [options]
 
     collect | render | extract     Snapshot changes, render a standalone report, or read one back
+                                   (--mode repo --scope <files.json>: a repository's chosen critical files, read whole)
+    critical                       Candidate files for a critical-code review of a repository: sign-in and users,
+                                   regulated data, secrets and security, payments
     series <#{SERIES_COMMANDS.join('|')}>
                                    Saved review series and their revisions
     previews render                Render template previews from a spec
@@ -61,6 +64,7 @@ when 'wait', 'comments', 'comment', 'screenshot', 'log', 'sync', 'risk-ranking',
   DCR::LiveCLI.run(command, ARGV)
 when 'serve' then load File.join(SCRIPTS, 'serve.rb') # in this process, so `dcr stop` finds it as `bin/dcr serve`
 when 'record' then run_script('record.rb', *ARGV)
+when 'critical' then run_script('critical.rb', *ARGV)
 when nil, '-h', '--help', 'help' then puts USAGE
 else abort "Unknown command #{command}\n\n#{USAGE}"
 end

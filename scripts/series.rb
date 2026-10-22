@@ -276,7 +276,7 @@ module ReviewSeries
     # A checkout whose branch took in its base branch (a merge or a rebase) is compared from
     # where it starts now, so the review shows its own change and not what the base gained.
     start ||= head || base ? nil : moved_start(repo, history, previous)
-    current = DynamicReviews.collect(repo: repo, mode: 'series', base: start || history.fetch('base'), head: working_tree ? nil : head)
+    current = DynamicReviews.collect(repo: repo, mode: 'series', base: start || history.fetch('base'), head: working_tree ? nil : head, paths: history['paths'])
     common = DynamicReviews.git(repo, 'merge-base', previous['snapshot']['head'], current['head'], allowed: [0, 1]).strip
     if history['origin_mode'] == 'pr'
       # An amended or force-pushed PR keeps the verified base, and the comparison is by content against it.
@@ -423,7 +423,7 @@ module ReviewSeries
       history = manifest(path)
       raise ArgumentError, 'Another revision was published; prepare again' unless history['revisions'].last['number'] == plan['revision']
       raise ArgumentError, 'Branch changed since preparation' unless history['branch'] == branch(plan['repo'])
-      fresh = DynamicReviews.collect(repo: plan['repo'], mode: 'series', base: history['base'], head: snapshot['working_tree'] ? nil : snapshot['head'])
+      fresh = DynamicReviews.collect(repo: plan['repo'], mode: 'series', base: history['base'], head: snapshot['working_tree'] ? nil : snapshot['head'], paths: history['paths'])
       raise ArgumentError, 'Code moved since preparation; prepare again' unless code_key(fresh) == plan['snapshot_key'] && code_key(snapshot) == plan['snapshot_key'] && fresh['head'] == snapshot['head']
       raise ArgumentError, 'Context moved since preparation; prepare again' unless contexts(fresh, plan['context'].keys) == plan['context']
       # A review of the verified head again ends following the checkout.
@@ -472,7 +472,7 @@ module ReviewSeries
       snapshot, review = payload.values_at('snapshot', 'review')
       keep_posted(path, history, review)
       ReviewQA.validate(evidence, snapshot, review)
-      fresh = DynamicReviews.collect(repo: repo, mode: 'series', base: snapshot['base'], head: snapshot['mode'] == 'uncommitted' || snapshot['working_tree'] ? nil : snapshot['head'])
+      fresh = DynamicReviews.collect(repo: repo, mode: 'series', base: snapshot['base'], head: snapshot['mode'] == 'uncommitted' || snapshot['working_tree'] ? nil : snapshot['head'], paths: snapshot['paths'])
       raise ArgumentError, 'Code changed; review the new snapshot before attaching QA' unless code_key(fresh) == code_key(snapshot) && fresh['head'] == snapshot['head']
       recorded_context = review.fetch('context', {})
       raise ArgumentError, 'Context changed; reassess before attaching QA' unless contexts(fresh, recorded_context.keys) == recorded_context
@@ -494,7 +494,7 @@ module ReviewSeries
       snapshot, review = payload.values_at('snapshot', 'review')
       keep_posted(path, history, review)
       ReviewPreviews.validate(rendered, snapshot, full: !targeted)
-      fresh = DynamicReviews.collect(repo: repo, mode: 'series', base: snapshot['base'], head: snapshot['mode'] == 'uncommitted' || snapshot['working_tree'] ? nil : snapshot['head'])
+      fresh = DynamicReviews.collect(repo: repo, mode: 'series', base: snapshot['base'], head: snapshot['mode'] == 'uncommitted' || snapshot['working_tree'] ? nil : snapshot['head'], paths: snapshot['paths'])
       raise ArgumentError, 'Code changed; review the new snapshot before attaching previews' unless code_key(fresh) == code_key(snapshot) && fresh['head'] == snapshot['head']
       if targeted
         raise ArgumentError, 'Targeted preview needs at least one example' if rendered.empty?
@@ -541,7 +541,7 @@ module ReviewSeries
       else
         review.delete('preview_scope')
       end
-      fresh = DynamicReviews.collect(repo: repo, mode: 'series', base: snapshot['base'], head: snapshot['mode'] == 'uncommitted' || snapshot['working_tree'] ? nil : snapshot['head'])
+      fresh = DynamicReviews.collect(repo: repo, mode: 'series', base: snapshot['base'], head: snapshot['mode'] == 'uncommitted' || snapshot['working_tree'] ? nil : snapshot['head'], paths: snapshot['paths'])
       raise ArgumentError, 'Code changed; review the new snapshot before attaching visual evidence' unless code_key(fresh) == code_key(snapshot) && fresh['head'] == snapshot['head']
       recorded_context = review.fetch('context', {})
       raise ArgumentError, 'Context changed; reassess before attaching visual evidence' unless contexts(fresh, recorded_context.keys) == recorded_context
@@ -578,6 +578,8 @@ module ReviewSeries
         review['context'] = contexts(snapshot, review.delete('context_paths'))
       end
       history = {'version' => 1, 'name' => name, 'repo' => root, 'branch' => branch(root), 'base' => snapshot['base'], 'origin_mode' => snapshot['mode'], 'revisions' => []}
+      # A critical-code review keeps to the files it chose: updates read only those.
+      history['paths'] = snapshot['paths'] if snapshot['paths']
       states = Array(review['findings']).map { |f| {'id' => f['id'], 'status' => 'open', 'change' => 'new', 'title' => f['title'], 'reason' => 'Recorded in the original review.', 'comment_id' => f['comment_id']}.compact }
       summary = if report then 'Original review imported. Its captured scope and validation remain historical.'
                 elsif in_progress then 'Review in progress: the changes are ready to read while the agent reviews them.'
@@ -612,7 +614,7 @@ module ReviewSeries
       payload = latest(path, history)
       snapshot = payload.fetch('snapshot')
       raise ArgumentError, 'The latest revision is not in progress; publish increments with `dcr series prepare` and `publish`' unless payload.dig('review', 'status') == 'in_progress'
-      fresh = DynamicReviews.collect(repo: repo, mode: 'series', base: snapshot['base'], head: snapshot['mode'] == 'uncommitted' || snapshot['working_tree'] ? nil : snapshot['head'])
+      fresh = DynamicReviews.collect(repo: repo, mode: 'series', base: snapshot['base'], head: snapshot['mode'] == 'uncommitted' || snapshot['working_tree'] ? nil : snapshot['head'], paths: snapshot['paths'])
       raise ArgumentError, 'Code changed while reviewing; run `dcr sync` to bring the review up to it, then finish with a review of that code' unless code_key(fresh) == code_key(snapshot) && fresh['head'] == snapshot['head']
       review = normalize(read(review))
       %w[history status qa previews preview_scope screenshots no_screenshots].each { |field| review.delete(field) }

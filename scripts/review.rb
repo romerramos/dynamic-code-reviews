@@ -113,8 +113,31 @@ module DynamicReviews
     end
   end
 
-  def self.collect(repo: '.', mode: 'uncommitted', commit: nil, base: nil, head: nil, max_bytes: 300_000, **_unused)
+  # A repository's critical files, chosen by the agent and approved by the reviewer, read whole:
+  # each must be a file in the checkout, and there are few enough to review with care.
+  SCOPE_LIMIT = 40
+
+  def self.scope(root, paths)
+    paths = Array(paths).map { |entry| entry.is_a?(Hash) ? entry['path'] : entry }
+    raise ArgumentError, 'The scope lists no files' if paths.empty?
+    raise ArgumentError, "The scope lists #{paths.length} files; keep it to the #{SCOPE_LIMIT} most critical" if paths.length > SCOPE_LIMIT
+    paths.each do |path|
+      raise ArgumentError, "Scope paths are repository-relative files: #{path.inspect}" unless path.is_a?(String) && !path.empty? && !Pathname.new(path).absolute? && !path.split('/').include?('..')
+      raise ArgumentError, "Not a file in the checkout: #{path}" unless File.file?(File.join(root, path)) && !File.symlink?(File.join(root, path))
+    end
+    paths.uniq.sort
+  end
+
+  # paths: only these files (a critical-code review keeps to its chosen ones).
+  def self.collect(repo: '.', mode: 'uncommitted', commit: nil, base: nil, head: nil, max_bytes: 300_000, paths: nil, **_unused)
     root = git(repo, 'rev-parse', '--show-toplevel').strip
+    if mode == 'repo'
+      # The chosen files as they are now, each read whole: compared with nothing, all of it is new.
+      paths = scope(root, paths)
+      mode = 'series'
+      base = git(root, 'hash-object', '-t', 'tree', '--stdin').strip
+      head = nil
+    end
     working_tree = mode == 'uncommitted' || (mode == 'series' && head.nil?)
     if mode == 'commit'
       raise ArgumentError, '--commit is required' unless commit
@@ -136,16 +159,17 @@ module DynamicReviews
       base = sha(root, base) unless base == empty_tree
       head = sha(root, head || 'HEAD')
     else
-      raise ArgumentError, 'Mode must be uncommitted, commit, pr or series'
+      raise ArgumentError, 'Mode must be uncommitted, commit, pr, series or repo'
     end
     raise ArgumentError, 'Unresolved conflicts: resolve them or choose a committed scope' if working_tree && !git(root, 'ls-files', '-u').empty?
     compare = working_tree ? [base] : [base, head]
-    paths = git(root, 'diff', '--name-only', '-z', '--no-renames', *compare).split("\0")
+    only = paths ? ['--', *paths] : []
+    listed = git(root, 'diff', '--name-only', '-z', '--no-renames', *compare, *only).split("\0")
     # Untracked: what git lists as others. A file deleted since the base is not in the index either,
     # and is a deletion to show, not an untracked file.
-    untracked = working_tree ? git(root, 'ls-files', '--others', '--exclude-standard', '-z').split("\0").to_set : Set.new
-    paths += untracked.to_a
-    files = paths.uniq.sort.reject { |path| path == '.reviews' || path.start_with?('.reviews/') }.map.with_index do |path, index|
+    untracked = working_tree ? git(root, 'ls-files', '--others', '--exclude-standard', '-z', *only).split("\0").to_set : Set.new
+    listed += untracked.to_a
+    files = listed.uniq.sort.reject { |path| path == '.reviews' || path.start_with?('.reviews/') }.map.with_index do |path, index|
       file = {'id' => "f#{index + 1}", 'path' => text(path), 'note' => '', 'patch' => '', 'hunks' => []}
       target = File.join(root, path)
       if sensitive?(path)
@@ -184,10 +208,11 @@ module DynamicReviews
       file['digest'] = Digest::SHA256.hexdigest(JSON.generate(file))
       file
     end
-    fingerprint = Digest::SHA256.hexdigest(JSON.generate([root, mode, base, head, files]))
+    fingerprint = Digest::SHA256.hexdigest(JSON.generate([root, mode, base, head, files, *([paths] if paths)]))
     result = {'version' => 2, 'repo' => root, 'mode' => mode, 'base' => base, 'head' => head,
               'created' => Time.now.utc.iso8601, 'fingerprint' => fingerprint, 'files' => files}
     result['working_tree'] = working_tree if mode == 'series'
+    result['paths'] = paths if paths
     add_sources(result, working_tree: working_tree, max_bytes: max_bytes)
   end
 
@@ -382,6 +407,7 @@ module DynamicReviews
     parser = OptionParser.new do |p|
       p.banner = 'ruby review.rb collect|render|extract [options]'
       %w[repo mode commit base head out snapshot review name report].each { |key| p.on("--#{key} VALUE") { |v| options[key.to_sym] = v } }
+      p.on('--scope FILE', 'repo mode: JSON list of the critical files to review (paths, or {path, …} objects)') { |v| options[:paths] = JSON.parse(File.read(v)).then { |data| data.is_a?(Hash) ? data.fetch('files') : data } }
       p.on('--max-bytes N', Integer) { |v| options[:max_bytes] = v }
       p.on('--brief', 'Print counts and omissions; full snapshot stays in --out') { options[:brief] = true }
       p.on('--replace', 'Replace the named report when refreshing its layout') { options[:replace] = true }

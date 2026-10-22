@@ -120,11 +120,15 @@ Ask your agent in plain words:
 /dynamic-code-reviews review my uncommitted changes
 /dynamic-code-reviews review this PR
 /dynamic-code-reviews review the last commit
+/dynamic-code-reviews review the critical parts of this repo
 Continue the task-export review with my latest changes.
 ```
 
 With no scope it reviews your uncommitted changes, or the open pull request of the current branch
-when the working tree is clean. You do not need to run any command yourself: the skill collects,
+when the working tree is clean. For an app with no change to review (a vibe-coded app on `main`),
+ask for the critical parts: the agent picks the files for sign-in and users, regulated data, secrets
+and security, and payments (about 20, never the whole app), shows you the list with a reason for each,
+and reviews them whole once you approve it. You do not need to run any command yourself: the skill collects,
 serves, opens and answers. When you are done, press **Finish review** in the page; ask the agent to
 close the review when you no longer need it.
 
@@ -214,7 +218,8 @@ commands. Everything runs as `<skill>/bin/dcr <command>`, with Ruby 3.1+ (under 
 
 | Command | What it does |
 | --- | --- |
-| `collect` | Snapshot uncommitted changes, a commit or a PR range. |
+| `collect` | Snapshot uncommitted changes, a commit or a PR range; `--mode repo --scope <files.json>` reads a repository's chosen critical files whole. |
+| `critical` | Candidate files for a critical-code review: sign-in and users, regulated data, secrets and security, payments, with the signals each matched (never the matched text). |
 | `series start --in-progress` / `series finish` | Open the review from an outline, then save the full review into the same revision. |
 | `series prepare` / `series publish` | Continue a saved series incrementally. |
 | `screenshot` | Post screenshots of the running app to the review: in the Overview's Seen in the app, or on a comment. A later QA clip of the same thing takes a screenshot's place. |
@@ -312,6 +317,7 @@ Run focused checks for what you change, from this folder:
 ```sh
 ruby scripts/test_review.rb        # collection, rendering, validation
 ruby scripts/test_series.rb        # series, in-progress reviews, increments
+ruby scripts/test_critical.rb      # critical-code reviews: the candidates, the chosen files, updates that keep to them
 ruby scripts/test_live.rb          # live server state, threads, focus, tailnet sharing
 ruby scripts/test_server.rb        # the served page, the recorder's command queue and uploads
 ruby scripts/test_themes.rb       # the theme contract: tokens, light and dark for every theme, no stray colours

@@ -1,6 +1,6 @@
 ---
 name: dynamic-code-reviews
-description: Review local changes, a whole pull request, or a specific commit with grouped offline HTML walkthroughs and evidence-backed findings. Continue saved review series incrementally, reusing unchanged explanations and retaining revision history. Use for Dynamic Code Reviews or an incremental code review report.
+description: Review local changes, a whole pull request, a specific commit, or only the critical parts of a whole repository (sign-in, regulated data, secrets, payments; for vibe-coded apps) with grouped offline HTML walkthroughs and evidence-backed findings. Continue saved review series incrementally, reusing unchanged explanations and retaining revision history. Use for Dynamic Code Reviews or an incremental code review report.
 ---
 
 # Dynamic Code Reviews
@@ -59,6 +59,7 @@ On invocation without an explicit scope, inspect the workspace: review uncommitt
 - **Uncommitted:** combined tracked working-tree state against HEAD (staged + unstaged), plus non-ignored untracked files. Explain that an edit staged and then reversed in the worktree is absent from the net diff; inspect `git diff --cached` separately if the user wants what will be committed.
 - **Whole PR:** resolve live PR metadata with the authenticated provider CLI/connector. Use its actual base branch, including stacked PR bases; never assume main. Fetch exact base/head objects without checkout, then pass verified refs to the collector. Exclude uncommitted work. Record PR URL, title, base/head SHAs, checks and issue links, and pass the URL and title as `comparison.pr_url` and `comparison.pr_title`. If provider access is unavailable, ask for the PR/base or offer a clearly labeled local comparison, not a claimed full PR review.
 - **Specific commit:** resolve the requested SHA; compare to its parent. Root commits compare to the empty tree. For merges ask which parent unless specified. No checkout needed.
+- **Critical parts of a repository:** when asked to review a repository, `main`, "the critical parts" or a vibe-coded app without naming a change, review only its sign-in and users, regulated data, secrets and security, and payments code, never the whole app. Follow [references/critical-review.md](references/critical-review.md): `dcr critical` finds candidates, you cut them to about 20 files with a reason each, the reviewer approves the list, and `dcr collect --mode repo --scope <files.json>` reads them whole.
 
 ## Collect and inspect efficiently
 
