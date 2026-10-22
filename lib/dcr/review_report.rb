@@ -58,7 +58,8 @@ module DCR
         # quiet: notes and praise, by label. They ask nothing, but an adversary can still challenge one.
         'comments' => {'total' => actionable.length, 'fixed' => fixed, 'kept' => settled.length - fixed, 'open' => (actionable & waiting).length,
                        'quiet' => (reviews - actionable).map { |comment| comment['label'] }.tally,
-                       'challenged' => reviews.count { |comment| challenged?(threads[comment['id']]) }},
+                       'challenged' => reviews.count { |comment| challenged?(threads[comment['id']]) },
+                       'challenges' => reviews.flat_map { |comment| challenges(threads[comment['id']]) }},
         'conversations' => comments.count { |comment| talked?(threads[comment['id']], mine: comment['mine']) },
         'revisions' => key.split(':').last.to_i,
         'left' => yours - viewed,
@@ -85,7 +86,7 @@ module DCR
         notes = quiet.map { |label, number| label == 'note' ? count(number, 'note') : "#{number} #{label}" }
         said = [agents.any? ? "**#{count(agents.length, 'agent')}** (#{agents.join(', ')})" : nil,
                 comments['total'].positive? || notes.empty? ? count(comments['total'], 'comment') : nil, *notes,
-                comments['challenged'].positive? ? "#{comments['challenged']} challenged by an adversary" : nil].compact
+                challenge_text(comments)].compact
         lines << "- #{said.join(' · ')}"
       end
       lines << "- **#{comments['fixed']} fixed** · #{comments['kept']} resolved as they were · #{comments['open']} open" if comments['total'].positive?
@@ -116,10 +117,22 @@ module DCR
     def fixed?(thread) = thread&.dig('fix', 'state') == 'done' || thread&.dig('outcome', 'verdict') == 'addressed'
 
     # An adversary disagreed with the comment, wholly or in part.
-    def challenged?(thread)
-      return false unless thread
-      Array(thread['messages']).any? { |message| message['role'] == 'adversary' && AGAINST.include?(message['verdict']) } ||
-        (thread['opinions'] || {}).values.any? { |opinion| AGAINST.include?(opinion['verdict']) }
+    def challenged?(thread) = challenges(thread).any?
+
+    # Each adversary's disagreement with the comment, as its verdict: one per agent, the latest.
+    def challenges(thread)
+      return [] unless thread
+      said = Array(thread['messages']).select { |message| message['role'] == 'adversary' }.to_h { |message| [message['agent'], message['verdict']] }
+      said.merge((thread['opinions'] || {}).transform_values { |opinion| opinion['verdict'] }).values.select { |verdict| AGAINST.include?(verdict) }
+    end
+
+    # "1 challenged in part by 2 adversaries": the comments challenged, by how many adversaries, and
+    # "in part" when none of them disagreed outright.
+    def challenge_text(comments)
+      return unless comments['challenged'].to_i.positive?
+      verdicts = Array(comments['challenges'])
+      by = verdicts.length > 1 ? count(verdicts.length, 'adversary', 'adversaries') : 'an adversary'
+      "#{comments['challenged']} challenged#{verdicts.all?('partly') ? ' in part' : ''} by #{by}"
     end
 
     # A person wrote in it and an agent answered. mine: the reader's own comment, which is what they
