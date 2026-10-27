@@ -408,8 +408,10 @@ example count.
 ## Marks in the diff
 
 - **The diff keeps its own colours.** Added and removed lines stay green and red under a
-  comment; a comment marks its lines only in the line numbers, amber, with no band across the
-  code, no rule down its side and no lines above and below.
+  comment; a comment marks its lines only in the line numbers: amber numbers and one thin
+  amber rule between them and the code, the same on changed and unchanged lines, so a range
+  that runs past the change into context reads as one piece. No background anywhere: a theme
+  colours changed lines' numbers, and a tint would show only on the unchanged ones.
 - **One icon each, no box.** A review note and a comment are a bare icon in the gutter; the
   only bar down the side is the section the keyboard is on.
 - **What asks nothing stays faint.** A resolved comment or praise keeps a faint icon and marks
