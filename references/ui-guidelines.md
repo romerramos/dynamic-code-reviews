@@ -405,6 +405,18 @@ and selected templates. The per-file chip reads Preview this template (served) o
 preview, Preview requested or Building preview…, and a rendered template's chip reads Preview with its
 example count.
 
+## Marks in the diff
+
+- **The diff keeps its own colours.** Added and removed lines stay green and red under a
+  comment; a comment marks its lines only in the line numbers, amber, with no band across the
+  code, no rule down its side and no lines above and below.
+- **One icon each, no box.** A review note and a comment are a bare icon in the gutter; the
+  only bar down the side is the section the keyboard is on.
+- **What asks nothing stays faint.** A resolved comment or praise keeps a faint icon and marks
+  no lines.
+- **Shift+C hides them all** (review notes and comments) for a plain diff, and again shows
+  them; it is the View menu's "Review comments in the code" switch, and says what it did.
+
 ## Comment popovers
 
 - Put an always-visible speech-bubble button in the gutter at `start`, on the

@@ -1210,13 +1210,15 @@
     return `<section class="popover-comment" data-comment-id="${escape(comment.id)}">${where}<div class="thread-badges">${threadBadges(comment)}</div><h4>${escape(comment.subject)}</h4>${body}${evidence}${actions}</section>`;
   }
 
+  // A comment that asks nothing more of the reader (resolved, or praise) keeps its icon, faintly, and marks no lines.
+  const quietComment = comment => comment.resolved || comment.label === 'praise';
   function commentTrigger(hunk, side, number, comment = null, path) {
     if (comment || !showComments || number === undefined) return '';
     const file = filesByPath.get(path);
     const anchored = comments.filter(comment => anchoredTo(comment, hunk, file, side) && comment.start === number);
     if (!anchored.length) return '';
     const label = anchored.length === 1 ? `Read ${anchored[0].label}: ${anchored[0].subject}` : `Read ${anchored.length} comments on ${side === 'new' ? 'after' : 'before'} line ${number}`;
-    return `<button class="comment-trigger" type="button" data-notes="${anchored.map(comment => escape(comment.id)).join(' ')}" aria-label="${escape(label)}" title="${escape(label)}" aria-haspopup="dialog" aria-controls="comment-popover" aria-expanded="false">${icon('message-square')}</button>`;
+    return `<button class="comment-trigger${anchored.every(quietComment) ? ' is-quiet' : ''}" type="button" data-notes="${anchored.map(comment => escape(comment.id)).join(' ')}" aria-label="${escape(label)}" title="${escape(label)}" aria-haspopup="dialog" aria-controls="comment-popover" aria-expanded="false">${icon('message-square')}</button>`;
   }
 
   function highlightComments(ids) {
@@ -1272,9 +1274,8 @@
     const file = filesByPath.get(path);
     if (comment) return anchoredTo(comment, hunk, file, side) && number >= comment.start && number <= comment.end ? ' range-selected' : '';
     if (!showComments || number === undefined) return '';
-    const matches = comments.filter(comment => anchoredTo(comment, hunk, file, side) && number >= comment.start && number <= comment.end);
-    if (!matches.length) return '';
-    return ` annotated${matches.some(comment => comment.start === number) ? ' range-start' : ''}${matches.some(comment => comment.end === number) ? ' range-end' : ''}`;
+    const matches = comments.filter(comment => !quietComment(comment) && anchoredTo(comment, hunk, file, side) && number >= comment.start && number <= comment.end);
+    return matches.length ? ' annotated' : '';
   }
 
   function splitCells(hunk, line, side, colored, comment = null, path) {
@@ -1310,7 +1311,7 @@
         rows[rowIndex] = rows[rowIndex].replace('<tr class="code-row">', `<tr class="code-row change-anchor" id="${id}">`);
       });
       const note = `<button class="review-note-trigger" aria-expanded="false" aria-haspopup="dialog" popovertarget="note-${hunk.id}" aria-label="Read review note for this change" title="Review note">${icon('sticky-note')}</button><aside id="note-${hunk.id}" class="review-note-popover comment-popover" popover="auto" role="dialog" aria-label="Review note"><header class="popover-heading"><strong>Review note</strong><button class="btn btn-xs btn-circle btn-ghost" popovertarget="note-${hunk.id}" popovertargetaction="hide" aria-label="Close review note">✕</button></header><section class="popover-comment"><p>${escape(summary || 'Changed section')}</p><small>Before ${range('old')} · After ${range('new')}</small></section></aside>`;
-      if (summary && firstChange !== undefined) {
+      if (summary && firstChange !== undefined && showComments) {
         const row = rows[firstChange];
         const gutters = [...row.matchAll(/<td class="gutter[^>]*>[\s\S]*?<\/td>/g)];
         const available = gutters.find(cell => !cell[0].includes('comment-trigger'));
@@ -3344,7 +3345,7 @@
   });
   $('whitespace-toggle').onchange = event => { const scroll = $('content').scrollTop; settings.ignoreWhitespace = event.target.checked; saveSettings(); render(); $('content').scrollTop = scroll; };
   applySettings();
-  $('comments-toggle').onchange = event => { const scroll = $('content').scrollTop; showComments = event.target.checked; render(); $('content').scrollTop = scroll; };
+  $('comments-toggle').onchange = event => { const scroll = $('content').scrollTop; showComments = event.target.checked; render(); $('content').scrollTop = scroll; toast(showComments ? 'Notes and comments shown in the code' : 'Notes and comments hidden. Shift+C shows them'); };
   function chooseReadingMode(enabled) {
     focusMode = enabled;
     try { localStorage.setItem('dynamic-review:reading-mode', enabled ? 'file' : 'walkthrough'); } catch { /* Choice still applies to this page session. */ }
@@ -3601,6 +3602,8 @@
       else if (event.key === '{' || event.key === '}') visualMove(() => moveByBlock(event.key === '}' ? 1 : -1));
       return;
     }
+    // Shift+C shows or hides the review notes and comments in the code, for a plain diff.
+    if (event.key === 'C') { event.preventDefault(); $('comments-toggle').click(); return; }
     if (key === 'v' && pane === 'main' && cursor()) { event.preventDefault(); startVisual(); return; }
     if (key === 's') { event.preventDefault(); openHints(); return; }
     // On a line of a diff: D and U half a screen, G the file's ends, C comment, E edit, Enter read.
