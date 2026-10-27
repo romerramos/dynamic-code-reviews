@@ -58,7 +58,7 @@ main#content{position:relative;overflow-y:auto;scroll-behavior:smooth;min-width:
 /* Comments belong to a source-side gutter, never to a full-width diff row. */
 .diff-table col.gutter{width:60px}
 .diff-table td.gutter{position:relative;padding-right:7px;padding-left:24px}
-.comment-trigger{position:absolute;left:5px;top:3px;display:grid;place-items:center;width:19px;height:19px;padding:0;margin:0;border:0;border-radius:calc(4px * var(--round));background:transparent;color:var(--ink-amber-4);cursor:pointer}.comment-trigger.is-quiet{color:var(--ink-neutral-6);opacity:.7}
+.comment-trigger{position:absolute;left:5px;top:3px;display:grid;place-items:center;width:19px;height:19px;padding:0;margin:0;border:0;border-radius:calc(4px * var(--round));background:var(--bg-neutral-1);color:var(--ink-amber-3);cursor:pointer}.comment-trigger.is-quiet{color:var(--ink-neutral-4)}.comment-trigger .review-icon,.review-note-trigger .review-icon{stroke-width:2.2}
 .comment-trigger:hover,.comment-trigger[aria-expanded=true]{background:var(--bg-amber-3);color:var(--ink-amber-1);opacity:1}
 .comment-trigger:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .comment-popover[popover]{position:fixed;inset:auto;margin:0;width:390px;max-width:calc(100vw - 24px);max-height:min(440px,calc(100dvh - 24px));overflow-y:auto;padding:0;border:1px solid var(--line-amber-3);border-radius:calc(10px * var(--round));background:var(--bg-neutral-1);color:var(--ink);box-shadow:0 8px 32px color-mix(in srgb,var(--shade) 14.1%,transparent);z-index:30;text-align:left}
@@ -418,7 +418,7 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 /* Keep line-number semantics available without a table banner above the code. */
 .diff-table .line-number-headings th{height:0;padding:0;border:0;line-height:0}.line-number-headings span{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .focus-location .copy-file-path{margin-top:5px;font-size:11px}.focus-reader td.code{position:relative;padding-right:12px}
-.review-note-trigger{position:absolute;left:5px;top:3px;display:grid;place-items:center;width:19px;height:19px;padding:0;margin:0;border:0;border-radius:calc(4px * var(--round));background:transparent;color:var(--ink-neutral-5);cursor:pointer}
+.review-note-trigger{position:absolute;left:5px;top:3px;display:grid;place-items:center;width:19px;height:19px;padding:0;margin:0;border:0;border-radius:calc(4px * var(--round));background:var(--bg-neutral-1);color:var(--ink-accent-3);cursor:pointer}
 .review-note-trigger:hover,.review-note-trigger[aria-expanded=true]{background:var(--bg-accent-2);color:var(--ink-accent-3)}
 .review-note-trigger:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .review-note-trigger .review-icon{width:14px;height:14px}
