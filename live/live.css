@@ -694,3 +694,9 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 .dcr-publish-preview .dcr-body p{margin:0}
 @media(max-width:520px){.dcr-publish-steps li{grid-template-columns:24px minmax(0,1fr)}.dcr-publish-steps li>.act{grid-column:2;justify-self:start}}
 .dcr-publish-box [data-publish-go]:disabled{opacity:.45;cursor:not-allowed}
+/* What is left once the files are read: the comments still open, under the file count and atop Review comments. */
+.overview-todo{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;max-width:85ch;margin:-6px 0 20px;font-size:14px;line-height:1.6;color:var(--ink-neutral-5)}
+.overview-todo strong{font-weight:650;color:var(--dcr-partly)}
+.dcr-todo-link{align-self:flex-start;padding:0;border:0;background:none;color:var(--dcr-partly);font-size:12px;font-weight:600;text-align:left}
+.dcr-todo-link:hover{text-decoration:underline}
+.dcr-todo-link[hidden]{display:none}

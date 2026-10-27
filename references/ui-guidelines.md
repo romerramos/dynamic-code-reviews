@@ -212,10 +212,17 @@ from its original snapshot and analysis when refreshing presentation only.
   adds them up and offers "Resolve those N". A comment the agents differ on, or one
   sent back to be fixed, stays in the Overview's list, first, until the reader closes it.
 - **What was said before the closing block folds to one line** ("Earlier discussion ·
-  3 messages · revision 1"), unless it went on after the outcome. It does not repeat who
+  3 messages · revision 1"), and stays folded when the talk went on after the outcome: the
+  card is the decision, and Your review holds the whole thread in time, the closing block
+  where it was said. It opens by itself only for an answer not read yet, and does not fold
+  again under the reader. It does not repeat who
   agreed then: next to "Codex agrees" above, that reads as the same thing twice. What the
   agents said of the outcome is in the block and not in the conversation too, and "Other
   opinions" lists only what was said of the comment itself.
+- **Reading every file is half the review.** While comments are open, the sidebar says
+  "N comments to settle" under the file count, and Review comments opens with "N comments
+  wait on you. Resolve each, or have it fixed, before you publish." Each takes the reader to
+  the first one. Never leave "16 of 16 files reviewed" as the only progress on the page.
 - **The Overview and Your review say the same thing about what is waiting.** With nothing open
   on the code as it is, both lead with "Nothing is waiting on you."; the Overview adds that
   the comments below were written on code that has changed since. Your review's footer does

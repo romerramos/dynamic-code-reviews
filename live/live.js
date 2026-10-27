@@ -49,6 +49,7 @@
   // Everything here lives inside the observed #content, so write only real changes or the
   // observer would re-trigger itself.
   const set = (node, property, value) => { if (node[property] !== value) node[property] = value; };
+  let todoHook = null; // set once the publish check is known: what is still open, said in the Overview
 
   const api = async (path, body) => {
     const response = await fetch(path, {method: body ? 'POST' : 'GET', headers: {'X-QA-Token': token, ...(body ? {'Content-Type': 'application/json'} : {})}, body: body ? JSON.stringify(body) : undefined});
@@ -234,13 +235,14 @@
       if (following) scroller.scrollTop = scroller.scrollHeight;
     }
     clampLong(convo);
-    // With a closing block, the discussion before it folds under one line, unless it went on since.
+    // With a closing block, the card is the decision: the discussion folds under one line, and
+    // opens only for an answer since that is not read yet. The whole thread, in time, is in Your review.
     const stage = block.querySelector('.dcr-stage');
     if (stage) {
       const closing = tools.closure(thread);
       const head = stage.querySelector('.dcr-stage-head');
       const earlier = (thread?.messages || []).filter(message => !(message.about === 'outcome' || (message.author === 'agent' && !message.role && message.outcome)));
-      const went = closing && earlier.some(message => message.at > (thread.outcome.at || ''));
+      const went = closing && earlier.some(message => message.at > (thread.outcome.at || '') && (message.author === 'agent' || message.author === 'person') && !seen.has(message.id));
       const fold = closing && (html || opinions) ? (went ? 'open' : 'folded') : 'none';
       set(head, 'hidden', fold === 'none');
       if (fold !== 'none') {
@@ -248,8 +250,9 @@
         const label = `<span>Earlier discussion</span><span class="dcr-stage-note">${tools.escape([count && `${count} ${earlier.length ? 'message' : 'opinion'}${count === 1 ? '' : 's'}`, comment?.outdated?.revision && `revision ${comment.outdated.revision}`].filter(Boolean).join(' · '))}</span>${ico('chevron-down')}`;
         if (head.dataset.html !== label) { head.innerHTML = label; head.dataset.html = label; }
       }
-      // Set when what it should be changes, so the reader's own opening or closing is kept.
-      if (stage.dataset.fold !== fold) { stage.dataset.fold = fold; stage.open = fold !== 'folded'; }
+      // Set when what it should be changes, so the reader's own opening or closing is kept; an
+      // answer read in place does not fold away under the reader.
+      if (stage.dataset.fold !== fold && !(stage.dataset.fold === 'open' && fold === 'folded')) { stage.dataset.fold = fold; stage.open = fold !== 'folded'; }
     }
     const stateEl = block.querySelector('.dcr-state');
     if (stateEl.dataset.sig !== statusSignature) { stateEl.innerHTML = status; stateEl.dataset.sig = statusSignature; }
@@ -406,6 +409,7 @@
       if (actions && !actions.querySelector('[data-dcr-split]')) addSplit(actions, id, 'sm');
     });
     document.querySelectorAll('.dcr-thread').forEach(refreshBlock);
+    todoHook?.();
     // From earlier revisions holds what is settled. A comment the agents differ on is the
     // reader's to close, so it goes back up, first in the list. Each folded card says what
     // became of it, and the section adds them up and closes the settled ones in one click.
@@ -2195,9 +2199,11 @@
     publishButton.dataset.tone = face.tone;
     set(publishButton, 'title', face.hint);
     publishButton.setAttribute('aria-label', `${face.text}. ${face.hint}`);
+    renderTodo();
     // The last file read is worth a word: what comes next.
     const left = filesNeed().left.length;
-    if (wasLeft && !left) flash('Every file that needs you is reviewed. Publish your review to GitHub from the top right.');
+    const open = openComments().length;
+    if (wasLeft && !left) flash(open ? `Every file that needs you is reviewed. ${open === 1 ? '1 comment still waits' : `${open} comments still wait`} on you in the Overview.` : 'Every file that needs you is reviewed. Publish your review to GitHub from the top right.');
     wasLeft = left;
     if (publishDialog.open && !publishing) renderPublishDialog();
   };
@@ -2213,6 +2219,40 @@
     renderPublish();
   };
   const laterPublish = () => { clearTimeout(publishTimer); publishTimer = setTimeout(() => { if (!document.hidden) askPublish(); }, 1500); };
+
+  // Reading every file is half the review; the comments still open are the rest. They are said
+  // under the file count and at the top of Review comments, each a way to the first one.
+  const openComments = () => (stepOf('comments')?.open || []).filter(id => !resolved().includes(id));
+  const todoFooter = Object.assign(document.createElement('button'), {type: 'button', className: 'dcr-todo-link', hidden: true});
+  document.querySelector('.sidebar-footer')?.append(todoFooter);
+  const renderTodo = () => {
+    const open = openComments();
+    const count = `${open.length} ${open.length === 1 ? 'comment' : 'comments'}`;
+    todoFooter.dataset.dcrShow = open[0] || '';
+    set(todoFooter, 'hidden', !open.length);
+    if (todoFooter.textContent !== `${count} to settle`) todoFooter.textContent = `${count} to settle`;
+    const heading = document.querySelector('#content .overview-comments > h2');
+    let line = document.querySelector('#content [data-dcr-todo]');
+    if (!heading || !open.length) { line?.remove(); return; }
+    if (!line) { line = Object.assign(document.createElement('p'), {className: 'overview-todo'}); line.dataset.dcrTodo = ''; }
+    if (line.previousElementSibling !== heading) heading.after(line);
+    const html = `<strong>${count} ${open.length === 1 ? 'waits' : 'wait'} on you.</strong> Resolve each, or have it fixed, before you publish.${open.length > 1 ? ` <button type="button" class="btn btn-xs" data-dcr-show="${tools.escape(open[0])}">Show the first</button>` : ''}`;
+    if (line.dataset.html !== html) { line.innerHTML = html; line.dataset.html = html; }
+  };
+  todoHook = renderTodo;
+  // To a comment's card in the Overview, opening the fold it is in.
+  document.addEventListener('click', event => {
+    const show = event.target.closest('[data-dcr-show]');
+    if (!show?.dataset.dcrShow) return;
+    const reveal = () => {
+      const card = document.querySelector(`#content article.review-thread[data-thread-id="${CSS.escape(show.dataset.dcrShow)}"]`);
+      if (!card) return false;
+      for (let fold = card.closest('details'); fold; fold = fold.parentElement.closest('details')) fold.open = true;
+      card.scrollIntoView({block: 'start', behavior: 'instant'});
+      return true;
+    };
+    if (!reveal()) { document.querySelector('.sidebar nav [data-view="overview"]')?.click(); requestAnimationFrame(reveal); }
+  });
 
   const publishDialog = document.createElement('dialog');
   publishDialog.id = 'dcr-publish-dialog';
