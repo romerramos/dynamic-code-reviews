@@ -474,6 +474,7 @@ module SeriesChecks
           assert(state.read.dig('comments', key).map { |entry| entry['id'] } == ['value-two'], 'The posted comment is not on the open review')
           rejects('A duplicate comment id was posted') { post.call(comment) }
           rejects('A comment outside its hunk was posted') { post.call(comment.merge('id' => 'far', 'start' => 40, 'end' => 40)) }
+          rejects('A comment on only closing lines was posted') { post.call(comment.merge('id' => 'closing', 'start' => 4, 'end' => 5)) }
           # The Risk ranking arrives while the reader is on the diff, checked against the snapshot.
           risk = {'summary' => 'The value changes for every caller.', 'files' => [{'file' => file['id'], 'score' => 72, 'tags' => %w[shared-code user-facing], 'reason' => 'Every caller of value now gets two.', 'line' => 3}]}
           map = lambda do |value|

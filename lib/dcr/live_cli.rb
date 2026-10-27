@@ -438,6 +438,7 @@ module DCR
         raise ArgumentError, "Unknown comment field(s): #{unknown.join(', ')}" unless unknown.empty?
         raise ArgumentError, 'A comment discussion must be text' if entry.key?('discussion') && !entry['discussion'].is_a?(String)
         DynamicReviews.validate_comment(entry, hunks)
+        DynamicReviews.validate_placement(entry, hunks)
         raise ArgumentError, "Comment id #{entry['id']} is used twice" if ids.include?(entry['id'])
         raise ArgumentError, 'A comment context must be short text' if entry.key?('context') && !(entry['context'].is_a?(String) && entry['context'].length <= 1000)
         raise ArgumentError, "Comment #{entry['id']} follows #{entry['follows'].inspect}, which is not a comment of this review" if entry.key?('follows') && !known.include?(entry['follows'])

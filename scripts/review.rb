@@ -358,6 +358,19 @@ module DynamicReviews
     end
   end
 
+  # A new comment on only closing or blank lines cannot be about them: it was placed by counting,
+  # often from an earlier version of the file, and marks nonsense in the diff. Checked when a
+  # comment is posted, never on comments carried into a later revision.
+  def self.validate_placement(comment, hunks)
+    side, first, last = comment.values_at('side', 'start', 'end')
+    hunk = hunks.dig(comment['hunk'], 1)
+    return unless hunk
+    marked = diff_rows(hunk)['unified'].select { |line| line[side]&.between?(first, last) }.map { |line| line['text'] }
+    return unless marked.all? { |text| text.strip.match?(CLOSING) }
+    raise ArgumentError, "Comment #{comment['id']} marks only closing or blank lines (#{side} L#{first}#{"–#{last}" if last != first}: #{marked.map(&:strip).reject(&:empty?).first(3).join(' ')}). Read the file as it is now and put it on the lines that hold the code it is about."
+  end
+  CLOSING = /\A(?:<%-?\s*end\s*-?%>|<\/[\w.:-]+>|end|[)\]};,]|\s)*\z/
+
   def self.extract(report) = DCR::Page.payload(File.read(report))
 
   def self.render(snapshot:, review:, name:, replace: false, **_unused)
