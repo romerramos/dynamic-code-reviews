@@ -189,20 +189,21 @@
     // The DOM re-serialises markup (an escaped quote comes back as a quote), so compare the
     // string that was set, not innerHTML, or the observer would re-trigger itself forever.
     const convo = block.querySelector('.dcr-convo');
-    const html = tools.messagesHTML(thread, {seen, agent: listener, me});
     const opinions = tools.opinionsHTML(thread);
-    // Keyed on the messages, not their text: "2 min ago" changes by itself and must not redraw.
-    const signature = [...(thread?.messages || []), ...tools.opinionMessages(thread)].map(message => message.id + ((message.author === 'agent' || message.author === 'person') && !seen.has(message.id) ? '!' : '')).join('|');
     const model = online ? tools.statusModel(thread, listening, Date.now(), listener) : {tone: 'off', text: 'The review server stopped. Restart `dcr serve` to send or receive.'};
     // Under a thread the status line only says what is still happening; an answer is shown, not announced.
     // What became of the comment once its code changed: each agent's word, and the reader's closing buttons.
     const comment = comments().find(entry => entry.id === id);
     const outcome = tools.closureHTML(thread, {plain: ledger, resolve: resolved().includes(id) ? null : id, still: !!comment && !comment.personal && online && !fixingId(), open: [...(openOpinions.get(id) || [])]});
+    // Your review is one thread in time: the closing block sits where it was said, among the messages.
+    const html = tools.messagesHTML(thread, {seen, agent: listener, me, closure: ledger ? outcome : ''});
+    // Keyed on the messages, not their text: "2 min ago" changes by itself and must not redraw.
+    const signature = [...(thread?.messages || []), ...tools.opinionMessages(thread)].map(message => message.id + ((message.author === 'agent' || message.author === 'person') && !seen.has(message.id) ? '!' : '')).join('|') + (ledger ? `|${outcome}` : '');
     const action = actionOf(id);
     // A request that was not taken says why here, and stays until it is read: a toast is gone too soon.
     const refused = refusals.has(id) ? `<p class="dcr-refusal" role="alert">${ico('circle-alert')}<span>${tools.escape(refusals.get(id))}</span><button type="button" class="btn btn-xs btn-ghost" data-dcr-refusal="${tools.escape(id)}">Dismiss</button></p>` : '';
     // An answer is its own message, signed by who wrote it: no line above it says that it came.
-    const status = refused + outcome + (model?.tone === 'done' ? '' : stateHTML(model, ''));
+    const status = refused + (ledger ? '' : outcome) + (model?.tone === 'done' ? '' : stateHTML(model, ''));
     const statusSignature = status ? `${model?.tone}|${model?.text}|${outcome}|${refused}` : '';
     const form = block.querySelector('.dcr-reply');
     if (ledger) {

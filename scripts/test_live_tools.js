@@ -203,6 +203,11 @@ assert.deepEqual(tools.tally(differing), {total:2, agree:1, partly:0, disagree:1
 const settledThread = tools.messagesHTML(settled, {seen:new Set(['m1', 'm2', 'm3'])});
 assert.doesNotMatch(settledThread, /It is capped now|The cap is there/, 'what was said of the outcome is in the closing block, not in the conversation too');
 assert.match(settledThread, /data-msg="m1"/, 'the discussion before it stays');
+// Your review reads as one thread in time: what was asked after the closing block comes after it.
+const askedAfter = {...settled, outcome:{...settled.outcome, at:'2026-10-09T11:00:00Z'},
+  messages:[...settled.messages, {id:'q1', author:'user', body:'Why do they disagree?', at:'2026-10-09T12:00:00Z'}, {id:'a1', author:'agent', agent:'claude', body:'They read the old file.', at:'2026-10-09T12:01:00Z'}]};
+const timeline = tools.messagesHTML(askedAfter, {closure:'<section class="dcr-closure"></section>'});
+assert.deepEqual(['data-msg="m1"', 'dcr-closure', 'data-msg="q1"', 'data-msg="a1"'].map(mark => timeline.indexOf(mark)).every((at, index, all) => at >= 0 && (!index || at > all[index - 1])), true, 'the closing block sits where it was said');
 // The other agents speak in the conversation, when they spoke; beside it only who is still to answer.
 const chat = tools.messagesHTML(debated, {seen:new Set(['m1'])});
 assert.ok(chat.indexOf('data-msg="m1"') < chat.indexOf('data-msg="o1"'), 'an opinion is a message, in the order it was said');

@@ -259,15 +259,19 @@ globalThis.LiveTools = (() => {
       .filter(([, opinion]) => opinion && !opinion.error && opinion.body && opinion.role !== 'adversary' && !(closing && opinion.about === 'outcome'))
       .map(([agent, opinion]) => ({...opinion, id: opinion.id || `opinion-${agent}`, author: 'agent', agent, opinion: true}));
   }
-  function messagesHTML(thread, {seen = new Set(), now = Date.now(), agent: fallback = null, me = null} = {}) {
+  // closure: the closing block's markup, to take its place in the thread when it was said
+  // (thread.outcome.at), so what was said after it reads after it.
+  function messagesHTML(thread, {seen = new Set(), now = Date.now(), agent: fallback = null, me = null, closure: closing_html = ''} = {}) {
     // What the agents said became of the comment is in its closing block, not here.
     const closing = !!OUTCOMES[thread?.outcome?.verdict];
     const said = (thread?.messages || []).filter(message => !closing || !(message.about === 'outcome' || (message.author === 'agent' && !message.role && message.outcome)));
+    const block = closing && closing_html ? [{at: thread.outcome.at || '9999', closure: closing_html}] : [];
     // In the order it was said; a message without a time keeps its place.
-    const messages = [...said, ...opinionMessages(thread)].map((message, index) => ({message, index}))
+    const messages = [...said, ...opinionMessages(thread), ...block].map((message, index) => ({message, index}))
       .sort((a, b) => (Date.parse(a.message.at) || 0) - (Date.parse(b.message.at) || 0) || a.index - b.index).map(entry => entry.message);
     if (!messages.length) return '';
     return messages.map(message => {
+      if (message.closure) return message.closure;
       const agent = message.author === 'agent';
       const person = message.author === 'person' ? message.person || {} : null; // a teammate, on GitHub
       const fresh = (agent || person) && !seen.has(message.id);
