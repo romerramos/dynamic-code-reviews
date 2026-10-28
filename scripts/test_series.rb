@@ -604,6 +604,9 @@ module SeriesChecks
           lines = ->(path) { since['files'].find { |file| file['path'] == path }['hunks'].flat_map { |hunk| hunk['rows']['unified'] }.reject { |row| row['kind'] == 'context' }.map { |row| [row['kind'], row['text']] } }
           assert(since['revision'] == 1 && since['files'].map { |file| file.values_at('path', 'state') } == [%w[extra.rb joined], %w[sample.rb changed]], 'The revision does not say which files it changed since the previous one')
           assert(lines.call('sample.rb') == [['add', '# frozen_string_literal: true'], ['del', '    2'], ['add', '    3']] && lines.call('extra.rb') == [['add', 'EXTRA = 1']], "The diff since the previous revision is not between the two captured files: #{lines.call('sample.rb')}")
+          # The page shows each file whole, so both texts travel with the diff.
+          sample = since['files'].find { |file| file['path'] == 'sample.rb' }
+          assert(sample['source']['new'] == File.read(File.join(root, 'sample.rb')) && sample['source']['old'].include?("    2\n"), 'The since view cannot show the file whole: its texts were not saved')
           note = review['comments'].find { |comment| comment['id'] == 'value-note' }
           assert(note['general'] && !note.key?('hunk') && note['outdated'] == {'side' => 'new', 'start' => 3, 'end' => 3, 'path' => 'sample.rb', 'lines' => ['    2'], 'revision' => 1}, 'A comment on a changed line was not kept as outdated')
           assert(review['unreviewed'] == %w[f2h1 f1h1] && review['groups'].last['id'] == 'updates', 'New code was not placed unexplained')

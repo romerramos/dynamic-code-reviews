@@ -37,6 +37,10 @@
   try { focusMode = localStorage.getItem('dynamic-review:reading-mode') !== 'walkthrough'; } catch { /* Keep the default when storage is unavailable. */ }
   const fileReadingActive = () => focusMode && layers.some(layer => layer.id === state.view);
   let focusIndex = 0;
+  // Since revision reads like a step in file by file: one file whole, its changes marked, with a pager.
+  let sinceIndex = 0;
+  const pagedReading = () => fileReadingActive() || (!!sinceView && state.view === 'since');
+  const readingKey = () => state.view === 'since' ? `since:${sinceIndex}` : focusOrder[focusIndex]?.file;
   let selectedChange = null;
   const fullContextCache = new Map();
   const components = layer => ReviewTools.componentGroups(layer.items, files);
@@ -283,12 +287,13 @@
     if (file) markViewed(file, !fileViewed(file));
   }
   // The file being read: the one shown in file-by-file mode, the one scrolled to in a walkthrough step.
-  const readingFile = () => files.get(fileReadingActive() ? focusOrder[focusIndex]?.file : state.navFile);
+  const readingFile = () => state.view === 'since' ? filesByPath.get(sinceView.files[sinceIndex]?.path) : files.get(fileReadingActive() ? focusOrder[focusIndex]?.file : state.navFile);
   // The next or previous stop in the sidebar, from the top: Overview, All changes, then every file
   // in reading order across the steps, each opened where it is read. onlyFiles: from file to file,
   // never on to Overview or All changes, and nothing from there.
   function stepFile(delta, onlyFiles = false) {
     const OVERVIEW = -2, ALL = -1;
+    if (state.view === 'since') { if (sinceView.files[sinceIndex + delta]) sinceFile(sinceIndex + delta); return; }
     const at = focusOrder.findIndex(entry => entry.layer.id === state.view && entry.file === state.navFile);
     const first = focusOrder.findIndex(entry => entry.layer.id === state.view);
     // On a step with no file reached yet, J opens its first and K the one before it.
@@ -728,7 +733,13 @@
     const keyboardHere = $('navigation').contains?.(document.activeElement); // absent only outside a browser
     const keyboardRow = keyboardHere && document.activeElement.dataset.fileLink;
     const query = $('search').value.trim().toLowerCase();
-    let html = `<ul class="menu"><li><button data-view="overview" aria-current="${state.view === 'overview' ? 'page' : 'false'}"><span class="step-number">${icon('layout-list')}</span><span class="step-body"><strong>Overview</strong><small>Comments & evidence</small></span></button></li><li><button data-view="files" aria-current="${state.view === 'files' ? 'page' : 'false'}"><span class="step-number">${icon('file-diff')}</span><span class="step-body"><strong>All changes</strong><small>Diffs by responsibility · ${files.size} files</small></span></button></li>${sinceView ? `<li><button data-view="since" aria-current="${state.view === 'since' ? 'page' : 'false'}"><span class="step-number">${icon('history')}</span><span class="step-body"><strong>Since revision ${escape(sinceView.revision)}</strong><small>What this revision changed · ${plural(sinceView.files.length, 'file')}</small></span></button></li>` : ''}</ul>`;
+    let html = `<ul class="menu"><li><button data-view="overview" aria-current="${state.view === 'overview' ? 'page' : 'false'}"><span class="step-number">${icon('layout-list')}</span><span class="step-body"><strong>Overview</strong><small>Comments & evidence</small></span></button></li><li><button data-view="files" aria-current="${state.view === 'files' ? 'page' : 'false'}"><span class="step-number">${icon('file-diff')}</span><span class="step-body"><strong>All changes</strong><small>Diffs by responsibility · ${files.size} files</small></span></button></li>${sinceView ? `<li><button data-view="since" aria-current="${state.view === 'since' ? 'page' : 'false'}"><span class="step-number">${icon('history')}</span><span class="step-body"><strong>Since revision ${escape(sinceView.revision)}</strong><small>What this revision changed · ${plural(sinceView.files.length, 'file')}</small></span></button>${state.view === 'since' && !query ? `<ul class="nav-files">${sinceView.files.map((file, index) => {
+      const slash = file.path.lastIndexOf('/');
+      // A file still in the change is marked reviewed here as in its step; one the revision took out has nothing to mark.
+      const current = filesByPath.get(file.path);
+      const viewed = current && fileViewed(current);
+      return `<li><button class="nav-file ${viewed ? 'is-viewed' : ''}" data-since-file="${index}" aria-current="${index === sinceIndex ? 'location' : 'false'}" aria-label="${escape(`Open ${file.path}${current ? (viewed ? ', reviewed' : ', not reviewed') : ''}`)}">${current ? `<span class="file-status" aria-hidden="true" title="${viewed ? 'Reviewed. Click to unmark' : 'Mark as reviewed'}">${viewed ? icon('check') : ''}</span>` : ''}<span class="nav-file-label"><span class="nav-file-name">${escape(file.path.slice(slash + 1))}</span>${slash < 0 ? '' : `<small class="nav-file-directory">${pathFit(file.path.slice(0, slash))}</small>`}</span></button></li>`;
+    }).join('')}</ul>` : ''}</li>` : ''}</ul>`;
     const fileLink = (id, layer) => {
       const file = files.get(id);
       const slash = file.path.lastIndexOf('/');
@@ -1292,7 +1303,7 @@
     const columns = mode === 'split' ? 4 : 3;
     const colored = highlights(hunk, path);
     const range = (side) => hunk[`${side}_count`] === 0 ? '—' : `${hunk[`${side}_start`]}–${hunk[`${side}_start`] + hunk[`${side}_count`] - 1}`;
-    const inlineNote = fileReadingActive() && !comment && !hunk.contextOnly;
+    const inlineNote = pagedReading() && !comment && !hunk.contextOnly;
     const heading = hunk.contextOnly || inlineNote ? '' : `<tr class="range-heading" id="${comment ? 'expanded-' : ''}${hunk.id}"><td colspan="${columns}"><div class="range-label"><span>CHANGED RANGE</span><span>Before ${range('old')} &nbsp; / &nbsp; After ${range('new')}</span></div>${summary ? `<p>${escape(summary)}</p>` : ''}</td></tr>`;
     const rows = shownRows(hunk, mode).map(row => {
       if (mode === 'split') return `<tr class="code-row">${splitCells(hunk, row.old, 'old', colored, comment, path)}${splitCells(hunk, row.new, 'new', colored, comment, path)}</tr>`;
@@ -2427,17 +2438,34 @@
     return `<div class="step-overview"><div class="page-intro"><div class="eyebrow">${escape(titleWithoutNumber(layer.group.title))} / Step ${layers.indexOf(layer) + 1}</div><h1>${escape(layer.title)}</h1><p class="lead">${escape(layer.summary || layer.group.summary)}</p></div><span class="step-progress badge neutral">${progressText(progress(layer.items))}</span></div><details class="context-details"><summary>Why these files belong together & what to check</summary><p>${escape(layer.group.summary)}</p>${bulletList(layer.checks)}</details>${flow(layer.flow)}${renderWalkthroughFiles(layer)}<details class="local-notes"><summary>Your notes for this step</summary><textarea id="notes" aria-label="Notes for this step" placeholder="Anything to revisit…"></textarea><small>Stored in this browser when available. Export from Review details to keep a copy.</small></details>${stepEnd(layers.indexOf(layer))}`;
   }
 
-  // Only what this revision changed since the one before. A comment whose lines it changed is
-  // shown under its file with the code it was written on, so the two can be read together.
+  // What this revision changed since the one before, one file at a time like file by file: the
+  // file whole, with this revision's changes marked and a pager between them. A comment whose lines
+  // it changed is shown under the file with the code it was written on, so the two can be read together.
   function renderSince() {
     const words = {joined: 'New in the change', left: 'Back as the base has it'};
     const sides = [`revision ${sinceView.revision}`, `revision ${review.history.revision}`];
-    const cards = sinceView.files.map(file => {
-      const rows = file.hunks.flatMap(hunk => hunk.rows.unified);
-      const gone = comments.filter(comment => comment.outdated?.revision === sinceView.revision && comment.outdated.path === file.path);
-      return `<details class="file-card since-card" open><summary><span class="file-icon" aria-hidden="true">&lt;/&gt;</span><span class="filename">${pathFit(file.path)}</span>${words[file.state] ? `<span class="badge neutral">${words[file.state]}</span>` : ''}<span class="badge success">+${rows.filter(line => line.kind === 'add').length}</span><span class="badge blocking">−${rows.filter(line => line.kind === 'del').length}</span></summary>${file.note ? `<p class="muted since-note">${escape(file.note)}</p>` : renderDiffTable(file, file.hunks, {}, layout, null, sides)}${gone.length ? `<section class="since-outdated"><h3>${plural(gone.length, 'comment')} on lines this revision changed</h3>${gone.map(comment => commentCard(comment, true)).join('')}</section>` : ''}</details>`;
-    }).join('');
-    return `<div class="page-intro"><div class="eyebrow">Revision ${escape(review.history.revision)}</div><h1>Since revision ${escape(sinceView.revision)}</h1><p class="lead">Only what changed after revision ${escape(sinceView.revision)}. The whole change, as it will be merged, is in All changes.</p><p class="muted">Select an after line number to comment. Comments are the same ones in both views.</p></div>${cards}`;
+    const count = sinceView.files.length;
+    sinceIndex = Math.max(0, Math.min(count - 1, sinceIndex));
+    const file = sinceView.files[sinceIndex];
+    const full = file.source ? wholeFile(file) : null;
+    // Lines outside the changed sections take comments too, by their line in the file as it is now.
+    full?.forEach(hunk => { hunk.since = true; });
+    const rows = file.hunks.flatMap(hunk => hunk.rows.unified);
+    const gone = comments.filter(comment => comment.outdated?.revision === sinceView.revision && comment.outdated.path === file.path);
+    const code = file.note ? `<p class="muted since-note">${escape(file.note)}</p>` : renderDiffTable(file, full || file.hunks, {}, layout, null, sides);
+    const next = sinceView.files[sinceIndex + 1];
+    const current = filesByPath.get(file.path);
+    const reviewed = current ? `<label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${current.id}" ${fileViewed(current) ? 'checked' : ''}> <span>${viewedLabel(fileViewed(current))}</span></label>` : '';
+    return `<section class="focus-reader since-reader"><header class="focus-file-header"><div class="focus-meta"><span class="focus-group"><span class="crumb-number">${sinceIndex + 1}/${count}</span><span class="crumb-group">Since revision ${escape(sinceView.revision)}</span></span><div class="focus-file-actions" role="group" aria-label="Changed sections"><button class="icon-button" data-change-step="-1" disabled aria-label="Previous changed section" title="Previous changed section">${icon('chevron-left')}</button><span id="change-position">${file.hunks.length} changes</span><button class="icon-button" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} aria-label="Next changed section" title="Next changed section">${icon('chevron-right')}</button></div></div><div class="focus-identity"><div class="current-file"><code data-path-toggle>${ReviewTools.pathParts(file.path)}</code>${words[file.state] ? `<span class="badge neutral">${words[file.state]}</span>` : ''}<span class="badge success">+${rows.filter(line => line.kind === 'add').length}</span><span class="badge blocking">−${rows.filter(line => line.kind === 'del').length}</span></div><div class="focus-progress-actions">${reviewed}<button class="btn btn-sm btn-ghost phone-only" data-focus-prev ${sinceIndex === 0 ? 'disabled' : ''} aria-label="Previous file">${icon('arrow-left')}<span class="focus-step-label"> Previous</span></button><button class="btn btn-sm btn-ghost" data-focus-next aria-label="Next file" ${next ? '' : 'disabled'}><span class="focus-step-label">Next file </span>${icon('arrow-right')}</button><span class="focus-count phone-only">${sinceIndex + 1} of ${count}</span></div></div></header>${!full && !file.note ? '<p class="focus-unavailable">This revision did not save the whole file. Showing only what changed.</p>' : ''}${code}${gone.length ? `<section class="since-outdated"><h3>${plural(gone.length, 'comment')} on lines this revision changed</h3>${gone.map(comment => commentCard(comment, true)).join('')}</section>` : ''}<footer class="focus-end"><span>${next ? `Next: ${escape(next.path)}` : `End of what changed since revision ${escape(sinceView.revision)}`}</span><button class="btn btn-sm btn-ghost phone-only" data-focus-prev ${sinceIndex === 0 ? 'disabled' : ''}>← Previous</button><button class="btn btn-sm btn-primary" data-focus-next ${next ? '' : 'disabled'}>Next file →</button></footer></section>`;
+  }
+  function sinceFile(index) {
+    document.body.classList.remove('navigation-open'); $('nav-toggle').setAttribute('aria-expanded', 'false');
+    if (state.view !== 'since') history.replaceState(null, '', '#since');
+    state.view = 'since';
+    state.navFile = null;
+    sinceIndex = Math.max(0, Math.min(sinceView.files.length - 1, index));
+    selectedChange = null;
+    clearSelection(); render(); $('content').scrollTo({top:0, behavior:'instant'}); revealFirstChange(); updateChangeNavigation();
   }
 
   function renderFiles() {
@@ -2454,17 +2482,9 @@
     }).join('')}</section>`).join('') || '<p class="empty-state">No matching files.</p>'}`;
   }
 
-  function renderFocus() {
-    const entry = focusOrder[focusIndex];
-    if (!entry) return '<p>No files in this review.</p>';
-    const file = files.get(entry.file);
-    const component = components(entry.layer).find(pair => pair.items.some(item => item.file === file.id));
-    const componentLinks = component ? `<div class="focus-component"><span>${escape(component.name)}</span><div class="join" role="group" aria-label="${escape(component.name)} files">${component.items.map(item => {
-      const sibling = files.get(item.file);
-      return `<button class="btn btn-sm join-item" data-focus-component-file="${sibling.id}" aria-pressed="${sibling.id === file.id}" title="${escape(sibling.path)}" aria-label="Open ${escape(sibling.path)}">${sibling.path.endsWith('.rb') ? 'Ruby' : 'Template'}</button>`;
-    }).join('')}</div></div>` : '';
-    const items = layers.flatMap(layer => layer.items).filter(item => item.file === file.id);
-    const summaries = Object.assign({}, ...items.map(item => item.summaries || {}));
+  // The whole file as hunks, its unchanged lines between the changed ones, highlighted as one text.
+  // null when the source was not captured or does not match the diff.
+  function wholeFile(file) {
     if (!fullContextCache.has(file.id)) {
       try { fullContextCache.set(file.id, ReviewTools.fullFileHunks(file)); }
       catch { fullContextCache.set(file.id, null); }
@@ -2479,6 +2499,21 @@
       full.forEach(hunk => highlightCache.set(hunk.id, colored));
       fullContextCache.set(`${file.id}:highlighted`, true);
     }
+    return full;
+  }
+
+  function renderFocus() {
+    const entry = focusOrder[focusIndex];
+    if (!entry) return '<p>No files in this review.</p>';
+    const file = files.get(entry.file);
+    const component = components(entry.layer).find(pair => pair.items.some(item => item.file === file.id));
+    const componentLinks = component ? `<div class="focus-component"><span>${escape(component.name)}</span><div class="join" role="group" aria-label="${escape(component.name)} files">${component.items.map(item => {
+      const sibling = files.get(item.file);
+      return `<button class="btn btn-sm join-item" data-focus-component-file="${sibling.id}" aria-pressed="${sibling.id === file.id}" title="${escape(sibling.path)}" aria-label="Open ${escape(sibling.path)}">${sibling.path.endsWith('.rb') ? 'Ruby' : 'Template'}</button>`;
+    }).join('')}</div></div>` : '';
+    const items = layers.flatMap(layer => layer.items).filter(item => item.file === file.id);
+    const summaries = Object.assign({}, ...items.map(item => item.summaries || {}));
+    const full = wholeFile(file);
     const groupNumber = review.groups.indexOf(entry.layer.group) + 1;
     const stepTitle = entry.layer.title === entry.layer.group.title ? '' : `<span class="crumb-sep" aria-hidden="true">›</span><span class="crumb-step">${escape(entry.layer.title)}</span>`;
     return `<section class="focus-reader"><header class="focus-file-header"><div class="focus-meta"><span class="focus-group" title="${escape(`Group ${groupNumber} of ${review.groups.length}: ${entry.layer.group.title}`)}"><span class="crumb-number">${groupNumber}/${review.groups.length}</span><span class="crumb-group">${escape(titleWithoutNumber(entry.layer.group.title))}</span>${stepTitle}</span><div class="focus-file-actions" role="group" aria-label="Changed sections"><button class="icon-button" data-change-step="-1" disabled aria-label="Previous changed section" title="Previous changed section">${icon('chevron-left')}</button><span id="change-position">${file.hunks.length} changes</span><button class="icon-button" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} aria-label="Next changed section" title="Next changed section">${icon('chevron-right')}</button></div></div><div class="focus-identity"><div class="current-file"><code data-path-toggle>${ReviewTools.pathParts(file.path)}</code><button class="icon-button copy-file-path" data-copy-file title="Copy the full relative file path" aria-label="Copy file path">${icon('copy')}</button>${needMark(file, true)}</div>${componentLinks}${previewToggle(file)}${notVisualNote(file)}<details class="file-about"><summary>${icon('info')}<span>Why this file</span></summary><p>${escape(entry.layer.summary || entry.layer.group.summary)}</p>${items.map(item => item.summary ? `<p>${escape(item.summary)}</p>` : '').join('')}</details><div class="focus-progress-actions"><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" ${fileViewed(file) ? 'checked' : ''}> <span>${viewedLabel(fileViewed(file))}</span></label><button class="btn btn-sm btn-ghost phone-only" data-focus-prev ${focusIndex === 0 ? 'disabled' : ''} aria-label="Previous file">${icon('arrow-left')}<span class="focus-step-label"> Previous</span></button><button class="btn btn-sm btn-ghost" data-focus-next aria-label="Next file" ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}><span class="focus-step-label">Next file </span>${icon('arrow-right')}</button><span class="focus-count phone-only">${focusIndex + 1} of ${focusOrder.length}</span></div></div></header>${!full ? '<p class="focus-unavailable">Full source was not captured or exceeds the text limit. Showing the saved diff; no current working files have been substituted.</p>' : ''}${(() => { const code = file.hunks.length || full?.length ? renderDiffTable(file, full || file.hunks, summaries) : `<pre>${escape(file.note || file.patch || 'No text diff available.')}</pre>`; return code; })()}<footer class="focus-end"><span>${focusIndex + 1 === focusOrder.length ? 'End of the review' : `Next: ${escape(files.get(focusOrder[focusIndex + 1].file).path)}`}</span><button class="btn btn-sm btn-ghost phone-only" data-focus-prev ${focusIndex === 0 ? 'disabled' : ''}>← Previous</button><button class="btn btn-sm btn-primary" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></footer></section>`;
@@ -2496,7 +2531,7 @@
   }
   // Full source can open with its first change below the fold; land on it like the Next section arrow does.
   function revealFirstChange() {
-    if (!fileReadingActive()) return;
+    if (!pagedReading()) return;
     const first = $('content').querySelector('.change-anchor');
     if (!first) return;
     const inner = getComputedStyle($('content')).overflowY !== 'visible';
@@ -2515,7 +2550,7 @@
       return {headings, top, current};
     }
     headings.forEach((node, index) => { if (node.getBoundingClientRect().top <= top + 4) current = index; });
-    if (selectedChange?.file === focusOrder[focusIndex]?.file && Math.abs(reviewScrollTop() - selectedChange.scrollTop) < 2) {
+    if (selectedChange?.file === readingKey() && Math.abs(reviewScrollTop() - selectedChange.scrollTop) < 2) {
       const selected = headings.findIndex(node => node.id === selectedChange.id);
       if (selected >= 0) current = selected;
     } else selectedChange = null;
@@ -2564,11 +2599,11 @@
       if (getComputedStyle($('content')).overflowY === 'visible') window.scrollTo({top:window.scrollY + delta, behavior:'instant'});
       else $('content').scrollTo({top:$('content').scrollTop + delta, behavior:'instant'});
     }
-    selectedChange = {file:focusOrder[focusIndex]?.file, id:target.id, scrollTop:reviewScrollTop()};
+    selectedChange = {file:readingKey(), id:target.id, scrollTop:reviewScrollTop()};
     updateChangeNavigation();
   }
   function updateChangeNavigation() {
-    if (!fileReadingActive()) return;
+    if (!pagedReading()) return;
     const {headings, current} = changedSectionPosition();
     $('content').querySelectorAll('.code-row.is-current-change').forEach(row => row.classList.remove('is-current-change'));
     for (let row = headings[current]; row?.classList.contains('code-row') && row.querySelector('td.code.add, td.code.del'); row = row.nextElementSibling) {
@@ -2821,7 +2856,7 @@
   function render() {
     stopQASequence();
     closeComments();
-    document.body.classList.toggle('reading-focus', fileReadingActive());
+    document.body.classList.toggle('reading-focus', pagedReading());
     $('focus').textContent = 'File by file';
     $('walkthrough').setAttribute('aria-pressed', !focusMode);
     $('focus').setAttribute('aria-pressed', focusMode);
@@ -2843,10 +2878,13 @@
       document.body.dataset.position = $('position').textContent;
       $('prev').disabled = focusIndex === 0; $('next').disabled = focusIndex === focusOrder.length - 1;
     }
-    // Overview, All changes and Since revision are not in a sequence: there the pager is their name, with no arrows.
-    $('prev').hidden = $('next').hidden = !layer && !fileReadingActive();
-    $('prev').setAttribute('aria-label', fileReadingActive() ? 'Previous file' : 'Previous step');
-    $('next').setAttribute('aria-label', fileReadingActive() ? 'Next file' : 'Next step');
+    if (state.view === 'since') {
+      $('prev').disabled = sinceIndex === 0; $('next').disabled = sinceIndex === sinceView.files.length - 1;
+    }
+    // Overview and All changes are not in a sequence: there the pager is their name, with no arrows.
+    $('prev').hidden = $('next').hidden = !layer && !pagedReading();
+    $('prev').setAttribute('aria-label', pagedReading() ? 'Previous file' : 'Previous step');
+    $('next').setAttribute('aria-label', pagedReading() ? 'Next file' : 'Next step');
     $('content').innerHTML = fileReadingActive() ? renderFocus() : layer ? renderStep(layer) : state.view === 'files' ? renderFiles() : state.view === 'since' ? renderSince() : renderOverview();
     refreshVisualControls();
     renderLedger();
@@ -2896,6 +2934,7 @@
   }
   function step(delta) {
     if (fileReadingActive()) { focusFile(focusIndex + delta); return; }
+    if (state.view === 'since') { if (sinceView.files[sinceIndex + delta]) sinceFile(sinceIndex + delta); return; }
     const index = layers.findIndex(layer => layer.id === state.view);
     if (index === 0 && delta < 0) return select('overview');
     const target = layers[Math.max(0, Math.min(layers.length - 1, index + delta))];
@@ -3141,6 +3180,13 @@
       navigateFile(layer, activeComponentFile(layer, component));
       return;
     }
+    const sinceLink = event.target.closest('[data-since-file]');
+    if (sinceLink && event.target.closest('.file-status')) {
+      const file = filesByPath.get(sinceView.files[Number(sinceLink.dataset.sinceFile)].path);
+      markViewed(file, !fileViewed(file));
+      return;
+    }
+    if (sinceLink) { sinceFile(Number(sinceLink.dataset.sinceFile)); return; }
     const matchLine = event.target.closest('.nav-match');
     if (matchLine) { openMatch(matchLine); renderNavigation(); return; }
     const fileLink = event.target.closest('[data-file-link]');

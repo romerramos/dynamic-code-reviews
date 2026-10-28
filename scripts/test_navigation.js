@@ -284,3 +284,41 @@ assert.equal(linked.view, 'g0l0');
 assert.equal(linked.navFile, null);
 assert.equal(linked.focusIndex, 0);
 console.log('PASS reports open on Overview and honor explicit deep links');
+
+// Since revision reads like file by file: one file at a time, whole, with no range headings to
+// work out, and the sidebar lists its files under it.
+{
+  const sinceFile = (id, path, before, after, at) => ({id, path, state:'changed',
+    source:{old:before.map(line => `${line}\n`).join(''), new:after.map(line => `${line}\n`).join('')},
+    hunks:[{id:`${id}h1`, old_start:at, old_count:1, new_start:at, new_count:1, rows:{
+      unified:[{kind:'del', text:before[at - 1], old:at}, {kind:'add', text:after[at - 1], new:at}],
+      split:[{old:{kind:'del', text:before[at - 1], old:at}, new:{kind:'add', text:after[at - 1], new:at}}]}}]});
+  const since = {revision:1, files:[
+    sinceFile('d1', 'app/models/message.rb', ['untouched_top', 'old_value', 'untouched_bottom'], ['untouched_top', 'new_value', 'untouched_bottom'], 2),
+    sinceFile('d2', 'app/models/owner.rb', ['owner_old'], ['owner_new'], 1)]};
+  get('data').textContent = JSON.stringify({...data, review:{...data.review, history:{series:'s', revision:2, since}}});
+  get('revision-navigation').querySelector = () => node('revision select');
+  const clicksBefore = listeners.click.length;
+  sandbox.location.hash = '';
+  sandbox.localStorage.getItem = () => null;
+  vm.runInContext(source.replace(/  render\(\);\n\}\)\(\);\s*$/, '  globalThis.sinceTest = {select, step, renderNavigation};\n})();'), sandbox);
+  const reader = sandbox.sinceTest;
+  reader.select('since');
+  let page = get('content').innerHTML;
+  assert(page.includes('untouched_top') && page.includes('untouched_bottom') && page.includes('new_value'), 'Since revision shows the file whole, not only its changed lines');
+  assert(!page.includes('CHANGED RANGE') && !page.includes('owner_new'), 'Since revision shows one file, without range headings');
+  assert.match(page, /data-file-viewed="f2"/, 'A file in Since revision can be marked reviewed where it is read');
+  assert.match(get('navigation').innerHTML, /data-since-file="0" aria-current="location"/);
+  reader.step(1);
+  page = get('content').innerHTML;
+  assert(page.includes('owner_new') && !page.includes('untouched_top'), 'Next file moves to the next file this revision changed');
+  assert.match(get('navigation').innerHTML, /data-since-file="1" aria-current="location"/);
+  // The file is marked reviewed from here, the same mark its step shows; a file no longer in the change has none.
+  assert(!page.includes('data-file-viewed='), 'A file outside the change has nothing to mark');
+  const mark = {dataset:{sinceFile:'0'}};
+  get('navigation').parentElement = node('sidebar');
+  Promise.resolve(listeners.click.slice(clicksBefore).find(listener => String(listener).includes('data-since-file'))({target:{closest:selector => selector === '[data-since-file]' ? mark : selector === '.file-status' ? {} : null}})).then(() => {
+    assert.match(get('navigation').innerHTML, /class="nav-file is-viewed" data-since-file="0"/, 'The sidebar mark beside a Since revision file marks it reviewed');
+    console.log('PASS since revision reads one whole file at a time, with its files in the sidebar to mark reviewed');
+  });
+}

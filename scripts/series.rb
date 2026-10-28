@@ -391,7 +391,8 @@ module ReviewSeries
       state = !old ? 'joined' : !new ? 'left' : 'changed'
       next({'path' => path, 'state' => state, 'note' => 'Changed, but its text was not captured in both revisions.', 'hunks' => []}) unless before && after
       next if before == after && state == 'changed'
-      {'path' => path, 'state' => state, 'patch' => text_diff(before, after)}
+      # Both texts, so the report can show the file whole with these changes marked.
+      {'path' => path, 'state' => state, 'patch' => text_diff(before, after), 'source' => {'old' => before, 'new' => after}}
     end
     files.each_with_index do |file, index|
       file['id'] = "d#{index + 1}"
