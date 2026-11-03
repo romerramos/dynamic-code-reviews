@@ -457,10 +457,11 @@
     glide(content, direction * keyStep(content, held));
   }
   // --- The line cursor ---------------------------------------------------------------------------
-  // In a diff the keyboard is on one line. J and K move it, D and U by half a screen, G to the
-  // file's first line and Shift+G to its last; the page follows. C comments on the line, E edits
+  // In a diff the keyboard is on one line. J and K move it, D and U by half a screen, G G to the
+  // file's first line and Shift+G to its last, G D to a definition; the page follows. C comments on the line, E edits
   // your comment on it (or opens the one that is there), Enter reads it.
   let cursorRow = null;
+  let pendingG = 0; // when G was pressed, waiting for the key after it
   let cursorPlace = null; // {table, index}: where it was, to put it back after the page is redrawn
   const isRow = node => node?.classList?.contains('code-row');
   const visible = node => node.checkVisibility ? node.checkVisibility() : !!node.getClientRects().length;
@@ -774,19 +775,49 @@
     definitionMenu.innerHTML = `<p class="definition-menu-title">${what} <code>${escape(name)}</code></p><ul>${places.map(([id, side, line, kind], index) => `<li><button type="button" data-definition="${index}"><span class="definition-where"><span>${escape(files.get(id).path)}:${line}</span>${side === 'old' ? '<span class="badge badge-sm">removed</span>' : ''}${kind ? `<small>${escape(kind.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase())}</small>` : ''}</span><code>${escape(definitionText(id, side, line))}</code></button></li>`).join('')}</ul>`;
     definitionMenu.onclick = event => {
       const choice = event.target.closest('[data-definition]');
-      if (!choice) return;
-      try { definitionMenu.hidePopover(); } catch { /* not a popover here */ }
-      goToDefinition(places[Number(choice.dataset.definition)], here);
+      if (choice) goToDefinition(places[Number(choice.dataset.definition)], here);
     };
+    openDefinitionMenu(link);
+  }
+  // Shows the menu under what it is about (above, when there is no room below), the keyboard on its first choice.
+  function openDefinitionMenu(anchor) {
     try { definitionMenu.showPopover(); } catch { /* still positioned */ }
-    const at = link.getBoundingClientRect(), size = definitionMenu.getBoundingClientRect();
+    const at = anchor.getBoundingClientRect(), size = definitionMenu.getBoundingClientRect();
     definitionMenu.style.left = `${Math.max(8, Math.min(innerWidth - size.width - 8, at.left))}px`;
     definitionMenu.style.top = `${at.bottom + 6 + size.height <= innerHeight - 8 ? at.bottom + 6 : Math.max(8, at.top - size.height - 6)}px`;
     definitionMenu.querySelector('button')?.focus({preventScroll:true});
   }
+  const closeDefinitionMenu = () => { try { definitionMenu.hidePopover(); } catch { /* not a popover here */ } };
+  let definitionMenuBack = null; // reopens the names of the line, from the places of one of them
+  // gd: the names on the cursor's line that link somewhere. One does what a click on it does; several
+  // are listed first, to choose one.
+  function definitionsAtCursor() {
+    const row = cursor();
+    const seen = new Set();
+    const links = [...(row?.querySelectorAll('td.code .symbol-link') || [])].filter(link => {
+      const key = `${link.closest('td').cellIndex}:${link.dataset.symbol}`;
+      return !seen.has(key) && seen.add(key);
+    });
+    definitionMenuBack = null;
+    if (!links.length) { toast('Nothing on this line is defined in the review'); return; }
+    if (links.length === 1) { showDefinitions(links[0]); return; }
+    const list = () => {
+      definitionMenu.innerHTML = `<p class="definition-menu-title">Names on this line</p><ul>${links.map((link, index) => `<li><button type="button" data-line-name="${index}"><span class="definition-where"><span>${escape(link.dataset.symbol)}</span></span></button></li>`).join('')}</ul>`;
+      definitionMenu.onclick = event => {
+        const choice = event.target.closest('[data-line-name]');
+        if (!choice) return;
+        closeDefinitionMenu();
+        definitionMenuBack = list;
+        showDefinitions(links[Number(choice.dataset.lineName)]);
+      };
+      openDefinitionMenu(row.querySelector('td.code') || row);
+    };
+    list();
+  }
   // Is the line in a changed section, which the walkthrough shows too, or only in the whole file?
   const inChangedSection = (file, side, line) => file.hunks.some(hunk => hunk.rows.unified.some(row => row[side] === line));
   function goToDefinition([id, side, line], from) {
+    closeDefinitionMenu();
     const file = files.get(id);
     const layer = layers.find(layer => layer.items.some(item => item.file === id));
     if (!file || !layer) { toast(`${file?.path || 'That file'} is not in the walkthrough`); return; }
@@ -828,6 +859,7 @@
   $('content').addEventListener('click', event => {
     const link = event.target.closest('td.code .symbol-link');
     if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || !window.getSelection().isCollapsed) return;
+    definitionMenuBack = null;
     showDefinitions(link);
   });
 
@@ -3745,6 +3777,16 @@
         return;
       }
       if (overlay.id === 'inline-composer' && composerKey(overlay, key, event)) { event.preventDefault(); return; }
+      // In the list of names or places: J and K move, L or Enter goes, H back to the names of the line.
+      if (overlay === definitionMenu && ['j', 'k', 'l', 'h'].includes(key) || overlay === definitionMenu && event.key === 'Enter') {
+        event.preventDefault();
+        const choices = [...definitionMenu.querySelectorAll('button')];
+        const at = choices.indexOf(document.activeElement);
+        if (key === 'j' || key === 'k') choices[Math.max(0, Math.min(choices.length - 1, at + (key === 'j' ? 1 : -1)))]?.focus();
+        else if (key === 'h') { if (definitionMenuBack) { closeDefinitionMenu(); definitionMenuBack(); } }
+        else (choices[at] || choices[0])?.click();
+        return;
+      }
       // Q closes what is open over the page, whatever it is.
       if (key === 'q') { event.preventDefault(); overlayCommands(overlay)[0].run(); return; }
       if (key === 's') { event.preventDefault(); openHints(overlay); }
@@ -3800,6 +3842,14 @@
     if (key === 's') { event.preventDefault(); openHints(); return; }
     // On a line of a diff: D and U half a screen, G the file's ends, C comment, E edit, Enter read.
     if (pane === 'main' && cursor()) {
+      // G waits for the key after it, as in Vim: G G is the file's first line and G D the definitions on the line.
+      if (pendingG && Date.now() - pendingG < 1500 && !event.shiftKey && (key === 'g' || key === 'd')) {
+        event.preventDefault(); pendingG = 0;
+        if (key === 'g') cursorKey('g', false, false); else definitionsAtCursor();
+        return;
+      }
+      pendingG = 0;
+      if (key === 'g' && !event.shiftKey) { event.preventDefault(); pendingG = Date.now(); return; }
       // K reads the comments on the line (k alone is still up); N and Shift+N go to the next and previous one.
       if (event.key === 'K') { event.preventDefault(); readAtCursor(); return; }
       if (key === 'n') { event.preventDefault(); stepComment(event.shiftKey ? -1 : 1); return; }
