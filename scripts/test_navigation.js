@@ -322,3 +322,26 @@ console.log('PASS reports open on Overview and honor explicit deep links');
     console.log('PASS since revision reads one whole file at a time, with its files in the sidebar to mark reviewed');
   });
 }
+
+// Go to definition: Prism makes the ? of a Ruby predicate its own token, and the name still links to
+// the method with the ?, showing only the name's own text. The real Ruby grammar, as the page has it.
+{
+  const prism = {window:{Prism:{manual:true}}};
+  prism.self = prism.window;
+  vm.createContext(prism);
+  for (const lang of ['core', 'clike', 'ruby']) vm.runInContext(fs.readFileSync(require.resolve(`../assets/vendor/prism-${lang}.min.js`), 'utf8'), prism);
+  // A file whose whole text the review saved: missing? is defined on line 4, used on 2, and once on a line the change removed.
+  const source2 = {old:'class Send\n  def run\n    missing? && done\n  end\nend\n', new:'class Send\n  def run = (return if missing?)\n  # missing_count, @missing? and missing are other words\n  def missing?\n    true\n  end\nend\n'};
+  const hunks2 = [{id:'h2', rows:{unified:[{kind:'del', old:2, text:''}, {kind:'del', old:3, text:''}, {kind:'add', new:2, text:''}]}}];
+  const files2 = data.snapshot.files.map(file => file.id === 'f2' ? {...file, source:source2, hunks:hunks2} : file);
+  get('data').textContent = JSON.stringify({...data, snapshot:{...data.snapshot, files:files2}, symbols:{'missing?':[['f2','new',4,'method']], 'render_missing':[['f2','new',12,'method']]}});
+  const context = vm.createContext({...sandbox, Prism:prism.window.Prism});
+  vm.runInContext(source.replace(/  render\(\);\n\}\)\(\);\s*$/, '  globalThis.definitionTest = {highlightedLines, usesOf};\n})();'), context);
+  assert.deepEqual(JSON.parse(JSON.stringify(context.definitionTest.usesOf('missing?'))), [['f2','new',2,''], ['f2','old',3,'']],
+    'The uses of a name are the lines that have it as a whole word, after the change and on lines it removed, never its definition');
+  const [line] = context.definitionTest.highlightedLines([{text:'return render_missing if missing?'}], 'ruby');
+  assert(line.includes('<span class="symbol-link" data-symbol="missing?">missing</span>'), `A call of a predicate links to it: ${line}`);
+  assert(line.includes('<span class="symbol-link" data-symbol="render_missing">render_missing</span>'), 'A plain name on the same line links too');
+  assert.equal(line.replace(/<[^>]+>/g, ''), 'return render_missing if missing?', 'The line reads as written');
+  console.log('PASS a name links to its definition, a Ruby predicate with its ?, and its definition lists its uses');
+}

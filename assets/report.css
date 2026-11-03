@@ -1367,3 +1367,20 @@ button.risk-path:hover .path-name{text-decoration:underline}
 .review-thread.is-earlier>.thread-details>.thread-summary>strong,.overview-reading .review-thread.is-earlier>.thread-details>.thread-summary>strong{display:block;flex:1 1 auto;min-width:0;font-size:13px;line-height:1.5;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .review-thread.is-earlier>.thread-details>.thread-summary>.comment-avatar{flex:none}
 .review-thread.is-earlier>.thread-details>.thread-summary :is(.thread-priority,.thread-severity,.thread-resolved){display:none}
+/* Go to definition: a name defined in the review is underlined under the pointer; the line it opens on glows once. */
+#content td.code .symbol-link{cursor:pointer;border-radius:2px}
+#content td.code .symbol-link:hover{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+@keyframes definition-flash{from{background-color:var(--bg-amber-3)}to{background-color:transparent}}
+.code-row.definition-flash>td.code{animation:definition-flash 1.2s ease-out}
+.definition-menu{position:fixed;inset:auto;margin:0;z-index:40;width:min(560px,calc(100vw - 16px));max-height:min(420px,70vh);overflow:auto;padding:8px;border:1px solid var(--line);border-radius:calc(10px * var(--round));background:var(--surface);color:var(--ink);box-shadow:0 16px 40px color-mix(in srgb,var(--shade) 20%,transparent);font-size:13px}
+.definition-menu-title{margin:2px 8px 6px;font-size:12px;color:var(--muted)}
+.definition-menu ul{list-style:none;margin:0;padding:0}
+.definition-menu button{display:grid;gap:2px;width:100%;text-align:left;padding:7px 8px;border:0;border-radius:calc(6px * var(--round));background:transparent;color:inherit;cursor:pointer}
+.definition-menu button:hover,.definition-menu button:focus-visible{background:var(--bg-neutral-3);outline:none}
+.definition-where{display:flex;align-items:center;gap:8px;font:12px/1.5 var(--mono);overflow-wrap:anywhere}
+.definition-where small{color:var(--muted);font-family:var(--review-font-family)}
+.definition-menu button>code{font:12px/1.5 var(--mono);color:var(--ink-neutral-5);white-space:pre;overflow:hidden;text-overflow:ellipsis;background:none;padding:0}
+.definition-back{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--line);border-radius:calc(8px * var(--round));background:var(--surface);color:var(--ink);font:12px/1.4 var(--review-font-family);cursor:pointer;position:fixed;left:50%;bottom:calc(var(--status-h, 0px) + 22px);transform:translateX(-50%);z-index:39;box-shadow:0 5px 20px color-mix(in srgb,var(--shade) 16.9%,transparent)}
+.definition-back:hover{background:var(--bg-neutral-3)}
+.definition-back[hidden]{display:none}
+.definition-back kbd{font:10px var(--mono);color:var(--muted);margin-left:4px}

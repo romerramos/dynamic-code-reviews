@@ -4,6 +4,7 @@ require 'digest'
 require 'erb'
 require 'json'
 require_relative 'stylesheet'
+require_relative 'symbols'
 
 module DCR
   # Every HTML page a review is read in comes from here, rendered from a template in assets/.
@@ -40,7 +41,7 @@ module DCR
     # export: {'key', 'progress', 'threads', 'previews'} for a read-only copy.
     def review(payload, served: nil, export: nil)
       raise ArgumentError, 'A page is either served or exported' if served && export
-      ReviewView.new(payload, served: served, export: export).render
+      ReviewView.new(Symbols.add(payload), served: served, export: export).render
     end
 
     def history(history) = HistoryView.new(history).render

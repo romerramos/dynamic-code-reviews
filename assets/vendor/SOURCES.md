@@ -52,3 +52,11 @@ slow to open.
     them in the page as data, so no font is fetched at runtime.
 - GitHub mark: the `mark-github` icon of Primer Octicons (https://github.com/primer/octicons, MIT),
   inlined in `assets/report.js` as `ghMark`. It marks the one button that sends a comment to GitHub.
+- Universal Ctags (GPL-2.0), not bundled: `bin/dcr setup` downloads one pinned build into `tools/ctags/`
+  (ignored by Git), checked against its SHA-256 in `lib/dcr/symbols.rb`. The skill runs it as a separate
+  program to find where names are defined; it is never linked into or embedded in a page.
+  - macOS and Linux: snapshot 2026.10.08 (commit 82494361bb3e7d4f7cf1d2bdc0d0e9001c926e45) from
+    https://github.com/universal-ctags/ctags-nightly-build/releases
+  - Windows: p6.2.20261011.0 from https://github.com/universal-ctags/ctags-win32/releases
+  - Source: https://github.com/universal-ctags/ctags. Each download carries its licence text (`COPYING`).
+  - A ctags already installed (Homebrew, apt) is used first, when it is Universal Ctags with JSON output.

@@ -108,6 +108,7 @@ your projects keep working.
 | `gh`, or a GitHub or Linear connector | Optional. Reviewing a pull request with its real base and linked issues. |
 | `gh`, signed in | Optional. Posting comments and reviews to the pull request from the review page. Without it, Comment on GitHub copies the comment and opens its lines. |
 | Node.js 18+ | Chrome DevTools MCP (screenshots), and the maintainer checks below. |
+| Universal Ctags | Optional. Clicking a name in the code to go to where it is defined, in any file of the review. Run `bin/dcr setup` once to download a pinned build for macOS, Linux or Windows into `tools/ctags`, or install it yourself (`brew install universal-ctags`). Without it there are no links. |
 
 No npm, Docker, database, API key or network connection is needed to collect and render a review.
 
@@ -320,6 +321,7 @@ ruby scripts/test_critical.rb      # critical-code reviews: the candidates, the 
 ruby scripts/test_live.rb          # live server state, threads, focus, tailnet sharing
 ruby scripts/test_server.rb        # the served page, the recorder's command queue and uploads
 ruby scripts/test_themes.rb       # the theme contract: tokens, light and dark for every theme, no stray colours
+ruby scripts/test_symbols.rb      # where names are defined, for go to definition (skips without ctags)
 ruby scripts/test_second_opinion.rb # adversaries: the panel, model lists, the questions, headless runs (stand-in CLIs)
 ruby scripts/test_jevmypr.rb       # JevMyPR's verdict: what is sent, on unless turned off, errors and no network (a stand-in service)
 ruby scripts/test_github.rb        # posting to the pull request through gh (a stand-in gh, nothing reaches GitHub)
@@ -338,6 +340,7 @@ the browser checks in [the UI guide](references/ui-guidelines.md).
 ## Bundled libraries
 
 daisyUI, Prism, Lucide and GLightbox are embedded so reviews work offline; versions, sources and
-licences are in [assets/vendor/SOURCES.md](assets/vendor/SOURCES.md). The skill's own code has no
+licences are in [assets/vendor/SOURCES.md](assets/vendor/SOURCES.md). Universal Ctags is not in the repository:
+`bin/dcr setup` downloads it, and SOURCES.md says which build and under which licence. The skill's own code has no
 distribution licence yet. Inspired by CodeRabbit's walkthroughs and change grouping; no CodeRabbit
 account or integration is involved.

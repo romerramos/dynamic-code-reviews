@@ -41,6 +41,7 @@ USAGE = <<~TEXT
     report                         What is left before the review goes to its pull request, and the short report it
                                    posts; --publish posts it and marks the reviewed commit
     record <action>                Control a running recorder (wait-ready, start, still, stop, end, status, reload)
+    setup                          Download Universal Ctags for links from a name to its definition (optional)
 
   Run a command with no further arguments to see its own usage.
 TEXT
@@ -64,6 +65,13 @@ when 'wait', 'comments', 'comment', 'screenshot', 'log', 'sync', 'risk-ranking',
   DCR::LiveCLI.run(command, ARGV)
 when 'serve' then load File.join(SCRIPTS, 'serve.rb') # in this process, so `dcr stop` finds it as `bin/dcr serve`
 when 'record' then run_script('record.rb', *ARGV)
+when 'setup'
+  require_relative '../lib/dcr/symbols'
+  begin
+    exit(DCR::Symbols.setup ? 0 : 1)
+  rescue StandardError => e
+    abort "dcr setup: #{e.message}"
+  end
 when 'critical' then run_script('critical.rb', *ARGV)
 when nil, '-h', '--help', 'help' then puts USAGE
 else abort "Unknown command #{command}\n\n#{USAGE}"

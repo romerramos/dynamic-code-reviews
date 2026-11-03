@@ -2,6 +2,8 @@
 .reviews/
 tmp/
 scratch/
+# Universal Ctags, downloaded by `dcr setup`.
+tools/
 snapshot.json
 review.json
 draft.json

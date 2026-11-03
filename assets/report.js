@@ -1,7 +1,9 @@
 /* Offline review UI. No framework, build step, network requests or code execution. */
 'use strict';
 (() => {
-  const {snapshot, review} = JSON.parse(document.getElementById('data').textContent);
+  const {snapshot, review, symbols} = JSON.parse(document.getElementById('data').textContent);
+  // Where each name in the review is defined (DCR::Symbols): name → [[file id, side, line, kind], ...].
+  const definitions = new Map(Object.entries(symbols || {}));
   const $ = id => document.getElementById(id);
   const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const pathFit = ReviewTools.pathFit;
@@ -710,6 +712,125 @@
     setCursor(row, false);
     row.scrollIntoView({block:'center', behavior:'instant'});
   }
+  // --- Go to definition -----------------------------------------------------------------------
+  // A click on a name opens where it is defined, in any file of the review, and a click on it where it
+  // is defined lists where it is used: straight there when there is one place, else from a short list.
+  // Ctrl+O comes back, as many times as it went.
+  const definitionTrail = [];
+  const definitionMenu = document.createElement('div');
+  definitionMenu.id = 'definition-menu';
+  definitionMenu.className = 'definition-menu';
+  definitionMenu.setAttribute('popover', 'auto');
+  definitionMenu.setAttribute('role', 'dialog');
+  document.body.append?.(definitionMenu);
+  const backButton = document.createElement('button');
+  backButton.type = 'button';
+  backButton.className = 'definition-back'; // its own look: it floats over code, which a theme's plain buttons would let show through
+  backButton.hidden = true;
+  document.body.append?.(backButton);
+  // The file, side and line a code cell shows.
+  function codePlace(cell) {
+    const row = cell?.closest('tr.code-row');
+    if (!row) return null;
+    const gutter = cell.previousElementSibling?.classList.contains('gutter') && row.closest('table').classList.contains('split')
+      ? cell.previousElementSibling
+      : row.querySelector(`.gutter[data-side="${row.querySelector('td.code.del') ? 'old' : 'new'}"][data-line]`) || row.querySelector('.gutter[data-line]');
+    const file = hunkFiles.get(gutter?.dataset.fullHunk);
+    return file && gutter ? {file: file.id, side: gutter.dataset.side, line: Number(gutter.dataset.line), row} : null;
+  }
+  function definitionText(id, side, line) {
+    const text = files.get(id)?.source?.[side]?.split('\n')[line - 1] || '';
+    return text.trim().slice(0, 120);
+  }
+  // Where a name is used: each line of the review's files that has it as a whole word, but not the
+  // lines that define it. The text after the change, and the lines the change removed. Matched as
+  // text, so a word in a comment or a string counts too; the list shows each line to tell them apart.
+  function usesOf(name) {
+    const word = name.replace(/[$?!]/g, char => `\\${char}`);
+    const pattern = new RegExp(`(?<![\\w$@])${word}${/[?!]$/.test(name) ? '' : '(?![\\w$?!])'}`);
+    const defined = new Set((definitions.get(name) || []).map(([id, side, line]) => `${id}:${side}:${line}`));
+    return snapshot.files.flatMap(file => {
+      if (!file.source) return [];
+      const removed = new Set(file.hunks.flatMap(hunk => hunk.rows.unified.filter(row => row.kind === 'del').map(row => row.old)));
+      return ['new', 'old'].flatMap(side => (file.source[side] || '').split('\n').flatMap((text, index) => {
+        const line = index + 1;
+        if (side === 'old' && !removed.has(line)) return [];
+        return pattern.test(text) && !defined.has(`${file.id}:${side}:${line}`) ? [[file.id, side, line, '']] : [];
+      }));
+    });
+  }
+  // A click on a name: where it is defined, or, on the name where it is defined, where it is used.
+  function showDefinitions(link) {
+    const name = link.dataset.symbol;
+    const here = codePlace(link.closest('td.code'));
+    const all = definitions.get(name) || [];
+    const atDefinition = here && all.some(([id, side, line]) => id === here.file && side === here.side && line === here.line);
+    const places = (atDefinition ? usesOf(name) : all.filter(([id, side, line]) => !(here && id === here.file && line === here.line && side === here.side)))
+      .filter(([id]) => files.has(id))
+      .sort((a, b) => here ? (b[0] === here.file) - (a[0] === here.file) : 0); // this file's first
+    if (!places.length) { toast(atDefinition ? `${name} is not used anywhere else in this review` : `${name} is not defined in this review`); return; }
+    if (places.length === 1) { goToDefinition(places[0], here); return; }
+    const what = atDefinition ? `${places.length} uses of` : `${places.length} definitions of`;
+    definitionMenu.innerHTML = `<p class="definition-menu-title">${what} <code>${escape(name)}</code></p><ul>${places.map(([id, side, line, kind], index) => `<li><button type="button" data-definition="${index}"><span class="definition-where"><span>${escape(files.get(id).path)}:${line}</span>${side === 'old' ? '<span class="badge badge-sm">removed</span>' : ''}${kind ? `<small>${escape(kind.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase())}</small>` : ''}</span><code>${escape(definitionText(id, side, line))}</code></button></li>`).join('')}</ul>`;
+    definitionMenu.onclick = event => {
+      const choice = event.target.closest('[data-definition]');
+      if (!choice) return;
+      try { definitionMenu.hidePopover(); } catch { /* not a popover here */ }
+      goToDefinition(places[Number(choice.dataset.definition)], here);
+    };
+    try { definitionMenu.showPopover(); } catch { /* still positioned */ }
+    const at = link.getBoundingClientRect(), size = definitionMenu.getBoundingClientRect();
+    definitionMenu.style.left = `${Math.max(8, Math.min(innerWidth - size.width - 8, at.left))}px`;
+    definitionMenu.style.top = `${at.bottom + 6 + size.height <= innerHeight - 8 ? at.bottom + 6 : Math.max(8, at.top - size.height - 6)}px`;
+    definitionMenu.querySelector('button')?.focus({preventScroll:true});
+  }
+  // Is the line in a changed section, which the walkthrough shows too, or only in the whole file?
+  const inChangedSection = (file, side, line) => file.hunks.some(hunk => hunk.rows.unified.some(row => row[side] === line));
+  function goToDefinition([id, side, line], from) {
+    const file = files.get(id);
+    const layer = layers.find(layer => layer.items.some(item => item.file === id));
+    if (!file || !layer) { toast(`${file?.path || 'That file'} is not in the walkthrough`); return; }
+    const table = from?.row.closest('table');
+    definitionTrail.push({focusMode, view: state.view, navFile: state.navFile, focusIndex, scroll: $('content').scrollTop,
+      table: table?.getAttribute('aria-label'), index: from?.row.rowIndex, label: from ? `${files.get(from.file).path.split('/').pop()}:${from.line}` : 'where you were'});
+    if (!focusMode && !inChangedSection(file, side, line)) chooseReadingMode(true);
+    navigateFile(layer, id);
+    const scope = document.querySelector(`.file-card[data-file="${id}"]`) || $('content');
+    const row = scope.querySelector(`.gutter[data-side="${side}"][data-line="${line}"]`)?.closest('tr');
+    if (row) {
+      setCursor(row, false);
+      row.scrollIntoView({block:'center', behavior:'instant'});
+      row.classList.remove('definition-flash'); void row.offsetWidth; row.classList.add('definition-flash');
+    } else toast(`Line ${line} of ${file.path} is not shown here`);
+    setPane('main', false);
+    showBack();
+  }
+  function showBack() {
+    const last = definitionTrail.at(-1);
+    backButton.hidden = !last;
+    if (last) backButton.innerHTML = `${icon('arrow-left')} Back to ${escape(last.label)} <kbd>Ctrl O</kbd>`;
+  }
+  function definitionBack() {
+    const last = definitionTrail.pop();
+    if (!last) return false;
+    if (focusMode !== last.focusMode) chooseReadingMode(last.focusMode);
+    const layer = layers.find(layer => layer.id === last.view);
+    if (last.focusMode && layer && last.navFile) focusFile(last.focusIndex);
+    else if (layer && last.navFile) navigateFile(layer, last.navFile);
+    else select(last.view, false);
+    $('content').scrollTop = last.scroll;
+    const row = diffTables().find(table => table.getAttribute('aria-label') === last.table)?.rows[last.index];
+    if (isRow(row)) setCursor(row, false);
+    showBack();
+    return true;
+  }
+  backButton.onclick = definitionBack;
+  $('content').addEventListener('click', event => {
+    const link = event.target.closest('td.code .symbol-link');
+    if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || !window.getSelection().isCollapsed) return;
+    showDefinitions(link);
+  });
+
   // Enter in the search field goes to the next thing found (Shift: the previous), in the order
   // shown: a file's lines, or the file itself when only its name matches. The keyboard stays in
   // the field, to go on to the one after.
@@ -848,17 +969,40 @@
     const source = lines.map(line => line.text).join('\n');
     const tokens = lang === 'erb' ? erbTokens(source) : Prism.languages[lang] ? Prism.tokenize(source, Prism.languages[lang]) : [source];
     const result = [''];
+    let offset = 0; // where the text being appended starts in the source
     function append(token, ancestors = []) {
       if (Array.isArray(token)) { token.forEach(item => append(item, ancestors)); return; }
       if (typeof token !== 'string') { append(token.content, [...ancestors, token.type]); return; }
+      // A name defined somewhere in the review links to its definition, except in a string's text or a number.
+      const plain = ancestors.includes('number') || ancestors.includes('keyword') || ancestors.lastIndexOf('string') > ancestors.lastIndexOf('interpolation');
+      const start = offset;
+      offset += token.length;
+      let at = start;
       token.split('\n').forEach((part, index) => {
         if (index) result.push('');
-        const content = escape(part);
+        // Prism makes the ? of valid? and the ! of save! a token of their own, so the name is read with the character after it.
+        const content = plain || !definitions.size ? escape(part) : linkNames(part, source[at + part.length]);
+        at += part.length + 1;
         result[result.length - 1] += ancestors.reduceRight((inner, type) => `<span class="token ${escape(type)}">${inner}</span>`, content);
       });
     }
     append(tokens);
     return result;
+  }
+
+  // The text with each defined name in it wrapped in a link. Ruby's valid? and save! keep their mark,
+  // also when it is the character after the text (next).
+  function linkNames(text, next = '') {
+    let out = '', at = 0;
+    for (const match of text.matchAll(/[A-Za-z_$][\w$]*[?!]?/g)) {
+      const marked = match.index + match[0].length === text.length && /^[?!]$/.test(next || '') && !/[?!]$/.test(match[0]) ? match[0] + next : null;
+      const name = marked && definitions.has(marked) ? marked : definitions.has(match[0]) ? match[0] : definitions.has(match[0].replace(/[?!]$/, '')) ? match[0].replace(/[?!]$/, '') : null;
+      if (!name || /[\w$]/.test(text[match.index - 1] || '')) continue;
+      const shown = name === marked ? match[0] : name; // the mark after the text stays in its own token
+      out += escape(text.slice(at, match.index)) + `<span class="symbol-link" data-symbol="${escape(name)}">${escape(shown)}</span>`;
+      at = match.index + shown.length;
+    }
+    return out + escape(text.slice(at));
   }
 
   function highlights(hunk, path) {
@@ -3560,6 +3704,8 @@
       ], null, true);
       return;
     }
+    // Ctrl+O goes back from a definition to where the name was clicked, as an editor's jump list does.
+    if (event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'o' && !inText && definitionTrail.length) { event.preventDefault(); definitionBack(); return; }
     // Ctrl+H and Ctrl+L go to the pane on the left or right, as between an editor's splits.
     if (event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && ['h', 'l'].includes(event.key.toLowerCase()) && !inText && !openOverlay()) { event.preventDefault(); movePane(event.key.toLowerCase() === 'l' ? 1 : -1); return; }
     // Only a text or a list being chosen from keeps the keys to itself; a checkbox or a radio button does not.
