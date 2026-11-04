@@ -483,7 +483,7 @@ globalThis.ReviewTools = (() => {
   const ledgerPlace = (id, path, where) => `<button type="button" class="ledger-place" data-ledger-jump="${escapeHTML(id)}" title="Show in the code">${path ? pathFit(path, ` · ${where}`) : escapeHTML(where)}${(globalThis.ReviewIcons?.['arrow-up-right'] || '').replace('<svg', '<svg aria-hidden="true" focusable="false"')}</button>`;
   const ledgerBy = (nameHTML, at, extra = '') => `<span class="ledger-by"><b class="ledger-name ${extra}">${nameHTML}</b><time class="ledger-when" data-when="${escapeHTML(at || '')}">${escapeHTML(whenText(at))}</time></span>`;
   // Agent-written text (comments, findings, answers) as a small, safe subset of Markdown: paragraphs,
-  // lists, fenced code, `code`, **bold**, *italic* and https links. Everything is escaped first, so
+  // headings, lists, tables, fenced code, `code`, **bold**, *italic* and https links. Everything is escaped first, so
   // nothing a message contains can become markup.
   // Code is set aside first, so **bold**, *italic* and links can hold it, and then put back as it was.
   const inline = text => {
@@ -496,12 +496,41 @@ globalThis.ReviewTools = (() => {
       .replace(/\n/g, '<br>')
       .replace(/\u0000(\d+)\u0000/g, (match, index) => `<code>${escapeHTML(codes[index].replace(/\s*\n\s*/g, ' '))}</code>`);
   };
+  // A table row's cells. A pipe inside `code` or written as \| belongs to the cell.
+  const tableCells = line => {
+    const cells = [''];
+    let code = false;
+    const row = line.trim().replace(/^\|/, '').replace(/(?<!\\)\|$/, '');
+    for (let i = 0; i < row.length; i++) {
+      const char = row[i];
+      if (char === '\\' && row[i + 1] === '|') { cells[cells.length - 1] += '|'; i++; }
+      else if (char === '|' && !code) cells.push('');
+      else { if (char === '`') code = !code; cells[cells.length - 1] += char; }
+    }
+    return cells.map(cell => cell.trim());
+  };
+  const HEADING = /^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/;
+  const TABLE_RULE = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
+  const tableStart = (lines, i) => lines[i].includes('|') && i + 1 < lines.length && TABLE_RULE.test(lines[i + 1]) && lines[i + 1].includes('|');
   function markdown(text) {
     const lines = String(text ?? '').replace(/\r\n?/g, '\n').split('\n');
     const out = [];
     for (let i = 0; i < lines.length;) {
       const line = lines[i];
-      if (/^\s*```/.test(line)) {
+      if (HEADING.test(line)) {
+        // Headings sit inside a comment, so they start below the page's own: # is h3.
+        const [, marks, title] = line.match(HEADING);
+        const level = Math.min(6, marks.length + 2);
+        out.push(`<h${level}>${inline(title)}</h${level}>`);
+        i++;
+      } else if (tableStart(lines, i)) {
+        const head = tableCells(lines[i]);
+        i += 2;
+        const rows = [];
+        while (i < lines.length && lines[i].trim() && lines[i].includes('|')) rows.push(tableCells(lines[i++]));
+        const cells = (row, tag) => head.map((_, n) => `<${tag}>${inline(row[n] ?? '')}</${tag}>`).join('');
+        out.push(`<div class="md-table"><table><thead><tr>${cells(head, 'th')}</tr></thead><tbody>${rows.map(row => `<tr>${cells(row, 'td')}</tr>`).join('')}</tbody></table></div>`);
+      } else if (/^\s*```/.test(line)) {
         const code = [];
         i++;
         while (i < lines.length && !/^\s*```/.test(lines[i])) code.push(lines[i++]);
@@ -517,7 +546,7 @@ globalThis.ReviewTools = (() => {
         i++;
       } else {
         const para = [];
-        while (i < lines.length && lines[i].trim() && !/^\s*```/.test(lines[i]) && !/^\s*[-*] +\S/.test(lines[i]) && !/^\s*\d+[.)] +\S/.test(lines[i])) para.push(lines[i++]);
+        while (i < lines.length && lines[i].trim() && !/^\s*```/.test(lines[i]) && !/^\s*[-*] +\S/.test(lines[i]) && !/^\s*\d+[.)] +\S/.test(lines[i]) && !HEADING.test(lines[i]) && !tableStart(lines, i)) para.push(lines[i++]);
         out.push(`<p>${inline(para.join('\n'))}</p>`);
       }
     }

@@ -130,6 +130,7 @@ dialog.dcr-app:focus{outline:0}
 .dcr-app-msg-body code{padding:1px 4px;border-radius:calc(4px * var(--round));background:color-mix(in oklab,var(--ink) 7%,transparent);font:12px var(--mono);overflow-wrap:anywhere}
 .dcr-app-msg-body pre{margin:0 0 8px;padding:9px 11px;overflow-x:auto;border-radius:calc(8px * var(--round));background:color-mix(in oklab,var(--ink) 6%,var(--surface));font:12px/1.5 var(--mono)}
 .dcr-app-msg-body pre code{padding:0;background:none;white-space:pre;overflow-wrap:normal}
+.dcr-app-msg-body :is(h3,h4,h5,h6){margin:.9em 0 .4em;font-size:1em;font-weight:700;line-height:1.4}.dcr-app-msg-body h3{font-size:1.1em}.dcr-app-msg-body .md-table{margin:.4em 0 .8em;overflow-x:auto}.dcr-app-msg-body table{border-collapse:collapse;font-size:.92em}.dcr-app-msg-body :is(th,td){padding:4px 10px;border:1px solid color-mix(in oklab,currentColor 18%,transparent);text-align:left;vertical-align:top;overflow-wrap:normal}.dcr-app-msg-body th{font-weight:700;background:color-mix(in oklab,currentColor 6%,transparent)}
 .dcr-app-msg-body a{color:var(--accent)}
 
 .dcr-app-reply{display:flex;align-items:flex-end;gap:6px;margin:0 16px 14px 19px;padding:5px 5px 5px 11px;border:1px solid var(--line);border-radius:calc(10px * var(--round));background:var(--surface)}

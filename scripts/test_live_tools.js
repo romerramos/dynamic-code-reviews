@@ -89,7 +89,15 @@ assert.equal(tools.markdown('**Why `id < log.id`:** it is'), '<p><strong>Why <co
 assert.equal(tools.markdown('`a**b**c` [x](https://e.com/`y`)'), '<p><code>a**b**c</code> [x](https://e.com/<code>y</code>)</p>', 'code is never formatted, nor put in a link address');
 assert.equal(tools.markdown('a\n\n\nb'), '<p>a</p><p>b</p>');
 assert.equal(tools.markdown('Call `phone_to\nnumber(@site)` once.'), '<p>Call <code>phone_to number(@site)</code> once.</p>', 'a code span wrapped across lines stays one span');
-console.log('PASS answers render paragraphs, lists, code and links, and hostile text stays inert');
+assert.equal(tools.markdown('Intro\n### The loop\nAfter'), '<p>Intro</p><h5>The loop</h5><p>After</p>', 'a heading ends the paragraph above it');
+assert.equal(tools.markdown('# Top'), '<h3>Top</h3>', 'headings start below the page headings');
+assert.equal(tools.markdown('#hashtag'), '<p>#hashtag</p>', 'a # with no space is text');
+assert.equal(tools.markdown('So:\n| Module | `mod.constants` |\n| --- | --- |\n| Core | `find { |c| c }`, a \\| b |\n| Booking |\nAfter'),
+  '<p>So:</p><div class="md-table"><table><thead><tr><th>Module</th><th><code>mod.constants</code></th></tr></thead><tbody><tr><td>Core</td><td><code>find { |c| c }</code>, a | b</td></tr><tr><td>Booking</td><td></td></tr></tbody></table></div><p>After</p>',
+  'a table ends a paragraph and keeps pipes inside code or escaped');
+assert.equal(tools.markdown('a | b\nc'), '<p>a | b<br>c</p>', 'a pipe without a rule under it is text');
+assert.equal(tools.markdown('| <b> |\n|---|\n| <img onerror=x> |'), '<div class="md-table"><table><thead><tr><th>&lt;b&gt;</th></tr></thead><tbody><tr><td>&lt;img onerror=x&gt;</td></tr></tbody></table></div>', 'table cells are escaped');
+console.log('PASS answers render paragraphs, headings, tables, lists, code and links, and hostile text stays inert');
 
 assert.equal(tools.snippet('I would keep `Data`. **Observed:** `to_params` uses `with` and `to_h`; see [the docs](https://x.test).\n\nSecond paragraph.'), 'I would keep Data. Observed: to_params uses with and to_h; see the docs.', 'only the first paragraph, marks removed, identifiers intact');
 assert.equal(tools.snippet('```ruby\nx = 1\n```\n\nAfter the code'), 'After the code', 'a leading code block is skipped');

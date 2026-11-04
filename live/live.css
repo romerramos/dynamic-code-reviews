@@ -56,6 +56,7 @@
 .dcr-body code{padding:1px 5px;border-radius:calc(5px * var(--round));background:color-mix(in oklab,currentColor 8%,transparent);font:12.5px/1.4 var(--mono)}
 .dcr-body pre{margin:.4em 0 .8em;padding:10px 12px;overflow:auto;border-radius:calc(8px * var(--round));background:color-mix(in oklab,currentColor 6%,transparent)}
 .dcr-body pre code{padding:0;background:none}
+.dcr-body :is(h3,h4,h5,h6){margin:.9em 0 .4em;font-size:1em;font-weight:700;line-height:1.4}.dcr-body h3{font-size:1.1em}.dcr-body .md-table{margin:.4em 0 .8em;overflow-x:auto}.dcr-body table{border-collapse:collapse;font-size:.92em}.dcr-body :is(th,td){padding:4px 10px;border:1px solid color-mix(in oklab,currentColor 18%,transparent);text-align:left;vertical-align:top;overflow-wrap:normal}.dcr-body th{font-weight:700;background:color-mix(in oklab,currentColor 6%,transparent)}
 .dcr-body a{color:var(--accent)}
 .dcr-more{margin:2px 0 0;padding:5px 0;border:0;background:none;color:var(--accent);font-size:13px;font-weight:550}
 .dcr-more:hover{text-decoration:underline}
