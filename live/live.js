@@ -2107,6 +2107,41 @@
   // Copy for LLMs carries the conversation, and where to read the rest of it.
   globalThis.ReviewTools.setConversationSource(id => threads[id]?.messages?.length ? {messages: threads[id].messages, series: review.history?.series} : null);
 
+  // --- Review lens -----------------------------------------------------------------------------
+  // Which review skill the agent reads before it judges the code. Kept by the server with the
+  // reviewer's other choices, so `dcr lens` gives the agent the same one; only a served review
+  // can save it, so only a served review shows it.
+  const lensSection = document.createElement('section');
+  lensSection.id = 'dcr-lens';
+  lensSection.hidden = true;
+  lensSection.innerHTML = '<h2>Review lens</h2><label class="view-select"><span>Review with</span><select id="dcr-lens-select" class="select select-sm select-bordered" aria-label="Review lens"></select></label><p class="muted dcr-lens-summary"></p>';
+  document.querySelector('#settings-dialog .view-keys')?.before(lensSection);
+  const lensSelect = lensSection.querySelector('select');
+  let lenses = null; // {active, default, lenses: [{id, name, summary, by}]}
+  const showLens = data => {
+    lenses = data;
+    lensSelect.replaceChildren(...data.lenses.map(lens => {
+      const option = document.createElement('option');
+      option.value = lens.id;
+      option.textContent = lens.id === data.default ? `${lens.name} (default)` : lens.name;
+      return option;
+    }));
+    lensSelect.value = data.active;
+    const lens = data.lenses.find(each => each.id === data.active);
+    lensSection.querySelector('.dcr-lens-summary').textContent = `${lens.summary}${lens.by ? ` From ${lens.by}.` : ''} Your agent reads it when it starts a review.`;
+    lensSection.hidden = false;
+  };
+  api('/api/lens').then(showLens).catch(() => {}); // an older server has none: the section stays hidden
+  lensSelect.addEventListener('change', async () => {
+    try {
+      showLens(await api('/api/lens', {id: lensSelect.value}));
+      flash(`Reviews you start from now on use the ${lensSelect.selectedOptions[0].textContent.replace(' (default)', '')} lens.`);
+    } catch (error) {
+      if (lenses) lensSelect.value = lenses.active;
+      flash(error.message);
+    }
+  });
+
   // --- JevMyPR's verdict ---------------------------------------------------------------------
   // A strip between the toolbar and the review. The server sends the diff only once the reviewer
   // turned it on for this repository; the answer arrives with the poll, like everything else.

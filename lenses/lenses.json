@@ -1,0 +1,107 @@
+{
+  "default": "dynamic",
+  "lenses": [
+    {
+      "id": "dynamic",
+      "name": "Dynamic Code Reviews",
+      "summary": "This skill's own calibration, with the best of Addy Osmani, Matt Pocock, Superpowers and pstack: correctness, spec, blast radius, structure and smells, scaled to the project.",
+      "read": [
+        "dynamic/LENS.md"
+      ]
+    },
+    {
+      "id": "addyosmani",
+      "name": "Addy Osmani",
+      "summary": "Five axes: correctness, readability, architecture, security, performance. Proposes the structural fix, checks findings against callers.",
+      "read": [
+        "addyosmani/LENS.md",
+        "addyosmani/upstream/code-review-and-quality.md"
+      ],
+      "upstream": {
+        "repo": "addyosmani/agent-skills",
+        "commit": "301b02b12bff98e4688e6984af6556802322bbde",
+        "license": "MIT",
+        "files": {
+          "skills/code-review-and-quality/SKILL.md": "addyosmani/upstream/code-review-and-quality.md",
+          "references/security-checklist.md": "addyosmani/upstream/security-checklist.md",
+          "references/performance-checklist.md": "addyosmani/upstream/performance-checklist.md",
+          "LICENSE": "addyosmani/LICENSE"
+        }
+      }
+    },
+    {
+      "id": "mattpocock",
+      "name": "Matt Pocock",
+      "summary": "Two axes kept apart: the repository's documented standards plus Fowler's code smells, and whether the code does what the issue asked.",
+      "read": [
+        "mattpocock/LENS.md",
+        "mattpocock/upstream/code-review.md"
+      ],
+      "upstream": {
+        "repo": "mattpocock/skills",
+        "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+        "license": "MIT",
+        "files": {
+          "skills/engineering/code-review/SKILL.md": "mattpocock/upstream/code-review.md",
+          "LICENSE": "mattpocock/LICENSE"
+        }
+      }
+    },
+    {
+      "id": "superpowers",
+      "name": "Superpowers",
+      "summary": "A senior reviewer against the plan: plan alignment, quality, architecture, tests, production readiness, and a list of what it declined to judge.",
+      "read": [
+        "superpowers/LENS.md",
+        "superpowers/upstream/code-reviewer.md"
+      ],
+      "upstream": {
+        "repo": "obra/superpowers",
+        "commit": "22f0b463e7a5e579904dd6211a520321035526f7",
+        "license": "MIT",
+        "files": {
+          "skills/requesting-code-review/code-reviewer.md": "superpowers/upstream/code-reviewer.md",
+          "LICENSE": "superpowers/LICENSE"
+        }
+      }
+    },
+    {
+      "id": "pstack",
+      "name": "pstack (poteto)",
+      "summary": "What the change breaks beyond the diff, and the one fact it is safe because of, judged against pstack's principles: less code, less for a reader to hold.",
+      "read": [
+        "pstack/LENS.md",
+        "pstack/upstream/blast-radius.md",
+        "pstack/upstream/principle-laziness-protocol.md",
+        "pstack/upstream/principle-subtract-before-you-add.md",
+        "pstack/upstream/principle-minimize-reader-load.md",
+        "pstack/upstream/principle-model-the-domain.md",
+        "pstack/upstream/principle-boundary-discipline.md",
+        "pstack/upstream/principle-type-system-discipline.md",
+        "pstack/upstream/principle-make-operations-idempotent.md",
+        "pstack/upstream/principle-migrate-callers-then-delete-legacy-apis.md",
+        "pstack/upstream/principle-fix-root-causes.md",
+        "pstack/upstream/principle-test-behavior-not-implementation.md"
+      ],
+      "upstream": {
+        "repo": "cursor/plugins",
+        "commit": "bb68f2365eceafa0cb2d253112f675acf5f144cc",
+        "license": "MIT",
+        "files": {
+          "pstack/skills/blast-radius/SKILL.md": "pstack/upstream/blast-radius.md",
+          "pstack/skills/principle-laziness-protocol/SKILL.md": "pstack/upstream/principle-laziness-protocol.md",
+          "pstack/skills/principle-subtract-before-you-add/SKILL.md": "pstack/upstream/principle-subtract-before-you-add.md",
+          "pstack/skills/principle-minimize-reader-load/SKILL.md": "pstack/upstream/principle-minimize-reader-load.md",
+          "pstack/skills/principle-model-the-domain/SKILL.md": "pstack/upstream/principle-model-the-domain.md",
+          "pstack/skills/principle-boundary-discipline/SKILL.md": "pstack/upstream/principle-boundary-discipline.md",
+          "pstack/skills/principle-type-system-discipline/SKILL.md": "pstack/upstream/principle-type-system-discipline.md",
+          "pstack/skills/principle-make-operations-idempotent/SKILL.md": "pstack/upstream/principle-make-operations-idempotent.md",
+          "pstack/skills/principle-migrate-callers-then-delete-legacy-apis/SKILL.md": "pstack/upstream/principle-migrate-callers-then-delete-legacy-apis.md",
+          "pstack/skills/principle-fix-root-causes/SKILL.md": "pstack/upstream/principle-fix-root-causes.md",
+          "pstack/skills/principle-test-behavior-not-implementation/SKILL.md": "pstack/upstream/principle-test-behavior-not-implementation.md",
+          "pstack/LICENSE": "pstack/LICENSE"
+        }
+      }
+    }
+  ]
+}

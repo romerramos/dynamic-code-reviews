@@ -4,6 +4,7 @@ require 'digest'
 require 'fileutils'
 require 'json'
 require 'open3'
+require_relative 'lenses'
 
 module DCR
   # The reviewer's display preferences, shared by every review they serve. Stored once per
@@ -86,6 +87,16 @@ module DCR
       github_voice
     end
 
+    # The review lens the agent reads before it reviews (Lenses); nil until the reviewer chose
+    # one, and a lens that no longer exists counts as none.
+    def review_lens = Lenses.ids.include?(saved['reviewLens']) ? saved['reviewLens'] : nil
+
+    def save_review_lens(id)
+      raise ArgumentError, "Unknown review lens #{id.inspect[0, 40]}. Known: #{Lenses.ids.join(', ')}" unless Lenses.ids.include?(id)
+      store(read, lens: id)
+      id
+    end
+
     private
 
     MODEL = %r{\A[\w.:/@#+-]{1,120}\z}
@@ -100,12 +111,13 @@ module DCR
     end
 
     # The page writes display settings and adversaries separately; each write keeps the other.
-    def store(display, adversaries = self.adversaries, decided: adversaries_decided?, jevmypr: jevmypr_choices, voice: github_voice, emojis: github_emojis)
+    def store(display, adversaries = self.adversaries, decided: adversaries_decided?, jevmypr: jevmypr_choices, voice: github_voice, emojis: github_emojis, lens: review_lens)
       merged = adversaries.empty? ? display : display.merge('adversaries' => adversaries)
       merged = merged.merge('adversariesDecided' => true) if decided
       merged = merged.merge('jevmypr' => jevmypr) unless jevmypr.empty?
       merged = merged.merge('githubVoice' => voice) if voice
       merged = merged.merge('githubEmojis' => emojis) if emojis
+      merged = merged.merge('reviewLens' => lens) if lens
       FileUtils.mkdir_p(File.dirname(@path), mode: 0o700)
       temporary = "#{@path}.#{Process.pid}.tmp"
       File.write(temporary, JSON.generate(merged), perm: 0o600)

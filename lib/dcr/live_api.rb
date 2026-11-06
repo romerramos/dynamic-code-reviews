@@ -67,6 +67,8 @@ module DCR
       when ['GET', '/api/emojis'] then [200, {'emojis' => Emojis.list}]
       when ['GET', '/api/settings'] then [200, @settings.read]
       when ['POST', '/api/settings'] then [200, @settings.write(json(body))]
+      when ['GET', '/api/lens'] then [200, Lenses.choices(@settings.review_lens)]
+      when ['POST', '/api/lens'] then (@settings.save_review_lens(json(body)['id']); [200, Lenses.choices(@settings.review_lens)])
       when ['POST', '/api/evidence']
         raise ArgumentError, 'Attaching recordings is not available here' unless @evidence
         [200, @evidence.call(json(body))]

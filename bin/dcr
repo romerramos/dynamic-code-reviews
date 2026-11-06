@@ -41,6 +41,7 @@ USAGE = <<~TEXT
     report                         What is left before the review goes to its pull request, and the short report it
                                    posts; --publish posts it and marks the reviewed commit
     record <action>                Control a running recorder (wait-ready, start, still, stop, end, status, reload)
+    lens                           The review lens: what to look for when reviewing (list, use <id>, update)
     setup                          Download Universal Ctags for links from a name to its definition (optional)
 
   Run a command with no further arguments to see its own usage.
@@ -71,6 +72,13 @@ when 'setup'
     exit(DCR::Symbols.setup ? 0 : 1)
   rescue StandardError => e
     abort "dcr setup: #{e.message}"
+  end
+when 'lens'
+  require_relative '../lib/dcr/settings'
+  begin
+    DCR::Lenses.cli(ARGV, settings: DCR::Settings.new)
+  rescue ArgumentError => e
+    abort e.message
   end
 when 'critical' then run_script('critical.rb', *ARGV)
 when nil, '-h', '--help', 'help' then puts USAGE

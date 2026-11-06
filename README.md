@@ -132,6 +132,14 @@ and reviews them whole once you approve it. You do not need to run any command y
 serves, opens and answers. When you are done, press **Finish review** in the page; ask the agent to
 close the review when you no longer need it.
 
+**Choose how it reviews.** What the agent looks for comes from a *review lens*, chosen in a served
+review's Settings under **Review lens** (or `dcr lens use <id>`); the agent reads it when it starts a review.
+**Dynamic Code Reviews** is the default: this skill's own calibration with the best of the others. The
+others are other authors' review skills, used as they wrote them: **Addy Osmani** (five axes, with the
+structural fix), **Matt Pocock** (the repository's standards and the issue, kept apart), **Superpowers**
+(a senior reviewer against the plan) and **pstack** by poteto (what the change breaks beyond the diff,
+against pstack's principles). Whichever you pick, comments, the walkthrough and the page stay the same.
+
 ## Open reviews from your other devices
 
 If [Tailscale](https://tailscale.com) is installed and running on the computer that runs the review,
@@ -234,6 +242,7 @@ commands. Everything runs as `<skill>/bin/dcr <command>`, with Ruby 3.1+ (under 
 | `record` / `evidence attach` | Record and attach visual QA evidence. |
 | `stop [--all]` | Stop a served review and its wait, and remove its tailnet share. |
 | `export` | One offline HTML file with the comments, replies and recordings. |
+| `lens` | The review lens to read before judging the code, and its files; `list`, `use <id>`, and `update [<id>]` for maintainers. |
 | `report [--publish]` | What is left before the review can go to its pull request, and the short report it posts, read from the saved review with no page open. `--publish` posts it (one comment, updated in place later) and marks the reviewed commit, only when nothing is left. The page's Publish does the same. |
 
 References: [review JSON](references/report-schema.md), [incremental reviews](references/incremental-reviews.md),
@@ -278,6 +287,13 @@ References: [review JSON](references/report-schema.md), [incremental reviews](re
   Gemini and opencode CLIs are asked headless and read-only, and may look things up on the web (Antigravity
   is not asked: headless, it is refused even reading a file); an agent checks the review it runs only
   on a model the reviewer named.
+- **Review lenses** (`lib/dcr/lenses.rb`, `lenses/`) say what the agent looks for. `lenses/lenses.json`
+  lists them; each is a folder with its own adapter, `LENS.md`, which says what to take from the lens and how
+  its labels become Conventional Comments. A lens taken from another author keeps that author's files
+  unchanged in `upstream/`, with their `LICENSE`, pinned to the commit in the manifest. `dcr lens update`
+  fetches them again at their repository's head and pins it; reread each changed lens's `LENS.md` against
+  what moved. To add one, add its folder and entry, then run the update. The choice is kept in
+  `~/.config/dcr/settings.json` as `reviewLens`.
 - **JevMyPR's verdict** (`lib/dcr/jevmypr.rb`) is the strip above a served review: whether the
   change needs a human review, an LLM review or none, with the confidence and a link to the verdict
   page, and how many files need the reviewer, which opens a list of them. A file's own header says
@@ -323,6 +339,7 @@ ruby scripts/test_server.rb        # the served page, the recorder's command que
 ruby scripts/test_themes.rb       # the theme contract: tokens, light and dark for every theme, no stray colours
 ruby scripts/test_symbols.rb      # where names are defined, for go to definition (skips without ctags)
 ruby scripts/test_second_opinion.rb # adversaries: the panel, model lists, the questions, headless runs (stand-in CLIs)
+ruby scripts/test_lenses.rb        # review lenses: files and licenses present, the choice saved, dcr lens
 ruby scripts/test_jevmypr.rb       # JevMyPR's verdict: what is sent, on unless turned off, errors and no network (a stand-in service)
 ruby scripts/test_github.rb        # posting to the pull request through gh (a stand-in gh, nothing reaches GitHub)
 ruby scripts/test_github_inbox.rb  # teammates' GitHub comments taken in, handed to the agent, answered under them
@@ -341,6 +358,7 @@ the browser checks in [the UI guide](references/ui-guidelines.md).
 
 daisyUI, Prism, Lucide and GLightbox are embedded so reviews work offline; versions, sources and
 licences are in [assets/vendor/SOURCES.md](assets/vendor/SOURCES.md). Universal Ctags is not in the repository:
-`bin/dcr setup` downloads it, and SOURCES.md says which build and under which licence. The skill's own code has no
+`bin/dcr setup` downloads it, and SOURCES.md says which build and under which licence. The review lenses
+from other authors are in `lenses/`, each with its own licence and pinned commit (all MIT). The skill's own code has no
 distribution licence yet. Inspired by CodeRabbit's walkthroughs and change grouping; no CodeRabbit
 account or integration is involved.
