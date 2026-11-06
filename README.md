@@ -101,7 +101,7 @@ your projects keep working.
 | --- | --- |
 | Ruby 3.1+ and Git on `PATH` | Everything. Ruby's standard library only, no gems. |
 | A browser | Reading the review. Chrome, Edge, Brave, Arc, Firefox or Safari. |
-| A browser tool for the agent (Claude in Chrome, or computer use) | Opening the review in a tab the agent can also use, for QA. Optional. QA recording needs a desktop browser you can see and share; an agent app's embedded browser panel or a headless browser cannot, so the skill offers to hand QA to a session that has one (for Claude Code, `claude --chrome`). |
+| A browser tool for the agent (Claude in Chrome, or computer use) | Opening the review in a tab the agent can also use, for QA. Optional. QA recording needs a desktop browser you can see and share; an agent app's embedded browser panel or a headless browser cannot, so when a change has a UI the skill moves its review to a session that has one before it starts (for Claude Code, `claude --chrome`). |
 | Chrome DevTools MCP with `--isolated --headless`, or Playwright | Screenshots of the running app as evidence. See [Browser for screenshots](#browser-for-screenshots). |
 | macOS, or Linux with Hyprland (Omarchy), Sway or X11 (`wmctrl` or `xdotool`) | Bringing the browser to the front when the review opens and when it is ready (`dcr focus`). Elsewhere the agent tells you which tab. |
 | Tailscale | Optional. Opening reviews from your other devices. |

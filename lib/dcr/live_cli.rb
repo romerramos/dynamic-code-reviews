@@ -48,7 +48,7 @@ module DCR
 
     QA_RULE = <<~TEXT.strip
       QA REQUEST. Record visual evidence in the review tab the reviewer shared, then attach it.
-      Recording needs a desktop browser the reviewer can see and share (Claude in Chrome, or computer use); an agent host's embedded browser panel or a headless browser never records. Without one, do not try: reply in the QA thread that this session cannot record, then hand off as "Which browser to use" in the skill's SKILL.md says.
+      Recording needs a desktop browser the reviewer can see and share (Claude in Chrome, or computer use); an agent host's embedded browser panel or a headless browser never records. Without one, do not try: reply in the QA thread that this session cannot record, and offer to stop this review and start a session that can, as "Which browser to use" in the skill's SKILL.md says.
       You may operate the running app in that tab, run `dcr record` and `dcr evidence attach`, read files and run read-only commands. You may also add the records the flows need to the development database (through the app, or the project's seeds, factories or console run against development) and update the QA notes file the request names. Do not edit, create or delete files in the project, and do not run formatters, generators, migrations, installs or git commands that change anything. Use only development data; never record credentials or unrelated screens.
     TEXT
 
