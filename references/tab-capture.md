@@ -1,6 +1,8 @@
 # Native tab video and PNG evidence
 
-Use this helper for UI QA on any browser-capable harness. Browser interaction
+Use this helper for UI QA on any harness that drives a desktop browser the
+reviewer can see and share (not an embedded agent-app panel or a headless
+browser; see "Which browser to use" in SKILL.md). Browser interaction
 stays with that harness; the helper only records the chosen tab and saves local
 media. It requires the skill's existing Ruby 3.1+ runtime and desktop Chromium
 with getDisplayMedia and MediaRecorder. No extension or media-tool installation.
