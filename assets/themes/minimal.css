@@ -217,7 +217,6 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body strong{font-size:13px}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view]{padding:4px 8px}
 /* The step being read is marked on the rule itself. */
-[data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"])){margin-left:-5px;padding-left:4px;border-left:1px solid var(--ink)}
 /* A group of one step is its own title: it reads as a title, and opens like a step. */
 [data-theme^="minimal-"] #navigation .nav-section:not(:has(>.nav-group-title)) button[data-view] .step-body strong{color:var(--ink);font-weight:600}
 [data-theme^="minimal-"] #navigation .nav-section:not(:has(>.nav-group-title)) button[data-view]{padding:0 8px}
@@ -271,7 +270,6 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] #navigation button[data-view]{position:relative;width:100%;padding-right:30px}
 [data-theme^="minimal-"] #navigation button[data-view] .step-number{position:absolute;right:8px;top:5px;margin:0}
 [data-theme^="minimal-"] .sidebar nav li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"])){margin-left:0;padding-left:0;border-left:0}
-[data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]))>button{box-shadow:inset 1px 0 var(--ink);margin-left:-5px;padding-left:13px;width:calc(100% + 5px)}
 /* Nothing waiting is one sentence. */
 [data-theme^="minimal-"] .overview-clear{gap:10px;padding:0;border:0;border-radius:0;background:transparent;color:var(--ink);display:flex;align-items:baseline}
 [data-theme^="minimal-"] .overview-clear p{color:var(--minimal-faint)}
@@ -382,7 +380,6 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .sidebar nav .nav-tests-label{margin:8px 0 2px;padding:0 8px;border:0;color:var(--minimal-faint);font-size:11px;font-weight:400;letter-spacing:.02em;text-transform:none}
 [data-theme^="minimal-"] .sidebar nav .nav-tests-label::after{content:none;display:none}
 [data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"])){margin-left:0;padding-left:0;border-left:0}
-[data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]))>button{margin-left:-5px;padding-left:13px;box-shadow:inset 1px 0 var(--line-neutral-4)}
 
 /* --- marks on the left, where they belong to their line ------------------------------------------------
    A finished step's check sits before its name; a file's review mark is a small square before its name,
@@ -396,8 +393,6 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .sidebar nav .nav-tests-count{display:inline}
 [data-theme^="minimal-"] .sidebar nav .nav-tests-toggle::after{content:"›";display:inline-block;transition:transform .12s}
 [data-theme^="minimal-"] .sidebar nav .nav-tests-toggle[aria-expanded="true"]::after{transform:rotate(90deg)}
-[data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]))>button{margin-left:-5px;padding-left:13px;width:calc(100% + 5px)}
-[data-theme^="minimal-"] #navigation .nav-section:has(>.nav-group-title) li>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]){margin-left:-5px;padding-left:13px;width:calc(100% + 5px)}
 
 /* --- one mark that is clicked, one that is read ----------------------------------------------------------
    A file's box is a real checkbox: square, always drawn, filled in ink with a white check once reviewed;
