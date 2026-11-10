@@ -409,3 +409,31 @@ Dir.mktmpdir('dcr-titles-') do |series|
   assert(api.state.read.dig('threads', key, 'mine-1', 'title') == 'The agent names it', "The agent's own title replaces the written one")
 end
 puts 'titles: your own comment is listed by a short title written from the whole message'
+
+# `dcr titles` titles the reviewer's own comments made before the page asked, once each, in every revision.
+require_relative '../lib/dcr/live_cli'
+Dir.mktmpdir('dcr-titles-cli-') do |series|
+  revisions = [{'number' => 1, 'fingerprint' => 'd' * 64}, {'number' => 2, 'fingerprint' => 'e' * 64}]
+  File.write(File.join(series, 'manifest.json'), JSON.generate('version' => 1, 'name' => 'feat', 'repo' => series, 'revisions' => revisions))
+  state = DCR::State.new(series)
+  keys = revisions.map { |revision| DCR::State.review_key(revision['fingerprint'], 'feat', revision['number']) }
+  mine = {'id' => 'mine-9', 'subject' => 'Okay, I am confused', 'discussion' => 'Why change store_configurations?'}
+  keys.each { |key| state.save_blob(key, {'personalComments' => [mine]}) }
+  state.set_title(keys.first, 'mine-0', 'Kept') # a comment already titled is left alone
+  asked = []
+  DCR::Titles.singleton_class.alias_method(:real_make, :make)
+  DCR::Titles.define_singleton_method(:make) { |text, agent:| asked << [text, agent]; 'Why store_configurations changes' }
+  begin
+    require 'stringio'
+    was, $stdout = $stdout, StringIO.new
+    DCR::LiveCLI.titles(state, {agent: 'claude'}, series)
+    out = $stdout.string
+  ensure
+    $stdout = was if was
+    DCR::Titles.singleton_class.alias_method(:make, :real_make)
+  end
+  assert(asked == [["Okay, I am confused\n\nWhy change store_configurations?", 'claude']], "Each comment is titled once, from the whole message: #{asked}")
+  assert(keys.all? { |key| state.read.dig('threads', key, 'mine-9', 'title') == 'Why store_configurations changes' }, 'Every revision gets the same title')
+  assert(out.include?('Wrote 1 title with Claude'), "The command says what it wrote: #{out}")
+end
+puts 'titles: dcr titles writes the missing ones for comments made before'
