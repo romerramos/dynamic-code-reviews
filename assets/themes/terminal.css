@@ -336,7 +336,7 @@
 }
 
 /* The Overview's rows as a markdown table: item | now | next, a dashed rule under the header, pipes that line up. */
-[data-theme^="terminal-"] .overview-reading :is(.dcr-try,.risk-fold,.risk-rank.risk-none){margin:0;border:0;border-radius:0;background:transparent}
+[data-theme^="terminal-"] .overview-reading :is(.dcr-try,.risk-fold,.risk-rank.risk-none){margin-block:0;border:0;border-radius:0;background:transparent}
 [data-theme^="terminal-"] .overview-reading .dcr-try{margin-top:26px}
 [data-theme^="terminal-"] .overview-reading :is(.dcr-try-head,.dcr-try-rule,.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary){display:grid;grid-template-columns:16ch minmax(0,1fr) 22ch 1ch;gap:0;align-items:baseline;min-height:0;padding:0;border:0;font-size:12px;line-height:1.9}
 [data-theme^="terminal-"] .overview-reading :is(.dcr-try-head,.dcr-try-rule,.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary)>:not(svg,[hidden]){min-width:0;overflow:hidden;white-space:nowrap}

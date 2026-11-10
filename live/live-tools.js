@@ -131,8 +131,8 @@ globalThis.LiveTools = (() => {
     const opened = checks.filter(isOpen).map(row => `<div class="dcr-check-body">${face(row.agent, 'sm')}<div><p class="dcr-check-by"><strong>${escape(name(row))}</strong> ${said(row)}${modelHTML(row)}</p><div class="dcr-body">${markdown(row.body)}</div></div></div>`).join('');
     const id = resolve && escape(resolve);
     const buttons = !id ? '' : differ
-      ? `<button type="button" class="btn btn-sm btn-primary" data-resolve="${id}" data-dcr-side="dealt">No longer a problem · Resolve</button>${still ? `<button type="button" class="btn btn-sm" data-dcr-still="${id}" data-dcr-side="applies">Still a problem · Fix this</button>` : ''}`
-      : plain ? `<button type="button" class="btn btn-sm${closing.state === 'settled' ? ' btn-primary' : ''}" data-resolve="${id}" data-dcr-side="${closing.side}">Resolve</button>` : '';
+      ? `${UI.Button({label: 'No longer a problem · Resolve', variant: 'primary', attrs: {'data-resolve': resolve, 'data-dcr-side': 'dealt'}})}${still ? UI.Button({label: 'Still a problem · Fix this', variant: null, attrs: {'data-dcr-still': resolve, 'data-dcr-side': 'applies'}}) : ''}`
+      : plain ? UI.Button({label: 'Resolve', variant: closing.state === 'settled' ? 'primary' : null, attrs: {'data-resolve': resolve, 'data-dcr-side': closing.side}}) : '';
     return `<section class="dcr-closure dcr-c-${closing.state}" aria-label="What became of this comment"><header class="dcr-closure-head"><strong>${head}</strong>${note ? `<span>${escape(note)}</span>` : ''}<span class="dcr-closure-rev">revision ${escape(closing.revision)}</span></header>`
       + `<div class="dcr-closure-main">${face(main.agent, 'sm')}<div class="dcr-closure-told"><p class="dcr-closure-by"><strong>${escape(name(main))}</strong>${did ? ` ${did}` : ''}${modelHTML(main)}</p>${String(main.body || '').trim() ? `<div class="dcr-body">${markdown(main.body)}</div>` : ''}`
       + `${chips ? `<div class="dcr-checks" aria-label="Checked by">${chips}</div>` : ''}${opened}</div></div>${buttons ? `<div class="dcr-closure-actions">${buttons}</div>` : ''}</section>`;
@@ -421,7 +421,7 @@ globalThis.LiveTools = (() => {
   // The Adversaries section of the agent card. catalog: the agent CLIs the server found (null while it looks).
   // intro: the same list inside the introduction, which says in its own words how they are used.
   function adversaryPanelHTML({catalog, adversaries = [], author = null, error = '', now = Date.now(), intro = false}) {
-    const refresh = `<button type="button" class="icon-button dcr-adv-recheck" data-dcr-adv-recheck aria-label="Look for agents again" title="Look again"${catalog ? '' : ' disabled'}>${globalThis.ReviewIcons?.['refresh-cw']?.replace('<svg', '<svg aria-hidden="true" focusable="false"') || '↻'}</button>`;
+    const refresh = UI.IconButton({label: 'Look for agents again', className: 'dcr-adv-recheck', attrs: {'data-dcr-adv-recheck': true, title: 'Look again', disabled: !catalog}, html: globalThis.ReviewIcons?.['refresh-cw']?.replace('<svg', '<svg aria-hidden="true" focusable="false"') || '↻'});
     const active = activeAdversaries(adversaries, author, catalog);
     const head = `<header class="dcr-adv-head"><span class="dcr-adv-title" id="${intro ? 'dcr-intro-agents' : 'dcr-adv-title'}">${intro ? 'Agents on this computer' : 'Adversaries'}</span><span class="dcr-adv-count">${active.length ? `${active.length} on` : 'Off'}</span>${refresh}</header>`;
     if (error) return `${head}<p class="dcr-adv-msg">${escape(error)}</p>`;
@@ -464,7 +464,7 @@ globalThis.LiveTools = (() => {
       <p class="dcr-intro-lead">Adversaries are other coding agents on this computer. They read the same code as ${who} and say where they disagree, so you do not have to take one agent's word for it.</p>
       <ul class="dcr-intro-points">${points}</ul>
       <section class="dcr-adv dcr-intro-adv" aria-labelledby="dcr-intro-agents">${adversaryPanelHTML({catalog, adversaries, author, error, now, intro: true})}</section>
-      <footer class="dcr-intro-actions"><p>You can change this any time from the agent button in the toolbar.</p><button type="button" class="btn btn-ghost" data-dcr-intro-skip>Don't use adversaries</button><button type="button" class="btn btn-primary" data-dcr-intro-use${count ? '' : ' disabled'}>${count ? `Use ${count} ${count === 1 ? 'adversary' : 'adversaries'}` : 'Choose an agent'}</button></footer></div>`;
+      <footer class="dcr-intro-actions"><p>You can change this any time from the agent button in the toolbar.</p>${UI.Button({html: "Don't use adversaries", variant: 'ghost', size: 'md', attrs: {'data-dcr-intro-skip': true}})}${UI.Button({label: count ? `Use ${count} ${count === 1 ? 'adversary' : 'adversaries'}` : 'Choose an agent', variant: 'primary', size: 'md', attrs: {'data-dcr-intro-use': true, disabled: !count}})}</footer></div>`;
   }
 
   function summary(comments, threads, resolved = []) {
@@ -482,7 +482,7 @@ globalThis.LiveTools = (() => {
     const name = '<span class="dcr-jev-name">JevMyPR</span>';
     if (enabled === false) return '';
     if (enabled !== true) {
-      return `${name}<p><strong>Does this need a human review, an LLM review, or none?</strong> JevMyPR can say, for the whole change and for each file. Asking sends this review's title and every changed file's name and patch to ${escape(host || 'JevMyPR')}.</p><span class="dcr-jev-actions"><button type="button" class="btn btn-sm btn-primary" data-dcr-jev="on">Turn on for this repository</button><button type="button" class="btn btn-sm btn-ghost" data-dcr-jev="off">No</button></span>`;
+      return `${name}<p><strong>Does this need a human review, an LLM review, or none?</strong> JevMyPR can say, for the whole change and for each file. Asking sends this review's title and every changed file's name and patch to ${escape(host || 'JevMyPR')}.</p><span class="dcr-jev-actions">${UI.Button({label: 'Turn on for this repository', variant: 'primary', attrs: {'data-dcr-jev': 'on'}})}${UI.Button({label: 'No', variant: 'ghost', attrs: {'data-dcr-jev': 'off'}})}</span>`;
     }
     if (verdict?.status === 'ready') {
       const said = Object.values(verdict.files || {});
@@ -503,7 +503,7 @@ globalThis.LiveTools = (() => {
       return `${name}<strong class="dcr-jev-verdict is-${escape(verdict.verdict)}">${JEV_WORDS[verdict.verdict] || escape(verdict.verdict)}</strong><p>${facts.join('')}</p><span class="dcr-jev-actions">${link}</span>`;
     }
     if (verdict?.status === 'error') {
-      return `${name}<p class="is-quiet">${escape(verdict.message || 'No verdict.')}</p><span class="dcr-jev-actions"><button type="button" class="btn btn-sm btn-ghost" data-dcr-jev="again">Try again</button></span>`;
+      return `${name}<p class="is-quiet">${escape(verdict.message || 'No verdict.')}</p><span class="dcr-jev-actions">${UI.Button({label: 'Try again', variant: 'ghost', attrs: {'data-dcr-jev': 'again'}})}</span>`;
     }
     return `${name}<p class="is-quiet" role="status">Asking for a verdict on this diff…</p>`;
   }

@@ -382,17 +382,11 @@
   const narrowCards = matchMedia('(max-width: 640px)');
   narrowCards.addEventListener('change', () => document.querySelectorAll('.dcr-thread').forEach(refreshBlock));
   const addSplit = (actions, id, size) => {
-    actions.insertAdjacentHTML('afterbegin', `<span class="dcr-split"><span class="dcr-split-main"></span><details class="more-menu dcr-split-menu" data-menu-from="parent"><summary class="btn btn-${size} btn-ghost dcr-split-more" aria-label="More for your agent" title="More for your agent"></summary><div class="more-list"></div></details><button type="button" class="btn btn-${size} btn-ghost dcr-split-cancel" data-dcr-cancel hidden>Cancel</button></span>`);
+    actions.insertAdjacentHTML('afterbegin', UI.SplitButton({id, size}));
     const split = actions.firstElementChild;
-    split.dataset.dcrSplit = id;
-    const act = Object.assign(document.createElement('button'), {type: 'button', className: `btn btn-${size} dcr-card-act`});
-    Object.assign(act.dataset, {dcrAct: '1', dcrFor: id});
-    const fix = Object.assign(document.createElement('button'), {type: 'button', className: `btn btn-${size} dcr-card-fix`, hidden: true});
-    fix.dataset.dcrFix = id;
-    split.querySelector('.dcr-split-main').append(act);
-    const noted = Object.assign(document.createElement('button'), {type: 'button', className: `btn btn-${size} btn-ghost dcr-card-fix`, hidden: true});
-    noted.dataset.dcrFixNote = id;
-    split.querySelector('.more-list').append(noted, fix);
+    split.querySelector('.dcr-split-main').insertAdjacentHTML('beforeend', UI.Button({variant: null, size, className: 'dcr-card-act', attrs: {'data-dcr-act': '1', 'data-dcr-for': id}}));
+    split.querySelector('.more-list').insertAdjacentHTML('beforeend', UI.Button({variant: 'ghost', size, className: 'dcr-card-fix', attrs: {'data-dcr-fix-note': id, hidden: true}})
+      + UI.Button({variant: null, size, className: 'dcr-card-fix', attrs: {'data-dcr-fix': id, hidden: true}}));
   };
   // What became of a comment whose code changed, in a word: the tag on its folded card in the
   // Overview and on its row in Your review.

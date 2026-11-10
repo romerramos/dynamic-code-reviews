@@ -1551,7 +1551,8 @@ main#content{padding-bottom:104px}
 #ledger .dcr-detail-code>:not(.dcr-detail-at){display:none}
 #ledger .dcr-detail-code .dcr-detail-at:not(:empty){display:inline}
 #ledger .dcr-detail-code:has(.dcr-detail-at:empty){display:none}
-#ledger .dcr-detail .dcr-msg{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;padding:16px 0 0;border:0;background:none}
+#ledger .dcr-detail{--message-face-col:18px;--message-gap:12px;--message-space:16px}
+#ledger .dcr-detail .dcr-msg{border:0;background:none}
 #ledger .dcr-detail .dcr-msg>.ui-avatar{--avatar-size:18px;margin-top:1px}
 #ledger .dcr-detail .dcr-origin.dcr-agent{padding-top:10px}
 #ledger .dcr-detail .dcr-origin.dcr-agent>.ui-avatar{visibility:hidden}

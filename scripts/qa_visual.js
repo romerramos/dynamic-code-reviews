@@ -101,8 +101,14 @@ async function toggle(page, id) {
   // A click where a reader clicks: the middle of the comment's title.
   const point = await page.evaluate(`(() => { const node = document.querySelector('.review-thread[data-thread-id="${id}"] .thread-summary strong'); if (!node) return null; node.scrollIntoView({block: 'nearest'}); const r = node.getBoundingClientRect(); return {x: r.left + Math.min(40, r.width / 2), y: r.top + r.height / 2}; })()`);
   if (!point) return;
+  const before = await page.evaluate(`document.querySelector('.review-thread[data-thread-id="${id}"] > details').open`);
   await page.click(point.x, point.y);
   await sleep(250);
+  // Something floating (the bar) can be where the title is; then the comment is opened as a keyboard would.
+  if (await page.evaluate(`document.querySelector('.review-thread[data-thread-id="${id}"] > details').open`) === before) {
+    await page.evaluate(`document.querySelector('.review-thread[data-thread-id="${id}"] > details > summary').click()`);
+    await sleep(250);
+  }
 }
 
 // --- measuring --------------------------------------------------------------------------------------
@@ -208,6 +214,8 @@ function measure(context) {
       const gap = b.getBoundingClientRect().top - a.getBoundingClientRect().bottom;
       const rules = lineOf(a, 'Bottom') + lineOf(b, 'Top') + lineOf(a.querySelector('.thread-summary'), 'Bottom') * (openA ? 0 : 1);
       if (!openA && !openB) { if (rules > 1 && gap < 2) ruleProblems.push(`${a.dataset.threadId}/${b.dataset.threadId}: ${rules} rules`); }
+      // A closed row right above an open card gives the card its rule: one line, so no gap is needed.
+      else if (!openA && openB && gap < 2) { if (lineOf(a, 'Bottom') + lineOf(b, 'Top') > 1) ruleProblems.push(`${a.dataset.threadId}/${b.dataset.threadId}: two rules over an open card`); }
       else if ((openA || openB) && boxed(openA ? a : b).card && gap < 8) ruleProblems.push(`${a.dataset.threadId}/${b.dataset.threadId}: open card ${gap.toFixed(1)}px from its neighbour`);
       else if (openA && openB && gap < 8) ruleProblems.push(`${a.dataset.threadId}/${b.dataset.threadId}: open comments ${gap.toFixed(1)}px apart`);
     }

@@ -1418,7 +1418,7 @@
   function commentHTML(comment) {
     const lines = `:${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}${comment.side === 'new' ? '' : ' (before)'}`;
     const body = ReviewTools.commentBody(comment, review.qa) ? `<div class="comment-discussion">${ReviewTools.markdown(ReviewTools.commentBody(comment, review.qa))}</div>` : '';
-    const evidence = ReviewTools.evidenceFlows(review.qa, comment).length ? `<button class="btn btn-xs btn-soft" data-evidence="${escape(comment.id)}">See visual evidence</button>` : '';
+    const evidence = ReviewTools.evidenceFlows(review.qa, comment).length ? UI.Button({label: 'See visual evidence', size: 'xs', attrs: {'data-evidence': comment.id}}) : '';
     const actions = `<div class="comment-actions">${commentActions(comment, 'xs')}</div>`;
     const found = ReviewTools.anchor(snapshot, comment);
     const tags = comment.personal && comment.audience === 'agent' ? (comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : '') : threadBadges(comment, comment.personal);
@@ -2043,8 +2043,8 @@
   // copies the comment for pasting anywhere. Everything else waits behind the ⋯ menu.
   function githubAction(comment, data, size = 'sm') {
     const link = ReviewTools.githubLink(snapshot, review, comment);
-    if (!link) return `<button class="btn btn-${size} btn-soft" ${data.copy}>${icon('copy')} Copy for comment</button>`;
-    return `<a class="btn btn-${size} gh-act" href="${escape(link)}" target="_blank" rel="noopener noreferrer" ${data.github} title="Copies the comment and opens ${comment.general ? 'the pull request' : 'these lines'} on GitHub, ready to paste">Comment on GitHub ${icon('arrow-up-right')}</a>`;
+    if (!link) return UI.Button({html: `${icon('copy')} Copy for comment`, size, attrs: data.copy});
+    return UI.Button({tag: 'a', html: `Comment on GitHub ${icon('arrow-up-right')}`, size, variant: null, className: 'gh-act', attrs: {href: link, target: '_blank', rel: 'noopener noreferrer', ...data.github, title: `Copies the comment and opens ${comment.general ? 'the pull request' : 'these lines'} on GitHub, ready to paste`}});
   }
   // --- GitHub -------------------------------------------------------------------------------------
   // A served review posts to the pull request itself: the live layer connects a provider that runs
@@ -2072,22 +2072,23 @@
   function githubControls(comment, size = 'sm') {
     const id = escape(comment.id);
     // Without a pull request to open there is nothing to do here but copy, and that is in the ⋯ menu.
-    if (!ghPostable(comment) || !ghLive()) return ghPostable(comment) ? githubAction(comment, {copy: `data-copy-comment="${id}"`, github: `data-github="${id}"`}, size) : '';
+    if (!ghPostable(comment) || !ghLive()) return ghPostable(comment) ? githubAction(comment, {copy: {'data-copy-comment': comment.id}, github: {'data-github': comment.id}}, size) : '';
     const status = ghStatus();
     const state = ghState(comment.id);
-    if (state.state === 'posted') return `<a class="btn btn-${size} gh-posted" href="${escape(state.url)}" target="_blank" rel="noopener noreferrer" title="${escape(ghWhere(state))}">${icon('check')}Posted · View on GitHub ${icon('arrow-up-right')}</a>`;
-    if (state.state === 'posting') return `<button type="button" class="btn btn-${size} gh-act gh-busy" disabled><span class="gh-spinner" aria-hidden="true"></span>Posting to GitHub…</button>`;
+    if (state.state === 'posted') return UI.Button({tag: 'a', html: `${icon('check')}Posted · View on GitHub ${icon('arrow-up-right')}`, size, variant: null, className: 'gh-posted', attrs: {href: state.url, target: '_blank', rel: 'noopener noreferrer', title: ghWhere(state)}});
+    if (state.state === 'posting') return UI.Button({html: '<span class="gh-spinner" aria-hidden="true"></span>Posting to GitHub…', size, variant: null, className: 'gh-act gh-busy', attrs: {disabled: true}});
     // Until GitHub answers, say so where the buttons will be, rather than showing dead buttons.
     if (status.phase === 'checking') return `<span class="gh-wait" role="status"><span class="gh-spinner" aria-hidden="true"></span>Connecting to GitHub…</span>`;
     const off = status.phase === 'ready' ? '' : `disabled title="${escape(status.text || '')}"`;
-    if (state.state === 'pending') return `<button type="button" class="btn btn-${size} btn-ghost" data-gh-unpend="${id}" ${off}>Remove from review</button>`;
+    const offAttrs = status.phase === 'ready' ? {} : {disabled: true, title: status.text || ''};
+    if (state.state === 'pending') return UI.Button({label: 'Remove from review', size, variant: 'ghost', attrs: {'data-gh-unpend': comment.id, ...offAttrs}});
     const error = state.state === 'failed' ? `<span class="gh-error" role="alert">${icon('circle-alert')}<span>${escape(state.error)}</span></span>` : '';
     const label = state.state === 'failed' ? 'Try again' : 'GitHub';
     // One way out to GitHub per comment. What the agent wrote goes in the reader's words, so its
     // button opens the box that shows them, and the box's two buttons choose. What the reader wrote
     // goes as written, so a menu with the same two choices is enough.
-    if (!comment.personal || comment.audience === 'agent') return `${error}<button type="button" class="btn btn-${size} gh-act" data-gh-open="${id}" ${off} title="${comment.personal ? 'The conversation, summed up in your words' : 'Read it in your words'}, then add it to your GitHub review or post it now">${ghMark}${label}</button>`;
-    return `${error}<details class="more-menu gh-menu"><summary class="btn btn-${size} gh-act" title="Add it to your GitHub review, or post it on the pull request now">${ghMark}${label}${icon('chevron-down')}</summary><div class="more-list">${menuItem(`data-gh-pend="${id}" ${off}`, 'Add to my GitHub review', 'plus')}${menuItem(`data-gh-post="${id}" ${off}`, 'Comment now', 'send')}</div></details>`;
+    if (!comment.personal || comment.audience === 'agent') return `${error}${UI.Button({html: `${ghMark}${label}`, size, variant: null, className: 'gh-act', attrs: {'data-gh-open': comment.id, ...offAttrs, title: `${comment.personal ? 'The conversation, summed up in your words' : 'Read it in your words'}, then add it to your GitHub review or post it now`}})}`;
+    return `${error}<details class="more-menu gh-menu">${UI.Button({tag: 'summary', html: `${ghMark}${label}${icon('chevron-down')}`, size, variant: null, className: 'gh-act', attrs: {title: 'Add it to your GitHub review, or post it on the pull request now'}})}<div class="more-list">${menuItem(`data-gh-pend="${id}" ${off}`, 'Add to my GitHub review', 'plus')}${menuItem(`data-gh-post="${id}" ${off}`, 'Comment now', 'send')}</div></details>`;
   }
   const ghSlot = (comment, size = 'sm') => `<span class="gh-slot" data-gh-slot="${escape(comment.id)}" data-size="${size}">${githubControls(comment, size)}</span>`;
   const ghBadgeSlot = comment => `<span class="gh-slot" data-gh-badge="${escape(comment.id)}">${ghBadge(comment)}</span>`;
@@ -2111,7 +2112,7 @@
   }
   window.ReviewGitHub = {connect(provider) { github.provider = provider; refreshGitHub(); }, refresh: refreshGitHub, mark: ghMark};
   const menuItem = (attrs, label, symbol = '') => `<button type="button" class="more-item" ${attrs}>${symbol ? icon(symbol) : ''}${label}</button>`;
-  const moreMenu = (items, size = 'sm') => `<details class="more-menu"><summary class="btn btn-${size} btn-ghost more-toggle" aria-label="More actions" title="More actions">${icon('ellipsis')}</summary><div class="more-list">${items.join('')}</div></details>`;
+  const moreMenu = (items, size = 'sm') => `<details class="more-menu">${UI.Button({tag: 'summary', html: icon('ellipsis'), size, variant: 'ghost', className: 'more-toggle', attrs: {'aria-label': 'More actions', title: 'More actions'}})}<div class="more-list">${items.join('')}</div></details>`;
   // A comment's actions: GitHub (when it is a comment for the PR) and the menu.
   function commentActions(comment, size = 'sm') {
     const id = escape(comment.id);
@@ -2224,7 +2225,7 @@
   function renderMyReview() {
     const personal = comments.filter(comment => comment.personal && !comment.resolved);
     const notes = personalNotes();
-    return `<section class="review-section" id="my-review"><div class="section-heading"><div><h2>Your comments <span class="badge neutral">${personal.length + notes.length}</span></h2></div><div class="comment-actions"><button class="btn btn-sm btn-soft" data-add-general>Add comment</button><button class="btn btn-sm btn-soft" data-copy-all ${personal.length + notes.length ? '' : 'disabled'}>Copy all for LLMs</button></div></div>${personal.length + notes.length ? personal.map(commentCard).join('') + notes.map(note => `<article class="review-comment personal-comment"><span class="badge neutral">Your step note</span><h3>${escape(note.title)}</h3><p class="comment-discussion">${escape(note.text)}</p><button class="btn btn-sm btn-soft" data-copy-note="${note.id}">Copy for LLMs</button><button class="btn btn-sm btn-ghost" data-view="${note.id}">Open step →</button></article>`).join('') : '<p class="review-empty">None yet. Select lines in the code to comment on them, or add a general one here.</p>'}</section>`;
+    return `<section class="review-section" id="my-review"><div class="section-heading"><div><h2>Your comments <span class="badge neutral">${personal.length + notes.length}</span></h2></div><div class="comment-actions">${UI.Button({label: 'Add comment', attrs: {'data-add-general': true}})}${UI.Button({label: 'Copy all for LLMs', attrs: {'data-copy-all': true, disabled: !(personal.length + notes.length)}})}</div></div>${personal.length + notes.length ? personal.map(commentCard).join('') + notes.map(note => `<article class="review-comment personal-comment"><span class="badge neutral">Your step note</span><h3>${escape(note.title)}</h3><p class="comment-discussion">${escape(note.text)}</p><button class="btn btn-sm btn-soft" data-copy-note="${note.id}">Copy for LLMs</button><button class="btn btn-sm btn-ghost" data-view="${note.id}">Open step →</button></article>`).join('') : '<p class="review-empty">None yet. Select lines in the code to comment on them, or add a general one here.</p>'}</section>`;
   }
   function findingComment(finding) {
     const file = hunkFiles.get(finding.hunk);

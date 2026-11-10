@@ -36,7 +36,7 @@
 [data-theme^="minimal-"]{--section-rule:transparent;
   --button-border-color:transparent;--button-bg:transparent;--button-shadow:none;--button-ink:var(--ink-neutral-3);--button-hover-bg:var(--minimal-soft);--button-hover-ink:var(--ink);--button-focus-outline:1px solid var(--muted);--button-focus-offset:1px;--button-primary-border:transparent;--button-primary-shadow:none;--button-primary-bg:initial;--button-close-border:transparent;--button-close-bg:transparent;--button-close-ink:var(--muted);--button-close-hover-ink:var(--ink);--split-gap:0;--split-join-radius:0;--split-join-border:0;--split-writing:none;--comment-action-face:14px;
   --avatar-style:mono;--avatar-mono-mark:72%;
-  --comment-inset:0px;--comment-row-rule:transparent;--comment-card-edge:var(--line);--comment-card-sides:0px;--comment-card-radius:0;--comment-card-bg:transparent;--comment-card-gap:14px;
+  --comment-inset:0px;--comment-row-rule:transparent;--comment-row-rule-width:0px;--comment-card-edge:var(--line);--comment-card-sides:0px;--comment-card-radius:0;--comment-card-bg:transparent;--comment-card-gap:14px;
   --comment-face-col:18px;--comment-face-size:18px;--comment-message-face:18px;--comment-gap:12px;--comment-line-top:8px;--comment-line-bottom:8px;
   --comment-title-size:14px;--comment-title-weight:400;--comment-title-ink:var(--ink);--comment-earlier-ink:var(--ink);
   --comment-tags:none;--comment-place:block;--comment-chevron:none;--comment-quiet:var(--minimal-faint);--comment-hover-underline:underline;
@@ -48,7 +48,7 @@
   --popover-pad:0;--popover-divider:var(--line);--popover-space:16px;--popover-where:none;--popover-tags:none;--popover-face:grid;--popover-face-col:18px;--popover-gap:12px;--popover-title-room:30px;--popover-title-size:15px;--popover-title-line:1.4;--popover-title-ink:var(--ink);--popover-place:block;--popover-text-ink:var(--ink-neutral-3);--popover-text-size:14px;--popover-footer-top:18px}
 [data-theme^="minimal-"] .dcr-card{--message-space:14px}
 [data-theme^="minimal-"] .dcr-popover{--message-space:12px}
-[data-theme^="minimal-"] #ledger .dcr-detail{--message-space:16px;--message-you-name:inline}
+[data-theme^="minimal-"] #ledger .dcr-detail{--message-you-name:inline}
 [data-theme^="minimal-"] *{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 
 /* --- the list: step names, and nothing around them ------------------------------------------------ */

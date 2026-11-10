@@ -6,7 +6,7 @@
    (--comment-card-sides: 0, no surface): the same structure either way.
    Tokens: --comment-inset, --comment-row-rule, --comment-card-*, --comment-text-*, --comment-meta,
    --comment-source, --comment-footer-*. */
-.ui-comment{--comment-indent:calc(var(--comment-face-col) + var(--comment-gap));--comment-pad:0px;display:block;min-width:0;margin:0 var(--comment-inset);padding:0;border:0 solid var(--comment-card-edge);border-bottom:1px solid var(--comment-row-rule);background:transparent}
+.ui-comment{--comment-indent:calc(var(--comment-face-col) + var(--comment-gap));--comment-pad:0px;display:block;min-width:0;margin:0 var(--comment-inset);padding:0;border:0 solid var(--comment-card-edge);border-bottom:var(--comment-row-rule-width) solid var(--comment-row-rule);background:transparent}
 .ui-comment>.thread-details{display:block;margin:0;padding:0;border:0;background:transparent}
 .ui-comment:has(>.thread-details:not([open]))>:is(.dcr-thread,.thread-footer){display:none}
 /* Open: the inset becomes the card's edge and its parts' padding. */
@@ -27,11 +27,11 @@
 .ui-comment>.thread-footer .comment-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0}
 /* Resolved and earlier comments are the same card; closed, an earlier one's title is quieter. */
 .ui-comment.is-earlier:has(>.thread-details:not([open])) .ui-comment-title{color:var(--comment-earlier-ink)}
-/* The lists a comment sits in reach past the reading column by the inset, so an open card can take it. */
-.overview-reading{display:grid;grid-template-columns:var(--comment-inset) minmax(0,1fr) var(--comment-inset);max-width:calc(840px + 2 * var(--comment-inset))}
-.overview-reading>*{grid-column:2;min-width:0}
-.overview-reading>:is(.overview-comments,#my-review,.overview-settled){grid-column:1 / -1}
-.overview-reading>:is(.overview-comments,#my-review,.overview-settled)>:not(.ui-comment,.overview-fold),.overview-reading>.overview-settled>.overview-fold>summary{margin-inline:var(--comment-inset)}
+/* The lists a comment sits in reach past the reading column by the inset, so an open card can take
+   it: the column is wider by the inset on each side, and everything else in it keeps to the reading
+   width with a margin of the inset (block flow, so vertical margins still collapse as before). */
+.overview-reading{max-width:calc(840px + 2 * var(--comment-inset))}
+.overview-reading>:not(.overview-comments,#my-review,.overview-settled),.overview-reading>:is(.overview-comments,#my-review,.overview-settled)>:not(.ui-comment,.overview-fold),.overview-reading>.overview-settled>.overview-fold>summary{margin-inline:var(--comment-inset)}
 main#content:has(>.overview-reading){padding-inline:max(0px,calc(28px - var(--comment-inset)))}
 .ui-comment>.thread-details>.thread-source{border:var(--comment-source-border,1px solid var(--line-neutral-2));border-radius:calc(7px * var(--round));overflow:hidden}
 /* The conversation's messages keep the comment's columns: faces on its face column, words on its title's. */
