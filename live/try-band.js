@@ -37,8 +37,8 @@
   const appHTML = app ? `
     <li class="dcr-try-row dcr-try-app">
       <strong class="dcr-try-do">In the app</strong>
-      <span class="dcr-try-about" data-try-seen>Nothing recorded yet.</span>
-      <span class="dcr-try-more"><button type="button" data-try-shots hidden>View</button><button type="button" data-try="qa" title="Your agent records the flows behind the comments, in this tab">Start QA review</button><button type="button" data-try="browse" title="${esc(app.upstream)} (A). Comment on it from there.">Open the app</button></span>
+      <span class="dcr-try-about"><span data-try-seen>Nothing recorded yet.</span><button type="button" data-try-shots title="The screenshots and recordings from the app" hidden>See them</button></span>
+      <span class="dcr-try-more"><button type="button" data-try="qa" title="Your agent records the flows behind the comments, in this tab">Start QA review</button><button type="button" data-try="browse" title="${esc(app.upstream)} (A). Comment on it from there.">Open the app</button></span>
     </li>` : noApp ? `
     <li class="dcr-try-row dcr-try-none">
       <strong class="dcr-try-do">No running app</strong>
