@@ -260,7 +260,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .overview-intro .lead{color:var(--ink)}
 [data-theme^="minimal-"] .overview-reading :is(.dcr-try,.overview-revision,.risk-fold,.risk-rank.risk-none,.ui-changes){display:none}
 /* A list's label: small, grey, with the page's 48px of air above it. */
-[data-theme^="minimal-"] .overview-reading :is(.overview-comments,.risk-brief,#my-review.review-section,.overview-settled){display:block;margin:48px 0 0;padding:0;border:0}
+[data-theme^="minimal-"] .overview-reading :where(.overview-comments,.risk-brief,#my-review.review-section,.overview-settled){display:block;margin:48px 0 0;padding:0;border:0}
 [data-theme^="minimal-"] .overview-reading :is(.overview-comments>h2,.risk-brief h2,#my-review h2,.overview-fold-title){margin:0 0 6px;color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0}
 [data-theme^="minimal-"] .overview-comments:has(>.overview-todo)>h2{display:none}
 [data-theme^="minimal-"] .overview-reading .overview-todo{margin:0 0 6px;color:var(--minimal-faint);font-size:0}
@@ -300,3 +300,96 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .overview-reading>.risk-brief{order:1}
 [data-theme^="minimal-"] .overview-reading>#my-review{order:2}
 [data-theme^="minimal-"] .overview-reading>.overview-settled{order:3}
+
+/* --- Round four, from the real review: one column of 760px, one way to show a comment --------------- */
+[data-theme^="minimal-"] .overview-reading{max-width:760px}
+[data-theme^="minimal-"] .overview-intro h1{font-size:28px}
+[data-theme^="minimal-"] .overview-intro :is(.lead,.lead-rest){font-size:15.5px}
+/* The list: its checks stand in one column at the right, whatever the indent. */
+[data-theme^="minimal-"] .sidebar nav ul.menu{display:block;width:auto}
+[data-theme^="minimal-"] .sidebar nav li{position:relative}
+[data-theme^="minimal-"] #navigation button[data-view]{position:relative;width:100%;padding-right:30px}
+[data-theme^="minimal-"] #navigation button[data-view] .step-number{position:absolute;right:8px;top:5px;margin:0}
+[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"])){margin-left:0;padding-left:0;border-left:0}
+[data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]))>button{box-shadow:inset 1px 0 var(--ink);margin-left:-5px;padding-left:13px;width:calc(100% + 5px)}
+/* Nothing waiting is one sentence. */
+[data-theme^="minimal-"] .overview-clear{display:flex;align-items:baseline}
+[data-theme^="minimal-"] .overview-clear>div{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+[data-theme^="minimal-"] .overview-clear p{margin:0;color:var(--minimal-faint)}
+/* A fold's head is a list's label: one size, one grey, one baseline; its arrow is small and at the right. */
+[data-theme^="minimal-"] .overview-settled{display:flex;flex-direction:column;gap:28px}
+[data-theme^="minimal-"] .overview-settled .overview-fold>summary{display:flex;align-items:baseline;gap:8px;min-height:0;padding:0 0 6px;margin:0;color:var(--minimal-faint);font-size:12px}
+[data-theme^="minimal-"] .overview-settled .overview-fold-title{display:inline;margin:0;color:var(--minimal-faint);font-size:12px;font-weight:400}
+[data-theme^="minimal-"] .overview-settled .overview-fold-title .badge{padding:0;margin-left:2px;border:0;background:none;color:inherit;font:inherit}
+[data-theme^="minimal-"] .overview-settled .overview-fold-note{color:var(--minimal-faint);font-size:12px}
+[data-theme^="minimal-"] .overview-settled .overview-fold-note .btn{height:auto;min-height:0;padding:0 0 0 10px;border:0;background:none;color:var(--ink);font-size:12px}
+[data-theme^="minimal-"] .overview-settled .overview-fold>summary>.review-icon{width:13px;height:13px;align-self:center}
+[data-theme^="minimal-"] .overview-settled .overview-fold[open]>summary{margin-bottom:0}
+/* A closed comment: what it says, and on the right its state and place. Nothing else. */
+[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-badges{display:none!important}
+[data-theme^="minimal-"] .review-thread .thread-file{display:none!important}
+[data-theme^="minimal-"] .thread-at[data-state]::before{content:attr(data-state) "  ·  ";white-space:pre;font-family:var(--review-font-family)}
+[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-summary{display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:24px}
+/* Open: a title, one quiet line about it, the text, and what became of it. */
+[data-theme^="minimal-"] .overview-reading .review-thread:has(>.thread-details[open]){margin:10px 0 14px;padding:18px 0 20px}
+[data-theme^="minimal-"] .review-thread:has(>.thread-details[open]) .thread-summary{display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:baseline;padding:0;background:transparent}
+[data-theme^="minimal-"] .review-thread:has(>.thread-details[open]) .thread-summary>:not(strong,.thread-at){display:none}
+[data-theme^="minimal-"] .review-thread:has(>.thread-details[open]) .thread-summary>strong{font-size:16px;font-weight:600;line-height:1.4}
+[data-theme^="minimal-"] .review-thread:has(>.thread-details[open]) .thread-at{display:block}
+[data-theme^="minimal-"] .thread-meta{display:flex;flex-wrap:wrap;gap:2px 8px;margin:4px 0 16px;color:var(--minimal-faint);font-size:12.5px}
+[data-theme^="minimal-"] .thread-meta i{font-style:normal;opacity:.6}
+[data-theme^="minimal-"] .thread-meta-path{font:11.5px var(--mono);overflow-wrap:anywhere}
+[data-theme^="minimal-"] .review-thread .thread-body{padding:0;max-width:640px}
+[data-theme^="minimal-"] .review-thread .comment-discussion{color:var(--ink-neutral-3);font-size:14.5px;line-height:1.7}
+[data-theme^="minimal-"] .review-thread :is(.thread-was,.thread-follows){margin:10px 0 0}
+[data-theme^="minimal-"] .review-thread :is(.thread-was,.thread-follows)>summary{color:var(--muted);font-size:13px}
+[data-theme^="minimal-"] .review-thread .thread-was pre{border:0;background:var(--minimal-soft)}
+[data-theme^="minimal-"] .review-thread .thread-source{display:none}
+/* The conversation: names and words, no faces, no cards. */
+[data-theme^="minimal-"] .review-thread .dcr-thread{max-width:640px;padding:0;margin-top:22px;border:0;background:transparent}
+[data-theme^="minimal-"] .review-thread :is(.dcr-avatar,.dcr-face,.agent-face){display:none!important}
+[data-theme^="minimal-"] .review-thread .dcr-closure{padding:0;border:0;background:transparent}
+[data-theme^="minimal-"] .review-thread .dcr-closure-head{display:flex;gap:8px;align-items:baseline;margin:0 0 4px;font-size:12.5px;color:var(--minimal-faint)}
+[data-theme^="minimal-"] .review-thread .dcr-closure-head strong{color:var(--ink);font-size:13px;font-weight:600}
+[data-theme^="minimal-"] .review-thread .dcr-closure-main{display:block;padding:0}
+[data-theme^="minimal-"] .review-thread .dcr-closure-by{display:none}
+[data-theme^="minimal-"] .review-thread .dcr-body{color:var(--ink-neutral-3);font-size:14px;line-height:1.65}
+[data-theme^="minimal-"] .review-thread .dcr-checks{display:flex;gap:14px;margin-top:6px}
+[data-theme^="minimal-"] .review-thread .dcr-check{padding:0;border:0;background:none;color:var(--minimal-faint);font-size:12.5px}
+[data-theme^="minimal-"] .review-thread .dcr-check strong{color:var(--ink-neutral-3);font-weight:500}
+[data-theme^="minimal-"] .review-thread .dcr-stage{margin-top:18px;border:0;background:transparent}
+[data-theme^="minimal-"] .review-thread .dcr-stage-head{padding:0;color:var(--muted);font-size:13px}
+[data-theme^="minimal-"] .review-thread .dcr-msg{gap:0;padding:8px 0 0}
+[data-theme^="minimal-"] .review-thread .dcr-msg-head{font-size:12.5px;color:var(--minimal-faint)}
+[data-theme^="minimal-"] .review-thread .dcr-msg-head strong{color:var(--ink)}
+[data-theme^="minimal-"] .review-thread .dcr-reply{margin-top:16px;border-color:var(--line);background:transparent}
+[data-theme^="minimal-"] .review-thread .thread-footer{margin-top:18px;padding:0;border:0;background:transparent}
+[data-theme^="minimal-"] .review-thread .thread-summary>:is(strong,.thread-at){grid-column:auto!important;grid-row:1!important}
+[data-theme^="minimal-"] .review-thread .thread-summary>.thread-at{grid-column:2!important;justify-self:end}
+[data-theme^="minimal-"] .review-thread .thread-summary>strong{grid-column:1!important}
+[data-theme^="minimal-"] .review-thread .thread-summary>:not(strong,.thread-at){display:none!important}
+[data-theme^="minimal-"] .overview-settled .review-thread:has(>.thread-details:not([open])) .thread-summary>strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400}
+[data-theme^="minimal-"] .overview-reading .overview-settled{display:flex;flex-direction:column;gap:30px}
+[data-theme^="minimal-"] .overview-resolved .thread-at[data-state]::before{content:none}
+[data-theme^="minimal-"] .overview-reading .review-thread:is(.is-earlier,.is-resolved){opacity:1}
+[data-theme^="minimal-"] .overview-reading .review-thread:is(.is-earlier,.is-resolved) .thread-summary>strong{color:var(--ink)}
+[data-theme^="minimal-"] .review-thread .thread-details,[data-theme^="minimal-"] .review-thread .thread-summary{border:0!important;box-shadow:none!important}
+[data-theme^="minimal-"] .thread-meta-path{font:inherit}
+[data-theme^="minimal-"] .overview-reading .review-thread:is(.is-earlier,.is-resolved){background:transparent}
+[data-theme^="minimal-"] .overview-reading .review-thread.is-earlier>.thread-details>.thread-summary{padding:0}
+[data-theme^="minimal-"] .overview-reading .review-thread.is-earlier:has(>.thread-details:not([open])) .thread-summary,[data-theme^="minimal-"] .overview-reading .review-thread:has(>.thread-details:not([open])) .thread-summary{padding:8px 0!important}
+[data-theme^="minimal-"] .overview-reading .review-thread:has(>.thread-details[open]) .thread-summary>strong{font-size:16px!important;font-weight:600!important;color:var(--ink)!important}
+[data-theme^="minimal-"] .review-thread .thread-footer{justify-content:flex-start;gap:22px}
+[data-theme^="minimal-"] .review-thread .thread-footer :is(.btn,summary.btn){height:auto;min-height:0;padding:0;border:0;background:none;box-shadow:none;color:var(--muted);font-size:13.5px;font-weight:400}
+[data-theme^="minimal-"] .review-thread .thread-footer :is(.btn,summary.btn):hover{color:var(--ink)}
+[data-theme^="minimal-"] .review-thread .thread-footer .comment-actions{gap:22px}
+[data-theme^="minimal-"] .review-thread .thread-footer .comment-actions>:first-child .btn:first-child{color:var(--ink);font-weight:500}
+[data-theme^="minimal-"] .review-thread .thread-footer .btn>.review-icon,[data-theme^="minimal-"] .review-thread .thread-footer .btn>svg{display:none}
+[data-theme^="minimal-"] .review-thread .dcr-closure-head{justify-content:flex-start}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view],[data-theme^="minimal-"] #navigation>ul button[data-view]{padding-right:30px}
+/* A reply: who, then what they concluded, on one line; then what they said. */
+[data-theme^="minimal-"] .review-thread .dcr-msg{display:block}
+[data-theme^="minimal-"] .review-thread .dcr-msg-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
+[data-theme^="minimal-"] .review-thread .dcr-msg-head :is(.dcr-model,.thread-model,.dcr-role){display:none}
+[data-theme^="minimal-"] .review-thread .dcr-msg-head :is(.dcr-verdict,.dcr-badge,[class*="dcr-v-"]){padding:0;border:0;background:none;color:var(--muted);font-size:12.5px;font-weight:400}
+[data-theme^="minimal-"] .review-thread .dcr-msg-head :is(.dcr-verdict,.dcr-badge,[class*="dcr-v-"]) svg{display:none}

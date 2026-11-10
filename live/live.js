@@ -437,6 +437,8 @@
       let chip = head?.querySelector('.dcr-earlier-outcome');
       if (head && !chip) { chip = document.createElement('span'); head.prepend(chip); }
       if (chip && chip.textContent !== label) { chip.className = `dcr-earlier-outcome dcr-c-${state}`; chip.textContent = label; }
+      const at = card.querySelector('.thread-at');
+      if (at && at.dataset.state !== label.toLowerCase()) at.dataset.state = label.toLowerCase();
     });
     // One the reader has to close went back up: then something is waiting.
     const quiet = section.parentElement.querySelector('[data-overview-status]');

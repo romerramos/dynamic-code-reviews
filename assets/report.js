@@ -2112,6 +2112,19 @@
     return `<span class="thread-type type-${tone}" title="${hint}"><span class="thread-type-icon">${icon(symbol)}</span>${title}</span><span class="thread-priority ${comment.decoration === 'blocking' ? 'is-blocking' : 'is-optional'}">${comment.decoration === 'blocking' ? `${icon('circle-alert')} Blocking` : 'Non-blocking'}</span>${comment.severity ? `<span class="thread-severity">${escape(comment.severity)}</span>` : ''}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${comment.personal ? own ? '' : '<span class="thread-author">Your comment</span>' : comment.author ? personBadge(comment.author) : agentBadge(comment.agent, comment)}${ghBadgeSlot(comment)}`;
   }
   // closed: the card starts folded to its subject (a comment from an earlier revision).
+  // A comment's place in a few characters (ws.rb:55), and its state in a word, for a closed comment shown as one line.
+  const place = (path, line) => path ? `${escape(path.split('/').pop())}${line ? `:${line}` : ''}` : '';
+  const stateWord = (comment, closed) => {
+    const word = comment.personal && !comment.resolved ? 'yours' : comment.resolved ? 'resolved' : closed && comment.outdated?.revision ? `revision ${comment.outdated.revision}` : '';
+    return word ? `data-state="${escape(word)}"` : '';
+  };
+  // Who wrote it, what kind it is and how much it matters, where it is: one line under the title.
+  const threadMeta = (comment, path, range) => {
+    const kind = comment.personal ? (comment.audience === 'agent' ? 'Your question' : 'Your comment') : (comment.label ? comment.label.charAt(0).toUpperCase() + comment.label.slice(1) : 'Comment');
+    const slug = comment.personal ? '' : comment.agent || '';
+    const by = slug ? escape(AGENT_NAMES[slug] || slug.charAt(0).toUpperCase() + slug.slice(1)) : '';
+    return `<p class="thread-meta">${[kind, by, comment.decoration && !comment.personal ? escape(comment.decoration) : '', range ? `<span class="thread-meta-path" title="${escape(path || '')}">${escape(range)}</span>` : ''].filter(Boolean).join('<i aria-hidden="true">·</i>')}</p>`;
+  };
   function commentCard(comment, closed = false) {
     const found = ReviewTools.anchor(snapshot, comment);
     if (!found && !comment.general) return '';
@@ -2119,12 +2132,12 @@
     const range = found ? `${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}` : '';
     // Its lines changed in an update: it says where it was, and shows the code it was written on.
     const was = ReviewTools.outdatedWhere(comment);
-    const wasCode = was?.code ? `<figure class="thread-was"><figcaption>The code this was written on, in revision ${escape(was.revision)}</figcaption><pre><code>${escape(was.code)}</code></pre></figure>` : '';
+    const wasCode = was?.code ? `<details class="thread-was"><summary>The ${plural(was.code.split('\n').length, 'line')} this was written on, in revision ${escape(was.revision)}</summary><pre><code>${escape(was.code)}</code></pre></details>` : '';
     // It takes up an outdated comment on the new lines: the earlier one, and its code, are a click away.
     const earlier = comment.follows && comments.find(other => other.id === comment.follows);
     const earlierWas = earlier && ReviewTools.outdatedWhere(earlier);
-    const follows = earlier ? `<details class="thread-follows"><summary>Follows up on “${escape(earlier.subject)}”${earlierWas?.revision ? `, from revision ${escape(earlierWas.revision)}` : ''}</summary>${earlier.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(earlier.discussion)}</div>` : ''}${earlierWas?.code ? `<figure class="thread-was"><figcaption>The code it was written on</figcaption><pre><code>${escape(earlierWas.code)}</code></pre></figure>` : ''}</details>` : '';
-    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''} ${closed ? 'is-earlier' : ''}${comment.personal ? ' is-own' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${pathFit(found?.file.path || was?.path || 'General comment', '', true)}</span><span class="thread-range">${found ? range : was ? `<span class="thread-outdated" title="These lines changed after the comment was written">Outdated</span>${escape(was.lines)}${closed && was.revision ? ` in revision ${escape(was.revision)}` : ''}` : ''}</span></div><details class="thread-details" data-thread-fold="${id}" ${threadsOpen.has(comment.id) ? 'open' : ''}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}">${comment.personal ? youAvatar() : ''}<span class="thread-badges">${comment.personal ? `<b class="thread-you you-name">${youName()}</b>${comment.audience === 'agent' ? (comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : '') + ghBadgeSlot(comment) : threadBadges(comment, true)}` : threadBadges(comment)}</span><strong>${escape(comment.subject)}</strong><span class="thread-at">${found ? `${escape(found.file.path.split('/').pop())}:${comment.start}` : ''}</span><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${comment.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(comment.discussion)}</div>` : ''}${wasCode}${follows}${commentShots(comment)}${commentEvidence(comment)}</div>${found ? found.fullFile ? `<button class="thread-source btn btn-sm btn-ghost" type="button" data-comment="${id}">View in file · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : `<button class="thread-source btn btn-sm btn-ghost" type="button" data-open-code="${id}" aria-haspopup="dialog" aria-label="${escape(`View code for ${found.file.path}, ${range}: ${comment.subject}`)}">View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : ''}</details><div class="thread-footer"><div class="comment-actions">${commentActions(comment)}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
+    const follows = earlier ? `<details class="thread-follows"><summary>Follows up on “${escape(earlier.subject)}”${earlierWas?.revision ? `, from revision ${escape(earlierWas.revision)}` : ''}</summary>${earlier.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(earlier.discussion)}</div>` : ''}${earlierWas?.code ? `<details class="thread-was"><summary>The code it was written on</summary><pre><code>${escape(earlierWas.code)}</code></pre></details>` : ''}</details>` : '';
+    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''} ${closed ? 'is-earlier' : ''}${comment.personal ? ' is-own' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${pathFit(found?.file.path || was?.path || 'General comment', '', true)}</span><span class="thread-range">${found ? range : was ? `<span class="thread-outdated" title="These lines changed after the comment was written">Outdated</span>${escape(was.lines)}${closed && was.revision ? ` in revision ${escape(was.revision)}` : ''}` : ''}</span></div><details class="thread-details" data-thread-fold="${id}" ${threadsOpen.has(comment.id) ? 'open' : ''}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}">${comment.personal ? youAvatar() : ''}<span class="thread-badges">${comment.personal ? `<b class="thread-you you-name">${youName()}</b>${comment.audience === 'agent' ? (comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : '') + ghBadgeSlot(comment) : threadBadges(comment, true)}` : threadBadges(comment)}</span><strong>${escape(comment.subject)}</strong><span class="thread-at" ${stateWord(comment, closed)}>${place(found ? found.file.path : was?.path, found ? comment.start : comment.outdated?.start)}</span><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${threadMeta(comment, found?.file.path || was?.path, found ? range : was?.lines)}${comment.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(comment.discussion)}</div>` : ''}${wasCode}${follows}${commentShots(comment)}${commentEvidence(comment)}</div>${found ? found.fullFile ? `<button class="thread-source btn btn-sm btn-ghost" type="button" data-comment="${id}">View in file · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : `<button class="thread-source btn btn-sm btn-ghost" type="button" data-open-code="${id}" aria-haspopup="dialog" aria-label="${escape(`View code for ${found.file.path}, ${range}: ${comment.subject}`)}">View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : ''}</details><div class="thread-footer"><div class="comment-actions">${commentActions(comment)}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
   }
   function toggleResolved(id) {
     const comment = comments.find(comment => comment.id === id);
@@ -2582,11 +2595,12 @@
   const threadsOpen = new Set();
   document.addEventListener('toggle', event => {
     const fold = event.target.matches?.('details.overview-fold') && event.target.dataset.fold;
-    if (fold) event.target.open ? foldsOpen.add(fold) : foldsOpen.delete(fold);
+    if (fold) { if (event.target.open) { foldsOpen.add(fold); foldsClosed.delete(fold); } else { foldsOpen.delete(fold); foldsClosed.add(fold); } }
     const thread = event.target.matches?.('details.thread-details') && event.target.dataset.threadFold;
     if (thread) event.target.open ? threadsOpen.add(thread) : threadsOpen.delete(thread);
   }, true);
-  const fold = (name, title, count, cards, note = '') => `<details class="overview-fold overview-${name}" data-fold="${name}" ${foldsOpen.has(name) ? 'open' : ''}><summary><h3 class="overview-fold-title">${title} <span class="badge neutral">${count}</span></h3>${note}${icon('chevron-down')}</summary>${cards}</details>`;
+  const foldsClosed = new Set();
+  const fold = (name, title, count, cards, note = '', start = false) => `<details class="overview-fold overview-${name}" data-fold="${name}" ${foldsOpen.has(name) || (start && !foldsClosed.has(name)) ? 'open' : ''}><summary><h3 class="overview-fold-title">${title} <span class="badge neutral">${count}</span></h3>${note}${icon('chevron-down')}</summary>${cards}</details>`;
   // The summary reads in two steps: what the change does, in the reader's ink, then the rest of
   // it, quieter. One block of equal text is the part people skip.
   // Above the title, one small line: the issue, the pull request, whether this is the checkout or
@@ -2607,9 +2621,10 @@
     const generated = comments.filter(comment => !comment.personal);
     // A comment whose code changed since is history: it leaves the list for a folded section
     // under it, so what is read first is about the code as it is.
-    const earlier = generated.filter(comment => comment.outdated);
+    const followed = new Set(generated.map(comment => comment.follows).filter(Boolean));
+    const earlier = generated.filter(comment => comment.outdated && !followed.has(comment.id));
     const earlierCards = earlier.map(comment => commentCard(comment, true)).join('');
-    const earlierSection = earlierCards ? fold('earlier', 'From earlier revisions', earlier.length, earlierCards, '<span class="overview-fold-note"><span data-earlier-outcomes></span></span>') : '';
+    const earlierSection = earlierCards ? fold('earlier', 'From earlier revisions', earlier.length, earlierCards, '<span class="overview-fold-note"><span data-earlier-outcomes></span></span>', !generated.some(comment => !comment.outdated && !comment.resolved)) : '';
     // A finding whose code changed is its comment under From earlier revisions, which says what
     // became of it. Only one with no comment is still said, in a line there and never a banner.
     // Its comment is the one it names, or for an older review the one with its title.
@@ -2629,7 +2644,7 @@
     const settled = current.filter(comment => comment.resolved);
     // The reader's own resolved comments are settled too: they fold here with the agent's, not among the open ones.
     const settledAll = [...settled, ...comments.filter(comment => comment.personal && comment.resolved)];
-    const resolvedSection = settledAll.length ? fold('resolved', 'Resolved', settledAll.length, settledAll.map(comment => commentCard(comment)).join('')) : '';
+    const resolvedSection = settledAll.length ? fold('resolved', 'Resolved', settledAll.length, settledAll.map(comment => commentCard(comment)).join(''), '', !current.some(comment => !comment.resolved)) : '';
     // With nothing left to do, one message says so, whether there never was anything or the
     // reader settled it all. What is settled stays folded below it.
     const folded = settled.length + earlier.length;
