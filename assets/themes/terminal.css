@@ -366,3 +366,13 @@
 [data-theme^="terminal-"] .overview-reading .dcr-try-more button:not([hidden])::before{content:"[ ";color:var(--terminal-overlay0)}
 [data-theme^="terminal-"] .overview-reading .dcr-try-more button:not([hidden])::after{content:" ]";color:var(--terminal-overlay0)}
 [data-theme^="terminal-"] .overview-reading .risk-fold>.risk-rank{padding:6px 0 0 2ch}
+/* The bar, as a terminal's prompt line: square, no shadow, the field bare, its button in brackets,
+   and Your review's groups headed like the rest of the page. */
+[data-theme^="terminal-"] .review-bar{border-radius:0;box-shadow:none;background:var(--surface)}
+[data-theme^="terminal-"] .review-bar textarea{background:transparent!important;border:0!important}
+[data-theme^="terminal-"] .review-bar .bar-primary{border-radius:0;background:transparent;color:var(--accent)}
+[data-theme^="terminal-"] .review-bar .bar-primary::before{content:"[ ";color:var(--terminal-overlay0)}
+[data-theme^="terminal-"] .review-bar .bar-primary::after{content:" ]";color:var(--terminal-overlay0)}
+[data-theme^="terminal-"] #ledger .ledger-item:nth-child(1 of [data-by="agent"])::before{content:"## Agent comments"}
+[data-theme^="terminal-"] #ledger .ledger-item:nth-child(1 of [data-ledger]:not([data-conversation]))::before{content:"## Your comments"}
+[data-theme^="terminal-"] #ledger .ledger-item:nth-child(1 of [data-by="person"])::before{content:"## From GitHub"}

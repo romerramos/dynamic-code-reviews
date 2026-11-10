@@ -1575,3 +1575,182 @@ details.thread-was:not([open])>summary{margin-bottom:0}
 .settings-tabs,.settings-agents,.settings-round,.ledger-export{display:none}
 .step-end{white-space:nowrap}
 .popover-comment .thread-footer{padding:12px 0 0;border:0;background:none}
+
+/* ==========================================================================================
+   One layout for every theme (each draws it in its own look): a slim header with the review's
+   Revision and Update, no toolbar row, the bar at the bottom for the agent, what you type and
+   what is next, the files that need you at the list's foot, and Your review as the agent's
+   comments then yours, one short row each, with Export by its title and Finish with agent in
+   Settings, Agents. Minimal draws the same layout with its own, more specific rules.
+   ========================================================================================== */
+:root{--toolbar-h:0px}
+.review-toolbar,.definition-back{display:none}
+.review-bar{display:flex}
+body:has(#inline-composer) .review-bar{display:none}
+main#content{padding-bottom:104px}
+:is(#toast,.range-actions,.leader-menu){bottom:calc(var(--status-h) + 84px)}
+/* The header keeps the review's name, its Revision and Update. The app and the previews are in Try
+   the change and ⌘K, Details in ⌘K, Publish in the bar. */
+.app-header :is(.dcr-views,#preview-list-toggle,#context-toggle,.header-more,#dcr-publish){display:none}
+.dcr-jev{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);padding:0;border:0}
+.progress-need{display:inline;padding:0;border:0;background:none;color:var(--ink);font:inherit;font-weight:600;text-align:left;cursor:pointer}
+#dcr-jev-list{left:22px!important;top:auto!important;bottom:118px!important}
+.sidebar{position:relative}
+.sidebar-footer{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:8px 10px;margin:0;padding:10px 8px 0}
+.sidebar-footer #progress{grid-column:1;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-footer .progress-need{grid-column:1;grid-row:1;justify-self:end;font-size:12px}
+.sidebar-footer progress{grid-column:1 / -1;grid-row:2;width:100%}
+.sidebar-footer .dcr-todo-link{display:none}
+.sidebar-settings{position:absolute;right:20px;bottom:17px;width:auto;margin:0;padding:2px;gap:0;color:var(--muted)}
+.sidebar-settings>span:not(#settings-icon){position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.sidebar-settings #settings-icon{display:inline-grid}
+.sidebar-settings .review-icon{width:15px;height:15px}
+.sidebar .sidebar-top{display:flex;align-items:center;gap:6px;margin-bottom:18px}
+.sidebar .sidebar-top #search{flex:1;min-width:0;height:36px;min-height:36px;margin:0}
+:is(.sidebar-hide,.sidebar-show){place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--muted)}
+:is(.sidebar-hide,.sidebar-show):hover{background:var(--bg-neutral-2);color:var(--ink)}
+:is(.sidebar-hide,.sidebar-show) .review-icon{width:17px;height:17px;stroke-width:1.8}
+@media(min-width:1200px){
+  html .sidebar-hide{display:grid;flex:none}
+  html body.sidebar-collapsed .sidebar-show{display:grid;position:fixed;top:calc(var(--chrome-h) + 12px);left:18px;z-index:30}
+}
+#ledger-close{display:none}
+:is(.ledger-hide,.ledger-show){place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--muted)}
+:is(.ledger-hide,.ledger-show):hover{background:var(--bg-neutral-2);color:var(--ink)}
+:is(.ledger-hide,.ledger-show) .review-icon{width:17px;height:17px;stroke-width:1.8}
+.ledger-hide{display:grid}
+@media(min-width:1200px){
+  html body:not(.ledger-open):not(.zen) .ledger-show{display:grid;position:fixed;top:calc(var(--chrome-h) + 10px);right:18px;z-index:30}
+}
+/* Each comment one quiet row, as on the Overview: the agent's mark, the title, the file and line;
+   under it, the marks of the agents who answered, and new when it is. */
+.ledger-item::before{display:none}
+.ledger-item[data-ledger] .ledger-place,.ledger-item[data-ledger] .ledger-by{display:none}
+.ledger-item[data-ledger] .ledger-msg{grid-template-columns:18px minmax(0,1fr) auto;column-gap:12px;align-items:baseline;padding:14px 18px 0 22px}
+.ledger-item[data-ledger] .ledger-msg>:is(.comment-avatar,.dcr-avatar){grid-row:auto;align-self:start;width:18px;height:18px;margin-top:1px;background:transparent;box-shadow:none;color:var(--ink)}
+.ledger-item[data-ledger] .ledger-msg>:is(.comment-avatar,.dcr-avatar) :is(svg,img){width:15px;height:15px}
+.ledger-item[data-ledger] .ledger-subject{font-size:14px;line-height:1.45}
+.ledger-item[data-ledger] .ledger-at{display:block;padding:0;border:0;background:none;color:var(--muted);font:11.5px var(--mono);white-space:nowrap;cursor:pointer}
+.ledger-item[data-ledger] .ledger-at:hover{color:var(--ink);text-decoration:underline}
+.ledger-item[data-ledger]{display:flex;flex-wrap:wrap;align-items:center;padding-bottom:12px}
+.ledger-item[data-ledger]>.ledger-msg{flex:1 0 100%}
+.ledger-item[data-ledger] .dcr-peek{width:auto;padding:5px 0 0 52px}
+.ledger-item[data-ledger] .dcr-peek :is(b,.dcr-peek-when,.dcr-peek-end){display:none}
+.ledger-item[data-ledger] .dcr-peek-faces{gap:6px}
+.ledger-item[data-ledger] .dcr-peek-faces>:is(.dcr-avatar,.comment-avatar){width:14px;height:14px;margin:0;background:transparent;box-shadow:none;color:var(--muted)}
+.ledger-item[data-ledger] .dcr-peek-faces>* :is(svg,img){width:13px;height:13px}
+.ledger-item[data-ledger] .ledger-meta{display:flex;align-items:center;gap:6px;margin:5px 0 0 8px;padding:0}
+/* Template previews have the Previews tab and ⌘K. */
+.ledger-previews{display:none}
+#settings-dialog.has-agents .settings-tabs{display:flex;gap:20px;margin:6px 0 14px}
+.settings-tabs button{padding:0 0 3px;border:0;background:none;color:var(--muted);font:inherit;font-size:13px;cursor:pointer}
+.settings-tabs button[aria-selected="true"]{color:var(--ink);font-weight:500;box-shadow:inset 0 -1.5px var(--ink)}
+#settings-dialog.has-agents[data-tab="agents"] .settings-body>:not(.settings-agents){display:none}
+#settings-dialog.has-agents[data-tab="agents"] .settings-agents{display:block}
+.settings-agents header{display:flex;align-items:center;gap:10px;margin:0 0 4px}
+.settings-agents header .dcr-avatar{width:20px;height:20px;background:transparent;color:var(--ink)}
+.settings-agents .dcr-presence-who{display:flex;align-items:baseline;gap:8px;min-width:0}
+.settings-agents .dcr-presence-who strong{font-size:13px;font-weight:500}
+.settings-agents .dcr-presence-who span{color:var(--muted);font-size:11.5px}
+.settings-agents .dcr-presence-word{display:inline-flex;align-items:center;gap:6px;margin-left:auto;color:var(--muted);font-size:12px}
+.settings-agents .dcr-presence-line{margin:0 0 0 30px;color:var(--muted);font-size:12.5px}
+.settings-agents .dcr-presence-line .dcr-presence-dot{display:none}
+.settings-agents :is(.dcr-presence-help,.dcr-presence-cmd){margin-left:30px}
+.settings-agents .dcr-adv{margin-top:18px;padding:16px 0 0;border-color:var(--line)}
+.settings-agents .dcr-adv-title{color:var(--muted);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
+.settings-agents .dcr-adv-list{gap:10px;margin:8px 0 0}
+.settings-agents .dcr-adv-row,.settings-agents .dcr-adv-row.is-on{padding:0;background:none}
+.settings-agents .dcr-adv-who strong{font-weight:500}
+.settings-agents .dcr-adv-status::before{display:none}
+.settings-agents .dcr-face-sm{background:transparent;color:var(--ink)}
+.settings-agents .dcr-voice-link{display:block;margin-top:18px;padding:16px 0 0;border:0;border-top:1px solid var(--line);background:none;color:var(--ink);font:inherit;font-size:13px;text-align:left;cursor:pointer}
+.settings-agents .dcr-voice-link::after{content:" ›"}
+/* The presence dot: the same tiny dot as a chat app's, on the corner of the agent's mark. */
+.settings-agents .dcr-presence-word .dcr-presence-dot{width:6px;height:6px;box-sizing:border-box;border-radius:50%;background:var(--dcr-ok)}
+.settings-agents .dcr-presence-word.dcr-presence-work .dcr-presence-dot{background:var(--dcr-work)}
+.settings-agents .dcr-presence-word.dcr-presence-off .dcr-presence-dot{border:1.5px solid var(--muted);background:transparent}
+.review-bar .bar-agent{position:relative}
+.review-bar .bar-agent span{opacity:1;filter:none}
+.review-bar .bar-agent::after{content:"";position:absolute;right:1px;bottom:5px;width:6px;height:6px;box-sizing:border-box;border:1.5px solid var(--muted);border-radius:50%;background:var(--surface);box-shadow:0 0 0 2px var(--surface)}
+.review-bar .bar-agent[data-tone="ok"]::after{border:0;background:var(--dcr-ok)}
+.review-bar .bar-agent[data-tone="work"]::after{border:0;background:var(--dcr-work);animation:bar-agent-work 1.4s ease-in-out infinite}
+.review-bar .bar-agent[data-tone="work"] span{animation:none}
+@media(prefers-reduced-motion:reduce){.review-bar .bar-agent[data-tone="work"]::after{animation:none}}
+#ledger .dcr-detail-bar [data-dcr-close]{display:none}
+#ledger .dcr-detail-bar .dcr-back{color:var(--muted);font-weight:400}
+#ledger .dcr-detail-title{display:grid;grid-template-columns:18px minmax(0,1fr);gap:4px 12px;align-items:start;border:0}
+#ledger .dcr-detail-title .ledger-where{display:none}
+#ledger .dcr-detail-mark{display:grid;grid-column:1;grid-row:1;place-items:center;width:18px;height:18px;margin-top:1px}
+#ledger .dcr-detail-mark .dcr-avatar{width:16px;height:16px;background:transparent;color:var(--ink)}
+#ledger .dcr-detail-mark .dcr-avatar svg{width:14px;height:14px}
+#ledger .dcr-detail-title strong{grid-column:2;grid-row:1;font-size:15px;font-weight:600;line-height:1.4}
+#ledger .dcr-detail-code{grid-column:2;justify-self:start;min-height:0;height:auto;padding:0;border:0;background:none;color:var(--ink-neutral-3);font:12px var(--mono);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+#ledger .dcr-detail-code:hover{color:var(--ink);text-decoration-color:currentColor}
+#ledger .dcr-detail-code>:not(.dcr-detail-at){display:none}
+#ledger .dcr-detail-code .dcr-detail-at:not(:empty){display:inline}
+#ledger .dcr-detail-code:has(.dcr-detail-at:empty){display:none}
+#ledger .dcr-detail .dcr-msg{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;padding:16px 0 0;border:0;background:none}
+#ledger .dcr-detail .dcr-msg>.dcr-avatar{display:inline-grid;place-items:center;width:18px;height:18px;margin-top:1px;overflow:hidden;border-radius:50%;background:transparent;color:var(--ink)}
+#ledger .dcr-detail .dcr-msg>.dcr-avatar :is(svg,img){width:13px;height:13px}
+#ledger .dcr-detail .dcr-msg>.dcr-avatar img{width:100%;height:100%;object-fit:cover}
+#ledger .dcr-detail .dcr-origin.dcr-agent{padding-top:10px}
+#ledger .dcr-detail .dcr-origin.dcr-agent>.dcr-avatar{visibility:hidden}
+#ledger .dcr-detail .dcr-msg-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;font-size:12px;color:var(--muted)}
+#ledger .dcr-detail .dcr-msg-head>strong,#ledger .dcr-detail .dcr-msg-head :is(.dcr-model,.thread-model){display:none}
+#ledger .dcr-detail .dcr-adversary .dcr-msg-head .dcr-role{display:none}
+#ledger .dcr-detail .dcr-msg.dcr-you .dcr-msg-head>strong{display:inline;color:var(--ink);font-weight:500}
+#ledger .dcr-detail .dcr-msg-head :is(.dcr-verdict,.dcr-badge,[class*="dcr-v-"]){padding:0;border:0;background:none;color:var(--ink-neutral-3);font-size:12px;font-weight:400}
+#ledger .dcr-detail .dcr-msg-head :is(.dcr-verdict,.dcr-badge) svg{display:none}
+#ledger .dcr-detail .dcr-body{margin-top:3px;font-size:13.5px;line-height:1.6}
+#ledger :is(.dcr-detail-title strong,.ledger-subject) code{padding:0;border:0;background:none;font-family:var(--mono);font-size:.92em}
+/* An adversary that did not answer: its mark, faint, and the words, in line with the answers. */
+#ledger .dcr-detail :is(.dcr-opinions,.dcr-ops,ul:has(>.dcr-op)){margin:16px 0 0;padding:0;border:0;list-style:none}
+#ledger .dcr-detail .dcr-op{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;align-items:center;padding:6px 0 0;border:0;background:none}
+#ledger .dcr-detail .dcr-op>.dcr-avatar{display:inline-grid;place-items:center;width:18px;height:18px;background:transparent;color:var(--ink);opacity:.4}
+#ledger .dcr-detail .dcr-op>.dcr-avatar svg{width:13px;height:13px}
+#ledger .dcr-detail .dcr-op-line{color:var(--muted);font-size:12px}
+#ledger .dcr-detail .dcr-op-line strong{color:inherit;font-weight:400}
+
+/* --- Your review in two groups, as on the Overview: the agent's comments, then yours. A comment the
+   agent adds in a new revision joins its own group, so nothing lands in the middle of yours. --- */
+#ledger .ledger-list{display:flex;flex-direction:column}
+#ledger .ledger-item[data-by="agent"]{order:0}
+#ledger .ledger-item[data-ledger]:not([data-conversation]){order:1}
+#ledger .ledger-item[data-by="person"]{order:2}
+#ledger .ledger-item:is(:nth-child(1 of [data-by="agent"]),:nth-child(1 of [data-ledger]:not([data-conversation])),:nth-child(1 of [data-by="person"]))::before{position:static;display:block;flex:1 0 100%;width:auto;height:auto;padding:16px 22px 2px;background:none;color:var(--muted);font-size:12px}
+#ledger .ledger-item:nth-child(1 of [data-by="agent"])::before{content:"Agent comments"}
+#ledger .ledger-item:nth-child(1 of [data-ledger]:not([data-conversation]))::before{content:"Your comments"}
+#ledger .ledger-item:nth-child(1 of [data-by="person"])::before{content:"From GitHub"}
+/* Your own row is drawn as the agent's: your face, the short title, the file and line, who answered. */
+#ledger .ledger-item[data-ledger]:not([data-conversation]) .ledger-meta :is([data-resolve],[data-copy]),#ledger .ledger-item .dcr-new{display:none}
+#ledger .ledger-item[data-ledger] .ledger-msg>.comment-avatar img{border-radius:50%}
+#ledger .ledger-item[data-ledger] .ledger-subject{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#ledger .dcr-detail-code{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#ledger .ledger-item[data-ledger] .ledger-at{display:grid;place-items:center;align-self:start;width:24px;height:24px;margin-top:-2px;border-radius:6px;color:var(--muted)}
+#ledger .ledger-item[data-ledger] .ledger-at:hover{background:var(--bg-neutral-2);color:var(--ink);text-decoration:none}
+:is(#ledger .ledger-at,.thread-go) svg{width:14px;height:14px;stroke-width:1.8}
+#dcr-panel .dcr-foot-status{display:none}
+/* An adversary that did not answer keeps its mark beside the words, on the Overview too. */
+:is(.popover-comment,.review-thread,#ledger) .dcr-op>.dcr-avatar{display:inline-grid!important;width:18px;height:18px}
+:is(.popover-comment,.review-thread,#ledger) .dcr-op-line{display:flex;gap:6px;white-space:nowrap}
+#ledger-footer{display:none}
+.ledger-head h2{display:flex;align-items:center}
+.ledger-head .ledger-export:not([hidden]){display:grid;place-items:center;width:26px;height:26px;margin:0 auto 0 6px;padding:0;border:0;border-radius:6px;background:none;color:var(--muted);cursor:pointer}
+.ledger-head .ledger-export:hover{background:var(--bg-neutral-2);color:var(--ink)}
+.ledger-head .ledger-export svg{width:15px;height:15px;stroke-width:1.8}
+#settings-dialog.has-agents[data-tab="agents"] .settings-round:not([hidden]){display:block;margin:18px 0 0;padding:16px 0 0;border-top:1px solid var(--line)}
+.settings-round h2{margin:0 0 8px;color:var(--muted);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
+.settings-round p{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;color:var(--muted);font-size:12.5px}
+.settings-round .btn{flex:none;height:30px;min-height:30px;padding:0 11px;border:1px solid var(--line)!important;border-radius:8px;color:var(--ink)!important;font-weight:500}
+#settings-dialog.has-agents[data-tab="agents"] .settings-round:not([hidden]){margin-inline:10px}
+.settings-agents .dcr-presence-help{margin-top:8px;color:var(--muted);font-size:12.5px;line-height:1.45}
+.settings-agents .dcr-presence-cmd code{font-size:11.5px}
+/* Your review is a column of its own on a wide screen, so it never covers the header or the page. */
+@media(min-width:1100px) and (max-width:1499px){
+  body.ledger-open:not(.zen):not(.sidebar-collapsed) .workspace{grid-template-columns:320px minmax(0,1fr) min(var(--ledger-w,420px),92vw)}
+  body.ledger-open.sidebar-collapsed:not(.zen) .workspace{grid-template-columns:minmax(0,1fr) min(var(--ledger-w,420px),92vw)}
+  body.ledger-open:not(.zen) .ledger{position:static;width:auto;max-width:none;box-shadow:none;animation:none}
+  body.ledger-open:not(.zen) .review-bar{left:50%;width:min(640px,calc(100% - 28px))}
+}
+/* A row says who answered; whether it is on GitHub is in its conversation. */
+#ledger .ledger-item[data-ledger] .ledger-meta .gh-slot{display:none}
