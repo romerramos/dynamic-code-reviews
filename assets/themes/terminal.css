@@ -388,3 +388,11 @@
   [data-theme^="terminal-"] body.ledger-open:not(.zen)[data-pane="ledger"] .ledger{outline-color:var(--pane-ring)}
 }
 [data-theme^="terminal-"] .overview-reading .risk-rank.risk-none .risk-redo{justify-self:stretch;margin:0;padding:0;text-align:left}
+/* A risk score is drawn as the list's progress is: a row of blocks, in the text's own shade, darker
+   the riskier, not a thin line. */
+[data-theme^="terminal-"] .risk-bar{height:10px;border-radius:0;background:repeating-linear-gradient(90deg,var(--terminal-surface0) 0 6px,transparent 6px 8px)}
+[data-theme^="terminal-"] .risk-bar i{border-radius:0;background:repeating-linear-gradient(90deg,var(--ink) 0 6px,transparent 6px 8px)}
+[data-theme^="terminal-"] .risk-critical .risk-bar{height:10px}
+[data-theme^="terminal-"] .risk-high .risk-bar i{background:repeating-linear-gradient(90deg,color-mix(in oklab,var(--ink) 80%,transparent) 0 6px,transparent 6px 8px)}
+[data-theme^="terminal-"] .risk-medium .risk-bar i{background:repeating-linear-gradient(90deg,color-mix(in oklab,var(--ink) 55%,transparent) 0 6px,transparent 6px 8px)}
+[data-theme^="terminal-"] .risk-low .risk-bar i{background:repeating-linear-gradient(90deg,color-mix(in oklab,var(--ink) 35%,transparent) 0 6px,transparent 6px 8px)}
