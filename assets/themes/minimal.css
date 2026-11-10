@@ -993,3 +993,12 @@ html[data-theme^="minimal-"]{--agent-claude:var(--ink)!important;--agent-codex:v
 [data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status.failed{color:var(--ink)}
 [data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-action{display:none}
 [data-theme^="minimal-"] .overview-reading .qa-preview-compact small{grid-column:1 / -1;color:var(--minimal-faint);font-size:12.5px;line-height:1.5}
+
+/* A flow's result is a mark after its name: a check when it passed, an ✕ when it failed. */
+[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-copy{display:block}
+[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-copy>strong{display:inline}
+[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status{display:inline-block;margin-left:6px;font-size:0;vertical-align:baseline}
+[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status::before{content:"✓";color:var(--ink-neutral-3);font-size:13px}
+[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status.failed::before{content:"✕";color:var(--ink)}
+[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status:not(.passed,.failed){display:none}
+[data-theme^="minimal-"] .overview-reading .qa-preview-compact small{display:block;margin-top:3px}
