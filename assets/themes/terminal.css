@@ -418,8 +418,6 @@
 /* An open comment is one card with one inner margin (24px) on every side: the face at the margin, the
    title, the comment, View in file and every answer's words all starting at one line (66px), the
    footer's buttons at the margin. */
-[data-theme^="terminal-"] .overview-reading .review-thread:has(>.thread-details[open]) .thread-summary{padding:22px 24px 14px!important;column-gap:14px!important}
-[data-theme^="terminal-"] .overview-reading .review-thread:has(>.thread-details[open]) .thread-file{padding-left:24px;padding-right:24px}
 [data-theme^="terminal-"] .overview-reading .review-thread:has(>.thread-details[open]) .thread-body{padding:0 24px 18px 66px!important}
 [data-theme^="terminal-"] .overview-reading .review-thread:has(>.thread-details[open]) .thread-source{box-sizing:border-box;width:auto!important;margin:0 24px 18px 66px!important}
 [data-theme^="terminal-"] .overview-reading .review-thread:has(>.thread-details[open]) .dcr-thread{padding-left:24px!important;padding-right:24px!important}
@@ -430,3 +428,21 @@
 [data-theme^="terminal-"] .overview-reading .review-thread.is-earlier:has(>.thread-details[open]){background:var(--surface)}
 [data-theme^="terminal-"] .overview-reading .review-thread.is-earlier:has(>.thread-details[open]) .thread-summary{background:var(--surface);border-bottom:0}
 [data-theme^="terminal-"] .overview-reading .review-thread.is-earlier>.thread-details[open]>.thread-summary>strong{font-size:12px;font-weight:500;line-height:1.55;color:var(--ink-neutral-2)}
+
+/* Opening a comment moves nothing under the pointer: the line stays exactly where it was (same face,
+   title and chevron), and the card grows around it, outward by the same 24px it keeps inside. The
+   file line is gone; View in file goes there. Click to open, click the same spot to close. */
+[data-theme^="terminal-"] .overview-reading .review-thread .thread-file{display:none!important}
+[data-theme^="terminal-"] .overview-reading .review-thread:has(>.thread-details[open]){margin:-1px -25px 0;}
+[data-theme^="terminal-"] .overview-reading .review-thread:has(>.thread-details[open]) .thread-summary{padding:11px 24px 2px!important}
+[data-theme^="terminal-"] .overview-reading .review-thread:has(>.thread-details[open]) .thread-summary>strong{font-size:inherit!important;line-height:inherit!important}
+
+/* The open card's words start where the title starts, so the line above them never moves. */
+[data-theme^="terminal-"] .overview-reading .review-thread:has(>.thread-details[open]) .thread-body{padding-left:62px!important}
+[data-theme^="terminal-"] .overview-reading .review-thread:has(>.thread-details[open]) .thread-source{margin-left:62px!important}
+[data-theme^="terminal-"] .overview-reading .review-thread:has(>.thread-details[open]) .dcr-thread .dcr-msg{grid-template-columns:28px minmax(0,1fr)!important}
+/* The type is a soft tag in its own colour; a resolved comment needs no check, it sits under Resolved. */
+[data-theme^="terminal-"] .overview-reading .review-thread .thread-summary .thread-resolved{display:none!important}
+[data-theme^="terminal-"] .overview-reading .review-thread .thread-summary .thread-type{min-width:0!important;flex:none;border-radius:0;padding:0 6px;background:var(--thread-tint)!important;color:var(--thread-ink)!important;font-size:11.5px;font-weight:600}
+[data-theme^="terminal-"] .overview-reading .review-thread .thread-summary .thread-type .thread-type-icon{display:none}
+[data-theme^="terminal-"] .overview-reading .review-thread.is-earlier .thread-summary{padding-top:11px!important;padding-bottom:2px!important}
