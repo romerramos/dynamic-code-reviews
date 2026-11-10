@@ -569,3 +569,4 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status .review-icon{width:10px;height:10px;stroke-width:3}
 [data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status:hover{border-color:var(--ink);background:var(--ink);color:var(--surface)}
 [data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{padding:0 8px 0 0}
+[data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{padding:0 8px 0 8px}
