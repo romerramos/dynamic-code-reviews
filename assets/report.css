@@ -1515,3 +1515,21 @@ details.thread-was:not([open])>summary{margin-bottom:0}
 .overview-intro .lead-rest p:last-child{margin-bottom:0}
 
 .thread-face{display:none}
+
+.composer-body{display:block}
+.composer-face{display:none}
+.composer-agent-mark{display:inline-grid;place-items:center;width:14px;height:14px;margin-right:6px;vertical-align:-2px}
+.composer-agent-mark svg{width:14px;height:14px}
+/* The bar's mark of the agent: faint when none is listening, full when one is, breathing while it works. */
+.review-bar .bar-agent{width:22px}
+.review-bar .bar-agent span{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:transparent;color:var(--ink);opacity:.35;filter:grayscale(1)}
+.review-bar .bar-agent span svg{width:14px;height:14px}
+.review-bar .bar-agent[data-tone="ok"] span{background:transparent;opacity:1;filter:none}
+.review-bar .bar-agent[data-tone="work"] span{background:transparent;opacity:1;filter:none;animation:bar-agent-work 1.4s ease-in-out infinite}
+@keyframes bar-agent-work{50%{opacity:.4}}
+@media(prefers-reduced-motion:reduce){.review-bar .bar-agent[data-tone="work"] span{animation:none}}
+/* Going back from a definition is its own small card above the bar, so the bar keeps its room. */
+.review-bar #bar-back{position:absolute;left:0;bottom:calc(100% + 8px);max-width:100%;height:30px;padding:0 12px;border:1px solid var(--line);border-radius:calc(10px * var(--round));background:var(--surface);box-shadow:0 6px 18px color-mix(in srgb,var(--shade) 7%,transparent);color:var(--ink);font-weight:500}
+.composer-agent-mark svg,.review-bar .bar-agent span svg{fill:currentColor!important;stroke:none!important}
+.composer-mode .composer-agent-mark{display:inline-grid!important;flex:none;width:14px;height:14px}
+.composer-mode .composer-agent-mark svg{display:block;width:14px!important;height:14px!important;min-width:14px}

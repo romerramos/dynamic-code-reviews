@@ -172,7 +172,7 @@
       if (toggle.dataset.html !== html) { toggle.innerHTML = html; toggle.dataset.html = html; }
       toggle.dataset.dcrAdvFor = id;
       if (toggle.getAttribute('aria-pressed') !== String(on)) toggle.setAttribute('aria-pressed', String(on));
-      const label = on ? `${who} will answer too. Click to ask only your agent.` : `Also ask ${who}`;
+      const label = on ? `Adversaries on: ${who} will answer too. Click to ask only your agent.` : `Include the adversaries: also ask ${who}`;
       if (toggle.title !== label) { toggle.title = label; toggle.setAttribute('aria-label', label); }
     });
   };

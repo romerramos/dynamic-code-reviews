@@ -1116,7 +1116,7 @@
     form.setAttribute('aria-label', 'Add a comment');
     form.innerHTML = `<header class="composer-head"><div class="composer-modes" role="radiogroup" aria-label="Who is this comment for?" hidden><label class="composer-mode"><input type="radio" name="composer-mode" value="agent"><span>${icon('sparkles')}Agent</span></label><label class="composer-mode"><input type="radio" name="composer-mode" value="pr"><span>${icon('message-square')}${prLabel}</span></label></div><span class="composer-where"></span><span class="composer-as" data-composer-as hidden></span><button type="button" class="act act-quiet act-icon" data-composer-close aria-label="Close; what you typed is kept" title="Close (Q). What you typed is kept.">${icon('x')}</button></header>
       <div class="composer-types" role="radiogroup" aria-label="Type of comment">${composerTypes.map(type => `<label class="composer-type"><input type="radio" name="composer-label" value="${type}"><span>${icon(commentTypes[type][0])}${commentTypes[type][1]}</span></label>`).join('')}</div>
-      <textarea class="composer-text" rows="3" aria-label="Your comment"></textarea>
+      <div class="composer-body"><span class="composer-face" data-composer-face aria-hidden="true"></span><textarea class="composer-text" rows="3" aria-label="Your comment"></textarea></div>
       <footer class="composer-foot"><label class="composer-blocking"><input type="checkbox" name="composer-blocking"><span>Blocks approval</span></label><div class="composer-actions"><button type="button" class="act act-quiet" data-composer-cancel>Cancel</button><button type="submit" class="act act-pr" data-composer-save title="Ctrl or Cmd with Enter">Save comment<kbd class="composer-key" aria-hidden="true">⌘↵</kbd></button><button type="submit" class="act act-secondary" data-gh-action="open" hidden>Copy &amp; open on GitHub ${icon('arrow-up-right')}</button><button type="submit" class="act act-secondary" data-gh-action="single" hidden title="Post it on the pull request now">Comment now</button><button type="submit" class="act act-gh" data-gh-action="review" hidden title="Ctrl or Cmd with Enter"></button><span class="composer-split" data-composer-agent hidden><button type="submit" class="act act-agent" data-composer-send title="Ask about these lines (Ctrl or Cmd with Enter)">${icon('send')}Ask agent<kbd class="composer-key" aria-hidden="true">⌘↵</kbd></button><details class="more-menu" data-menu-from="parent"><summary class="act act-quiet act-icon" aria-label="More for your agent" title="More for your agent">${icon('chevron-down')}</summary><div class="more-list"><button type="submit" class="more-item" data-composer-change>${icon('wrench')}Send change<small>it edits your checkout</small></button></div></details></span></div></footer><p class="composer-gh" data-composer-gh role="status" aria-live="polite" hidden></p>`;
     const text = form.querySelector('.composer-text');
     const refresh = () => {
@@ -1257,10 +1257,18 @@
     // Only waiting and failures take a line of their own under the buttons.
     const line = form.querySelector('[data-composer-gh]');
     const as = form.querySelector('[data-composer-as]');
+    // The reader's face beside the text, saying who and where for a theme that hides the header's words.
+    const face = form.querySelector('[data-composer-face]');
+    const faceHTML = youAvatar().replace(/^<span[^>]*>|<\/span>$/g, '');
+    if (face.dataset.html !== faceHTML) { face.innerHTML = faceHTML; face.dataset.html = faceHTML; }
+    const agentTab = form.querySelector('.composer-mode input[value="agent"] + span');
+    const slug = mainAgent();
+    if (agentTab && agentTab.dataset.agent !== slug) { agentTab.dataset.agent = slug; agentTab.innerHTML = `<span class="composer-agent-mark" data-agent="${escape(slug)}" aria-hidden="true">${agentMark(slug)}</span>Agent`; }
     const status = ghStatus();
     const who = gh === 'post' && status.phase === 'ready' && !unpushed ? `<b>@${escape(status.login)}</b> on #${escape(status.number)}${ghPending() ? ` · ${ghPending()} pending` : ''}` : '';
     if (as.dataset.html !== who) { as.innerHTML = who; as.dataset.html = who; as.title = who ? `Commenting as @${status.login} on ${status.repo} #${status.number}` : ''; }
     as.hidden = !who;
+    face.title = [form.querySelector('.composer-where')?.textContent, who ? `as @${status.login} on #${status.number}` : ''].filter(Boolean).join(' · ');
     let html = '';
     if (unpushed) html = 'These lines are not on the pull request yet, so GitHub cannot take a comment on them. Save it, push, then post it from its card.';
     else if (gh === 'post' && status.phase !== 'ready') html = `${status.phase === 'checking' ? '<span class="gh-spinner" aria-hidden="true"></span>' : ''}${escape(status.text || '')}`;
@@ -2126,6 +2134,15 @@
     // Who wrote it is the face beside the title, and where it is is at the right of it: only what kind of comment it is is said.
     return `<p class="thread-meta" title="${escape([by, path && range ? `${path}, ${range}` : ''].filter(Boolean).join(' · '))}">${[kind, comment.decoration && !comment.personal ? escape(comment.decoration) : ''].filter(Boolean).join('<i aria-hidden="true">·</i>')}</p>`;
   };
+  // The agent this review is with: the one listening, else the one that wrote its comments.
+  function mainAgent() {
+    const live = document.querySelector('#dcr-presence [data-agent]')?.dataset.agent;
+    if (live) return live;
+    const count = {};
+    (review.comments || []).forEach(comment => { if (comment.agent) count[comment.agent] = (count[comment.agent] || 0) + 1; });
+    return Object.entries(count).sort((a, b) => b[1] - a[1])[0]?.[0] || 'claude';
+  }
+  const agentMark = slug => window.ReviewBrands?.[slug] || `<b>${escape((AGENT_NAMES[slug] || slug).charAt(0))}</b>`;
   // Who wrote a comment, as a small face: the reader, a teammate on GitHub, or an agent's mark.
   function authorFace(comment) {
     if (comment.personal) return youAvatar().replace('class="comment-avatar"', 'class="thread-face is-you" title="You"');
@@ -4033,6 +4050,8 @@
     const chip = document.getElementById('dcr-presence');
     $('bar-agent').hidden = !chip;
     if (chip && $('bar-agent').dataset.tone !== chip.dataset.tone) $('bar-agent').dataset.tone = chip.dataset.tone || 'off';
+    const slug = mainAgent();
+    if (chip && $('bar-agent').dataset.agent !== slug) { $('bar-agent').dataset.agent = slug; $('bar-agent').firstElementChild.innerHTML = agentMark(slug); }
     if (chip && $('bar-agent').title !== chip.title) { $('bar-agent').title = chip.title; $('bar-agent').setAttribute('aria-label', chip.getAttribute('aria-label') || chip.title); }
     // How many files need the reader, from the verdict strip, for a theme that shows it by the progress instead.
     const need = document.querySelector('#dcr-jev .dcr-jev-yours');
