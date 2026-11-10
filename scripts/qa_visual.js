@@ -25,7 +25,7 @@ const COMPARE = option('compare', null) && path.resolve(option('compare'));
 const THEMES = list('themes', 'aida,terminal,minimal');
 const MODES = list('modes', 'light,dark');
 const VIEWPORTS = list('viewports', '1440x900,1280x800').map(size => { const [width, height] = size.split('x').map(Number); return {width, height, name: size}; });
-const STATES = list('states', 'overview,resolved,open-one,open-all,sidebar-collapsed,ledger,conversation,popover,settings,offline');
+const STATES = list('states', 'overview,resolved,open-one,open-all,sidebar-collapsed,ledger,conversation,popover,popover-own,settings,offline');
 const NO_FAIL = args.includes('--no-fail');
 // --probe file.js: print what an expression in that file returns in each combination, and nothing else.
 const PROBE = option('probe', null) && fs.readFileSync(option('probe'), 'utf8');
@@ -76,16 +76,8 @@ const steps = {
     await page.evaluate(`document.querySelector('[data-dcr-open="fee-window"]')?.click()`);
     await sleep(600);
   },
-  async popover(page) {
-    await page.evaluate(`document.querySelector('.thread-go[data-comment="fee-window"]')?.click() || document.querySelector('.review-thread[data-thread-id="fee-window"] [data-comment="fee-window"]')?.click()`);
-    await sleep(900);
-    // A real click on the comment's mark beside the code, once the scroll has settled.
-    await page.evaluate(`(() => { const trigger = [...document.querySelectorAll('.comment-trigger')].find(node => node.dataset.notes.split(' ').includes('fee-window')); trigger?.scrollIntoView({block: 'center'}); })()`);
-    await sleep(500);
-    const at = await page.evaluate(`(() => { const trigger = [...document.querySelectorAll('.comment-trigger')].find(node => node.dataset.notes.split(' ').includes('fee-window')); const r = trigger?.getBoundingClientRect(); return r ? {x: r.left + r.width / 2, y: r.top + r.height / 2} : null; })()`);
-    if (at) await page.click(at.x, at.y);
-    await sleep(700);
-  },
+  async popover(page) { await openPopover(page, 'fee-window'); },
+  async 'popover-own'(page) { await openPopover(page, 'mine-file-note'); },
   async settings(page) {
     await page.evaluate(`document.querySelector('[data-open-settings]')?.click()`);
     await sleep(300);
@@ -94,6 +86,17 @@ const steps = {
   },
   async offline(page) { await page.evaluate(`(${openFolds})()`); }
 };
+async function openPopover(page, id) {
+    await page.evaluate(`document.querySelector('.thread-go[data-comment="${id}"]')?.click() || document.querySelector('.review-thread[data-thread-id="${id}"] [data-comment="${id}"]')?.click()`);
+    await sleep(900);
+    // A real click on the comment's mark beside the code, once the scroll has settled.
+    await page.evaluate(`(() => { const trigger = [...document.querySelectorAll('.comment-trigger')].find(node => node.dataset.notes.split(' ').includes('${id}')); trigger?.scrollIntoView({block: 'center'}); })()`);
+    await sleep(500);
+    const at = await page.evaluate(`(() => { const trigger = [...document.querySelectorAll('.comment-trigger')].find(node => node.dataset.notes.split(' ').includes('${id}')); const r = trigger?.getBoundingClientRect(); return r ? {x: r.left + r.width / 2, y: r.top + r.height / 2} : null; })()`);
+    if (at) await page.click(at.x, at.y);
+    await sleep(700);
+  }
+
 function openFolds() {
   document.querySelectorAll('.overview-settled details.overview-fold:not([open])').forEach(fold => { fold.open = true; });
 }
@@ -329,7 +332,23 @@ async function backToOverview(page) {
   return {check: 'back-to-overview', pass: /Overview/.test(back), detail: back || 'no way back shown'};
 }
 
+// A picture of the contact sheet (index.html), for whoever reads the results without a browser.
+async function sheetPicture(browser, dir) {
+  const page = await browser.page({width: 1600, height: 900});
+  await page.goto(`file://${path.join(dir, 'index.html')}`);
+  await sleep(1500);
+  const height = await page.evaluate('Math.min(document.documentElement.scrollHeight, 16000)');
+  await page.call('Emulation.setDeviceMetricsOverride', {width: 1600, height, deviceScaleFactor: 1, mobile: false});
+  await sleep(500);
+  await page.screenshot(path.join(dir, 'contact-sheet.png'));
+  await page.close();
+}
+
 // --- the run ----------------------------------------------------------------------------------------
+if (option('sheet', null)) {
+  (async () => { const browser = await launch(); await sheetPicture(browser, path.resolve(option('sheet'))); await browser.close(); })();
+  return;
+}
 (async () => {
   fs.mkdirSync(OUT, {recursive: true});
   const work = fs.mkdtempSync(path.join(os.tmpdir(), 'dcr-qa-visual-'));
@@ -387,6 +406,7 @@ async function backToOverview(page) {
     }
     if (COMPARE) await compare(browser, report);
     writeSheet(report);
+    await sheetPicture(browser, OUT);
   } finally {
     await browser.close();
     served.server.kill();
@@ -434,7 +454,7 @@ function writeSheet(report) {
   const escape = text => String(text).replace(/[&<>"]/g, char => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[char]));
   const checks = [...new Set(report.flatMap(entry => entry.checks.map(check => check.check)))];
   const rows = report.map(entry => `<tr><td>${escape(entry.name)}</td>${checks.map(name => { const check = entry.checks.find(item => item.check === name); return check ? `<td class="${check.pass ? 'ok' : 'bad'}" title="${escape(check.detail)}">${check.pass ? 'pass' : 'FAIL'}</td>` : '<td>–</td>'; }).join('')}${entry.diff !== undefined ? `<td>${entry.diff === null ? 'new' : `${entry.diff}%`}</td>` : ''}</tr>`).join('');
-  const shots = report.map(entry => `<figure><a href="${escape(entry.name)}.png"><img src="${escape(entry.name)}.png" loading="lazy"></a>${entry.diff !== undefined && entry.diff !== null ? `<a href="diff/${escape(entry.name)}.png">diff ${entry.diff}%</a>` : ''}<figcaption>${escape(entry.name)}</figcaption></figure>`).join('');
+  const shots = report.map(entry => `<figure><a href="${escape(entry.name)}.png"><img src="${escape(entry.name)}.png"></a>${entry.diff !== undefined && entry.diff !== null ? `<a href="diff/${escape(entry.name)}.png">diff ${entry.diff}%</a>` : ''}<figcaption>${escape(entry.name)}</figcaption></figure>`).join('');
   fs.writeFileSync(path.join(OUT, 'index.html'), `<!doctype html><meta charset="utf-8"><title>Visual QA</title><style>body{font:13px system-ui;margin:20px}table{border-collapse:collapse;margin-bottom:24px}td,th{border:1px solid #ccc;padding:2px 6px;font-size:11px}.ok{color:#176}.bad{background:#fdd;color:#900;font-weight:600}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}figure{margin:0}img{width:100%;border:1px solid #ddd}</style>
 <h1>Visual QA: ${report.length} screenshots</h1><table><tr><th>combination</th>${checks.map(name => `<th>${escape(name)}</th>`).join('')}${COMPARE ? '<th>diff</th>' : ''}</tr>${rows}</table><div class="grid">${shots}</div>`);
 }

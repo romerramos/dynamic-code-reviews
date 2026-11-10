@@ -23,8 +23,8 @@ html[data-avatar-style="mono"] .ui-avatar[data-kind="agent"]{--face-ink:var(--in
 .ui-avatar:is([data-kind="you"],[data-kind="person"]){--face-ink:var(--ink-neutral-2);--face-bg:var(--bg-neutral-3)}
 .ui-avatar[data-photo]{background:none}
 .ui-avatar>img{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover}
-/* Several faces overlapping, as in a chat's "replied" line. */
-.ui-avatar-stack{display:inline-flex;align-items:center}
+/* Several faces overlapping, as in a chat's "replied" line: each column is narrower than its face by
+   --stack-overlap, so the next face covers that much of it (no offsets); the count closes the row. */
+.ui-avatar-stack{display:inline-grid;grid-auto-flow:column;grid-auto-columns:calc(var(--avatar-size,16px) - var(--stack-overlap,4px));align-items:center;padding-right:var(--stack-overlap,4px)}
 .ui-avatar-stack>.ui-avatar{box-shadow:0 0 0 1.5px var(--surface)}
-.ui-avatar-stack>*+*{margin-left:-4px}
 .ui-avatar-more{display:inline-grid;place-items:center;min-width:16px;height:16px;padding:0 3px;border-radius:calc(999px * var(--round));background:var(--line);box-shadow:0 0 0 1.5px var(--surface);color:var(--ink);font-size:9.5px;font-weight:700}

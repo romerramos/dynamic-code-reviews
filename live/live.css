@@ -519,7 +519,7 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 .dcr-intro{width:min(540px,calc(100vw - 24px));max-width:none;padding:24px 26px 0;font-size:14px}
 .dcr-intro h2:focus{outline:none}
 .dcr-intro-hero{display:flex;align-items:center;gap:10px;margin-bottom:14px}
-.dcr-intro-hero .ui-avatar-stack .ui-avatar{--avatar-size:26px}
+.dcr-intro-hero .ui-avatar-stack{--avatar-size:26px}
 .dcr-intro-plus{color:var(--muted);font-size:16px;font-weight:600}
 .dcr-intro h2{margin:0 0 6px;font-size:19px;font-weight:650;letter-spacing:-.01em}
 .dcr-intro-lead{margin:0;color:var(--muted);line-height:1.55}

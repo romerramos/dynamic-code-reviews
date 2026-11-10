@@ -1421,7 +1421,7 @@
     const evidence = ReviewTools.evidenceFlows(review.qa, comment).length ? UI.Button({label: 'See visual evidence', size: 'xs', attrs: {'data-evidence': comment.id}}) : '';
     const actions = `<div class="comment-actions">${commentActions(comment, 'xs')}</div>`;
     const found = ReviewTools.anchor(snapshot, comment);
-    const tags = comment.personal && comment.audience === 'agent' ? (comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : '') : threadBadges(comment, comment.personal);
+    const tags = comment.personal && comment.audience === 'agent' ? `${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${youBadge()}` : threadBadges(comment, comment.personal);
     return UI.CommentPopover({id: comment.id, own: comment.personal, where: pathFit(found?.file.path || '', lines, true), tags, face: authorFace(comment),
       title: comment.personal ? escape(comment.subject) : prose(comment.subject), place: escape(lines),
       meta: threadMeta(comment, found?.file.path, lines.slice(1)), body: `${body}${evidence}`,
@@ -2137,6 +2137,8 @@
     const model = ReviewTools.modelText(comment.model, comment.effort);
     return `<span class="thread-by" title="Written by ${escape(model ? `${name}, ${model}` : name)}">by${UI.Avatar({agent: slug, size: 'xs', title: ''})}${escape(name)}${model ? `<span class="thread-model">${escape(model)}</span>` : ''}</span>`;
   }
+  // The reader's own comment, said as the agent's is: by (face) and their name.
+  const youBadge = () => `<span class="thread-by" title="Your comment">by${youAvatar('xs')}<span class="you-name">${youName()}</span></span>`;
   // A teammate's comment, taken in from the pull request on GitHub: their avatar and login.
   function personBadge(person) {
     const login = person.login || 'someone';
@@ -2145,7 +2147,7 @@
   // own: in a message already signed You, so it does not say Your comment.
   function threadBadges(comment, own = false) {
     if (comment.audience === 'agent') return `${UI.Tag(null, {agent: true})}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${ghBadgeSlot(comment)}`;
-    return `${UI.Tag(comment.label)}<span class="thread-priority ${comment.decoration === 'blocking' ? 'is-blocking' : 'is-optional'}">${comment.decoration === 'blocking' ? `${icon('circle-alert')} Blocking` : 'Non-blocking'}</span>${comment.severity ? `<span class="thread-severity">${escape(comment.severity)}</span>` : ''}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${comment.personal ? own ? '' : '<span class="thread-author">Your comment</span>' : comment.author ? personBadge(comment.author) : agentBadge(comment.agent, comment)}${ghBadgeSlot(comment)}`;
+    return `${UI.Tag(comment.label)}<span class="thread-priority ${comment.decoration === 'blocking' ? 'is-blocking' : 'is-optional'}">${comment.decoration === 'blocking' ? `${icon('circle-alert')} Blocking` : 'Non-blocking'}</span>${comment.severity ? `<span class="thread-severity">${escape(comment.severity)}</span>` : ''}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${comment.personal ? own ? youBadge() : '<span class="thread-author">Your comment</span>' : comment.author ? personBadge(comment.author) : agentBadge(comment.agent, comment)}${ghBadgeSlot(comment)}`;
   }
   // closed: the card starts folded to its subject (a comment from an earlier revision).
   // A comment's place in a few characters (ws.rb:55), and its state in a word, for a closed comment shown as one line.
