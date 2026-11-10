@@ -926,3 +926,17 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
 [data-theme^="minimal-"] .dcr-qa-done .dcr-qa-free{margin:14px 0 0;color:var(--minimal-faint);font-size:12px}
 [data-theme^="minimal-"] .dcr-qa-done footer{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;padding:0;border:0;background:none}
 [data-theme^="minimal-"] .dcr-qa-done.is-empty [data-done-close]{display:none}
+
+/* --- The app opens as a modal over the review, not in its place: the review dimmed behind, a head with
+   what it is and the ×, and its own controls in their bar at its bottom, inside it. --- */
+[data-theme^="minimal-"] dialog.stage.dcr-app{inset:0;width:calc(100vw - 48px);height:calc(100dvh - 48px);margin:auto;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 24px 64px color-mix(in srgb,var(--shade) 16%,transparent)}
+[data-theme^="minimal-"] dialog.stage.dcr-app[open]{display:grid;grid-template-rows:48px minmax(0,1fr)}
+[data-theme^="minimal-"] dialog.stage.dcr-app::backdrop{background:color-mix(in srgb,var(--ink) 18%,transparent)}
+[data-theme^="minimal-"] .dcr-app .dcr-app-head{display:flex;align-items:center;gap:10px;height:48px;box-sizing:border-box;padding:0 10px 0 20px;border-bottom:1px solid var(--line);background:var(--surface)}
+[data-theme^="minimal-"] .dcr-app .dcr-app-head strong{font-size:13px;font-weight:600}
+[data-theme^="minimal-"] .dcr-app .dcr-app-head-host{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--minimal-faint);font:12px var(--mono)}
+[data-theme^="minimal-"] .dcr-app .dcr-app-head .dcr-app-icon{display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:8px;background:transparent;color:var(--ink-neutral-3)}
+[data-theme^="minimal-"] .dcr-app .dcr-app-head .dcr-app-icon:hover{background:var(--minimal-soft);color:var(--ink)}
+/* The bar's own × goes: the head has the one every modal has. */
+[data-theme^="minimal-"] .dcr-app .stage-tools [data-app-close]{display:none}
+[data-theme^="minimal-"] .dcr-app.is-agent-driving .dcr-app-head [data-app-close]{display:none}

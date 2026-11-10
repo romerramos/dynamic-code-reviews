@@ -706,3 +706,5 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 /* The QA bar's own copy of what the agent is getting ready, for a theme that says it there instead of over the app. */
 #dcr-app [data-qa-prep]{display:none}
 .dcr-qa-done.is-empty .dcr-qa-check{display:none}
+/* The app's modal head, for a theme that opens the app as a modal over the review. */
+.dcr-app-head{display:none}

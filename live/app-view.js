@@ -38,6 +38,7 @@
   dialog.tabIndex = -1;
   dialog.autofocus = true;
   dialog.innerHTML = `
+    <div class="dcr-app-head"><strong>The app</strong><span class="dcr-app-head-host">${esc(app.upstream.replace(/^https?:\/\//, ''))}</span><button type="button" class="dcr-app-icon" data-app-close aria-label="Close the app" title="Close (Esc)">${icons.close}</button></div>
     <header class="stage-bar">
       <div class="dcr-qa-banner" role="status" aria-live="polite" hidden>
         <span class="dcr-qa-pulse" aria-hidden="true"></span>
@@ -799,7 +800,8 @@
   $('[data-app-reload]').addEventListener('click', () => navigate(route));
   $('[data-app-back]').addEventListener('click', () => { stepping = {direction: 'back', from: route}; post({type: 'back'}); });
   $('[data-app-forward]').addEventListener('click', () => { stepping = {direction: 'forward', from: route}; post({type: 'forward'}); });
-  $('[data-app-close]').addEventListener('click', () => dialog.close());
+  // The head's × (a theme that draws the app as a modal) and the bar's both close it.
+  dialog.querySelectorAll('[data-app-close]').forEach(button => button.addEventListener('click', () => dialog.close()));
   dialog.querySelectorAll('[data-app-mode]').forEach(button => button.addEventListener('click', () => setMode(button.dataset.appMode)));
   dialog.querySelectorAll('[data-app-width]').forEach(button => button.addEventListener('click', () => setWidth(button.dataset.appWidth)));
   dialog.addEventListener('keydown', event => {
