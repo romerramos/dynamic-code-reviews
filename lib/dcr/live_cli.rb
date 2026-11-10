@@ -87,6 +87,7 @@ module DCR
       'link' => 'dcr link (--repo ROOT --name SERIES | --dir DIR)   (the served review\'s addresses: on this computer, and on your tailnet when shared)',
       'focus' => 'dcr focus (--repo ROOT --name SERIES | --dir DIR)   (brings the browser tab showing the served review to the front)',
       'reply' => 'dcr reply (--repo ROOT --name SERIES | --dir DIR) [--agent NAME] [--model ID] [--effort LEVEL] [--key KEY] [--json] [--outcome addressed|still-applies|not-relevant] [--no-second-opinion] <thread-id> <text>   (--outcome: what became of that comment after the code changed; the adversaries then check it)',
+      'progress' => 'dcr progress (--repo ROOT --name SERIES | --dir DIR) <thread-id> <text>   (one short line, at most 160 characters, on what you are doing in a QA review before it records, such as "Signing in as the seeded admin"; the page shows the latest few over the app)',
       'second-opinion' => 'dcr second-opinion (--repo ROOT --name SERIES | --dir DIR) (--comment ID [--comment ID]... | --outcome ID) [--agent AUTHOR] [--context TEXT]   (asks the reviewer\'s adversaries to check a posted comment, or what became of one after the code changed; `dcr comment` and `dcr reply --outcome` do this by themselves)',
       'evidence' => 'dcr evidence attach (--repo ROOT --name SERIES | --dir DIR) --file ITEMS.json [--replace previous-qa|all]   (ITEMS: [{"path", "title", "result": "passed|failed", "observed", "comment_id"?, "screenshot_id"?, "page"?}]; screenshot_id: the review screenshot this clip shows in motion, which it then replaces, keeping it as its thumbnail; previous-qa, the default, replaces the last QA review; all replaces every recording, only when the reviewer asks to start over)'
     }.freeze
@@ -137,6 +138,7 @@ module DCR
       when 'wait' then wait(state, options)
       when 'comments' then comments(state, options)
       when 'reply' then reply(state, options, argv, parser)
+      when 'progress' then progress(state, argv, parser)
       when 'comment' then comment(state, options, directory(options, parser))
       when 'screenshot' then screenshot(state, options, directory(options, parser))
       when 'sync' then sync(options, directory(options, parser))
@@ -149,7 +151,7 @@ module DCR
       when 'evidence' then evidence(options, directory(options, parser), argv, parser)
       when 'second-opinion' then second_opinion(options, directory(options, parser), parser)
       end
-      Activity.record(series, said, 'ok', (options[:none] if command == 'screenshot')) unless %w[comments link].include?(command) || (command == 'report' && !options[:publish])
+      Activity.record(series, said, 'ok', (options[:none] if command == 'screenshot')) unless %w[comments link progress].include?(command) || (command == 'report' && !options[:publish])
     rescue ArgumentError, KeyError, SystemCallError, JSON::ParserError => error
       Activity.record(series, said, 'failed', error.message) if series
       abort error.message
@@ -672,6 +674,13 @@ module DCR
       return puts(JSON.generate(message)) if options[:json]
       puts "Replied to #{id}#{" (#{options[:outcome]})" if options[:outcome]}."
       check_outcome(series, id, author) if series && options[:second_opinion] != false
+    end
+
+    def progress(state, argv, parser)
+      id, *words = argv
+      raise ArgumentError, parser.to_s unless id && !words.empty?
+      state.progress(id, words.join(' '))
+      puts 'Shown in the page.'
     end
 
     # The adversaries say what became of the comment on their own, in the background, as for a comment.

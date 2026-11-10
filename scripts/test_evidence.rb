@@ -162,6 +162,7 @@ ReviewChecks.fixture do |root, _commit|
     notes = queued['text'][/QA notes: (\S+)/, 1]
     assert(notes&.start_with?(File.join(ENV['DCR_CONFIG_DIR'], 'qa-notes')) && notes == DCR::QARequest.notes_path(ReviewSeries.manifest(series_dir)['repo']), "QA notes live outside the project, one file per repository: #{notes}")
     assert(queued['text'].include?('Sign in as the right person, without guessing') && queued['text'].include?('Make the data each flow needs') && queued['text'].include?('An issue the review only inferred is worth recording most'), 'The QA request must prepare the sign-in and the data, and record inferred issues')
+    assert(queued['text'].include?("progress --repo") && queued['text'].include?('Never put a password'), 'The QA request must ask the agent to say what it is doing while it prepares')
     assert(queued['text'].include?("arrows at the left of the App view's address field"), 'The QA request must say how to go Back without leaving the review')
     printed = DCR::LiveCLI.render([queued], '--repo r --name s')
     assert(printed.start_with?('QA REQUEST.') && !printed.include?('REPLY ONLY') && printed.include?('record and attach only'), 'dcr wait must hand a QA request over as a task')

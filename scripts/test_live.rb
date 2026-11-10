@@ -123,6 +123,17 @@ Dir.mktmpdir('dcr-live-test') do |directory|
   out, = run.call('wait', '--dir', agent_dir, '--timeout', '2')
   assert(out.include?('CODE UPDATE: 1 file changed.') && out.include?("dcr comment --dir #{agent_dir} --file") && !out.include?('REPLY ONLY'), 'A code update was not handed over as a task to comment on')
   puts 'PASS dcr wait blocks until the reviewer sends, prints thread and reply command, acknowledges, and dcr reply/comments (and --thread) round-trip'
+  # A running QA review says what it is doing; the page shows the newest lines over the app.
+  agent_state.request_qa(KEY, 'app-qa-1a2b3c4d', 'QA REQUEST')
+  14.times { |n| run.call('progress', '--dir', agent_dir, 'app-qa-1a2b3c4d', "Step #{n}:", 'making', 'orders') }
+  thread = agent_state.read.dig('threads', KEY, 'app-qa-1a2b3c4d')
+  assert(thread['progress'].length == DCR::State::PROGRESS_KEPT && thread['progress'].last['text'] == 'Step 13: making orders', 'Progress lines were not kept, newest last')
+  assert(thread['messages'].length == 1 && thread['delivery'] == 'sent', 'A progress line must not answer the QA thread')
+  _out, err, status = run.call('progress', '--dir', agent_dir, 'app-qa-1a2b3c4d', 'x' * 161)
+  assert(!status.success? && err.include?('160 characters'), 'A long progress line was accepted')
+  _out, err, status = run.call('progress', '--dir', agent_dir, 'nope', 'text')
+  assert(!status.success? && err.include?('No thread nope'), 'Progress on an unknown thread did not fail clearly')
+  puts 'PASS dcr progress keeps the newest lines on the QA thread without answering it'
 
   FileUtils.rm_f(state.path)
   server = DCR::Server.new(directory: File.join(directory, 'capture'), report: File.join(series, 'current.html'))

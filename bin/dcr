@@ -23,6 +23,7 @@ USAGE = <<~TEXT
     previews render                Render template previews from a spec
     serve                          Serve a review with the QA recorder panel and live conversation threads
     wait | comments | reply        The agent's side of a served review: receive the reviewer's comments, list threads, answer one
+    progress                       Show the reviewer a short line on what you are doing in a QA review before it records
     comment                        Post a review comment to a review in progress; the open page shows it at once,
                                    and another installed agent checks it
     sync                           Update a review to the code as it is now: comments follow their lines or become outdated,
@@ -61,7 +62,7 @@ when 'series'
 when 'previews'
   abort USAGE unless ARGV.first == 'render'
   run_script('previews.rb', *ARGV)
-when 'wait', 'comments', 'comment', 'screenshot', 'log', 'sync', 'risk-ranking', 'focus', 'link', 'stop', 'reply', 'export', 'report', 'preview', 'evidence', 'second-opinion'
+when 'wait', 'comments', 'comment', 'screenshot', 'log', 'sync', 'risk-ranking', 'focus', 'link', 'stop', 'reply', 'progress', 'export', 'report', 'preview', 'evidence', 'second-opinion'
   require_relative '../lib/dcr/live_cli'
   DCR::LiveCLI.run(command, ARGV)
 when 'serve' then load File.join(SCRIPTS, 'serve.rb') # in this process, so `dcr stop` finds it as `bin/dcr serve`

@@ -69,7 +69,7 @@
     </header>
     <div class="dcr-app-body">
       <div class="dcr-app-canvas">
-        <div class="dcr-app-pane"><iframe title="The app under review" name="dcr-app-frame"></iframe><div class="dcr-app-prep" role="status" aria-live="polite" hidden><div class="dcr-app-prep-card"><span class="dcr-app-prep-spin" aria-hidden="true"></span><span class="dcr-app-prep-text"><strong data-prep-title></strong><span data-prep-detail></span></span></div></div></div>
+        <div class="dcr-app-pane"><iframe title="The app under review" name="dcr-app-frame"></iframe><div class="dcr-app-prep" hidden><div class="dcr-app-prep-card"><span class="dcr-app-prep-spin" aria-hidden="true"></span><div class="dcr-app-prep-text"><p class="dcr-app-prep-head"><strong data-prep-title></strong><span class="dcr-app-prep-clock" data-prep-clock aria-hidden="true"></span></p><p class="dcr-app-prep-now" role="status" aria-live="polite"><span data-prep-detail></span><span class="dcr-app-prep-clock" data-prep-since aria-hidden="true"></span></p><ol class="dcr-app-prep-log" data-prep-log hidden></ol></div></div></div></div>
         <form class="dcr-app-compose" data-app-compose hidden aria-label="Comment on this element">
           <p class="dcr-app-target"></p>
           <textarea name="body" rows="3" placeholder="What should change here?" aria-label="Your comment"></textarea>
@@ -599,8 +599,31 @@
     const who = listener && tools ? tools.agentInfo(listener).name : 'Your agent';
     const clips = clipsSince(thread.messages[0]?.at || '');
     $('[data-prep-title]').textContent = clips ? `${who} is preparing the next recording` : `${who} is getting the app ready to record`;
-    $('[data-prep-detail]').textContent = clips ? `${clips} ${clips === 1 ? 'recording' : 'recordings'} so far. This part is not recorded.` : 'Signing in and setting up the data the flows need. This part is not recorded.';
+    // What the agent says it is doing (`dcr progress`): the newest line leads with how long it has
+    // been at it, and the two before it show what it already did, so the wait plainly moves.
+    const lines = (thread.progress || []).slice(-3).reverse();
+    const fallback = clips ? `${clips} ${clips === 1 ? 'recording' : 'recordings'} so far. This part is not recorded.` : 'Signing in and setting up the data the flows need. This part is not recorded.';
+    const detail = $('[data-prep-detail]');
+    if (detail.textContent !== (lines[0]?.text || fallback)) detail.textContent = lines[0]?.text || fallback;
+    const log = $('[data-prep-log]');
+    const older = lines.slice(1).map(line => line.text);
+    if (JSON.stringify(older) !== log.dataset.lines) {
+      log.dataset.lines = JSON.stringify(older);
+      log.replaceChildren(...older.map(text => Object.assign(document.createElement('li'), {textContent: text})));
+    }
+    log.hidden = !older.length;
+    prep.dataset.started = thread.delivered_at || thread.messages[0]?.at || '';
+    prep.dataset.since = lines[0]?.at || '';
+    tickPrep();
   };
+  // The clocks run every second, so even a long step shows the agent is still on it.
+  const tickPrep = () => {
+    if (prep.hidden) return;
+    const since = at => at ? clock(Date.now() - Date.parse(at)) : '';
+    $('[data-prep-clock]').textContent = since(prep.dataset.started);
+    $('[data-prep-since]').textContent = since(prep.dataset.since);
+  };
+  setInterval(tickPrep, 1000);
   window.addEventListener('qa-recorder-state', event => syncPrep(event.detail));
   const setDriving = entry => {
     qaActive = entry ? entry[0] : null;

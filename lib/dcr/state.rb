@@ -278,6 +278,24 @@ module DCR
       end
     end
 
+    PROGRESS_KEPT = 12
+
+    # A short line on what the agent is doing in a running task (signing in, making data), for the
+    # page to show while nothing is recorded yet. Not a message: it never answers the thread.
+    def progress(id, line)
+      line = line.to_s.gsub(/\s+/, ' ').strip
+      raise ArgumentError, 'A progress line cannot be empty' if line.empty?
+      raise ArgumentError, 'A progress line is limited to 160 characters' if line.length > 160
+      update do |state|
+        key = state['threads'].select { |_, threads| threads.key?(id) }.keys.max_by { |name| name.split(':').last.to_i }
+        raise ArgumentError, "No thread #{id}. Give the QA thread's id." unless key
+        thread = thread(state, key, id)
+        entry = {'at' => Time.now.utc.iso8601, 'text' => line}
+        thread['progress'] = (Array(thread['progress']) << entry).last(PROGRESS_KEPT)
+        entry
+      end
+    end
+
     OUTCOMES = %w[addressed still-applies not-relevant].freeze
     SIDES = %w[dealt applies].freeze
 

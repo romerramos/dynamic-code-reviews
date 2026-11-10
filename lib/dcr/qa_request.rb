@@ -52,6 +52,7 @@ module DCR
         - The app is the large pane in the middle of the App view; act inside it. Change the page with the address field at the top of the App view. Do not close the App view, reload the review or open another tab.
         - For a step that needs the browser's Back or Forward, use the arrows at the left of the App view's address field. They move the app's own history only, never the review's, so such a step can be recorded. Never use the browser's own Back. Each arrow's tooltip names where it leads, and after one is used the status line under the app says where it went, including "the same address" when an entry repeats the one before, which a glance at the page cannot show.
         - Between recordings the App view covers the app with a light veil saying you are preparing, so the reviewer knows nothing is being recorded yet. Clicks pass through it, and it is gone before a recording starts; ignore it.
+        - The reviewer watches that veil while you prepare, and it is all they see of your work. Before each step, and when a step takes a while, tell them in a few plain words what you are doing: #{dcr} progress #{flags} #{id} '<Looking up the seeded accounts>'. One line each, at most 160 characters, such as "Signing in as the seeded admin", "Creating 3 orders: 2 paid, 1 refunded" or "That login was rejected; checking the seeds again". Never put a password, token or other secret in it.
 
         Prepare first (not recorded); this is what makes the clips worth watching:
         - QA notes: #{notes} — #{known}
