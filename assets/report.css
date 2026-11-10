@@ -1754,3 +1754,7 @@ main#content{padding-bottom:104px}
 }
 /* A row says who answered; whether it is on GitHub is in its conversation. */
 #ledger .ledger-item[data-ledger] .ledger-meta .gh-slot{display:none}
+/* A panel's icon holds both of its states; it shows the one that says what a click will do. */
+:is(.sidebar-show,.ledger-show) .when-open{display:none}
+body:not(.sidebar-collapsed) .sidebar-show .when-open,body.ledger-open .ledger-show .when-open{display:contents}
+body:not(.sidebar-collapsed) .sidebar-show .when-closed,body.ledger-open .ledger-show .when-closed{display:none}

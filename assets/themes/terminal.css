@@ -376,3 +376,15 @@
 [data-theme^="terminal-"] #ledger .ledger-item:nth-child(1 of [data-by="agent"])::before{content:"## Agent comments"}
 [data-theme^="terminal-"] #ledger .ledger-item:nth-child(1 of [data-ledger]:not([data-conversation]))::before{content:"## Your comments"}
 [data-theme^="terminal-"] #ledger .ledger-item:nth-child(1 of [data-by="person"])::before{content:"## From GitHub"}
+/* Rank the files is its row's own cell, so its brackets go inside it, after the table's pipe. */
+[data-theme^="terminal-"] .overview-reading .risk-rank.risk-none .risk-redo>svg{display:none}
+[data-theme^="terminal-"] .overview-reading .risk-rank.risk-none .risk-redo>span::before{content:"[ ";color:var(--terminal-overlay0)}
+[data-theme^="terminal-"] .overview-reading .risk-rank.risk-none .risk-redo>span::after{content:" ]";color:var(--terminal-overlay0)}
+/* The header is a pane like the others: a line all round, apart from them by the same gap, so no
+   line runs across the top of the panes. Your review is a pane wherever it is a column. */
+@media(min-width:1200px){
+  [data-theme^="terminal-"] body:not(.zen) .app-header{height:calc(var(--chrome-h) - 6px);margin:6px 6px 0;border:0;outline:1px solid var(--line);outline-offset:-1px}
+  [data-theme^="terminal-"] body.ledger-open:not(.zen) .ledger{border:0;outline:1px solid var(--line);outline-offset:-1px}
+  [data-theme^="terminal-"] body.ledger-open:not(.zen)[data-pane="ledger"] .ledger{outline-color:var(--pane-ring)}
+}
+[data-theme^="terminal-"] .overview-reading .risk-rank.risk-none .risk-redo{justify-self:stretch;margin:0;padding:0;text-align:left}
