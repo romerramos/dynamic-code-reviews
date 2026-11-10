@@ -241,6 +241,7 @@ function measure(context) {
   const style = (getComputedStyle(document.documentElement).getPropertyValue('--avatar-style').trim() || context.expectedStyle);
   const markProblems = [];
   // The bar's and the composer's mark is the field's icon, drawn in the text's colour in every theme.
+  const probe = document.createElement('i'); probe.style.color = 'var(--agent-claude, #d97757)'; document.body.append(probe); const brand = rgba(getComputedStyle(probe).color); probe.remove();
   const marks = [...document.querySelectorAll('[data-agent="claude"] svg, [data-agent="codex"] svg')].filter(visible).filter(svg => !svg.closest('.dcr-intro, .composer-agent-mark, .review-bar'));
   marks.forEach(svg => {
     const holder = svg.closest('[data-agent]');
@@ -248,7 +249,8 @@ function measure(context) {
     const isInk = distance(fill, ink) < 40;
     const where = label(holder.parentElement);
     if (context.expectedStyle === 'mono' && !isInk) markProblems.push(`${where}: ${holder.dataset.agent} not ink`);
-    if (context.expectedStyle === 'brand' && holder.dataset.agent === 'claude' && isInk) markProblems.push(`${where}: claude in ink`);
+    // Brand: Claude's mark in Claude's own colour (--agent-claude for this mode), not ink, not black.
+    if (context.expectedStyle === 'brand' && holder.dataset.agent === 'claude' && distance(fill, brand) > 40) markProblems.push(`${where}: claude not in its brand colour`);
   });
   add('agent-marks-theme-style', !markProblems.length && (style === context.expectedStyle || !document.documentElement.style), `${marks.length} marks, style ${style}; ${markProblems.slice(0, 4).join(' | ')}`);
 
