@@ -1045,3 +1045,5 @@ html[data-theme^="minimal-"]{--agent-claude:var(--ink)!important;--agent-codex:v
 [data-theme^="minimal-"] .overview-reading .review-thread .thread-summary .thread-go:hover{color:var(--ink)}
 [data-theme^="minimal-"] .overview-reading .review-thread .thread-summary .thread-go svg{width:14px;height:14px}
 [data-theme^="minimal-"] .overview-reading .review-thread:has(>.thread-details[open]) .thread-summary .thread-go{display:none}
+/* One line between two comments, open or closed: only the line under each. */
+[data-theme^="minimal-"] .overview-reading .review-thread{border-top-width:0!important}

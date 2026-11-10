@@ -126,7 +126,7 @@
    title and chevron), and the card grows around it, outward by the same 24px it keeps inside. The
    file line is gone; View in file goes there. Click to open, click the same spot to close. */
 [data-theme^="aida-"] .overview-reading .review-thread .thread-file{display:none!important}
-[data-theme^="aida-"] .overview-reading .review-thread:has(>.thread-details[open]){margin:-1px -25px 0;}
+[data-theme^="aida-"] .overview-reading .review-thread:has(>.thread-details[open]){margin:-1px -25px 16px;}
 [data-theme^="aida-"] .overview-reading .review-thread:has(>.thread-details[open]) .thread-summary{padding:11px 24px 2px!important}
 [data-theme^="aida-"] .overview-reading .review-thread:has(>.thread-details[open]) .thread-summary>strong{font-size:inherit!important;line-height:inherit!important}
 
