@@ -1637,8 +1637,10 @@ main#content{padding-bottom:104px}
 .ledger-item[data-ledger] .dcr-peek{width:auto;padding:5px 0 0 52px}
 .ledger-item[data-ledger] .dcr-peek :is(b,.dcr-peek-when,.dcr-peek-end){display:none}
 .ledger-item[data-ledger] .dcr-peek-faces{gap:6px}
-.ledger-item[data-ledger] .dcr-peek-faces>:is(.dcr-avatar,.comment-avatar){width:14px;height:14px;margin:0;box-shadow:none;color:var(--muted)}
-.ledger-item[data-ledger] .dcr-peek-faces>* :is(svg,img){width:13px;height:13px}
+/* Who answered: each agent's own small logo, in its colours, as the adversaries' toggle shows them. */
+.ledger-item[data-ledger] .dcr-peek-faces>:is(.dcr-avatar,.comment-avatar){width:18px;height:18px;margin:0;box-shadow:none;filter:none;opacity:1}
+.ledger-item[data-ledger] .dcr-peek-faces>.dcr-avatar svg{width:58%;height:58%}
+.ledger-item[data-ledger] .dcr-peek-faces>* img{width:100%;height:100%}
 .ledger-item[data-ledger] .ledger-meta{display:flex;align-items:center;gap:6px;margin:5px 0 0 8px;padding:0}
 /* Template previews have the Previews tab and ⌘K. */
 .ledger-previews{display:none}
@@ -1773,7 +1775,7 @@ body:not(.sidebar-collapsed) .sidebar-show .when-closed,body.ledger-open .ledger
 .overview-reading .thread-summary .thread-go svg{width:14px;height:14px}
 /* A comment carried from an earlier revision is still yours: same place and colour as the others. */
 .overview-reading #my-review .review-thread.is-earlier .thread-summary{padding-left:0}
-.overview-reading #my-review .review-thread.is-earlier .thread-summary strong{color:var(--ink)}
+.overview-reading #my-review .review-thread.is-earlier .thread-summary strong{color:var(--ink-neutral-2)}
 .overview-reading .thread-summary{align-items:center}
 .overview-reading .review-thread .thread-summary .thread-resolved{font-size:0!important;letter-spacing:0}
 .overview-reading .review-thread .thread-summary .thread-resolved::before,.overview-reading .review-thread .thread-summary .thread-resolved::after{content:none}

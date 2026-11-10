@@ -415,3 +415,18 @@
 [data-theme^="terminal-"] .overview-reading .review-thread .thread-summary>:is(.comment-avatar,.thread-face) :is(img,svg){width:24px;height:24px;border-radius:50%}
 [data-theme^="terminal-"] .overview-reading .review-thread .thread-summary>.thread-face:not(.is-you) svg{width:16px;height:16px;border-radius:0}
 [data-theme^="terminal-"] .overview-reading .review-thread .thread-summary .thread-badges .gh-slot{display:none!important}
+/* An open comment is one card with one inner margin (24px) on every side: the face at the margin, the
+   title, the comment, View in file and every answer's words all starting at one line (66px), the
+   footer's buttons at the margin. */
+[data-theme^="terminal-"] .overview-reading .review-thread:has(>.thread-details[open]) .thread-summary{padding:22px 24px 14px!important;column-gap:14px!important}
+[data-theme^="terminal-"] .overview-reading .review-thread:has(>.thread-details[open]) .thread-file{padding-left:24px;padding-right:24px}
+[data-theme^="terminal-"] .overview-reading .review-thread:has(>.thread-details[open]) .thread-body{padding:0 24px 18px 66px!important}
+[data-theme^="terminal-"] .overview-reading .review-thread:has(>.thread-details[open]) .thread-source{box-sizing:border-box;width:auto!important;margin:0 24px 18px 66px!important}
+[data-theme^="terminal-"] .overview-reading .review-thread:has(>.thread-details[open]) .dcr-thread{padding-left:24px!important;padding-right:24px!important}
+[data-theme^="terminal-"] .overview-reading .review-thread:has(>.thread-details[open]) .dcr-thread .dcr-msg{grid-template-columns:32px minmax(0,1fr)!important;column-gap:10px!important;margin-left:0!important;padding-left:0!important}
+[data-theme^="terminal-"] .overview-reading .review-thread:has(>.thread-details[open]) .thread-footer{padding-left:24px!important;padding-right:24px!important}
+/* A comment carried from an earlier revision opens as the same card as the others: same surface, no
+   rule under its header, the same title. */
+[data-theme^="terminal-"] .overview-reading .review-thread.is-earlier:has(>.thread-details[open]){background:var(--surface)}
+[data-theme^="terminal-"] .overview-reading .review-thread.is-earlier:has(>.thread-details[open]) .thread-summary{background:var(--surface);border-bottom:0}
+[data-theme^="terminal-"] .overview-reading .review-thread.is-earlier>.thread-details[open]>.thread-summary>strong{font-size:12px;font-weight:500;line-height:1.55;color:var(--ink-neutral-2)}
