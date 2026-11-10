@@ -91,7 +91,8 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .overview-reading .eyebrow{color:var(--minimal-faint);font-weight:400;letter-spacing:.04em}
 [data-theme^="minimal-"] .overview-reading :is(.thread-file,.thread-footer){padding-left:0;padding-right:0;border-color:transparent;background:transparent}
 [data-theme^="minimal-"] .overview-reading :is(.thread-summary,.thread-body,.dcr-thread){padding-left:0;padding-right:0;background:transparent}
-[data-theme^="minimal-"] .overview-reading .review-thread{padding:18px 0;border-top:1px solid var(--line)}
+[data-theme^="minimal-"] .overview-reading .review-thread{border-radius:0;border-bottom:1px solid var(--line)}
+[data-theme^="minimal-"] .overview-reading .review-thread:has(>.thread-details[open]){padding:6px 0 10px}
 /* Overview and All changes are places, not steps: no mark beside them. */
 [data-theme^="minimal-"] #navigation>ul .step-number{display:none}
 [data-theme^="minimal-"] .overview-reading .review-thread .thread-details>summary.thread-summary{padding-left:0;padding-right:0}

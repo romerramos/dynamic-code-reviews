@@ -232,40 +232,31 @@ html[data-mode="dark"] .dcr-send:not(:disabled){background:var(--color-primary)}
 
 
 
-/* Try the change: right after What changed on the Overview of a served review. The running app
-   is shown as itself, a live miniature, because seeing it is what tells you what you can do. */
 body.dcr-has-try .evidence-strip{display:none}
 body.dcr-has-app #qa-panel{display:none}
-.dcr-try{margin:36px 0 8px}
-.dcr-try > h2{margin:0 0 14px;font-size:20px;font-weight:600}
-.dcr-try-body{display:grid;gap:14px}
-.dcr-try-app{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:22px;align-items:center;padding:16px;border:1px solid var(--line);border-radius:calc(14px * var(--round));background:var(--surface)}
-.dcr-try-mini{position:relative;display:block;padding:0;border:0;border-radius:calc(10px * var(--round));background:none;cursor:pointer;text-align:left}
-.dcr-try-frame{display:block;position:relative;aspect-ratio:16/10;overflow:hidden;border-radius:calc(10px * var(--round));background:color-mix(in oklab,var(--ink) 6%,var(--canvas));box-shadow:0 0 0 1px var(--line),0 10px 30px color-mix(in srgb,var(--shade) 12.2%,transparent)}
-.dcr-try-frame iframe{position:absolute;top:0;left:0;width:1280px;height:800px;border:0;background:var(--bg-neutral-1);transform-origin:0 0;pointer-events:none}
-.dcr-try-mini:hover .dcr-try-frame,.dcr-try-mini:focus-visible .dcr-try-frame{box-shadow:0 0 0 2px var(--accent),0 12px 34px color-mix(in srgb,var(--shade) 20%,transparent)}
-.dcr-try-addr{position:absolute;left:8px;bottom:8px;display:inline-flex;align-items:center;gap:6px;max-width:calc(100% - 16px);padding:3px 9px;overflow:hidden;border-radius:calc(999px * var(--round));background:color-mix(in oklab,var(--surface) 92%,transparent);color:var(--ink);font:11.5px var(--mono);text-overflow:ellipsis;white-space:nowrap;box-shadow:0 1px 3px color-mix(in srgb,var(--shade) 14.9%,transparent)}
-.dcr-try-dot{flex:none;width:7px;height:7px;border-radius:calc(50% * var(--round));background:var(--dcr-off)}
-.dcr-try.is-running .dcr-try-dot{background:var(--dcr-ok)}
-.dcr-try-copy h3,.dcr-try-previews h3{margin:0 0 6px;font-size:16px;font-weight:600}
-.dcr-try-copy p,.dcr-try-previews p{max-width:58ch;margin:0 0 14px;color:var(--muted);font-size:14px;line-height:1.55}
-.dcr-try-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
-.dcr-try-actions kbd{margin-left:6px;padding:0 5px;border:1px solid var(--line);border-radius:calc(4px * var(--round));color:var(--muted);font:11px var(--mono)}
-.dcr-try-rec{display:inline-block;width:8px;height:8px;margin-right:6px;border-radius:calc(50% * var(--round));background:var(--bg-red-2);vertical-align:1px}
-.dcr-try-none h3{margin:0 0 6px;font-size:16px;font-weight:600}
-.dcr-try-none p{max-width:58ch;margin:0;color:var(--muted);font-size:14px;line-height:1.55}
+/* Try the change, and the risk ranking before it is ranked: one row each. What it is, a few words on it, the ways in. */
+.dcr-try{margin:0 0 6px}
+.dcr-try > h2{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.dcr-try-rows{margin:0;padding:0;list-style:none}
+.dcr-try-row,.risk-rank.risk-none{display:grid;grid-template-columns:150px minmax(0,1fr) auto;align-items:baseline;gap:4px 18px;padding:11px 0;border-top:1px solid var(--line);font-size:14px}
+.dcr-try-do,.risk-rank.risk-none h2{margin:0;padding:0;border:0;background:none;color:var(--ink);font:inherit;font-weight:600;text-align:left}
+button.dcr-try-do{cursor:pointer}
+button.dcr-try-do:hover{text-decoration:underline;text-underline-offset:3px}
+.dcr-try-about,.risk-rank.risk-none p{margin:0;color:var(--muted)}
+.dcr-try-more{display:flex;gap:16px}
+.dcr-try-more button,.dcr-try-templates button{padding:0;border:0;background:none;color:var(--ink-neutral-3);font:inherit;cursor:pointer}
+.dcr-try-more button:hover,.dcr-try-templates button:hover{color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+.dcr-try-more kbd{margin-left:4px;color:var(--muted);font:11px var(--mono)}
+.dcr-try-templates{grid-column:2 / -1;display:flex;flex-wrap:wrap;gap:4px 22px;margin:0;padding:0;list-style:none;font-size:13px}
+.dcr-try-templates:empty{display:none}
+.dcr-try-templates li{display:flex;align-items:baseline;gap:7px}
+.dcr-try-templates code{font:12.5px var(--mono)}
+.dcr-try-state{color:var(--muted)}
+.risk-rank.risk-none{margin:0;border-radius:0;border-left:0;border-right:0;border-bottom:1px solid var(--line);background:transparent;box-shadow:none}
+.risk-rank.risk-none .risk-redo{justify-self:end}
+@media(max-width:700px){.dcr-try-row,.risk-rank.risk-none{grid-template-columns:1fr}.dcr-try-templates{grid-column:1}}
 /* No app needed: the recorder card and the video QA prompt would only offer what does not apply. */
 body.dcr-no-app #qa-panel,body.dcr-no-app .visual-qa-option,body.dcr-no-app .evidence-strip:not(:has(.btn:not(.visual-qa-option))){display:none}
-.dcr-try-previews{padding:16px 18px;border:1px solid var(--line);border-radius:calc(14px * var(--round));background:var(--surface)}
-.dcr-try-templates{display:grid;gap:2px;margin:0 0 6px;padding:0;list-style:none}
-.dcr-try-templates li{display:grid;grid-template-columns:10px minmax(0,1fr) auto auto;align-items:center;gap:10px;min-height:34px;padding:0 4px;border-top:1px solid var(--line)}
-.dcr-try-templates li:first-child{border-top:0}
-.dcr-try-templates code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:12.5px var(--mono)}
-.dcr-try-state{color:var(--muted);font-size:12.5px}
-.dcr-try-templates button,.dcr-try-link{padding:4px 2px;border:0;background:none;color:var(--accent);font:inherit;font-size:13px;font-weight:550;cursor:pointer}
-.dcr-try-templates button:hover,.dcr-try-link:hover{text-decoration:underline}
-@media(min-width:1500px){.dcr-try-body.has-both{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}.dcr-try-body.has-both .dcr-try-app{grid-template-columns:minmax(0,1fr)}}
-@media(max-width:700px){.dcr-try-app{grid-template-columns:1fr}}
 
 /* GitHub work in progress, bottom right: a spinner while it runs, then what happened and its link. */
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}

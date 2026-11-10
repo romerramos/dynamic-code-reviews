@@ -1,7 +1,6 @@
 'use strict';
-// "Try the change" on the Overview of a served review: the running app as a live miniature that
-// opens the App view, and the changed templates with their preview state. Both are things a reader
-// can do with the change itself, so they come right after What changed instead of in a quiet line.
+// "Try the change" on the Overview of a served review: what a reader can do with the change itself,
+// one row each (a QA review and the running app, the changed templates and their previews).
 (() => {
   const content = document.getElementById('content');
   const tools = window.ReviewTools;
@@ -34,34 +33,24 @@
   const band = document.createElement('section');
   band.className = 'dcr-try';
   band.setAttribute('aria-labelledby', 'dcr-try-title');
+  // Each thing a reader can do with the change is one row: what it is, a few words on it, the ways in.
   const appHTML = app ? `
-    <div class="dcr-try-app">
-      <button type="button" class="dcr-try-mini" data-try="browse" aria-label="Open the running app">
-        <span class="dcr-try-frame"><iframe tabindex="-1" aria-hidden="true" loading="lazy" title="Preview of the running app"></iframe></span>
-        <span class="dcr-try-addr"><span class="dcr-try-dot" aria-hidden="true"></span>${esc(app.upstream.replace(/^https?:\/\//, ''))}${esc(app.start === '/' ? '' : app.start)}</span>
-      </button>
-      <div class="dcr-try-copy">
-        <h3>Check it in the running app</h3>
-        <p><strong>Start QA review</strong> and your agent records the flows behind the comments in this tab, with its pointer, and puts each clip on its comment. You share this tab once; then watch, or keep reading.</p>
-        <div class="dcr-try-actions">
-          <button type="button" class="act act-primary" data-try="qa">Start QA review</button>
-          <button type="button" class="act act-quiet" data-try="browse">Open the app <kbd>A</kbd></button>
-          <button type="button" class="act act-quiet" data-try="comment">Comment on it</button>
-        </div>
-      </div>
-    </div>` : noApp ? `
-    <div class="dcr-try-none">
-      <h3>No running app needed</h3>
-      <p>${esc(noApp.charAt(0).toUpperCase() + noApp.slice(1).replace(/[.\s]+$/, ''))}. Your agent left the app out of this review, so it has no QA review and no screenshots.</p>
-    </div>` : '';
+    <li class="dcr-try-row dcr-try-app">
+      <button type="button" class="dcr-try-do" data-try="qa">Start QA review</button>
+      <span class="dcr-try-about">Your agent records the flows behind the comments, in this tab.</span>
+      <span class="dcr-try-more"><button type="button" data-try="browse" title="${esc(app.upstream)}">Open the app <kbd>A</kbd></button><button type="button" data-try="comment">Comment on it</button></span>
+    </li>` : noApp ? `
+    <li class="dcr-try-row dcr-try-none">
+      <strong class="dcr-try-do">No running app</strong>
+      <span class="dcr-try-about">${esc(noApp.charAt(0).toUpperCase() + noApp.slice(1).replace(/[.\s]+$/, ''))}, so this review has no QA review and no screenshots.</span>
+    </li>` : '';
   const previewsHTML = templates.length ? `
-    <div class="dcr-try-previews">
-      <h3>${templates.length === 1 ? 'One changed template' : `${templates.length} changed templates`}</h3>
-      <p>See them rendered with example data, at phone, tablet or desktop width.</p>
+    <li class="dcr-try-row dcr-try-previews">
+      <button type="button" class="dcr-try-do" data-try-all>Previews</button>
+      <span class="dcr-try-about">${templates.length === 1 ? 'One changed template' : `${templates.length} changed templates`}, rendered with example data.</span>
       <ul class="dcr-try-templates"></ul>
-      ${templates.length > 4 ? `<button type="button" class="dcr-try-link" data-try-all>All ${templates.length} in Previews</button>` : ''}
-    </div>` : '';
-  band.innerHTML = `<h2 id="dcr-try-title">Try the change</h2><div class="dcr-try-body${(app || noApp) && templates.length ? ' has-both' : ''}">${appHTML}${previewsHTML}</div>`;
+    </li>` : '';
+  band.innerHTML = `<h2 id="dcr-try-title">Try the change</h2><ul class="dcr-try-rows">${appHTML}${previewsHTML}</ul>`;
 
   const stateOf = template => {
     const preview = livePreviews[template.path];
@@ -89,21 +78,7 @@
     if (event.target.closest('[data-try-all]')) document.querySelector('[data-open-previews], #previews-toggle, .previews-button')?.click();
   });
 
-  // The miniature is the real app, shrunk and inert; it loads only when the band is on screen.
-  const frame = band.querySelector('.dcr-try-frame iframe');
-  const holder = band.querySelector('.dcr-try-frame');
-  if (frame) {
-    const size = () => { const scale = holder.clientWidth / 1280; frame.style.transform = `scale(${scale})`; };
-    new ResizeObserver(size).observe(holder);
-    new IntersectionObserver((entries, observer) => {
-      if (!entries.some(entry => entry.isIntersecting)) return;
-      frame.src = app.origin + app.start;
-      observer.disconnect();
-    }).observe(holder);
-    frame.addEventListener('load', () => band.classList.add('is-running'));
-  }
-
-  // The band sits after What changed whenever the Overview is drawn; the review redraws #content.
+  // The band sits after the summary whenever the Overview is drawn; the review redraws #content.
   const holderOff = document.createElement('div');
   holderOff.hidden = true;
   holderOff.append(band);

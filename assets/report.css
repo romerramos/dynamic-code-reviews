@@ -1429,3 +1429,40 @@ body.zen.ledger-open .review-bar{left:calc(50% - min(var(--ledger-w,420px),92vw)
 .review-bar .bar-agent span{width:8px;height:8px;border-radius:50%;background:var(--dcr-off)}
 .review-bar .bar-agent[data-tone="ok"] span{background:var(--dcr-ok)}
 .review-bar .bar-agent[data-tone="work"] span{background:var(--dcr-work)}
+
+/* The Overview opens with what the change does, said once and large enough to read; the rest of
+   the summary follows more quietly, and the facts about the review are one small line. */
+.overview-intro .lead{max-width:62ch;margin:0 0 12px;color:var(--ink);font-size:19px;line-height:1.5;letter-spacing:-.005em}
+.overview-intro .lead-rest{max-width:68ch;margin:0 0 20px;color:var(--ink-neutral-4);font-size:15px;line-height:1.7}
+.overview-facts{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 18px;color:var(--muted);font-size:12.5px}
+.overview-facts :is(p,nav){margin:0;font-size:inherit;color:inherit}
+.overview-facts .overview-history{display:flex;gap:14px}
+.overview-settled{margin-top:28px}
+/* A comment is one line (where it is, what it says) until the reader opens it. */
+.review-thread:has(>.thread-details:not([open]))>:is(.dcr-thread,.thread-footer){display:none}
+.review-thread:has(>.thread-details:not([open])) .thread-summary{padding-top:10px;padding-bottom:12px}
+.review-thread:has(>.thread-details:not([open])) .thread-summary strong{font-size:15px}
+/* The risk ranking is a line until it is asked for, like the other things the Overview offers. */
+.risk-fold{margin:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.risk-fold>summary{display:grid;grid-template-columns:150px minmax(0,1fr) auto;align-items:baseline;gap:4px 18px;padding:11px 0;font-size:14px}
+.risk-fold-title{color:var(--ink);font-weight:600}
+.risk-fold-line{color:var(--muted)}
+.risk-fold[open]>summary{margin-bottom:4px}
+.risk-fold .risk-rank{margin:0 0 12px;padding:0;border:0;background:transparent;box-shadow:none}
+.risk-fold .risk-head h2{display:none}
+/* A closed comment: what it says, then where, in two short lines with a hairline between comments. */
+.review-thread:has(>.thread-details:not([open])){display:flex;flex-direction:column-reverse;margin:0;border-width:0 0 1px;border-radius:0;background:transparent}
+.review-thread:has(>.thread-details:not([open])) .thread-file{padding:0 0 11px;border:0;background:transparent;font-size:12px}
+.review-thread:has(>.thread-details:not([open])) .thread-summary{display:flex!important;align-items:center;flex-wrap:nowrap!important;gap:10px;padding:11px 0 2px;background:transparent}
+.review-thread:has(>.thread-details:not([open])) .thread-summary>strong{order:1;flex:1 1 0!important;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14.5px;font-weight:550}
+.review-thread:has(>.thread-details:not([open])) .thread-summary>.thread-chevron{order:3}
+.review-thread:has(>.thread-details:not([open])) .thread-summary>:not(strong,.thread-chevron){order:2;flex:none}
+.review-thread:has(>.thread-details[open]){margin-top:14px}
+/* Closed, its line is its kind and what it says; who wrote it and how urgent it is come with the rest. */
+.review-thread:has(>.thread-details:not([open])) .thread-badges{display:contents}
+.review-thread:has(>.thread-details:not([open])) .thread-badges>:is(.thread-priority.is-optional,.thread-severity,.thread-by,.gh-slot:empty){display:none}
+.review-thread:has(>.thread-details:not([open])) .thread-badges>.thread-type{order:0;flex:none;min-width:86px}
+.overview-comments{margin-top:30px}
+.overview-comments>h2{margin-bottom:6px}
+.review-thread:has(>.thread-details[open]) .thread-summary>strong{font-size:17px}
+.review-thread:has(>.thread-details:not([open])) .thread-summary>:first-child:not(.thread-badges){order:0}

@@ -2294,6 +2294,8 @@
       const card = document.querySelector(`#content article.review-thread[data-thread-id="${CSS.escape(show.dataset.dcrShow)}"]`);
       if (!card) return false;
       for (let fold = card.closest('details'); fold; fold = fold.parentElement.closest('details')) fold.open = true;
+      const body = card.querySelector('details.thread-details');
+      if (body) body.open = true;
       card.scrollIntoView({block: 'start', behavior: 'instant'});
       return true;
     };
