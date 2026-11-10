@@ -31,8 +31,7 @@
     <aside class="sidebar" aria-label="Change groups">
       <div class="sidebar-top"><input id="search" class="input input-bordered" type="search" placeholder="Find a file or code…" aria-label="Find a file or a line of code"><button type="button" id="sidebar-hide" class="sidebar-hide" aria-label="Hide the list" title="Hide the list"></button></div>
       <nav id="navigation" aria-label="Review navigation"></nav>
-      <button type="button" id="settings-toggle" class="sidebar-settings" data-open-settings aria-haspopup="dialog"><span id="settings-icon" aria-hidden="true"></span><span>Settings</span></button>
-      <div class="sidebar-footer"><span id="progress" role="status"></span><button type="button" id="progress-need" class="progress-need" hidden></button><progress id="progress-bar" class="progress progress-primary" value="0" max="1" aria-label="Review progress"></progress></div>
+      <div class="sidebar-footer"><span id="progress" role="status"></span><button type="button" id="progress-need" class="progress-need" hidden></button><button type="button" id="settings-toggle" class="sidebar-settings" data-open-settings aria-haspopup="dialog"><span id="settings-icon" aria-hidden="true"></span><span>Settings</span></button><progress id="progress-bar" class="progress progress-primary" value="0" max="1" aria-label="Review progress"></progress></div>
     </aside>
     <div id="sidebar-scrim" class="sidebar-scrim" aria-hidden="true"></div>
     <button type="button" id="sidebar-show" class="sidebar-show" aria-label="Show the list" title="Show the list"></button>
@@ -54,7 +53,7 @@
         <button type="button" id="bar-update" class="bar-soft" hidden></button>
         <form id="bar-form"><textarea id="bar-input" rows="1" autocomplete="off" enterkeyhint="send"></textarea></form><span id="bar-hint" aria-hidden="true">⇧↵ new line</span>
         <span id="bar-meta"></span>
-        <button type="button" id="bar-action" class="bar-primary" hidden></button>
+        <button type="button" id="bar-action" class="btn btn-sm btn-primary bar-primary" data-ui="Button" hidden></button>
         <button type="button" id="bar-commands" class="bar-keys" aria-label="Every command" title="Every command"><kbd id="bar-keys"></kbd></button>
       </div>
     </div>

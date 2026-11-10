@@ -15,6 +15,8 @@
 .ui-comment>.thread-details[open]>.ui-comment-line{padding-top:calc(var(--comment-line-top) - 1px);padding-bottom:var(--comment-open-line-bottom)}
 /* The row above an open card gives it its rule, so there is one line between them, not two. */
 .ui-comment:has(+ .ui-comment>.thread-details[open]){border-bottom-color:transparent}
+/* The last row of its list draws no rule: the next section's own rule closes the list, so there is one line, not two. */
+.ui-comment:last-child:not(:has(>.thread-details[open])){border-bottom-color:transparent}
 /* Under the line: a quiet line about it, its words, the way to its code, its conversation and its
    actions, all from the title's column. */
 .ui-comment-body{display:block;padding:var(--comment-body-top) var(--comment-pad) var(--comment-body-bottom) calc(var(--comment-pad) + var(--comment-indent))}

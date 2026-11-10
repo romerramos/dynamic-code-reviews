@@ -900,6 +900,8 @@
     $('search').focus({preventScroll:true});
     [...nav.querySelectorAll('.nav-file, .nav-match')].find(button => key(button) === stop)?.scrollIntoView({block:'nearest'});
   }
+  const navFolds = {}; // what the reader folded or unfolded in the list, by step id or `group:<first step id>`
+  let navFoldView = null;
   function renderNavigation() {
     const keyboardHere = $('navigation').contains?.(document.activeElement); // absent only outside a browser
     const keyboardRow = keyboardHere && document.activeElement.dataset.fileLink;
@@ -938,12 +940,26 @@
     // Where to read next: the first step with files left. A theme may point at it.
     const nextLayer = layers.find(layer => { const done = progress(layer.items); return done.total && done.viewed < done.total; });
     const stepNext = '<span class="step-next">start here</span>';
+    // A title in the list folds what is under it; only a file opens something. Where you are always
+    // starts open: arriving at another step forgets the folds set on it and on its group.
+    if (state.view !== navFoldView) {
+      const here = layers.find(layer => layer.id === state.view);
+      if (here) { delete navFolds[here.id]; delete navFolds[`group:${layers.find(layer => layer.group === here.group).id}`]; }
+      navFoldView = state.view;
+    }
+    // A theme says whether a group you are not in starts open or folded.
+    const groupsStart = getComputedStyle(document.documentElement).getPropertyValue?.('--nav-groups').trim() || 'open';
     if (!query) review.groups.forEach(group => {
       const matching = layers.filter(layer => layer.group === group);
       if (!matching.length) return;
       // A single-step group needs one heading, not the same title twice.
       const startsHere = matching.includes(nextLayer);
-      html += `<section class="nav-section">${group.layers.length > 1 ? `<h3 class="nav-group-title" data-view="${matching[0].id}">${escape(titleWithoutNumber(group.title))}${startsHere ? stepNext : ''}</h3>` : ''}<ul class="menu">`;
+      const groupKey = `group:${matching[0].id}`;
+      const titled = group.layers.length > 1;
+      const groupOpen = !titled || (navFolds[groupKey] ?? (groupsStart !== 'current' || matching.some(layer => layer.id === state.view)));
+      html += `<section class="nav-section">${titled ? `<h3 class="nav-group-title"><button type="button" class="nav-group-toggle" data-nav-fold="${groupKey}" aria-expanded="${groupOpen}" aria-controls="nav-steps-${matching[0].id}">${escape(titleWithoutNumber(group.title))}${startsHere ? stepNext : ''}</button></h3>` : ''}`;
+      if (!groupOpen) { html += `<ul id="nav-steps-${matching[0].id}" hidden></ul></section>`; return; }
+      html += `<ul id="nav-steps-${matching[0].id}" class="menu">`;
       matching.forEach(layer => {
         const count = layerComments(layer).length;
         const completed = progress(layer.items);
@@ -964,8 +980,10 @@
         // Tests are a label that a theme may make a fold: how many, and the reader opens them when they want them.
         const testsOpen = (state.testsOpen || []).includes(layer.id) || ordered.tests.includes(state.navFile);
         const tests = testLinks ? `<li class="nav-tests-label" role="presentation"><button type="button" class="nav-tests-toggle" data-tests-toggle="${layer.id}" aria-expanded="${testsOpen}">Tests <span class="nav-tests-count">${ordered.tests.length}</span></button></li>${testLinks}` : '';
-        const expanded = state.view === layer.id;
-        html += `<li><button data-view="${layer.id}" aria-current="${state.view === layer.id ? 'page' : 'false'}" aria-expanded="${expanded}" aria-controls="nav-files-${layer.id}"><span class="step-number">${completed.total && completed.viewed === completed.total ? icon('check') : layers.indexOf(layer) + 1}</span><span class="step-body"><strong>${stepTitle(titleWithoutNumber(group.layers.length === 1 ? group.title : layer.title), completed.total && completed.viewed === completed.total)}${layer === nextLayer ? stepNext : ''}</strong><small>${progressText(completed)}${count ? ` · ${count} comments` : ''}</small></span></button>${expanded ? `<ul id="nav-files-${layer.id}" class="nav-files">${links}${tests}</ul>` : `<ul id="nav-files-${layer.id}" hidden></ul>`}</li>`;
+        // Read file by file a step has no page of its own, so its title only folds its files. In the
+        // walkthrough the step is a page, and its title opens it.
+        const expanded = navFolds[layer.id] ?? state.view === layer.id;
+        html += `<li><button ${focusMode ? `data-nav-fold="${layer.id}" ` : ''}data-view="${layer.id}" aria-current="${state.view === layer.id ? 'page' : 'false'}" aria-expanded="${expanded}" aria-controls="nav-files-${layer.id}"><span class="step-number">${completed.total && completed.viewed === completed.total ? icon('check') : layers.indexOf(layer) + 1}</span><span class="step-body"><strong>${stepTitle(titleWithoutNumber(group.layers.length === 1 ? group.title : layer.title), completed.total && completed.viewed === completed.total)}${layer === nextLayer ? stepNext : ''}</strong><small>${progressText(completed)}${count ? ` · ${count} comments` : ''}</small></span></button>${expanded ? `<ul id="nav-files-${layer.id}" class="nav-files">${links}${tests}</ul>` : `<ul id="nav-files-${layer.id}" hidden></ul>`}</li>`;
       });
       html += '</ul></section>';
     });
@@ -1487,7 +1505,10 @@
   // How far down a comment card may reach: above the bar, where the theme shows one.
   function commentFloor() {
     const bar = $('review-bar');
-    const top = bar && getComputedStyle(bar).display !== 'none' ? bar.getBoundingClientRect().top - 8 : innerHeight;
+    // The card ends above the bar, and above its Back to … pill when that shows.
+    const back = $('bar-back');
+    const above = back && !back.hidden && back.getBoundingClientRect().height ? back : bar;
+    const top = bar && getComputedStyle(bar).display !== 'none' ? above.getBoundingClientRect().top - 8 : innerHeight;
     return Math.min(innerHeight, top) - 12;
   }
   function positionComment() {
@@ -3013,7 +3034,12 @@
     persist(); schedulePosition();
   }
   // --- Your review: what you have said so far, and focus mode -------------------------------
-  const ledgerWide = () => matchMedia('(min-width: 1500px)').matches;
+  // Your review is a column beside the page from 1400px; narrower, it slides over the page.
+  const ledgerWide = () => matchMedia('(min-width: 1400px)').matches;
+  // Where it slides over the page, it opens for this visit only: a choice made on a wide screen
+  // (and kept with your progress) must not cover the page on a tablet.
+  let ledgerOverOpen = false;
+  matchMedia('(min-width: 1400px)').addEventListener?.('change', () => renderLedger());
   function ledgerEntries() {
     return comments.filter(comment => comment.personal).map(comment => {
       const found = comment.general ? null : ReviewTools.anchor(snapshot, comment);
@@ -3023,7 +3049,10 @@
     });
   }
   // Open by choice; until you choose, open on a wide screen once there is something to show.
-  const ledgerOpen = () => typeof state.ledgerOpen === 'boolean' ? state.ledgerOpen : ledgerWide() && (ledgerEntries().length > 0 || personalNotes().length > 0);
+  const ledgerOpen = () => {
+    if (!ledgerWide() && !document.body.classList.contains?.('zen')) return ledgerOverOpen;
+    return typeof state.ledgerOpen === 'boolean' ? state.ledgerOpen : ledgerWide() && (ledgerEntries().length > 0 || personalNotes().length > 0);
+  };
   function renderLedger() {
     const entries = ledgerEntries();
     const notes = personalNotes();
@@ -3086,7 +3115,10 @@
     await copyText(ReviewTools.reviewText(snapshot, chosen, [], review.qa));
   };
 
-  function setLedger(open) { state.ledgerOpen = open; persist(); renderLedger(); }
+  function setLedger(open) {
+    if (!ledgerWide() && !document.body.classList.contains?.('zen')) { ledgerOverOpen = open; renderLedger(); return; }
+    state.ledgerOpen = open; persist(); renderLedger();
+  }
   // Your review is as wide as you drag it: its left edge is a handle (arrow keys work too, and a
   // double click goes back to the default). The width is this browser's, for every review.
   const LEDGER_WIDTH = 'dynamic-review:ledger-width';
@@ -3523,6 +3555,14 @@
       return;
     }
     if (sinceLink) { sinceFile(Number(sinceLink.dataset.sinceFile)); return; }
+    const fold = event.target.closest('#navigation [data-nav-fold]');
+    if (fold) {
+      const keyboard = fold.matches?.(':focus-visible');
+      navFolds[fold.dataset.navFold] = fold.getAttribute('aria-expanded') !== 'true';
+      renderNavigation();
+      if (keyboard) $('navigation').querySelector(`[data-nav-fold="${fold.dataset.navFold}"]`)?.focus({preventScroll:true});
+      return;
+    }
     const testsToggle = event.target.closest('[data-tests-toggle]');
     if (testsToggle) {
       const id = testsToggle.dataset.testsToggle;
@@ -3851,13 +3891,18 @@
   $('ledger-show').addEventListener('click', () => setLedger(!document.body.classList.contains('ledger-open')));
   $('sidebar-show').innerHTML = `<span class="when-closed">${icon('panel-left-open')}</span><span class="when-open">${icon('panel-left-close')}</span>`;
   const labelPanelIcons = () => {
+    // The list is open as a column (wide screens) or as a drawer (narrower): one class says which,
+    // so the icon shows the same state in both.
+    const listOpen = wideScreen() ? !document.body.classList.contains('sidebar-collapsed') : document.body.classList.contains('navigation-open');
+    if (document.body.classList.contains('list-open') !== listOpen) document.body.classList.toggle('list-open', listOpen);
     const ledger = document.body.classList.contains('ledger-open') ? 'Hide your review' : 'Show your review';
-    const list = document.body.classList.contains('sidebar-collapsed') ? 'Show the list' : 'Hide the list';
+    const list = listOpen ? 'Hide the list' : 'Show the list';
     [['ledger-show', ledger], ['sidebar-show', list]].forEach(([id, label]) => { if ($(id).title !== label) { $(id).title = label; $(id).setAttribute('aria-label', label); } });
   };
   if (typeof MutationObserver !== 'undefined') {
     new MutationObserver(labelPanelIcons).observe(document.body, {attributes: true, attributeFilter: ['class']});
     requestAnimationFrame(labelPanelIcons);
+    window.addEventListener('resize', labelPanelIcons);
   }
   ['sidebar-hide', 'sidebar-show'].forEach(id => $(id).addEventListener('click', () => $('nav-toggle').click()));
   $('prev').innerHTML = icon('chevron-left');
@@ -4153,7 +4198,7 @@
     // The agent's mark with its PresenceDot on its corner, drawn again when either changes.
     const tone = chip?.dataset.tone || 'off';
     const slug = mainAgent();
-    if (chip && ($('bar-agent').dataset.tone !== tone || $('bar-agent').dataset.agent !== slug)) { $('bar-agent').dataset.tone = tone; $('bar-agent').dataset.agent = slug; $('bar-agent').innerHTML = `<span class="ui-presence"><span class="bar-agent-mark" aria-hidden="true">${UI.AgentMark(slug)}</span>${UI.PresenceDot(tone)}</span>`; }
+    if (chip && ($('bar-agent').dataset.tone !== tone || $('bar-agent').dataset.agent !== slug)) { $('bar-agent').dataset.tone = tone; $('bar-agent').dataset.agent = slug; $('bar-agent').innerHTML = `<span class="ui-presence">${UI.Avatar({agent: slug, size: 'xs', className: 'bar-agent-mark'})}${UI.PresenceDot(tone)}</span>`; }
     if (chip && $('bar-agent').title !== chip.title) { $('bar-agent').title = chip.title; $('bar-agent').setAttribute('aria-label', chip.getAttribute('aria-label') || chip.title); }
     // How many files need the reader, from the verdict strip, for a theme that shows it by the progress instead.
     const need = document.querySelector('#dcr-jev .dcr-jev-yours');

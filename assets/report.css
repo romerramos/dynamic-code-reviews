@@ -336,11 +336,12 @@ main#content{position:relative;overflow-y:auto;scroll-behavior:smooth;min-width:
 .font-controls{display:flex;align-items:center;gap:2px;white-space:nowrap}.font-controls output{font-size:11px;min-width:32px;text-align:center}
 .diff-table td.code code{font-size:var(--code-font-size,12px);line-height:var(--code-line-height,22px)}
 .diff-table td.gutter,.diff-table .line-number{line-height:var(--code-line-height,24px);min-height:var(--code-line-height,24px)}
-.focus-reader{width:100%;min-width:0}.focus-file-header{position:sticky;top:-30px;z-index:5;background:var(--canvas);padding:14px 0;border-bottom:1px solid var(--line-neutral-2);display:flex;flex-wrap:wrap;align-items:end;gap:12px 24px}
+.focus-reader{width:100%;min-width:0}/* Reading a file, the space above it is the header's own (--reader-top), not the page's: the header sticks flush at the top, covers what scrolls under it, and its file name never moves. */
+.focus-file-header{position:sticky;top:0;z-index:5;background:var(--canvas);padding:calc(var(--reader-top,12px) + var(--header-pad-top,14px)) 0 14px;border-bottom:1px solid var(--line-neutral-2);display:flex;flex-wrap:wrap;align-items:end;gap:12px 24px}
 .focus-location{flex:1;min-width:0}.focus-location .eyebrow{display:block;margin-bottom:5px;font-size:11px}.focus-location label{font-size:12px;display:block;margin-bottom:5px}.focus-location select{width:100%;max-width:100%;font:13px var(--mono);height:38px;min-height:38px}
 .focus-file-actions{display:flex;gap:6px;flex-wrap:wrap}.focus-file-header details{flex-basis:100%;font-size:13px}.focus-file-header details p{max-width:90ch;margin:8px 0}.focus-reader .diff-scroll{margin-top:12px}.focus-end{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:24px 0}.focus-end span{font-size:13px;overflow-wrap:anywhere}.focus-unavailable{padding:14px;border-left:3px solid var(--line-amber-5);background:var(--bg-amber-1)}
-@media(max-width:1199px){.focus-file-header{top:-24px}.toolbar-options{flex-wrap:wrap}.focus-file-actions{width:100%}.focus-location .eyebrow{overflow-wrap:anywhere}}
-@media(max-width:650px){.toolbar-options #focus{display:inline-flex}.focus-file-header{top:-25px}.font-controls .btn{padding:4px 7px}}
+@media(max-width:1199px){.toolbar-options{flex-wrap:wrap}.focus-file-actions{width:100%}.focus-location .eyebrow{overflow-wrap:anywhere}}
+@media(max-width:650px){.toolbar-options #focus{display:inline-flex}.font-controls .btn{padding:4px 7px}}
 
 .toolbar-options{flex-wrap:wrap}.toolbar-options #focus{display:inline-flex;white-space:nowrap}.toolbar-options #focus[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);box-shadow:inset 0 0 0 1px var(--ring-accent-1)}
 .focus-file-actions{align-items:center}.focus-file-actions #change-position{font-size:11px;font-variant-numeric:tabular-nums}.focus-file-actions .file-viewed{margin-left:8px}
@@ -369,8 +370,8 @@ main#content{position:relative;overflow-y:auto;scroll-behavior:smooth;min-width:
 .focus-component{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}.focus-component>span{font-size:11px;color:var(--muted);overflow-wrap:anywhere}.focus-component .btn{font-size:11px;min-height:28px;height:28px;padding:3px 10px}.focus-component [aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:var(--line-accent-2)}
 
 /* Keep controls close to the information they act on, regardless of width. */
-body.reading-focus main#content{padding-top:12px}
-.focus-file-header{display:block;padding:10px 0;top:-12px}
+body.reading-focus main#content{padding-top:0}
+.focus-file-header{display:block;--header-pad-top:10px;padding-bottom:10px}
 .focus-meta{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:6px 14px;font-size:11px;line-height:1.5}
 .focus-group{flex:0 1 auto;min-width:0;color:var(--accent);font-weight:600;overflow-wrap:anywhere}
 .focus-meta .focus-file-position{margin:0;font-size:11px;white-space:nowrap}
@@ -392,7 +393,6 @@ body.reading-focus main#content{padding-top:12px}
 .file-about summary{width:fit-content;color:var(--muted);padding:4px 0}
 .focus-file-header .file-about[open]{flex-basis:100%}.file-about p{font-size:13px}
 @media(max-width:650px){
- .focus-file-header{top:-12px}
  .focus-meta{gap:6px 10px}.focus-group{flex-basis:100%}
  .focus-meta .focus-file-actions{padding-left:8px}
  .focus-meta .file-viewed{font-size:11px;padding:5px 7px}
@@ -474,7 +474,8 @@ body.reading-focus main#content{padding-top:12px}
 .sidebar nav .menu>li>button[data-view][aria-current="page"] .step-number svg{color:var(--ink-neutral-9)}
 .sidebar nav .menu>li>button[data-view] .step-number .review-icon{width:15px;height:15px}
 .sidebar nav .menu>li>button[data-view][aria-current="page"] .step-body strong{color:var(--ink-accent-1);font-weight:620}
-.sidebar nav li:has(>button[data-view][aria-current="page"])>.nav-files{margin:2px 0 16px 34px}
+/* A step's files, open or unfolded: their checks in the column of the step's mark (12px pad + 1px border + half of 24 - 14, less the file row's own 7px). */
+.sidebar nav li:has(>button[data-view])>.nav-files{margin:2px 0 16px 11px}
 .sidebar nav button.nav-file[aria-current="location"],.sidebar nav .nav-component.is-current{background:var(--accent-soft);color:var(--ink-accent-1);border-color:transparent;box-shadow:none}
 .sidebar nav button.nav-file[aria-current="location"] .nav-file-name,.sidebar nav .nav-component.is-current strong{color:var(--ink-accent-1);font-weight:650}
 .sidebar nav .nav-component-files button[aria-current="location"]{background:var(--bg-neutral-1);color:var(--ink-accent-1);border-color:var(--line-accent-2)}
@@ -521,7 +522,6 @@ html[data-mode="dark"] .revision-control .select:is(:focus,:open):not(:focus-vis
 .sidebar-settings{flex:none;display:flex;align-items:center;gap:10px;width:100%;margin-top:12px;padding:9px 10px;border:0;border-radius:calc(8px * var(--round));background:transparent;color:var(--ink-neutral-3);font-size:13px;font-weight:550;text-align:left}
 .sidebar-settings:hover,.sidebar-settings:focus-visible{background:var(--bg-neutral-2);color:var(--ink)}
 .sidebar-settings #settings-icon{display:inline-grid;color:var(--ink-neutral-5)}.sidebar-settings .review-icon,.view-all .review-icon{width:16px;height:16px}
-.sidebar-settings+.sidebar-footer{margin-top:6px}
 .view-all{display:inline-flex;align-items:center;gap:8px;font-size:13px}.view-all #view-all-icon{display:inline-grid}
 .settings-box{width:min(440px,calc(100vw - 24px));max-width:none}
 .settings-box header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}.settings-box header h2{margin:0;font-size:17px}
@@ -561,7 +561,7 @@ html[data-mode="dark"] .revision-control .select:is(:focus,:open):not(:focus-vis
 .view-keys p{margin:0;font-size:12px;line-height:1.9;color:var(--muted)}
 .view-keys kbd{font:600 10.5px/1 var(--mono);padding:2px 5px}
 /* File by file header: orientation row, then the file and its actions. */
-.focus-file-header{padding:12px 0 10px;background:var(--canvas);border-bottom:1px solid var(--line)}
+.focus-file-header{--header-pad-top:12px;padding-bottom:10px;background:var(--canvas);border-bottom:1px solid var(--line)}
 .focus-meta{justify-content:space-between;gap:6px 16px;font-size:12px}
 .focus-group{display:inline-flex;align-items:baseline;flex-wrap:wrap;gap:0 7px;min-width:0;color:var(--ink-neutral-5);font-weight:500}
 .crumb-number{align-self:center;padding:0 6px;border-radius:calc(5px * var(--round));background:var(--bg-accent-3);color:var(--accent);font:650 10.5px/18px var(--mono)}
@@ -748,14 +748,6 @@ body.ledger-open .ledger{display:flex}
 .ledger-count{min-width:18px;height:18px;padding:0 5px;border-radius:calc(9px * var(--round));background:var(--accent);color:var(--ink-neutral-9);font-size:11px;font-weight:600;line-height:18px;text-align:center}
 @media(max-width:900px){.ledger-label{display:none}}
 .ledger-count[hidden]{display:none}
-@media(min-width:1500px){
-  body.ledger-open .workspace{grid-template-columns:320px minmax(0,1fr) var(--ledger-w,380px)}
-  body.ledger-open.sidebar-collapsed .workspace{grid-template-columns:minmax(0,1fr) var(--ledger-w,380px)}
-}
-@media(min-width:1650px){body.ledger-open .workspace{grid-template-columns:340px minmax(0,1fr) var(--ledger-w,420px)}body.ledger-open.sidebar-collapsed .workspace{grid-template-columns:minmax(0,1fr) var(--ledger-w,420px)}}
-@media(max-width:1499px){
-  body.ledger-open .ledger{position:fixed;z-index:18;top:0;right:0;bottom:var(--status-h);width:var(--ledger-w,420px);max-width:92vw;box-shadow:-8px 0 28px color-mix(in srgb,var(--shade) 14.9%,transparent);animation:ledger-in .16s ease-out}
-}
 /* Your review's left edge: drag it to make the panel wider or narrower. The hint sits inside the
    panel, which clips anything outside it. */
 .ledger{position:relative}
@@ -853,7 +845,7 @@ button.line-number:hover::before{opacity:1;transform:scale(1)}
 
 /* The composer, in the code, directly under the lines it is about. */
 tr.inline-compose>td{padding:0!important;border:0!important;background:var(--surface)!important}
-.composer{position:sticky;left:0;box-sizing:border-box;width:min(720px,calc(100vw - 80px));margin:10px 0 12px 56px;padding:12px 14px 12px;border:1px solid color-mix(in oklab,var(--line-accent-8) 45%,var(--line));border-radius:calc(12px * var(--round));background:var(--surface);color:var(--ink);box-shadow:0 8px 28px color-mix(in srgb,var(--shade) 12.2%,transparent),0 0 0 3px color-mix(in oklab,var(--ring-accent-3) 12%,transparent);font:14px/1.5 var(--review-font-family);white-space:normal}
+.composer{position:sticky;left:0;box-sizing:border-box;width:100cqi;margin:10px 0 12px;padding:12px 14px 12px;border:1px solid color-mix(in oklab,var(--line-accent-8) 45%,var(--line));border-radius:calc(12px * var(--round));background:var(--surface);color:var(--ink);box-shadow:0 8px 28px color-mix(in srgb,var(--shade) 12.2%,transparent),0 0 0 3px color-mix(in oklab,var(--ring-accent-3) 12%,transparent);font:14px/1.5 var(--review-font-family);white-space:normal}
 @media(prefers-reduced-motion:no-preference){.composer{animation:composer-in .16s ease-out}}
 @keyframes composer-in{from{opacity:0;transform:translateY(-4px)}}
 .composer-head{display:flex;align-items:center;justify-content:space-between;margin:0 0 8px}
@@ -964,7 +956,7 @@ dialog.stage::backdrop{background:color-mix(in srgb,var(--bg-neutral-8) 40%,tran
 .composer-modes{display:inline-flex;gap:2px;padding:3px;border-radius:calc(9px * var(--round));background:var(--bg-neutral-3)}
 .composer-modes[hidden]{display:none}
 .composer-mode input{position:absolute;opacity:0;pointer-events:none}
-.composer-mode span{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:calc(7px * var(--round));color:var(--ink-neutral-5);font-size:13px;font-weight:600;cursor:pointer}
+.composer-mode>span{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:calc(7px * var(--round));color:var(--ink-neutral-5);font-size:13px;font-weight:600;cursor:pointer}
 .composer-mode span svg{width:14px;height:14px}
 .composer-mode:hover span{color:var(--ink-neutral-2)}
 .composer-mode input:checked+span{background:var(--bg-neutral-1);color:var(--ink-neutral-2);box-shadow:0 1px 2px rgba(17,22,31,.12),0 0 0 1px rgba(17,22,31,.06)}
@@ -1148,7 +1140,7 @@ button.risk-path:hover .path-name{text-decoration:underline}
      What is for a wide screen and a pointer stays there: the pager of changed sections (a swipe
      scrolls), copying the path, who should review the file, and the template's preview, which the
      Previews tab at the top opens. Why this file is its icon; it opens under the header. */
-  .focus-file-header{position:relative;padding:8px 0 10px}
+  .focus-file-header{position:relative;--header-pad-top:8px;padding-bottom:10px}
   .focus-meta{padding-right:9ch}
   .focus-meta .focus-file-actions,.focus-file-header :is(.copy-file-path,.need-set,.preview-toggle,.not-visual-note){display:none}
   .focus-group{flex-basis:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--muted);font-weight:500}
@@ -1181,8 +1173,8 @@ button.risk-path:hover .path-name{text-decoration:underline}
 @media(min-width:651px) and (max-width:1199px){
   :root{--chrome-h:44px;--toolbar-h:44px}
   .header-meta #repo-label{flex:none}
-  .review-area:has(.focus-reader) main#content{padding-top:12px}
-  .focus-file-header{top:-12px;padding:6px 0 8px}
+  .review-area:has(.focus-reader) main#content{padding-top:0}
+  .focus-file-header{--header-pad-top:6px;padding-bottom:8px}
   .focus-meta .focus-file-actions,.focus-file-header :is(.copy-file-path,.need-set,.preview-toggle,.not-visual-note){display:none}
   .focus-group{flex:1 1 100%;flex-wrap:nowrap;white-space:nowrap;overflow:hidden;color:var(--muted)}
   .focus-group .crumb-group{min-width:0;overflow:hidden;text-overflow:ellipsis}
@@ -1316,11 +1308,12 @@ button.risk-path:hover .path-name{text-decoration:underline}
 .bar-bubble-dots i:nth-child(3){animation-delay:.4s}
 @keyframes bar-bubble-dot{0%,60%,100%{opacity:.25}30%{opacity:1}}
 @media(prefers-reduced-motion:reduce){.bar-bubble-dots i{animation:none;opacity:.6}}
-.review-bar button{flex:none;height:30px;padding:0 11px;border:0;border-radius:calc(9px * var(--round));background:transparent;color:var(--muted);font:inherit;white-space:nowrap}
-.review-bar button:hover{color:var(--ink)}
+.review-bar button:where(:not(.btn)){flex:none;height:30px;padding:0 11px;border:0;border-radius:calc(9px * var(--round));background:transparent;color:var(--muted);font:inherit;white-space:nowrap}
+.review-bar button:where(:not(.btn)):hover{color:var(--ink)}
+/* Its action is the theme's own primary Button, at the bar's height. */
+.review-bar{--button-height:30px;--button-min-height:30px}
+.review-bar .bar-primary{flex:none;white-space:nowrap}
 .review-bar .bar-soft{max-width:46%;overflow:hidden;text-overflow:ellipsis;background:var(--bg-neutral-3);color:var(--ink);font-weight:550}
-.review-bar .bar-primary{background:var(--ink);color:var(--surface);font-weight:550}
-.review-bar .bar-primary:hover{color:var(--surface);opacity:.86}
 .review-bar .bar-keys{padding:0 4px}
 .review-bar kbd{padding:3px 7px;border-radius:calc(6px * var(--round));background:var(--bg-neutral-3);color:var(--muted);font:11px/1.4 var(--mono)}
 .review-bar .bar-nav{display:none;margin-left:-6px;padding:0 8px}
@@ -1346,7 +1339,6 @@ dialog.palette::backdrop{background:color-mix(in srgb,var(--ink) 14%,transparent
 .palette-list kbd{flex:none;color:var(--muted);font:11px/1.4 var(--mono)}
 .palette-list mark{background:transparent;color:inherit;font-weight:700;text-decoration:underline;text-underline-offset:3px}
 /* Your review floats over the reading area on a narrower window: the bar keeps to what is left of it. */
-@media(min-width:741px) and (max-width:1499px){body.ledger-open .review-bar{left:calc(50% - min(var(--ledger-w,420px),92vw) / 2);width:min(640px,calc(100% - min(var(--ledger-w,420px),92vw) - 28px))}}
 body.zen.ledger-open .review-bar{left:calc(50% - min(var(--ledger-w,420px),92vw) / 2);width:min(640px,calc(100% - min(var(--ledger-w,420px),92vw) - 28px))}
 .review-bar .bar-agent{display:grid;place-items:center;width:20px;margin-left:-4px;padding:0}
 
@@ -1432,12 +1424,12 @@ details.thread-was:not([open])>summary{margin-bottom:0}
 /* The bar's mark of the agent: faint when none is listening, full when one is, breathing while it works. */
 .review-bar .bar-agent{width:22px;--presence-size:6px}
 /* The agent's mark in ink, its PresenceDot on its corner (the mark's own grid cell, no offsets). */
-.review-bar .bar-agent .bar-agent-mark{display:grid;place-items:center;width:18px;height:18px;color:var(--ink)}
-.review-bar .bar-agent .bar-agent-mark svg{width:14px;height:14px}
+/* The agent's face as the theme draws faces (its brand colours, or its plain mark), with its dot. */
+.review-bar .bar-agent{--avatar-size:18px;color:var(--ink)}
 /* Going back from a definition is its own small card above the bar, so the bar keeps its room. */
 .review-bar #bar-back{position:absolute;left:0;bottom:calc(100% + 8px);max-width:100%;height:30px;padding:0 12px;border:1px solid var(--line);border-radius:calc(10px * var(--round));background:var(--surface);box-shadow:0 6px 18px color-mix(in srgb,var(--shade) 7%,transparent);color:var(--ink);font-weight:500}
 .composer-agent-mark svg,.review-bar .bar-agent-mark svg{fill:currentColor;stroke:none}
-.composer-mode .composer-agent-mark{display:inline-grid!important;flex:none;width:14px;height:14px}
+.composer-mode .composer-agent-mark{display:inline-grid!important;flex:none;width:14px;height:14px;margin:0}
 .composer-mode .composer-agent-mark svg{display:block;width:14px!important;height:14px!important;min-width:14px}
 
 .sidebar nav .nav-tests-toggle{all:unset;cursor:default;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit}
@@ -1473,13 +1465,14 @@ main#content{padding-bottom:104px}
 .dcr-jev{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);padding:0;border:0}
 .progress-need{display:inline;padding:0;border:0;background:none;color:var(--ink);font:inherit;font-weight:600;text-align:left;cursor:pointer}
 #dcr-jev-list{left:22px!important;top:auto!important;bottom:118px!important}
-.sidebar{position:relative}
-.sidebar-footer{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:8px 10px;margin:0;padding:10px 8px 0}
-.sidebar-footer #progress{grid-column:1;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sidebar-footer .progress-need{grid-column:1;grid-row:1;justify-self:end;font-size:12px}
-.sidebar-footer progress{grid-column:1 / -1;grid-row:2;width:100%}
+body:not(.navigation-open) .sidebar{position:relative}
+/* The list's foot: how far you are and what needs you on one line, the bar under it, Settings' gear in its own column beside both. */
+.sidebar-footer{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px 10px;margin:0;padding:10px 8px 0}
+.sidebar-footer #progress{grid-column:1;grid-row:1;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-footer .progress-need{grid-column:2;grid-row:1;font-size:12px}
+.sidebar-footer progress{grid-column:1 / 3;grid-row:2;width:100%}
 .sidebar-footer .dcr-todo-link{display:none}
-.sidebar-settings{position:absolute;right:20px;bottom:17px;width:auto;margin:0;padding:2px;gap:0;color:var(--muted)}
+.sidebar-footer .sidebar-settings{grid-column:3;grid-row:1 / 3;width:auto;margin:0;padding:2px;gap:0;color:var(--muted)}
 .sidebar-settings>span:not(#settings-icon){position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 .sidebar-settings #settings-icon{display:inline-grid}
 .sidebar-settings .review-icon{width:15px;height:15px}
@@ -1488,18 +1481,11 @@ main#content{padding-bottom:104px}
 :is(.sidebar-hide,.sidebar-show){place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--muted)}
 :is(.sidebar-hide,.sidebar-show):hover{background:var(--bg-neutral-2);color:var(--ink)}
 :is(.sidebar-hide,.sidebar-show) .review-icon{width:17px;height:17px;stroke-width:1.8}
-@media(min-width:1200px){
-  html .sidebar-hide{display:grid;flex:none}
-  html body.sidebar-collapsed .sidebar-show{display:grid;position:fixed;top:calc(var(--chrome-h) + 12px);left:18px;z-index:30}
-}
 #ledger-close{display:none}
 :is(.ledger-hide,.ledger-show){place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--muted)}
 :is(.ledger-hide,.ledger-show):hover{background:var(--bg-neutral-2);color:var(--ink)}
 :is(.ledger-hide,.ledger-show) .review-icon{width:17px;height:17px;stroke-width:1.8}
 .ledger-hide{display:grid}
-@media(min-width:1200px){
-  html body:not(.ledger-open):not(.zen) .ledger-show{display:grid;position:fixed;top:calc(var(--chrome-h) + 10px);right:18px;z-index:30}
-}
 /* Template previews have the Previews tab and ⌘K. */
 .ledger-previews{display:none}
 #settings-dialog.has-agents .settings-tabs{display:flex;gap:20px;margin:6px 0 14px}
@@ -1573,17 +1559,6 @@ main#content{padding-bottom:104px}
 #settings-dialog.has-agents[data-tab="agents"] .settings-round:not([hidden]){margin-inline:10px}
 .settings-agents .dcr-presence-help{margin-top:8px;color:var(--muted);font-size:12.5px;line-height:1.45}
 .settings-agents .dcr-presence-cmd code{font-size:11.5px}
-/* Your review is a column of its own on a wide screen, so it never covers the header or the page. */
-@media(min-width:1100px) and (max-width:1499px){
-  body.ledger-open:not(.zen):not(.sidebar-collapsed) .workspace{grid-template-columns:320px minmax(0,1fr) min(var(--ledger-w,420px),92vw)}
-  body.ledger-open.sidebar-collapsed:not(.zen) .workspace{grid-template-columns:minmax(0,1fr) min(var(--ledger-w,420px),92vw)}
-  body.ledger-open:not(.zen) .ledger{position:static;width:auto;max-width:none;box-shadow:none;animation:none}
-  body.ledger-open:not(.zen) .review-bar{left:50%;width:min(640px,calc(100% - 28px))}
-}
-/* A panel's icon holds both of its states; it shows the one that says what a click will do. */
-:is(.sidebar-show,.ledger-show) .when-open{display:none}
-body:not(.sidebar-collapsed) .sidebar-show .when-open,body.ledger-open .ledger-show .when-open{display:contents}
-body:not(.sidebar-collapsed) .sidebar-show .when-closed,body.ledger-open .ledger-show .when-closed{display:none}
 
 
 
@@ -1593,3 +1568,78 @@ body:not(.sidebar-collapsed) .sidebar-show .when-closed,body.ledger-open .ledger
    scrolling under it. */
 html[data-mode="dark"] .review-bar{background:color-mix(in srgb,var(--ink) 9%,var(--surface));border-color:color-mix(in srgb,var(--ink) 26%,transparent);box-shadow:0 0 0 6px color-mix(in srgb,var(--surface) 85%,black),0 16px 40px rgba(0,0,0,.6)}
 html[data-mode="dark"] .review-bar textarea{background:transparent}
+
+/* ==========================================================================================
+   Layout tiers, the one place that says where the list and Your review go at each width.
+   Wide (1400px and up): both are columns beside the page. Laptop (1200-1399px): the list is a
+   column; Your review slides over the page. Tablet and phone (under 1200px): both slide over the
+   page. In every tier each panel has its icon in sight, and the icon shows what a click will do:
+   body.list-open and body.ledger-open say which panels are open, whichever way they are shown.
+   A theme sets --list-w; --ledger-w is the width you dragged Your review to.
+   ========================================================================================== */
+:root{--list-w:320px;--ledger-size:min(var(--ledger-w,400px),92vw)}
+@media(min-width:1200px){
+  body:not(.zen) .workspace{grid-template-columns:var(--list-w) minmax(0,1fr)}
+  body.sidebar-collapsed:not(.zen) .workspace{grid-template-columns:minmax(0,1fr)}
+}
+@media(min-width:1400px){
+  :root{--ledger-size:min(var(--ledger-w,400px),40vw)}
+  body.ledger-open:not(.zen) .workspace{grid-template-columns:var(--list-w) minmax(0,1fr) var(--ledger-size)}
+  body.ledger-open.sidebar-collapsed:not(.zen) .workspace{grid-template-columns:minmax(0,1fr) var(--ledger-size)}
+  body.ledger-open:not(.zen) .ledger{position:static;width:auto;max-width:none;box-shadow:none;animation:none}
+}
+@media(min-width:741px) and (max-width:1399px){
+  body.ledger-open .ledger{position:fixed;z-index:18;top:var(--chrome-h);right:0;bottom:var(--status-h);width:var(--ledger-size);max-width:none;box-shadow:-8px 0 28px color-mix(in srgb,var(--shade) 14.9%,transparent)}
+  body.ledger-open .review-bar{left:calc(50% - var(--ledger-size) / 2);width:min(640px,calc(100% - var(--ledger-size) - 28px))}
+}
+@media(min-width:741px) and (max-width:1199px){
+  .navigation-open .sidebar{top:var(--chrome-h);bottom:var(--status-h);width:min(var(--list-w),85vw);max-width:none}
+  .sidebar-scrim{inset:var(--chrome-h) 0 var(--status-h) 0}
+  /* The panels' icons float at the page's top corners here, over a pinned file header too: the page
+     keeps a gutter on each side for them. */
+  main#content{padding-left:60px;padding-right:60px}
+}
+/* The panels' icons: the list's own close sits beside its finder; when the list is closed, its icon
+   waits at the page's top left. Your review's waits at the top right. */
+.sidebar-hide{display:grid;flex:none}
+/* Both icons sit on one line; a theme moves the line with --panel-icon-top. */
+:root{--panel-icon-top:calc(var(--chrome-h) + 12px)}
+body:not(.list-open):not(.zen) .sidebar-show{display:grid;position:fixed;top:var(--panel-icon-top);left:18px;z-index:30}
+body:not(.ledger-open):not(.zen) .ledger-show{display:grid;position:fixed;top:var(--panel-icon-top);right:18px;z-index:30}
+:is(.sidebar-show,.ledger-show) .when-open{display:none}
+body.list-open .sidebar-show .when-open,body.ledger-open .ledger-show .when-open{display:contents}
+body.list-open .sidebar-show .when-closed,body.ledger-open .ledger-show .when-closed{display:none}
+/* The bar says what comes next (Reviewed, Next file), so a file does not end with it again. */
+.focus-end{display:none}
+/* The resize hint is hidden, not just transparent, until it shows: it must not sit over Your review's rows. */
+.ledger-resize-tip{visibility:hidden}
+.ledger-resize:hover .ledger-resize-tip,.ledger-resize:focus-visible .ledger-resize-tip,body[data-resize] .ledger-resize-tip{visibility:visible}
+/* Dialogs fit what the screen shows: on iOS 100vh counts the area behind the browser's address bar,
+   so a dialog centred in it loses its top. The dynamic viewport is what is in sight. */
+/* A dialog and its box fit what the screen shows (dvh), not the height under a hidden address bar (daisyUI's 100vh), so its top and × stay in view on an iPad. */
+dialog.modal{height:100dvh;max-height:100dvh}
+dialog.modal>.modal-box{max-height:calc(100dvh - 32px)}
+/* Settings keeps its title, close and tabs in sight; only the settings themselves scroll. */
+.settings-box{display:flex;flex-direction:column;overflow:hidden}
+.settings-box>:is(header,.settings-tabs){flex:none}
+.settings-box>.settings-body{flex:1 1 auto;min-height:0;overflow-y:auto}
+/* Keyboard hints mean nothing on a touch screen. */
+@media(hover:none) and (pointer:coarse){.settings-box .view-keys{display:none}}
+/* On a tablet the list opens as a drawer over the page, the bar included. */
+@media(min-width:741px) and (max-width:1199px){
+  .navigation-open .sidebar{z-index:40}
+  .navigation-open .sidebar-scrim{z-index:35}
+}
+/* A file's name is as wide as it is, so Why this file sits right after it; the file's own actions keep the far end. */
+.focus-identity>.current-file{flex:0 1 auto;min-width:0}
+.focus-identity>.file-about{margin-left:8px}
+.focus-identity>.focus-progress-actions{margin-left:auto}
+/* A group's title folds its steps: it reads as the title it is, with no button look. */
+.sidebar nav button.nav-group-toggle{display:inline;width:auto;min-height:0;padding:0;margin:0;border:0;border-radius:0;background:none;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit;line-height:inherit;cursor:pointer}
+.sidebar nav button.nav-group-toggle:hover{background:none;text-decoration:underline;text-underline-offset:4px}
+/* A comment box opened between lines spans the code block it sits in, edge to edge, as wide as the block shows (not the scrolled width). */
+.diff-scroll{container-type:inline-size}
+/* Your review's title sits on the line the panel icons and the file name share: the head is as tall as twice the distance from the panel's top to that line. */
+.ledger-head{box-sizing:border-box;min-height:calc(2 * (var(--panel-icon-top) + var(--panel-icon-size,32px) / 2 - var(--chrome-h)));padding-block:0}
+/* The command key sits in the middle of its button. */
+.review-bar .bar-keys{display:grid;place-items:center}

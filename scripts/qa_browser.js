@@ -53,7 +53,10 @@ async function launch() {
     });
     await call('Page.enable');
     await call('Runtime.enable');
-    await call('Emulation.setDeviceMetricsOverride', {width, height, deviceScaleFactor: 1, mobile: false});
+    // Under 1200px it is a touch tablet or phone, as an iPad is: the page's viewport tag applies.
+    const mobile = width > 100 && width < 1200;
+    await call('Emulation.setDeviceMetricsOverride', {width, height, deviceScaleFactor: 1, mobile});
+    if (mobile) await call('Emulation.setTouchEmulationEnabled', {enabled: true, maxTouchPoints: 5});
     const evaluate = async (expression, awaitPromise = true) => {
       const result = await call('Runtime.evaluate', {expression, awaitPromise, returnByValue: true});
       if (result.exceptionDetails) throw new Error(`${result.exceptionDetails.exception?.description || result.exceptionDetails.text}\n${expression.slice(0, 200)}`);

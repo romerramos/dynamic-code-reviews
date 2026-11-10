@@ -58,7 +58,7 @@
 [data-theme^="minimal-"] .sidebar nav button{min-height:0;margin:0;align-items:baseline}
 [data-theme^="minimal-"] .sidebar nav :is(li,.menu){margin:0;padding:0;gap:0}
 [data-theme^="minimal-"] .sidebar nav .nav-section{margin:18px 0 0}
-[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view][aria-current="page"])>.nav-files{margin:0 0 8px 12px}
+[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view])>.nav-files{margin:0 0 8px 12px}
 [data-theme^="minimal-"] .sidebar nav button.nav-file[aria-current="location"]{background:transparent;color:var(--ink)}
 [data-theme^="minimal-"] .sidebar nav button.nav-file[aria-current="location"] .nav-file-name{color:var(--ink);font-weight:600}
 [data-theme^="minimal-"] .sidebar nav .nav-file-directory{display:none}
@@ -75,8 +75,7 @@
 [data-theme^="minimal-"] .nav-group-title{color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
 [data-theme^="minimal-"] .sidebar-settings{padding:5px 8px;color:var(--muted);font-size:12px;font-weight:400}
 [data-theme^="minimal-"] .sidebar-settings:hover{background:transparent;color:var(--ink)}
-[data-theme^="minimal-"] .sidebar-settings #settings-icon{display:none}
-[data-theme^="minimal-"] .sidebar-footer{border-top:0;padding:6px 8px 0;color:var(--minimal-faint)}
+[data-theme^="minimal-"] .sidebar-footer{border-top:0;padding:10px 8px 0;color:var(--minimal-faint)}
 [data-theme^="minimal-"] .sidebar-footer progress{height:2px}
 
 /* --- the page: one column, no boxes ----------------------------------------------------------------- */
@@ -94,7 +93,8 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .focus-file-header :is(.focus-group,.focus-progress-actions){display:none}
 [data-theme^="minimal-"] .focus-file-header{border:0;background:var(--surface)}
 [data-theme^="minimal-"] .focus-file-actions{margin-left:auto;border:0;background:transparent;color:var(--minimal-faint)}
-[data-theme^="minimal-"] main#content{padding-top:22px}
+[data-theme^="minimal-"]{--reader-top:22px}
+[data-theme^="minimal-"] body:not(.reading-focus) main#content{padding-top:22px}
 [data-theme^="minimal-"] :is(.app-header,.review-toolbar,.definition-back){display:none}
 [data-theme^="minimal-"] .review-bar{display:flex}
 [data-theme^="minimal-"] main#content{padding-bottom:104px}
@@ -351,30 +351,15 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .overview-intro :is(.lead,.lead-rest) code{background:var(--minimal-soft)}
 
 /* --- the foot of the list: one line, how far and how many need you, beside a small gear ------------ */
-[data-theme^="minimal-"] .sidebar{position:relative}
-[data-theme^="minimal-"] .sidebar-footer{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:8px 10px;padding:10px 8px 0}
-[data-theme^="minimal-"] .sidebar-footer #progress{grid-column:1;font-size:12px;color:var(--minimal-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-[data-theme^="minimal-"] .sidebar-footer .progress-need{grid-column:1;grid-row:1;justify-self:end;font-size:12px}
-[data-theme^="minimal-"] .sidebar-footer progress{grid-column:1 / -1;grid-row:2;width:100%}
-[data-theme^="minimal-"] .sidebar-footer .dcr-todo-link{display:none}
-[data-theme^="minimal-"] .sidebar-settings{position:absolute;right:20px;bottom:17px;width:auto;margin:0;padding:2px;gap:0;color:var(--minimal-faint)}
-[data-theme^="minimal-"] .sidebar-settings>span:not(#settings-icon){position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
-[data-theme^="minimal-"] .sidebar-settings #settings-icon{display:inline-grid}
-[data-theme^="minimal-"] .sidebar-settings .review-icon{width:15px;height:15px}
-[data-theme^="minimal-"] .sidebar-footer{padding-right:34px}
-[data-theme^="minimal-"] .sidebar-footer #progress{grid-row:1}
+[data-theme^="minimal-"] body:not(.navigation-open) .sidebar{position:relative}
+[data-theme^="minimal-"] .sidebar-footer #progress{color:var(--minimal-faint)}
+[data-theme^="minimal-"] .sidebar-footer .sidebar-settings{padding:2px;color:var(--minimal-faint)}
 
 /* --- who wrote it, in a glance: a small face before each comment's line --------------------------- */
 /* The lists line up with the faces: what to read first starts where the comments' words do. */
 [data-theme^="minimal-"] .risk-brief button{padding-left:30px}
 
 /* --- room: a wider list, so step names fit on a line, and a wider page for the lines ------------- */
-@media(min-width:1100px){
-  html[data-theme^="minimal-"] body:not(.sidebar-collapsed):not(.zen) .workspace{grid-template-columns:384px minmax(0,1fr)}
-  html[data-theme^="minimal-"] body.ledger-open:not(.sidebar-collapsed):not(.zen) .workspace{grid-template-columns:384px minmax(0,1fr) var(--ledger-w,380px)}
-  /* With the list hidden, Your review still keeps its column, so the page never runs under it. */
-  html[data-theme^="minimal-"] body.ledger-open.sidebar-collapsed:not(.zen) .workspace{grid-template-columns:minmax(0,1fr) var(--ledger-w,380px)}
-}
 [data-theme^="minimal-"] .overview-reading{max-width:880px}
 [data-theme^="minimal-"] .overview-intro .lead-rest{max-width:680px}
 
@@ -395,7 +380,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .composer{padding:12px 14px 12px 12px}
 [data-theme^="minimal-"] .composer-head{min-height:0;margin-bottom:8px;padding:0}
 [data-theme^="minimal-"] .composer-head :is(.composer-where,.composer-as){display:none}
-[data-theme^="minimal-"] .composer-mode span{padding:3px 9px;font-size:12.5px}
+[data-theme^="minimal-"] .composer-mode>span{padding:3px 9px;font-size:12.5px}
 [data-theme^="minimal-"] .composer-modes{background:var(--minimal-soft);border:0}
 [data-theme^="minimal-"] .composer-modes svg{width:13px;height:13px}
 [data-theme^="minimal-"] .composer-body{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;align-items:start}
@@ -425,7 +410,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] #navigation button[aria-expanded="true"] .step-body small{display:none}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body strong,[data-theme^="minimal-"] #navigation .nav-section button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]) .step-body strong{font-weight:400}
 [data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]))>button{box-shadow:inset 1px 0 var(--line-neutral-4)}
-[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view][aria-current="page"])>.nav-files{margin:2px 0 8px 16px;padding:0;border:0}
+[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view])>.nav-files{margin:2px 0 8px 16px;padding:0;border:0}
 [data-theme^="minimal-"] .sidebar nav button.nav-file{min-height:0;gap:8px;padding:3px 8px;border:0;background:transparent;color:var(--muted);font:12px/1.5 var(--mono)}
 [data-theme^="minimal-"] .sidebar nav button.nav-file .nav-file-name{font-weight:400;color:inherit}
 [data-theme^="minimal-"] .sidebar nav button.nav-file[aria-current="location"],[data-theme^="minimal-"] .sidebar nav button.nav-file[aria-current="location"] .nav-file-name{background:transparent;color:var(--ink);font-weight:400}
@@ -453,7 +438,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number:not(:has(svg)){display:block;visibility:hidden}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number .review-icon{width:12px;height:12px;vertical-align:-1px}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body{grid-column:2;order:0}
-[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view][aria-current="page"])>.nav-files{margin-left:28px}
+[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view])>.nav-files{margin-left:28px}
 [data-theme^="minimal-"] .sidebar nav button.nav-file{align-items:center}
 [data-theme^="minimal-"] .sidebar nav .file-status{flex:0 0 12px;width:12px;height:12px;margin:0;border:1px solid var(--line-neutral-5);border-radius:3px;background:var(--surface);cursor:pointer}
 [data-theme^="minimal-"] .sidebar nav .file-status:hover{border-color:var(--ink)}
@@ -483,7 +468,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view]:has(.step-number svg) .step-body strong{color:var(--minimal-faint)}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view]:not(:has(.step-number svg)) .step-body strong{color:var(--ink-neutral-3)}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view]:is([aria-current="page"],[aria-expanded="true"]) .step-body strong{color:var(--ink)}
-[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view][aria-current="page"])>.nav-files{margin-left:16px}
+[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view])>.nav-files{margin-left:16px}
 [data-theme^="minimal-"] .sidebar nav .file-status{flex:0 0 14px;width:14px;height:14px;margin:0;border:1.5px solid var(--line-neutral-5);border-radius:4px;background:var(--surface);cursor:pointer}
 [data-theme^="minimal-"] .sidebar nav .file-status:hover{border-color:var(--ink)}
 [data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status{display:grid;place-items:center;border-color:var(--ink-neutral-3);background:var(--ink-neutral-3);color:var(--surface)}
@@ -522,7 +507,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .overview-clear p{margin:0}
 
 /* A file name stays on one line, its box under the step's text; too long, it loses its middle, never its end. */
-[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view][aria-current="page"])>.nav-files{margin-left:0}
+[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view])>.nav-files{margin-left:0}
 [data-theme^="minimal-"] .sidebar nav button.nav-file .nav-file-name{display:flex;min-width:0;white-space:nowrap;overflow-wrap:normal}
 [data-theme^="minimal-"] .sidebar nav button.nav-file .name-head{min-width:0;overflow:hidden;text-overflow:ellipsis}
 [data-theme^="minimal-"] .sidebar nav button.nav-file .name-tail{flex:none}
@@ -533,18 +518,13 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] :is(.sidebar-hide,.sidebar-show){place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--minimal-faint)}
 [data-theme^="minimal-"] :is(.sidebar-hide,.sidebar-show):hover{background:var(--minimal-soft);color:var(--ink)}
 [data-theme^="minimal-"] :is(.sidebar-hide,.sidebar-show) .review-icon{width:17px;height:17px;stroke-width:1.8}
-@media(min-width:1200px){
-  html[data-theme^="minimal-"] .sidebar-hide{display:grid;flex:none}
-  html[data-theme^="minimal-"] body.sidebar-collapsed .sidebar-show{display:grid;position:fixed;top:28px;left:18px;z-index:30}
-}
 
 /* --- The Overview while you read ------------------------------------------------------------------ */
 /* Where you are is underlined. */
 [data-theme^="minimal-"] .sidebar nav button[data-view][aria-current="page"] .step-body>strong{text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:5px}
-/* A group shows its steps only when you are in it; its title opens its first step. */
-[data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title):not(:has(button[aria-current="page"]))>.menu{display:none}
-[data-theme^="minimal-"] .sidebar nav .nav-group-title[data-view]{cursor:pointer}
-[data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title):not(:has(button[aria-current="page"]))>.nav-group-title:hover{text-decoration:underline;text-underline-offset:5px}
+/* A group you are not in starts folded; its title unfolds it. */
+html[data-theme^="minimal-"]{--nav-groups:current}
+[data-theme^="minimal-"] #navigation button.nav-group-toggle{padding:0;color:inherit}
 /* A quiet pointer at the first step with files left; not on the step you are on. */
 [data-theme^="minimal-"] .sidebar nav .step-next{display:inline;margin-left:10px;color:var(--minimal-faint);font-size:11.5px;font-weight:400;text-decoration:none;white-space:nowrap}
 [data-theme^="minimal-"] .sidebar nav .step-next::before{content:"← "}
@@ -558,9 +538,6 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] :is(.ledger-hide,.ledger-show):hover{background:var(--minimal-soft);color:var(--ink)}
 [data-theme^="minimal-"] :is(.ledger-hide,.ledger-show) .review-icon{width:17px;height:17px;stroke-width:1.8}
 [data-theme^="minimal-"] .ledger-hide{display:grid}
-@media(min-width:1200px){
-  html[data-theme^="minimal-"] body:not(.ledger-open):not(.zen) .ledger-show{display:grid;position:fixed;top:14px;right:18px;z-index:30}
-}
 /* Each comment one quiet row, as on the Overview: the agent's mark, the title, the file and line;
    under it, the marks of the agents who answered, and new when it is. */
 /* Template previews have the Previews tab and ⌘K. */
@@ -597,20 +574,6 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 
 /* --- One icon per panel, just outside it: the same button opens and closes it, and stays on the
    panel's edge, so neither panel looks like an app of its own. The finder takes the list's width. --- */
-[data-theme^="minimal-"] :is(.sidebar-show,.ledger-show) .when-open{display:none}
-[data-theme^="minimal-"] body:not(.sidebar-collapsed) .sidebar-show .when-open,[data-theme^="minimal-"] body.ledger-open .ledger-show .when-open{display:contents}
-[data-theme^="minimal-"] body:not(.sidebar-collapsed) .sidebar-show .when-closed,[data-theme^="minimal-"] body.ledger-open .ledger-show .when-closed{display:none}
-@media(min-width:1200px){
-  html[data-theme^="minimal-"] :is(.sidebar-hide,.ledger-hide){display:none}
-  html[data-theme^="minimal-"] body:not(.zen) .sidebar-show{display:grid;position:fixed;top:28px;left:392px;z-index:30}
-  html[data-theme^="minimal-"] body.sidebar-collapsed:not(.zen) .sidebar-show{left:18px}
-  html[data-theme^="minimal-"] body:not(.zen) .ledger-show{display:grid;position:fixed;top:14px;right:18px;z-index:30}
-  /* Your review lies over the page below 1500px, at its own width, and is a column above it. */
-  html[data-theme^="minimal-"] body.ledger-open:not(.zen) .ledger-show{right:calc(min(var(--ledger-w,420px),92vw) + 8px)}
-}
-@media(min-width:1500px){
-  html[data-theme^="minimal-"] body.ledger-open:not(.zen) .ledger-show{right:calc(var(--ledger-w,380px) + 8px)}
-}
 
 /* --- Your review on one conversation, drawn as the Overview draws it: the agent's mark and the title
    first, the file and line as the link to the code, then each answer as a mark and a quiet line. --- */
@@ -643,9 +606,6 @@ html[data-theme^="minimal-"] #content .overview-reading .overview-comments:not(:
 [data-theme^="minimal-"] .overview-reading .overview-comments:not(:has(.overview-clear))>h2::before{content:"Agent comments";font-size:12px}
 [data-theme^="minimal-"] .overview-reading .overview-todo{display:none}
 /* Your review is a column of its own here, so the bar centres on what is left without taking it off twice. */
-@media(min-width:741px) and (max-width:1499px){
-  html[data-theme^="minimal-"] body.ledger-open:not(.zen) .review-bar{left:50%;width:min(640px,calc(100% - 28px))}
-}
 [data-theme^="minimal-"] #ledger .dcr-detail-code{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* --- Try the change: the three things to do with the change as quiet rows, like the comments under
@@ -694,11 +654,6 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
 @media(min-width:1200px){
   html[data-theme^="minimal-"] body:not(.sidebar-collapsed):not(.zen) main#content{padding-left:52px}
   html[data-theme^="minimal-"] body.ledger-open:not(.zen) main#content{padding-right:52px}
-}
-/* Below 1500px Your review lies over the page at 420px: the page's column for it is as wide. */
-@media(min-width:1100px) and (max-width:1499px){
-  html[data-theme^="minimal-"] body.ledger-open:not(.sidebar-collapsed):not(.zen) .workspace{grid-template-columns:384px minmax(0,1fr) min(var(--ledger-w,420px),92vw)}
-  html[data-theme^="minimal-"] body.ledger-open.sidebar-collapsed:not(.zen) .workspace{grid-template-columns:minmax(0,1fr) min(var(--ledger-w,420px),92vw)}
 }
 
 /* --- A comment's actions, in the code's popover and on the Overview: one split button whose halves
@@ -851,3 +806,14 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
 
 /* The way to a comment's code follows its title's last word. */
 /* One line between two comments, open or closed: only the line under each. */
+
+/* Minimal's list is wider, and each panel's icon sits just outside the panel's edge in every tier:
+   at the page's corner when the panel is closed, beside its edge when it is open. */
+html[data-theme^="minimal-"]{--list-w:384px}
+html[data-theme^="minimal-"] :is(.sidebar-hide,.ledger-hide){display:none}
+/* Its icons' line is the file name's line when reading a file. */
+html[data-theme^="minimal-"]{--panel-icon-top:25px}
+html[data-theme^="minimal-"] body:not(.zen) .sidebar-show{display:grid;position:fixed;top:var(--panel-icon-top);left:18px;z-index:30}
+html[data-theme^="minimal-"] body.list-open:not(.zen) .sidebar-show{left:calc(min(var(--list-w),85vw) + 8px)}
+html[data-theme^="minimal-"] body:not(.zen) .ledger-show{display:grid;position:fixed;top:var(--panel-icon-top);right:18px;z-index:30}
+html[data-theme^="minimal-"] body.ledger-open:not(.zen) .ledger-show{right:calc(var(--ledger-size) + 8px)}

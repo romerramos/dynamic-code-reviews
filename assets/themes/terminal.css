@@ -364,9 +364,6 @@
 /* In the dark the bar is lifted as everywhere else (report.css); in the light it is the page's own surface. */
 [data-theme="terminal-light"] .review-bar{box-shadow:none;background:var(--surface)}
 [data-theme^="terminal-"] .review-bar textarea{background:transparent;border:0}
-[data-theme^="terminal-"] .review-bar .bar-primary{border-radius:0;background:transparent;color:var(--accent)}
-[data-theme^="terminal-"] .review-bar .bar-primary::before{content:"[ ";color:var(--terminal-overlay0)}
-[data-theme^="terminal-"] .review-bar .bar-primary::after{content:" ]";color:var(--terminal-overlay0)}
 /* Rank the files is its row's own cell, so its brackets go inside it, after the table's pipe. */
 [data-theme^="terminal-"] .overview-reading .risk-rank.risk-none .risk-redo>svg{display:none}
 [data-theme^="terminal-"] .overview-reading .risk-rank.risk-none .risk-redo>span::before{content:"[ ";color:var(--terminal-overlay0)}
@@ -387,3 +384,5 @@
 [data-theme^="terminal-"] .risk-high .risk-bar i{background:repeating-linear-gradient(90deg,color-mix(in oklab,var(--ink) 80%,transparent) 0 6px,transparent 6px 8px)}
 [data-theme^="terminal-"] .risk-medium .risk-bar i{background:repeating-linear-gradient(90deg,color-mix(in oklab,var(--ink) 55%,transparent) 0 6px,transparent 6px 8px)}
 [data-theme^="terminal-"] .risk-low .risk-bar i{background:repeating-linear-gradient(90deg,color-mix(in oklab,var(--ink) 35%,transparent) 0 6px,transparent 6px 8px)}
+/* A group's title folds its steps; it keeps the title's look. */
+[data-theme^="terminal-"] .sidebar nav button.nav-group-toggle,[data-theme^="terminal-"] .sidebar nav button.nav-group-toggle:hover{padding:0;background:none}

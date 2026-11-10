@@ -215,7 +215,10 @@
     const statusSignature = status ? `${model?.tone}|${model?.text}|${outcome}|${refused}` : '';
     const form = block.querySelector('.dcr-reply');
     if (ledger) {
-      set(form, 'hidden', !sent);
+      // Your review always has the reply box: on a comment not sent yet, your words go with it to your agent.
+      set(form, 'hidden', false);
+      if (!sent) form.dataset.mode = 'answer';
+      else if (form.dataset.mode === 'answer') delete form.dataset.mode;
       const field = form.querySelector('textarea');
       set(field, 'disabled', !online);
       set(field, 'placeholder', online ? 'Reply to your agent' : 'The review server stopped');
@@ -308,7 +311,8 @@
           set(button, 'title', fixing ? 'Your agent is working on it. The next revision shows what it changed.' : other ? 'Your agent is changing the code for another comment. One at a time, so each shows as its own change.' : 'Have your agent change the code in your checkout. The next revision shows that change and nothing else.');
         });
       }
-      [act, fix].forEach(button => { button.classList.toggle('btn-primary', button === first && (writing || (!sent && !!action?.act))); button.classList.toggle('btn-ghost', button !== first); });
+      // The first action is a quiet button, as Resolve beside it: it carries the agent's face, which a filled button drowns.
+      [act, fix].forEach(button => { button.classList.toggle('btn-soft', button === first); button.classList.toggle('btn-ghost', button !== first); });
       split.classList.toggle('is-narrow', narrow);
       split.classList.toggle('is-writing', writing);
       const more = menu.querySelector('summary');

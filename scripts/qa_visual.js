@@ -24,7 +24,7 @@ const OUT = path.resolve(option('out', path.join(ROOT, '.reviews/qa/after')));
 const COMPARE = option('compare', null) && path.resolve(option('compare'));
 const THEMES = list('themes', 'aida,terminal,minimal');
 const MODES = list('modes', 'light,dark');
-const VIEWPORTS = list('viewports', '1440x900,1280x800').map(size => { const [width, height] = size.split('x').map(Number); return {width, height, name: size}; });
+const VIEWPORTS = list('viewports', '1440x900,1280x800,1133x744,744x1133').map(size => { const [width, height] = size.split('x').map(Number); return {width, height, name: size}; });
 const STATES = list('states', 'overview,resolved,open-one,open-all,sidebar-collapsed,ledger,conversation,popover,popover-own,settings,offline');
 const NO_FAIL = args.includes('--no-fail');
 // --probe file.js: print what an expression in that file returns in each combination, and nothing else.
@@ -326,6 +326,39 @@ async function lineStability(page) {
   return {check: 'line-still-on-open', pass: true, detail: results.join(' | ')};
 }
 
+// The page is never squeezed: at every width the reading column keeps room for a line of code.
+function roomCheck() {
+  const content = document.getElementById('content');
+  const need = Math.min(560, innerWidth - 40);
+  const width = content ? content.getBoundingClientRect().width : 0;
+  return {check: 'page-has-room', pass: width >= need, detail: `content ${Math.round(width)}px of ${innerWidth}px (needs ${need})`};
+}
+
+// Each panel has an icon in sight that opens it, and a way to close it again, at every width.
+async function panelsOpenAndClose(page) {
+  const results = [];
+  for (const [name, show, hide, panel] of [['list', 'sidebar-show', 'sidebar-hide', '.sidebar'], ['your review', 'ledger-show', 'ledger-hide', '#ledger']]) {
+    const state = `(() => {
+      const usable = id => { const node = document.getElementById(id); if (!node) return null; const r = node.getBoundingClientRect(); if (!r.width || getComputedStyle(node).visibility === 'hidden') return null;
+        const x = r.left + r.width / 2, y = r.top + r.height / 2; if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) return null;
+        const top = document.elementFromPoint(x, y); return top && (top === node || node.contains(top)) ? id : null; };
+      const p = document.querySelector(${JSON.stringify(panel)}); const r = p && p.getBoundingClientRect();
+      const open = !!(r && r.width > 40 && r.right > 0 && r.left < innerWidth && getComputedStyle(p).display !== 'none' && !p.hidden);
+      return {open, control: usable(${JSON.stringify(show)}) || usable(${JSON.stringify(hide)})};
+    })()`;
+    const first = await page.evaluate(state);
+    if (!first.control) { results.push(`${name}: no icon in sight`); continue; }
+    await page.evaluate(`document.getElementById(${JSON.stringify(first.control)}).click()`); await sleep(400);
+    const second = await page.evaluate(state);
+    if (second.open === first.open) { results.push(`${name}: ${first.control} did not ${first.open ? 'close' : 'open'} it`); continue; }
+    if (!second.control) { results.push(`${name}: no icon in sight once ${second.open ? 'open' : 'closed'}`); continue; }
+    await page.evaluate(`document.getElementById(${JSON.stringify(second.control)}).click()`); await sleep(400);
+    const third = await page.evaluate(state);
+    results.push(third.open === first.open ? `${name}: ok` : `${name}: ${second.control} did not ${second.open ? 'close' : 'open'} it`);
+  }
+  return {check: 'panels-open-and-close', pass: results.every(line => line.endsWith(': ok')), detail: results.join(' | ')};
+}
+
 // From the Overview to the code and back.
 async function backToOverview(page) {
   await page.evaluate(`document.querySelector('.thread-go[data-comment="fee-window"]')?.click() || document.querySelector('.review-thread[data-thread-id="fee-window"] [data-comment="fee-window"]')?.click()`);
@@ -393,7 +426,8 @@ if (option('sheet', null)) {
       if (PROBE) { console.log(name, JSON.stringify(await page.evaluate(PROBE))); await page.close(); await sleep(400); continue; }
       await page.screenshot(path.join(OUT, `${name}.png`));
       const checks = await page.evaluate(`(${measure})(${JSON.stringify({expectedStyle: expected[theme], plainTags: theme === 'minimal'})})`);
-      if (state === 'overview') { checks.push(await lineStability(page)); checks.push(await backToOverview(page)); }
+      checks.push(await page.evaluate(`(${roomCheck})()`));
+      if (state === 'overview') { checks.push(await panelsOpenAndClose(page)); checks.push(await lineStability(page)); checks.push(await backToOverview(page)); }
       checks.push({check: 'no-script-errors', pass: !page.errors.length, detail: page.errors.slice(0, 2).join(' | ')});
       report.push({name, theme, mode, state, viewport: viewport.name, checks});
       const failed = checks.filter(check => !check.pass);
