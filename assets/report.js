@@ -1442,20 +1442,42 @@
     highlightComments([]);
   }
 
-  function positionAnnotation(popover, trigger, close) {
+  // lines: the first and last code cells a comment is about. The card then hangs under the last
+  // one, lined up with the code, so the lines stay readable above it; where there is no room
+  // below, it sits above the first.
+  function positionAnnotation(popover, trigger, close, lines = null) {
     if (!trigger?.isConnected || !popover.matches(':popover-open')) return;
     const anchor = trigger.getBoundingClientRect();
     const content = $('content').getBoundingClientRect();
     if (anchor.bottom < content.top || anchor.top > Math.min(content.bottom, innerHeight) || anchor.right < content.left || anchor.left > innerWidth) { close(); return; }
     const box = popover.getBoundingClientRect();
+    if (lines) {
+      const first = lines.first.getBoundingClientRect(), last = lines.last.getBoundingClientRect();
+      const under = last.bottom + 6, room = commentFloor() - under;
+      popover.style.left = `${Math.max(12, Math.min(first.left, innerWidth - box.width - 12))}px`;
+      // Short of room, the card scrolls inside itself rather than covering the lines.
+      if (room >= 200) { popover.style.maxHeight = `${room}px`; popover.style.top = `${under}px`; return; }
+      popover.style.maxHeight = '';
+      const height = popover.getBoundingClientRect().height, over = first.top - height - 6;
+      popover.style.top = `${over >= 12 ? over : Math.max(12, innerHeight - height - 12)}px`;
+      return;
+    }
     const left = Math.max(12, Math.min(anchor.right + 8, innerWidth - box.width - 12));
     const below = anchor.bottom + 8;
     const top = below + box.height <= innerHeight - 12 ? below : Math.max(12, anchor.top - box.height - 8);
     popover.style.left = `${left}px`;
     popover.style.top = `${top}px`;
   }
+  // How far down a comment card may reach: above the bar, where the theme shows one.
+  function commentFloor() {
+    const bar = $('review-bar');
+    const top = bar && getComputedStyle(bar).display !== 'none' ? bar.getBoundingClientRect().top - 8 : innerHeight;
+    return Math.min(innerHeight, top) - 12;
+  }
   function positionComment() {
-    positionAnnotation($('comment-popover'), commentAnchor, closeComments);
+    const table = commentAnchor?.closest('table');
+    const cells = table ? [...table.querySelectorAll('.code.range-selected')] : [];
+    positionAnnotation($('comment-popover'), commentAnchor, closeComments, cells.length ? {first: cells[0], last: cells.at(-1)} : null);
   }
 
   function openComment(trigger, ids = trigger.dataset.notes.split(' ')) {
@@ -1468,6 +1490,10 @@
     trigger.setAttribute('aria-expanded', 'true');
     highlightComments(ids);
     if (!popover.matches(':popover-open')) popover.showPopover();
+    // The lines go near the top, so the card has room under them.
+    const lines = [...trigger.closest('table')?.querySelectorAll('.code.range-selected') || []];
+    const last = lines.at(-1)?.getBoundingClientRect();
+    if (last && last.bottom + Math.min(popover.scrollHeight, 420) > commentFloor()) $('content').scrollTop += lines[0].getBoundingClientRect().top - 120;
     positionComment();
     popover.querySelector('[data-close-comment]').focus({preventScroll:true});
   }
