@@ -272,7 +272,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .risk-brief button:hover>span,[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-summary:hover>strong{text-decoration:underline;text-decoration-color:var(--line-neutral-4);text-underline-offset:4px}
 /* A closed comment is such a line: what it says, and where. Its kind, its author and the rest come when it opens. */
 [data-theme^="minimal-"] .overview-reading .review-thread:has(>.thread-details:not([open])){display:block;margin:0;padding:0;border:0}
-[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-file,[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-summary>:not(strong,.thread-at,.thread-go){display:none}
+[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-file,[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-summary>:not(strong,.thread-at){display:none}
 [data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-summary{justify-content:space-between;gap:24px;padding:7px 0}
 [data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-summary>strong{font-size:14px;font-weight:400;color:var(--ink)}
 [data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-at{display:block;order:2}
@@ -331,7 +331,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 /* Open: a title, one quiet line about it, the text, and what became of it. */
 [data-theme^="minimal-"] .overview-reading .review-thread:has(>.thread-details[open]){margin:10px 0 14px;padding:18px 0 20px}
 [data-theme^="minimal-"] .review-thread:has(>.thread-details[open]) .thread-summary{display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:baseline;padding:0;background:transparent}
-[data-theme^="minimal-"] .review-thread:has(>.thread-details[open]) .thread-summary>:not(strong,.thread-at,.thread-go){display:none}
+[data-theme^="minimal-"] .review-thread:has(>.thread-details[open]) .thread-summary>:not(strong,.thread-at){display:none}
 [data-theme^="minimal-"] .review-thread:has(>.thread-details[open]) .thread-summary>strong{font-size:16px;font-weight:600;line-height:1.4}
 [data-theme^="minimal-"] .review-thread:has(>.thread-details[open]) .thread-at{display:block}
 [data-theme^="minimal-"] .thread-meta{display:flex;flex-wrap:wrap;gap:2px 8px;margin:4px 0 16px;color:var(--minimal-faint);font-size:12.5px}
@@ -365,7 +365,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .review-thread .thread-summary>:is(strong,.thread-at){grid-column:auto!important;grid-row:1!important}
 [data-theme^="minimal-"] .review-thread .thread-summary>.thread-at{grid-column:2!important;justify-self:end}
 [data-theme^="minimal-"] .review-thread .thread-summary>strong{grid-column:1!important}
-[data-theme^="minimal-"] .review-thread .thread-summary>:not(strong,.thread-at,.thread-go){display:none!important}
+[data-theme^="minimal-"] .review-thread .thread-summary>:not(strong,.thread-at){display:none!important}
 [data-theme^="minimal-"] .overview-settled .review-thread:has(>.thread-details:not([open])) .thread-summary>strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400}
 [data-theme^="minimal-"] .overview-reading .overview-settled{display:flex;flex-direction:column;gap:30px}
 [data-theme^="minimal-"] .overview-resolved .thread-at[data-state]::before{content:none}
@@ -846,7 +846,6 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
 [data-theme^="minimal-"] #ledger .ledger-item[data-ledger] .ledger-at:hover{background:var(--minimal-soft);color:var(--ink);text-decoration:none}
 [data-theme^="minimal-"] :is(#ledger .ledger-at,.thread-go) svg{width:14px;height:14px;stroke-width:1.8}
 [data-theme^="minimal-"] #content .overview-reading .thread-summary:has(.thread-go) .thread-at{display:none}
-[data-theme^="minimal-"] .overview-reading .thread-go{display:grid;place-items:center;width:24px;height:24px;padding:0;border:0;border-radius:6px;background:none;color:var(--minimal-faint);cursor:pointer}
 [data-theme^="minimal-"] .overview-reading .thread-go:hover{background:var(--minimal-soft);color:var(--ink)}
 /* The risk ranking's files, under its row: the score first (a number and a short bar, darker the higher),
    then why, then the file as a link; a migration is just "migration". */
@@ -1040,3 +1039,9 @@ html[data-theme^="minimal-"]{--agent-claude:var(--ink)!important;--agent-codex:v
 [data-theme^="minimal-"] .dcr-publish-preview .dcr-body code{padding:0;background:none;font-size:12px;color:var(--ink-neutral-3)}
 [data-theme^="minimal-"] .dcr-publish-box .dcr-gh-actions{margin-top:22px;padding:0;border:0;background:none}
 [data-theme^="minimal-"] .dcr-publish-box .dcr-gh-actions :is(.act-primary,.act-gh){background:var(--ink)!important;border-color:var(--ink)!important;color:var(--surface)!important}
+
+/* The way to a comment's code follows its title's last word. */
+[data-theme^="minimal-"] .overview-reading .review-thread .thread-summary .thread-go{display:inline-grid;place-items:center;width:20px;height:20px;margin-left:2px;padding:0;border:0;border-radius:4px;background:none;color:var(--minimal-faint);vertical-align:-4px;cursor:pointer}
+[data-theme^="minimal-"] .overview-reading .review-thread .thread-summary .thread-go:hover{color:var(--ink)}
+[data-theme^="minimal-"] .overview-reading .review-thread .thread-summary .thread-go svg{width:14px;height:14px}
+[data-theme^="minimal-"] .overview-reading .review-thread:has(>.thread-details[open]) .thread-summary .thread-go{display:none}

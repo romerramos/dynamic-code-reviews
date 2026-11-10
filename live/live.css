@@ -708,3 +708,8 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 .dcr-qa-done.is-empty .dcr-qa-check{display:none}
 /* The app's modal head, for a theme that opens the app as a modal over the review. */
 .dcr-app-head{display:none}
+/* Prose keeps a readable measure; a table or a code block in an answer may use the message's whole
+   width, so it does not scroll inside a narrow column while there is room beside it. */
+.dcr-body{max-width:none}
+.dcr-body>:is(p,ul,ol,h1,h2,h3,h4,h5,h6,blockquote){max-width:68ch}
+.dcr-closure .dcr-body>:is(p,ul,ol,h1,h2,h3,h4,h5,h6,blockquote){max-width:72ch}

@@ -1769,7 +1769,6 @@ body:not(.sidebar-collapsed) .sidebar-show .when-closed,body.ledger-open .ledger
 .overview-reading .thread-summary .thread-resolved{font-size:0;padding:0;border:0;background:none;color:var(--muted)}
 .overview-reading .thread-summary .thread-resolved svg{width:14px;height:14px}
 .overview-reading .thread-summary:has(.thread-go) .thread-at{display:none}
-.overview-reading .thread-summary .thread-go{display:inline-grid;place-items:center;order:3;width:24px;height:24px;padding:0;border:0;background:none;color:var(--muted);cursor:pointer}
 .overview-reading .thread-summary .thread-go:hover{color:var(--ink)}
 .overview-reading .thread-summary .thread-go svg{width:14px;height:14px}
 /* A comment carried from an earlier revision is still yours: same place and colour as the others. */
@@ -1778,3 +1777,17 @@ body:not(.sidebar-collapsed) .sidebar-show .when-closed,body.ledger-open .ledger
 .overview-reading .thread-summary{align-items:center}
 .overview-reading .review-thread .thread-summary .thread-resolved{font-size:0!important;letter-spacing:0}
 .overview-reading .review-thread .thread-summary .thread-resolved::before,.overview-reading .review-thread .thread-summary .thread-resolved::after{content:none}
+/* The way to a comment's code sits right after its title, not at the far edge; an open comment has
+   View in file instead. */
+.overview-reading .review-thread:has(>.thread-details[open]) .thread-go{display:none}
+
+/* --- A comment on the Overview is one line, open or closed, in every theme: the face, the type as a
+   plain word, a check when resolved, then the title with the way to its code right after its last
+   word. Opening it shows the rest under that same line; nothing in the line moves. --- */
+
+
+/* On a dark page a shadow barely shows, so what floats is lifted the way dark interfaces lift it: its
+   surface a step lighter than the page, a clearer edge, and a dark halo that parts it from the text
+   scrolling under it. */
+html[data-mode="dark"] .review-bar{background:color-mix(in srgb,var(--ink) 9%,var(--surface));border-color:color-mix(in srgb,var(--ink) 26%,transparent);box-shadow:0 0 0 6px color-mix(in srgb,var(--surface) 85%,black),0 16px 40px rgba(0,0,0,.6)}
+html[data-mode="dark"] .review-bar textarea{background:transparent}
