@@ -271,7 +271,10 @@ module DCR
         raise ArgumentError, "No thread #{id}. Reply to an id printed by `dcr wait`." unless key
         message = add_message(state, key, id, 'agent', body, agent: agent, model: model, effort: effort, outcome: outcome)
         thread = thread(state, key, id)
-        thread['title'] = title unless title.empty?
+        unless title.empty?
+          thread['title'] = title
+          own_title(state, key, id, title)
+        end
         if outcome
           thread['outcome'] = {'verdict' => outcome, 'revision' => key.split(':').last.to_i, 'at' => message['at'], 'agent' => message['agent']}.compact
           thread['fix']['state'] = 'done' if thread['fix']
@@ -293,8 +296,16 @@ module DCR
       update do |state|
         thread = thread(state, key, id)
         thread['title'] = title unless keep && thread['title']
+        own_title(state, key, id, thread['title'])
         thread['title']
       end
+    end
+
+    # The title also goes on the comment in the saved progress, which the page is given before its
+    # scripts run, so it draws the title from the first paint.
+    def own_title(state, key, id, title)
+      comment = Array(state.dig('blobs', key, 'personalComments')).find { |entry| entry['id'] == id }
+      comment['title'] = title if comment
     end
 
     PROGRESS_KEPT = 12

@@ -434,6 +434,7 @@ Dir.mktmpdir('dcr-titles-cli-') do |series|
   end
   assert(asked == [["Okay, I am confused\n\nWhy change store_configurations?", 'claude']], "Each comment is titled once, from the whole message: #{asked}")
   assert(keys.all? { |key| state.read.dig('threads', key, 'mine-9', 'title') == 'Why store_configurations changes' }, 'Every revision gets the same title')
+  assert(keys.all? { |key| state.read.dig('blobs', key, 'personalComments', 0, 'title') == 'Why store_configurations changes' }, 'The title is kept on the comment the page is given before its scripts run')
   assert(out.include?('Wrote 1 title with Claude'), "The command says what it wrote: #{out}")
 end
 puts 'titles: dcr titles writes the missing ones for comments made before'

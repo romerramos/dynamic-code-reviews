@@ -1225,12 +1225,9 @@
       api('/api/title', {key, id: comment.id, text}).catch(() => { /* an older server, or no agent here: the first words stay */ });
     });
   };
-  // The same title on the Overview, in Your comments.
-  const titleOwnThreads = () => document.querySelectorAll('#content .review-thread.is-own[data-thread-id]').forEach(card => {
-    const title = threads[card.dataset.threadId]?.title;
-    const strong = card.querySelector('.thread-summary > strong');
-    if (title && strong && strong.dataset.title !== title) { strong.innerHTML = titleHTML(title); strong.dataset.title = title; }
-  });
+  // A title that arrived is kept on the comment itself, so the page draws it from then on.
+  const titleOwnThreads = () => comments().filter(comment => comment.personal && threads[comment.id]?.title && comment.title !== threads[comment.id].title)
+    .forEach(comment => window.ReviewOwnTitles?.set(comment.id, threads[comment.id].title));
 
   // The open conversation: it takes the panel's place until Back (or Escape).
   const ledgerPanel = document.getElementById('ledger');
