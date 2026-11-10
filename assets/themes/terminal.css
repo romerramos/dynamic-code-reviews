@@ -446,3 +446,7 @@
 [data-theme^="terminal-"] .overview-reading .review-thread .thread-summary .thread-type{min-width:0!important;flex:none;border-radius:0;padding:0 6px;background:var(--thread-tint)!important;color:var(--thread-ink)!important;font-size:11.5px;font-weight:600}
 [data-theme^="terminal-"] .overview-reading .review-thread .thread-summary .thread-type .thread-type-icon{display:none}
 [data-theme^="terminal-"] .overview-reading .review-thread.is-earlier .thread-summary{padding-top:11px!important;padding-bottom:2px!important}
+[data-theme^="terminal-"] .overview-reading .review-thread .thread-summary>.comment-avatar{background:none!important;box-shadow:none!important;border:0!important}
+[data-theme^="terminal-"] .overview-reading .review-thread .thread-summary>.comment-avatar img{width:24px!important;height:24px!important;border-radius:50%!important}
+[data-theme^="terminal-"] #ledger .ledger-msg>.comment-avatar{background:none!important;box-shadow:none!important;border:0!important}
+[data-theme^="terminal-"] #ledger .ledger-msg>.comment-avatar img{width:100%!important;height:100%!important;border-radius:50%!important}
