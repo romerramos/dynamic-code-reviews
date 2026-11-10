@@ -59,7 +59,7 @@
     </div>
     <aside id="ledger" class="ledger" aria-label="Your review" hidden>
       <div id="ledger-resize" class="ledger-resize" role="separator" aria-orientation="vertical" aria-label="Resize your review" title="" tabindex="0"><span class="ledger-resize-tip" aria-hidden="true">Drag to resize <b>↔</b></span></div>
-      <header class="ledger-head"><h2>Your review</h2><button id="ledger-close" class="icon-button" aria-label="Close your review" title="Close"></button><button type="button" id="ledger-hide" class="ledger-hide" aria-label="Hide your review" title="Hide your review"></button></header>
+      <header class="ledger-head"><h2>Your review</h2><button type="button" id="ledger-export" class="ledger-export" aria-label="Export your review" title="Export: one offline file with your comments, the replies and any recordings" hidden></button><button id="ledger-close" class="icon-button" aria-label="Close your review" title="Close"></button><button type="button" id="ledger-hide" class="ledger-hide" aria-label="Hide your review" title="Hide your review"></button></header>
       <div id="ledger-body" class="ledger-body"></div>
       <footer id="ledger-footer" class="ledger-footer"></footer>
     </aside>
@@ -77,6 +77,7 @@
     <section class="view-row"><span>Code size</span><div class="font-controls" role="group" aria-label="Code font size"><button id="font-smaller" class="icon-button" aria-label="Decrease code font size">A−</button><output id="font-size" aria-live="polite"></output><button id="font-larger" class="icon-button" aria-label="Increase code font size">A+</button></div></section>
     <section class="view-keys"><h2>Keyboard</h2><p><kbd>⌘K</kbd> finds anything · <kbd>space</kbd> opens a menu of commands · <button type="button" class="link-button" data-open-keys><kbd>?</kbd> shows every key</button></p></section>
     <section class="settings-agents" aria-labelledby="settings-agents-title"><h2 id="settings-agents-title">Your agent</h2></section>
+    <section class="settings-round" hidden><h2>This round</h2><p><span>Sends anything unsent and tells your agent this round is done.</span><button type="button" class="btn btn-sm" data-settings-finish>Finish with agent</button></p></section>
   </div></div></dialog>
   <dialog id="details-dialog" class="modal" aria-labelledby="details-title"><article class="modal-box"><header><button aria-label="Close review details" rel="prev" class="btn btn-sm btn-circle btn-ghost" id="close-details">✕</button><h2 id="details-title">Review details</h2></header><div id="review-details"></div><footer><button id="export" class="btn btn-sm btn-ghost">Export local notes</button><button class="btn btn-sm btn-primary" id="done-details">Done</button></footer></article></dialog>
   <div id="comment-popover" class="comment-popover" popover="auto" role="dialog" aria-labelledby="comment-popover-title"></div>

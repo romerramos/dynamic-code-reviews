@@ -1002,3 +1002,18 @@ html[data-theme^="minimal-"]{--agent-claude:var(--ink)!important;--agent-codex:v
 [data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status.failed::before{content:"✕";color:var(--ink)}
 [data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status:not(.passed,.failed){display:none}
 [data-theme^="minimal-"] .overview-reading .qa-preview-compact small{display:block;margin-top:3px}
+
+/* --- Your review has no footer: Export is a download icon by its title, and Finish with agent is in
+   Settings, Agents, under This round. --- */
+[data-theme^="minimal-"] #ledger-footer{display:none}
+[data-theme^="minimal-"] .ledger-head h2{display:flex;align-items:center}
+[data-theme^="minimal-"] .ledger-head .ledger-export:not([hidden]){display:grid;place-items:center;width:26px;height:26px;margin:0 auto 0 6px;padding:0;border:0;border-radius:6px;background:none;color:var(--minimal-faint);cursor:pointer}
+[data-theme^="minimal-"] .ledger-head .ledger-export:hover{background:var(--minimal-soft);color:var(--ink)}
+[data-theme^="minimal-"] .ledger-head .ledger-export svg{width:15px;height:15px;stroke-width:1.8}
+[data-theme^="minimal-"] #settings-dialog.has-agents[data-tab="agents"] .settings-round:not([hidden]){display:block;margin:18px 0 0;padding:16px 0 0;border-top:1px solid var(--line)}
+[data-theme^="minimal-"] .settings-round h2{margin:0 0 8px;color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
+[data-theme^="minimal-"] .settings-round p{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;color:var(--muted);font-size:12.5px}
+[data-theme^="minimal-"] .settings-round .btn{flex:none;height:30px;min-height:30px;padding:0 11px;border:1px solid var(--line)!important;border-radius:8px;color:var(--ink)!important;font-weight:500}
+[data-theme^="minimal-"] #settings-dialog.has-agents[data-tab="agents"] .settings-round:not([hidden]){margin-inline:10px}
+[data-theme^="minimal-"] .settings-agents .dcr-presence-help{margin-top:8px;color:var(--muted);font-size:12.5px;line-height:1.45}
+[data-theme^="minimal-"] .settings-agents .dcr-presence-cmd code{font-size:11.5px}

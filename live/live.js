@@ -1719,6 +1719,12 @@
   // card: they go wherever they are shown, and are listed afresh when that tab opens.
   const settingsDialog = document.getElementById('settings-dialog');
   const settingsAgents = settingsDialog?.querySelector('.settings-agents');
+  // For a theme with no footer in Your review: Export is an icon by its title, Finish with agent is in
+  // Settings, Agents. Both press the footer's own buttons, so they do exactly the same.
+  const ledgerExport = document.getElementById('ledger-export');
+  if (ledgerExport) { ledgerExport.innerHTML = ico('download'); ledgerExport.hidden = false; ledgerExport.addEventListener('click', () => document.querySelector('[data-dcr-export]')?.click()); }
+  const settingsRound = settingsDialog?.querySelector('.settings-round');
+  if (settingsRound) { settingsRound.hidden = false; settingsRound.querySelector('[data-settings-finish]').addEventListener('click', () => { settingsDialog.close(); document.querySelector('[data-dcr-finish]')?.click(); }); }
   const agentParts = [presenceMain, advPanel, presenceCard.querySelector('.dcr-voice-link')];
   const agentsInSettings = () => !!settingsAgents && settingsDialog.open && getComputedStyle(settingsAgents).display !== 'none';
   const homeAgentParts = () => {
