@@ -878,3 +878,25 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
   html[data-theme^="minimal-"] body.ledger-open:not(.sidebar-collapsed):not(.zen) .workspace{grid-template-columns:384px minmax(0,1fr) min(var(--ledger-w,420px),92vw)}
   html[data-theme^="minimal-"] body.ledger-open.sidebar-collapsed:not(.zen) .workspace{grid-template-columns:minmax(0,1fr) min(var(--ledger-w,420px),92vw)}
 }
+
+/* --- A comment's actions, in the code's popover and on the Overview: one split button whose halves
+   meet, the agent's plain mark, and while you write a note only the box and what sends it. --- */
+[data-theme^="minimal-"] :is(.review-thread,.popover-comment) .thread-footer .dcr-split:has(>.dcr-split-menu:not([hidden])) .dcr-split-main .btn{border-top-right-radius:0;border-bottom-right-radius:0}
+[data-theme^="minimal-"] :is(.review-thread,.popover-comment) .thread-footer .dcr-split>.dcr-split-menu>summary.btn{margin-left:-1px;border-top-left-radius:0;border-bottom-left-radius:0}
+[data-theme^="minimal-"] :is(.review-thread,.popover-comment) .thread-footer .btn .dcr-avatar{display:inline-grid;place-items:center;width:14px;height:14px;background:transparent!important;box-shadow:none;color:var(--ink)}
+[data-theme^="minimal-"] :is(.review-thread,.popover-comment) .thread-footer .btn .dcr-avatar svg{width:12px;height:12px}
+/* Writing a note: the split steps aside (the note's own button sends it), and hidden buttons stay hidden. */
+[data-theme^="minimal-"] :is(.review-thread,.popover-comment) .thread-footer .dcr-split.is-writing{display:none}
+[data-theme^="minimal-"] :is(.review-thread,.popover-comment) :is(.dcr-actions,.thread-footer) [hidden]{display:none!important}
+/* In the popover its × already closes it, so the note needs no Cancel; Esc still does the same. */
+[data-theme^="minimal-"] .popover-comment .dcr-reply [data-dcr-cancel]{display:none}
+[data-theme^="minimal-"] :is(.review-thread,.popover-comment) .dcr-reply{border-top:0;padding-top:0}
+[data-theme^="minimal-"] :is(.review-thread,.popover-comment) .dcr-actions .btn-primary{height:28px;min-height:28px;padding:0 12px;border:0;border-radius:8px;background:var(--ink)!important;color:var(--surface)!important;font-weight:600}
+[data-theme^="minimal-"] :is(.review-thread,.popover-comment) .dcr-actions .btn-primary:hover{opacity:.86}
+/* An adversary that did not answer, in the popover and on the Overview as in Your review: a faint line. */
+[data-theme^="minimal-"] :is(.popover-comment,.review-thread) :is(.dcr-opinions,.dcr-ops,ul:has(>.dcr-op)){margin:14px 0 0;padding:0;border:0;list-style:none}
+[data-theme^="minimal-"] :is(.popover-comment,.review-thread) .dcr-op{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;align-items:center;padding:4px 0 0;border:0;background:none}
+[data-theme^="minimal-"] :is(.popover-comment,.review-thread) .dcr-op>.dcr-avatar{display:inline-grid;place-items:center;width:18px;height:18px;background:transparent!important;color:var(--ink);opacity:.4}
+[data-theme^="minimal-"] :is(.popover-comment,.review-thread) .dcr-op>.dcr-avatar svg{width:13px;height:13px}
+[data-theme^="minimal-"] :is(.popover-comment,.review-thread) .dcr-op-line{color:var(--minimal-faint);font-size:12px}
+[data-theme^="minimal-"] :is(.popover-comment,.review-thread) .dcr-op-line strong{color:inherit;font-weight:400}
