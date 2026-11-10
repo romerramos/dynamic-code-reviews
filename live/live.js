@@ -1166,10 +1166,12 @@
   };
   // When a comment was made: when it was posted, else its conversation's first message.
   const startedAt = (comment, thread) => comment?.at || comment?.posted_at || [...(thread?.messages || [])].map(message => message.at).filter(Boolean).sort()[0] || '';
+  // The same place in a few characters (eligibility.rb:20), for a theme that shows it beside the title.
+  const shortPlace = (comment, path, earlier) => comment.general && !comment.outdated || !path ? '' : `<button type="button" class="ledger-at" data-ledger-jump="${tools.escape(comment.id)}" title="${tools.escape(`${path} · ${placeLines(comment, earlier)}`)}">${tools.escape(`${path.split('/').pop()}:${comment.start}`)}</button>`;
   const rowFor = (comment, earlier = false) => {
     const path = earlier ? globalThis.ReviewTools.outdatedWhere(comment)?.path : (globalThis.ReviewTools.anchor(snapshot, comment)?.file.path || globalThis.ReviewTools.outdatedWhere(comment)?.path);
     const at = startedAt(comment, threads[comment.id]);
-    return `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-conversation="1" data-at="${tools.escape(at)}"${earlier ? ' data-earlier="1"' : ''}>${globalThis.ReviewTools.ledgerPlace(comment.id, comment.general && !comment.outdated ? '' : path, placeLines(comment, earlier))}<div class="ledger-msg">${byFace(comment)}${globalThis.ReviewTools.ledgerBy(tools.escape(byName(comment)), at)}<span class="ledger-subject">${tools.escape(comment.subject)}</span></div><div class="ledger-meta"></div></li>`;
+    return `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-conversation="1" data-at="${tools.escape(at)}"${earlier ? ' data-earlier="1"' : ''}>${globalThis.ReviewTools.ledgerPlace(comment.id, comment.general && !comment.outdated ? '' : path, placeLines(comment, earlier))}<div class="ledger-msg">${byFace(comment)}${globalThis.ReviewTools.ledgerBy(tools.escape(byName(comment)), at)}<span class="ledger-subject">${tools.escape(comment.subject)}</span>${shortPlace(comment, path, earlier)}</div><div class="ledger-meta"></div></li>`;
   };
   const chevron = '<svg class="dcr-peek-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
   // Under the row, the replies in a line (who, how many, when last).

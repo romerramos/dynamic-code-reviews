@@ -919,11 +919,15 @@
       html += list('Files', named) + list('In the code', coded);
       if (!named.length && !coded.length) html += '<p class="nav-empty muted">No file or line of code matches.</p>';
     }
+    // Where to read next: the first step with files left. A theme may point at it.
+    const nextLayer = layers.find(layer => { const done = progress(layer.items); return done.total && done.viewed < done.total; });
+    const stepNext = '<span class="step-next">start here</span>';
     if (!query) review.groups.forEach(group => {
       const matching = layers.filter(layer => layer.group === group);
       if (!matching.length) return;
       // A single-step group needs one heading, not the same title twice.
-      html += `<section class="nav-section">${group.layers.length > 1 ? `<h3 class="nav-group-title">${escape(titleWithoutNumber(group.title))}</h3>` : ''}<ul class="menu">`;
+      const startsHere = matching.includes(nextLayer);
+      html += `<section class="nav-section">${group.layers.length > 1 ? `<h3 class="nav-group-title" data-view="${matching[0].id}">${escape(titleWithoutNumber(group.title))}${startsHere ? stepNext : ''}</h3>` : ''}<ul class="menu">`;
       matching.forEach(layer => {
         const count = layerComments(layer).length;
         const completed = progress(layer.items);
@@ -945,7 +949,7 @@
         const testsOpen = (state.testsOpen || []).includes(layer.id) || ordered.tests.includes(state.navFile);
         const tests = testLinks ? `<li class="nav-tests-label" role="presentation"><button type="button" class="nav-tests-toggle" data-tests-toggle="${layer.id}" aria-expanded="${testsOpen}">Tests <span class="nav-tests-count">${ordered.tests.length}</span></button></li>${testLinks}` : '';
         const expanded = state.view === layer.id;
-        html += `<li><button data-view="${layer.id}" aria-current="${state.view === layer.id ? 'page' : 'false'}" aria-expanded="${expanded}" aria-controls="nav-files-${layer.id}"><span class="step-number">${completed.total && completed.viewed === completed.total ? icon('check') : layers.indexOf(layer) + 1}</span><span class="step-body"><strong>${stepTitle(titleWithoutNumber(group.layers.length === 1 ? group.title : layer.title), completed.total && completed.viewed === completed.total)}</strong><small>${progressText(completed)}${count ? ` · ${count} comments` : ''}</small></span></button>${expanded ? `<ul id="nav-files-${layer.id}" class="nav-files">${links}${tests}</ul>` : `<ul id="nav-files-${layer.id}" hidden></ul>`}</li>`;
+        html += `<li><button data-view="${layer.id}" aria-current="${state.view === layer.id ? 'page' : 'false'}" aria-expanded="${expanded}" aria-controls="nav-files-${layer.id}"><span class="step-number">${completed.total && completed.viewed === completed.total ? icon('check') : layers.indexOf(layer) + 1}</span><span class="step-body"><strong>${stepTitle(titleWithoutNumber(group.layers.length === 1 ? group.title : layer.title), completed.total && completed.viewed === completed.total)}${layer === nextLayer ? stepNext : ''}</strong><small>${progressText(completed)}${count ? ` · ${count} comments` : ''}</small></span></button>${expanded ? `<ul id="nav-files-${layer.id}" class="nav-files">${links}${tests}</ul>` : `<ul id="nav-files-${layer.id}" hidden></ul>`}</li>`;
       });
       html += '</ul></section>';
     });
@@ -3815,6 +3819,10 @@
   // Toolbar icons come from the bundled Lucide set; the static glyphs are only fallbacks.
   $('nav-toggle').innerHTML = icon('panel-left');
   $('sidebar-hide').innerHTML = icon('panel-left-close');
+  $('ledger-hide').innerHTML = icon('panel-right-close');
+  $('ledger-show').innerHTML = icon('panel-right-open');
+  $('ledger-hide').addEventListener('click', () => setLedger(false));
+  $('ledger-show').addEventListener('click', () => setLedger(true));
   $('sidebar-show').innerHTML = icon('panel-left-open');
   ['sidebar-hide', 'sidebar-show'].forEach(id => $(id).addEventListener('click', () => $('nav-toggle').click()));
   $('prev').innerHTML = icon('chevron-left');
@@ -4187,6 +4195,7 @@
       ...leaderCommands(markKeyboardFile).filter(command => command.key !== ' ').map(command => ({label: command.label, keys: `space ${command.key}`, run: command.run})),
       document.getElementById('dcr-presence') && !agentChip() && {label: 'Agents and adversaries', run: () => $('bar-agent').click()},
       qa && {label: 'Start QA review', run: () => { select('overview'); qa.click(); }},
+      document.getElementById('qa-panel') && {label: 'Record the app yourself', run: () => { select('overview'); document.body.classList.add('qa-recorder-shown'); requestAnimationFrame(() => document.getElementById('qa-panel')?.scrollIntoView({block: 'center'})); }},
       document.querySelector('.dcr-try [data-try-all]') && {label: 'Open previews of the changed templates', run: () => document.querySelector('.dcr-try [data-try-all]').click()},
       document.querySelector('.risk-redo') && {label: 'Rank the risky files again', run: () => { select('overview'); document.querySelector('.risk-redo')?.click(); }},
       sinceView && state.view !== 'since' && {label: `See what changed since revision ${sinceView.revision}`, run: () => select('since')},

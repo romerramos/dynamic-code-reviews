@@ -1549,6 +1549,6 @@ details.thread-was:not([open])>summary{margin-bottom:0}
 .popover-title{display:contents}
 .step-done{display:none}
 .sidebar-top{display:contents}
-.sidebar-hide,.sidebar-show{display:none}
+.sidebar-hide,.sidebar-show,.ledger-hide,.ledger-show,.step-next,.ledger-at{display:none}
 .step-end{white-space:nowrap}
 .popover-comment .thread-footer{padding:12px 0 0;border:0;background:none}
