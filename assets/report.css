@@ -1482,3 +1482,23 @@ body.dcr-has-app .ui-changes{display:none}
 .ui-changes .shot-stack-text strong{color:var(--ink);font-size:14px;font-weight:600}
 .ui-changes .shot-stack-text span{color:var(--muted)}
 .progress-need{display:none}
+
+/* The Overview's rows are one component: a quiet label, what there is to say, and the ways on at the
+   right, the first of them the one most likely wanted. Every row is the same height and has the same rule. */
+.overview-reading :is(.overview-row,.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary,.ui-changes .shot-stack){display:grid;grid-template-columns:128px minmax(0,1fr) auto;align-items:baseline;gap:2px 20px;min-height:46px;margin:0;padding:13px 0;border:0;border-top:1px solid var(--line);border-radius:0;background:transparent;box-shadow:none;color:var(--ink);font-size:14px;line-height:1.4}
+.overview-reading :is(.overview-row>strong,.dcr-try-do,.risk-rank.risk-none h2,.risk-fold-title,.ui-changes .shot-stack-text strong){margin:0;color:var(--muted);font-size:13px;font-weight:500}
+.overview-reading :is(.overview-row>span:not(.overview-row-actions),.dcr-try-about,.risk-rank.risk-none p,.risk-fold-line,.ui-changes .shot-stack-text span){margin:0;color:var(--ink)}
+.overview-reading :is(.overview-row-actions,.dcr-try-more){display:flex;align-items:baseline;gap:20px;justify-self:end}
+.overview-reading :is(.overview-row-actions,.dcr-try-more,.dcr-try-templates) :is(button,a),.overview-reading .risk-rank.risk-none .risk-redo{padding:0;border:0;background:none;box-shadow:none;color:var(--muted);font:inherit;font-size:13px;text-decoration:none;cursor:pointer}
+.overview-reading :is(.overview-row-actions,.dcr-try-more)>:is(button,a):first-child:not([hidden]),.overview-reading :is(.overview-row-actions,.dcr-try-more)>[hidden]+:is(button,a),.overview-reading .risk-rank.risk-none .risk-redo{color:var(--ink);font-weight:550}
+.overview-reading :is(.overview-row-actions,.dcr-try-more,.dcr-try-templates) :is(button,a):hover,.overview-reading .risk-rank.risk-none .risk-redo:hover{color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+.overview-reading .risk-rank.risk-none .risk-redo .review-icon{display:none}
+.overview-reading .dcr-try-templates{grid-column:2 / -1;gap:2px 22px;color:var(--muted);font-size:13px}
+.overview-reading .overview-intro .overview-row{margin-top:28px}
+.overview-reading .overview-intro{margin-bottom:0}
+.overview-reading .dcr-try{margin:0}
+.overview-reading :is(.risk-rank.risk-none,.risk-fold){border-bottom:1px solid var(--line)}
+.overview-reading .risk-fold{border-top:0}
+
+/* Pieces only some themes show: a closed comment's place in a few characters, and the files that stand out as plain lines. */
+.thread-at,.risk-brief{display:none}

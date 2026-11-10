@@ -205,3 +205,98 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .overview-reading #my-review.review-section{border-top:0;padding-top:0;margin-top:26px}
 [data-theme^="minimal-"] .sidebar nav .nav-group-title{margin:0 0 4px;padding:0 8px;font-size:13.5px}
 [data-theme^="minimal-"] .sidebar nav .nav-section button[data-view]{min-height:0;height:auto}
+
+/* --- Minimal's page, as one system ----------------------------------------------------------------
+   Sizes: 12.5 for facts, 13 for labels and the list, 14.5 for rows, 16 for prose, 20 for the lead,
+   30 for the title. Space: 6 inside a group, 14 between a label and its rows, 44 between sections.
+   A label is grey and medium; what it labels is ink. Nothing else carries weight. */
+[data-theme^="minimal-"] main#content:has(>.overview-reading){padding-top:72px}
+[data-theme^="minimal-"] .overview-reading{max-width:800px}
+[data-theme^="minimal-"] .overview-where{margin-bottom:14px}
+[data-theme^="minimal-"] .overview-intro h1{margin:0 0 18px;font-size:30px;line-height:1.2;letter-spacing:-.022em}
+[data-theme^="minimal-"] .overview-intro .lead{margin:0 0 12px;font-size:20px;line-height:1.45}
+[data-theme^="minimal-"] .overview-intro .lead-rest{margin:0;font-size:16px;line-height:1.7}
+[data-theme^="minimal-"] .overview-reading .overview-intro .overview-row{margin-top:36px}
+/* A section starts with its label, the same grey as a row's, and 44px of air above it. */
+[data-theme^="minimal-"] .overview-reading :is(.overview-comments,#my-review.review-section,.overview-settled){margin-top:44px}
+[data-theme^="minimal-"] .overview-reading :is(.overview-comments>h2,#my-review h2){margin:0 0 14px;color:var(--muted);font-size:13px;font-weight:500;letter-spacing:0}
+[data-theme^="minimal-"] .overview-reading .overview-todo{margin:0 0 6px;font-size:14.5px}
+/* Nothing waiting is a sentence, not a banner. */
+[data-theme^="minimal-"] .overview-clear{gap:10px;padding:0;border:0;border-radius:0;background:transparent;color:var(--ink)}
+[data-theme^="minimal-"] .overview-clear .review-icon{width:16px;height:16px;margin-top:3px;color:var(--dcr-ok)}
+[data-theme^="minimal-"] .overview-clear strong{font-size:14.5px;font-weight:600}
+[data-theme^="minimal-"] .overview-clear p{margin:2px 0 0;color:var(--muted);font-size:14.5px}
+/* What is settled: rows with the page's rule, their names in the label's grey. */
+[data-theme^="minimal-"] .overview-settled .overview-fold{margin:0;border-top:1px solid var(--line)}
+[data-theme^="minimal-"] .overview-settled .overview-fold:last-child{border-bottom:1px solid var(--line)}
+[data-theme^="minimal-"] .overview-settled .overview-fold>summary{min-height:46px;padding:13px 0;align-items:center}
+[data-theme^="minimal-"] .overview-fold-title{color:var(--muted);font-size:13px;font-weight:500}
+[data-theme^="minimal-"] .overview-fold-title .badge{background:transparent;color:var(--minimal-faint);font-weight:400}
+
+/* --- the list, as a tree: a group is a title, its steps hang from a thin rule under it ------------- */
+[data-theme^="minimal-"] .sidebar{padding-top:26px}
+[data-theme^="minimal-"] #search{margin-bottom:18px}
+[data-theme^="minimal-"] .sidebar nav button[data-view]{min-height:0;height:auto;padding:5px 8px}
+[data-theme^="minimal-"] .sidebar nav .nav-section{margin:22px 0 0}
+[data-theme^="minimal-"] .sidebar nav .nav-group-title{margin:0 0 6px;padding:0 8px;color:var(--ink);font-size:13px;font-weight:600;line-height:1.4}
+[data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title)>ul.menu{margin:0 0 0 9px;padding:0 0 0 4px;border-left:1px solid var(--line)}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body strong{font-size:13px}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view]{padding:4px 8px}
+/* The step being read is marked on the rule itself. */
+[data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"])){margin-left:-5px;padding-left:4px;border-left:1px solid var(--ink)}
+/* A group of one step is its own title: it reads as a title, and opens like a step. */
+[data-theme^="minimal-"] #navigation .nav-section:not(:has(>.nav-group-title)) button[data-view] .step-body strong{color:var(--ink);font-weight:600}
+[data-theme^="minimal-"] #navigation .nav-section:not(:has(>.nav-group-title)) button[data-view]{padding:0 8px}
+
+/* --- The Overview as designed: a title, a paragraph, and plain lists ---------------------------------
+   One column of 640px. What waits on the reader and what to read first are lists of single lines:
+   what it says on the left, where it is on the right, in the code's face and the label's grey.
+   The app, QA, previews, the ranking and the revisions are commands (⌘K), not rows on the page. */
+[data-theme^="minimal-"] main#content:has(>.overview-reading){padding-top:84px}
+[data-theme^="minimal-"] .overview-reading{max-width:640px}
+[data-theme^="minimal-"] .overview-where{margin-bottom:14px;color:var(--minimal-faint)}
+[data-theme^="minimal-"] .overview-intro h1{margin:0 0 20px;font-size:26px;font-weight:600;line-height:1.25;letter-spacing:-.022em}
+[data-theme^="minimal-"] .overview-intro :is(.lead,.lead-rest){display:inline;margin:0;color:var(--ink-neutral-3);font-size:15px;line-height:1.75;letter-spacing:0}
+[data-theme^="minimal-"] .overview-intro .lead{color:var(--ink)}
+[data-theme^="minimal-"] .overview-reading :is(.dcr-try,.overview-revision,.risk-fold,.risk-rank.risk-none,.ui-changes){display:none}
+/* A list's label: small, grey, with the page's 48px of air above it. */
+[data-theme^="minimal-"] .overview-reading :is(.overview-comments,.risk-brief,#my-review.review-section,.overview-settled){display:block;margin:48px 0 0;padding:0;border:0}
+[data-theme^="minimal-"] .overview-reading :is(.overview-comments>h2,.risk-brief h2,#my-review h2,.overview-fold-title){margin:0 0 6px;color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0}
+[data-theme^="minimal-"] .overview-comments:has(>.overview-todo)>h2{display:none}
+[data-theme^="minimal-"] .overview-reading .overview-todo{margin:0 0 6px;color:var(--minimal-faint);font-size:0}
+[data-theme^="minimal-"] .overview-reading .overview-todo strong{color:var(--minimal-faint);font-size:12px;font-weight:400}
+[data-theme^="minimal-"] .overview-reading .overview-todo button{display:none}
+/* A line of a list. */
+[data-theme^="minimal-"] .risk-brief ol{margin:0;padding:0;list-style:none}
+[data-theme^="minimal-"] .risk-brief button{display:flex;align-items:baseline;justify-content:space-between;gap:24px;width:100%;padding:7px 0;border:0;background:none;color:var(--ink);font:inherit;font-size:14px;text-align:left;cursor:pointer}
+[data-theme^="minimal-"] .risk-brief button>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+[data-theme^="minimal-"] .risk-brief code,[data-theme^="minimal-"] .thread-at{flex:none;color:var(--minimal-faint);font:12px var(--mono);white-space:nowrap}
+[data-theme^="minimal-"] .risk-brief button:hover>span,[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-summary:hover>strong{text-decoration:underline;text-decoration-color:var(--line-neutral-4);text-underline-offset:4px}
+/* A closed comment is such a line: what it says, and where. Its kind, its author and the rest come when it opens. */
+[data-theme^="minimal-"] .overview-reading .review-thread:has(>.thread-details:not([open])){display:block;margin:0;padding:0;border:0}
+[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-file,[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-summary>:not(strong,.thread-at){display:none}
+[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-summary{justify-content:space-between;gap:24px;padding:7px 0}
+[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-summary>strong{font-size:14px;font-weight:400;color:var(--ink)}
+[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-at{display:block;order:2}
+/* Open, a comment is set apart by space and one rule above and below it. */
+[data-theme^="minimal-"] .overview-reading .review-thread:has(>.thread-details[open]){margin:12px 0 20px;padding:14px 0 6px;border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);border-radius:0}
+/* Your comments: the same lines; its two actions are words beside the label. */
+[data-theme^="minimal-"] #my-review .section-heading{display:flex;align-items:baseline;justify-content:space-between;margin:0 0 6px}
+[data-theme^="minimal-"] #my-review .section-heading h2{margin:0}
+[data-theme^="minimal-"] #my-review .section-heading h2 .badge{display:none}
+[data-theme^="minimal-"] #my-review .comment-actions .btn{height:auto;min-height:0;padding:0 0 0 16px;color:var(--minimal-faint);font-size:12px;font-weight:400}
+[data-theme^="minimal-"] #my-review .comment-actions .btn:hover{background:none;color:var(--ink)}
+/* What is settled: two quiet lines at the end. */
+[data-theme^="minimal-"] .overview-settled .overview-fold,[data-theme^="minimal-"] .overview-settled .overview-fold:last-child{margin:0;border:0}
+[data-theme^="minimal-"] .overview-settled .overview-fold>summary{min-height:0;padding:7px 0}
+[data-theme^="minimal-"] .overview-settled .overview-fold-title{margin:0;font-size:14px;color:var(--muted)}
+[data-theme^="minimal-"] .overview-clear p{font-size:14px}
+[data-theme^="minimal-"] .overview-clear strong{font-size:14px}
+[data-theme^="minimal-"] .overview-intro .lead::after{content:" "}
+[data-theme^="minimal-"] .overview-reading #my-review.review-section:has(>.review-empty){display:none}
+[data-theme^="minimal-"] .overview-reading .overview-todo strong{white-space:nowrap}
+/* What waits on the reader comes before what to read first, as designed. */
+[data-theme^="minimal-"] .overview-reading{display:flex;flex-direction:column}
+[data-theme^="minimal-"] .overview-reading>.risk-brief{order:1}
+[data-theme^="minimal-"] .overview-reading>#my-review{order:2}
+[data-theme^="minimal-"] .overview-reading>.overview-settled{order:3}

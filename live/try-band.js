@@ -38,7 +38,7 @@
     <li class="dcr-try-row dcr-try-app">
       <strong class="dcr-try-do">In the app</strong>
       <span class="dcr-try-about" data-try-seen>Nothing recorded yet.</span>
-      <span class="dcr-try-more"><button type="button" data-try-shots hidden>View</button><button type="button" data-try="qa" title="Your agent records the flows behind the comments, in this tab">Start QA review</button><button type="button" data-try="browse" title="${esc(app.upstream)}">Open it <kbd>A</kbd></button><button type="button" data-try="comment">Comment on it</button></span>
+      <span class="dcr-try-more"><button type="button" data-try-shots hidden>View</button><button type="button" data-try="qa" title="Your agent records the flows behind the comments, in this tab">Start QA review</button><button type="button" data-try="browse" title="${esc(app.upstream)} (A). Comment on it from there.">Open the app</button></span>
     </li>` : noApp ? `
     <li class="dcr-try-row dcr-try-none">
       <strong class="dcr-try-do">No running app</strong>
@@ -46,8 +46,9 @@
     </li>` : '';
   const previewsHTML = templates.length ? `
     <li class="dcr-try-row dcr-try-previews">
-      <button type="button" class="dcr-try-do" data-try-all>Previews</button>
-      <span class="dcr-try-about">${templates.length === 1 ? 'One changed template' : `${templates.length} changed templates`}, rendered with example data.</span>
+      <strong class="dcr-try-do">Previews</strong>
+      <span class="dcr-try-about">${templates.length === 1 ? 'One changed template' : `${templates.length} changed templates`}</span>
+      <span class="dcr-try-more"><button type="button" data-try-all>Open previews</button></span>
       <ul class="dcr-try-templates"></ul>
     </li>` : '';
   band.innerHTML = `<h2 id="dcr-try-title">Try the change</h2><ul class="dcr-try-rows">${appHTML}${previewsHTML}</ul>`;
