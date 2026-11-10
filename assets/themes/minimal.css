@@ -467,7 +467,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .review-thread :is(.dcr-msg,.dcr-checks) .dcr-avatar{color:var(--ink)}
 [data-theme^="minimal-"] .review-thread .thread-footer :is(.dcr-split-more,.more-toggle)>svg,[data-theme^="minimal-"] .review-thread .thread-footer :is(.dcr-split-more,.more-toggle) .review-icon{display:inline-block!important;width:14px;height:14px}
 [data-theme^="minimal-"] .review-thread .thread-footer .dcr-split{display:inline-flex;gap:0}
-[data-theme^="minimal-"] .review-thread .thread-footer .dcr-split-main .btn{border-top-right-radius:0;border-bottom-right-radius:0}
+[data-theme^="minimal-"] .review-thread .thread-footer .dcr-split:has(>.dcr-split-menu:not([hidden])) .dcr-split-main .btn{border-top-right-radius:0;border-bottom-right-radius:0}
 [data-theme^="minimal-"] .review-thread .thread-footer .dcr-split-menu>summary{margin-left:-1px;border-top-left-radius:0;border-bottom-left-radius:0}
 [data-theme^="minimal-"] .review-thread .thread-footer .btn-primary{color:var(--ink);font-weight:600}
 
@@ -620,7 +620,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .popover-comment .thread-footer :is(.dcr-split-more,.more-toggle){padding:0 7px}
 [data-theme^="minimal-"] .popover-comment .thread-footer :is(.dcr-split-more,.more-toggle) .review-icon{display:inline-block!important;width:14px;height:14px}
 [data-theme^="minimal-"] .popover-comment .dcr-split{display:inline-flex;gap:0}
-[data-theme^="minimal-"] .popover-comment .dcr-split-main .btn{border-top-right-radius:0;border-bottom-right-radius:0}
+[data-theme^="minimal-"] .popover-comment .dcr-split:has(>.dcr-split-menu:not([hidden])) .dcr-split-main .btn{border-top-right-radius:0;border-bottom-right-radius:0}
 [data-theme^="minimal-"] .popover-comment .dcr-split-menu>summary{margin-left:-1px;border-top-left-radius:0;border-bottom-left-radius:0}
 [data-theme^="minimal-"] .popover-comment .thread-footer :is(.btn,summary.btn){height:28px;min-height:28px;padding:0 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface)!important;box-shadow:none;color:var(--ink-neutral-3)!important;font-size:13px;font-weight:500}
 [data-theme^="minimal-"] .popover-comment .thread-footer .btn-primary{color:var(--ink)!important;font-weight:600}
