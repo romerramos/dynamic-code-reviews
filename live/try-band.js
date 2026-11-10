@@ -26,7 +26,7 @@
     seenNames.add(name);
     templates.push({name, path: file.path});
   });
-  // The recorder card (record the app's own tab) is the way in when the app is not in the page.
+  // A served review with no app and no reason for none: QA needs the app, so the row says how to add it.
   const recorder = () => !app && !noApp && document.getElementById('qa-panel');
   if (!app && !noApp && !templates.length && !recorder() && !document.querySelector('.risk-fold')) return;
   const reviewed = new Set((review.previews || []).filter(preview => preview.status === 'rendered').flatMap(preview => preview.files || []));
@@ -54,19 +54,21 @@
       <span class="dcr-try-more"><button type="button" data-try-all>Open previews</button></span>
       <ul class="dcr-try-templates"></ul>
     </li>` : '';
-  // For a theme that keeps the risk ranking and the recorder as rows here rather than cards of their own:
-  // the ranking's one line, unfolding its files under it; and the recorder, one click away.
+  // For a theme that keeps the risk ranking as a row here rather than a card of its own: the ranking's
+  // one line, unfolding its files under it; and QA, which needs the app in the review.
   const riskHTML = `
     <li class="dcr-try-line dcr-try-risk" hidden>
       <span class="dcr-try-icon">${icon('gauge')}</span><strong class="dcr-try-do">Risk ranking</strong>
       <span class="dcr-try-about" data-try-risk-line></span>
       <span class="dcr-try-more"><button type="button" data-try-risk aria-expanded="false">Show</button></span>
     </li>`;
+  // Without the app in the review there is no QA review to start, and the row says how to get one.
+  // (The older tab recorder stays one ⌘K away, as Record the app yourself.)
   const recordHTML = `
     <li class="dcr-try-line dcr-try-record" hidden>
-      <span class="dcr-try-icon">${icon('video')}</span><strong class="dcr-try-do">Record the app</strong>
-      <span class="dcr-try-about">Share the app’s tab to record clips and screenshots</span>
-      <span class="dcr-try-more"><button type="button" data-try-record>Record</button></span>
+      <span class="dcr-try-icon">${icon('video')}</span><strong class="dcr-try-do">QA review</strong>
+      <span class="dcr-try-about">No app in this review. Serve it with <code>--app</code> to start one</span>
+      <span class="dcr-try-more"></span>
     </li>`;
   band.innerHTML = `<h2 id="dcr-try-title">Try the change</h2><ul class="dcr-try-rows"><li class="dcr-try-head" aria-hidden="true"><span>item</span><span>now</span><span>next</span></li><li class="dcr-try-rule" aria-hidden="true"><span></span><span></span><span></span></li>${riskHTML}${appHTML}${recordHTML}${previewsHTML}</ul>`;
 
@@ -91,11 +93,6 @@
   let riskShown = false;
   band.addEventListener('click', event => {
     if (event.target.closest('[data-try-risk]')) { riskShown = !riskShown; mount(); return; }
-    if (event.target.closest('[data-try-record]')) {
-      document.body.classList.add('qa-recorder-shown');
-      requestAnimationFrame(() => document.getElementById('qa-panel')?.scrollIntoView({block: 'center', behavior: 'smooth'}));
-      return;
-    }
     if (event.target.closest('[data-try-shots]')) { document.querySelector('.ui-changes [data-open-shots]')?.click(); return; }
     const trigger = event.target.closest('[data-try]');
     if (trigger) { window.DCRApp?.open(trigger.dataset.try); return; }

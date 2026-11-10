@@ -2,6 +2,7 @@
 
 require 'json'
 require 'uri'
+require_relative 'titles'
 require_relative 'agent_catalog'
 require_relative 'emojis'
 require_relative 'github'
@@ -28,7 +29,7 @@ module DCR
     # for the outside verdict, asked only for a repository whose reviewer turned it on.
     # draft: callable(context:, opinions:, voice:, author:, adversaries:, repo:) returning [text, agent],
     # which writes a comment in the reviewer's voice for GitHub.
-    def initialize(directory, settings: Settings.new, evidence: nil, github: GitHub.new(directory), catalog: nil, ask_adversaries: nil, jevmypr: JevMyPR.new, draft: GitHubDraft.method(:write))
+    def initialize(directory, settings: Settings.new, evidence: nil, github: GitHub.new(directory), catalog: nil, ask_adversaries: nil, jevmypr: JevMyPR.new, draft: GitHubDraft.method(:write), titler: nil)
       @draft = draft
       @jevmypr = jevmypr
       @state = State.new(directory)
@@ -37,6 +38,11 @@ module DCR
       @github = github
       @catalog = catalog || ->(fresh) { AgentCatalog.list(fresh: fresh) }
       @ask_adversaries = ask_adversaries || method(:question_in_background)
+      @titler = titler || lambda do |text|
+        agent = Titles.writer(@state.listener) or raise ArgumentError, 'No agent CLI on this computer can write a title'
+        Titles.make(text, agent: agent)
+      end
+      @titling = {}
     end
 
     attr_reader :state
@@ -76,6 +82,7 @@ module DCR
       when ['POST', '/api/preview'] then (input = json(body); [200, {'entry' => @state.request_preview(input['key'], input['path'])}])
       when ['POST', '/api/send'] then send_items(json(body))
       when ['POST', '/api/message'] then message(json(body))
+      when ['POST', '/api/title'] then [200, title(json(body))]
       when ['POST', '/api/fix'] then [200, fix(json(body))]
       when ['POST', '/api/closure'] then (input = json(body); [200, {'closed' => @state.closed(input['key'], input['id'].to_s, input['side'].to_s)}])
       when ['GET', '/api/screenshot'] then [200, screenshot(key, query['id'])]
@@ -178,6 +185,27 @@ module DCR
       File.file?(page) ? Array(Page.payload(File.read(page)).dig('snapshot', 'files')) : []
     rescue StandardError
       []
+    end
+
+    # The reviewer's own comment gets a short title, written in the background by an agent from the
+    # whole message: {key, id, text}. Says where it stands; the title reaches the page through the poll.
+    # Each comment is tried once per server, so a failing CLI is not asked again on every page load.
+    def title(input)
+      key, id, text = input['key'].to_s, input['id'].to_s, input['text'].to_s.strip
+      raise ArgumentError, 'Invalid review key' unless key.match?(State::KEY)
+      raise ArgumentError, 'Nothing to title' if text.empty?
+      existing = @state.read.dig('threads', key, id, 'title')
+      return {'title' => existing} if existing
+      return {'titling' => @titling[[key, id]]} if @titling.key?([key, id])
+      @titling[[key, id]] = 'working'
+      Thread.new do
+        @state.set_title(key, id, @titler.call(text[0, 4000]), keep: true)
+        @titling[[key, id]] = 'done'
+      rescue StandardError => error
+        @titling[[key, id]] = 'failed'
+        warn "No title for #{id}: #{error.message}"
+      end
+      {'titling' => 'working'}
     end
 
     def question_in_background(key, id, text)

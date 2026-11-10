@@ -284,6 +284,19 @@ module DCR
       end
     end
 
+    # A short title for the reviewer's own comment (from Titles, or the agent's `reply --title`).
+    # keep: leave a title already there, as a written one arriving late must not replace the agent's.
+    def set_title(key, id, title, keep: false)
+      title = title.to_s.gsub(/\s+/, ' ').strip
+      raise ArgumentError, 'A title cannot be empty' if title.empty?
+      raise ArgumentError, "A title is limited to #{TITLE_LIMIT} characters" if title.length > TITLE_LIMIT
+      update do |state|
+        thread = thread(state, key, id)
+        thread['title'] = title unless keep && thread['title']
+        thread['title']
+      end
+    end
+
     PROGRESS_KEPT = 12
 
     # A short line on what the agent is doing in a running task (signing in, making data), for the

@@ -388,3 +388,24 @@ Dir.mktmpdir('dcr-emojis-') do |config|
   assert(DCR::LiveAPI.new(config).call('GET', '/api/emojis', nil)[1].key?('emojis'), 'The page cannot ask for the emoji names')
 end
 puts 'emojis: names come from GitHub\'s list, are kept for a week and survive being offline'
+
+# The reviewer's own comment gets a short title, written once in the background from the whole message.
+require_relative '../lib/dcr/titles'
+Dir.mktmpdir('dcr-titles-') do |series|
+  assert(DCR::Titles.clean("Title: \"Why the migration changes `store_configurations`.\"\nmore") == 'Why the migration changes `store_configurations`', 'A title keeps its first line, without label, quotes or full stop')
+  long = DCR::Titles.clean('word ' * 30)
+  assert(long.length <= DCR::Titles::LIMIT && long.end_with?('…'), "A long title is cut on a word to fit: #{long}")
+  asked = []
+  api = DCR::LiveAPI.new(series, titler: ->(text) { asked << text; 'Why the migration changes store_configurations' })
+  key = DCR::State.review_key('c' * 64, 'feat', 1)
+  _, first = api.call('POST', '/api/title', -> { JSON.generate('key' => key, 'id' => 'mine-1', 'text' => "Okay, I think I'm confused\n\nWhy store_configurations?") })
+  sleep 0.05 until api.state.read.dig('threads', key, 'mine-1', 'title') || asked.length > 1
+  sleep 0.1
+  assert(first == {'titling' => 'working'} && asked == ["Okay, I think I'm confused\n\nWhy store_configurations?"], "The title is written in the background from the whole message: #{first}")
+  _, again = api.call('POST', '/api/title', -> { JSON.generate('key' => key, 'id' => 'mine-1', 'text' => 'x') })
+  assert(again == {'title' => 'Why the migration changes store_configurations'} && asked.length == 1, 'A comment with a title is not titled again')
+  assert(!api.state.read.dig('threads', key, 'mine-1', 'live') && api.state.read.dig('threads', key, 'mine-1', 'delivery') == 'draft', 'A title must not make a conversation')
+  api.state.agent_reply('mine-1', 'An answer', key: key, title: 'The agent names it')
+  assert(api.state.read.dig('threads', key, 'mine-1', 'title') == 'The agent names it', "The agent's own title replaces the written one")
+end
+puts 'titles: your own comment is listed by a short title written from the whole message'

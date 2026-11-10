@@ -1166,10 +1166,10 @@
   };
   // When a comment was made: when it was posted, else its conversation's first message.
   const startedAt = (comment, thread) => comment?.at || comment?.posted_at || [...(thread?.messages || [])].map(message => message.at).filter(Boolean).sort()[0] || '';
-  // The same place in a few characters (eligibility.rb:20), for a theme that shows it beside the title.
   // A title as the Overview prints it: `code` in backticks set as code, everything else as text.
   const titleHTML = text => tools.escape(text).replace(/`([^`]+)`/g, '<code>$1</code>');
-  const shortPlace = (comment, path, earlier) => comment.general && !comment.outdated || !path ? '' : `<button type="button" class="ledger-at" data-ledger-jump="${tools.escape(comment.id)}" title="${tools.escape(`${path} · ${placeLines(comment, earlier)}`)}">${tools.escape(`${path.split('/').pop()}:${comment.start}`)}</button>`;
+  // The way to a comment's place in the code, for a theme that shows it beside the title: an icon, the place in its tooltip.
+  const shortPlace = (comment, path, earlier) => comment.general && !comment.outdated || !path ? '' : `<button type="button" class="ledger-at" data-ledger-jump="${tools.escape(comment.id)}" title="${tools.escape(`${path} · ${placeLines(comment, earlier)}`)}" aria-label="${tools.escape(`Show in the code: ${path}, ${placeLines(comment, earlier)}`)}">${ico('arrow-up-right')}</button>`;
   const rowFor = (comment, earlier = false) => {
     const path = earlier ? globalThis.ReviewTools.outdatedWhere(comment)?.path : (globalThis.ReviewTools.anchor(snapshot, comment)?.file.path || globalThis.ReviewTools.outdatedWhere(comment)?.path);
     const at = startedAt(comment, threads[comment.id]);
@@ -1198,6 +1198,9 @@
     return `<span class="dcr-peek-who"><span class="dcr-peek-faces">${faces}</span><b>${replies.length} ${replies.length === 1 ? 'reply' : 'replies'}</b><span class="dcr-peek-when">last <time data-at="${tools.escape(last.at || '')}">${tools.escape(tools.relativeTime(last.at))}</time></span><span class="dcr-peek-end">${chevron}</span></span>`;
   };
   const decoratePeek = (item, comment, thread) => {
+    // Your own comment goes by its short title, once it has one.
+    const subject = item.querySelector(':scope > .ledger-msg > .ledger-subject');
+    if (thread?.title && subject && subject.dataset.title !== thread.title) { subject.innerHTML = titleHTML(thread.title); subject.dataset.title = thread.title; }
     let peek = item.querySelector(':scope > .dcr-peek');
     if (!hasConversation(thread) && !item.dataset.earlier) { peek?.remove(); return; }
     if (!peek) {
@@ -1210,9 +1213,17 @@
     }
     const html = peekHTML(thread, item.dataset.ledger, !!item.dataset.earlier);
     if (peek.dataset.html !== html) { peek.innerHTML = html; peek.dataset.html = html; }
-    // Your own question goes by the short title your agent gave it, once it has one.
-    const subject = item.querySelector(':scope > .ledger-msg > .ledger-subject');
-    if (thread?.title && subject && subject.dataset.title !== thread.title) { subject.innerHTML = titleHTML(thread.title); subject.dataset.title = thread.title; }
+  };
+  // Your own comments are listed by a short title an agent writes from the whole message, as the
+  // agent's comments are by theirs. Asked once per comment; the title arrives with the state.
+  const titleAsked = new Set();
+  const askTitles = () => {
+    if (!online) return;
+    comments().filter(comment => comment.personal && !threads[comment.id]?.title && !titleAsked.has(comment.id)).forEach(comment => {
+      titleAsked.add(comment.id);
+      const text = [comment.subject, comment.discussion].filter(Boolean).join('\n\n');
+      api('/api/title', {key, id: comment.id, text}).catch(() => { /* an older server, or no agent here: the first words stay */ });
+    });
   };
   // The same title on the Overview, in Your comments.
   const titleOwnThreads = () => document.querySelectorAll('#content .review-thread.is-own[data-thread-id]').forEach(card => {
@@ -1756,8 +1767,8 @@
     const name = tools.escape(listener ? tools.agentInfo(listener).name : 'Your agent');
     const dots = '<span class="bar-bubble-dots" aria-hidden="true"><i></i><i></i><i></i></span>';
     const html = answered ? `<span>${name} answered</span><b>Read ›</b>`
-      : !online ? '<span>Saved. The review server stopped, so it waits</span>'
-      : listening === false ? '<span>Sent. It waits until your agent picks it up</span>'
+      : !online ? '<span>Saved · the review server stopped</span>'
+      : listening === false ? '<span>Sent · your agent is offline</span>'
       : `<span>${name} is thinking</span>${dots}`;
     bubble.dataset.state = answered ? 'answered' : 'thinking';
     bubble.setAttribute('aria-label', answered ? `${tools.agentInfo(listener || 'agent').name || 'Your agent'} answered. Open the conversation` : 'Your agent is working on your question');
@@ -2475,7 +2486,7 @@
     });
     const arrived = tools.unseen(threads, seen).filter(item => !announced.has(item.id));
     arrived.forEach(item => announced.add(item.id));
-    decorate(); autoResolve(); decorateLedger(); window.ReviewGitHub?.refresh(); renderPanel(); renderUnsent(); renderAgent(); refreshUnread(); renderBubble(); titleOwnThreads();
+    decorate(); autoResolve(); decorateLedger(); window.ReviewGitHub?.refresh(); renderPanel(); renderUnsent(); renderAgent(); refreshUnread(); renderBubble(); titleOwnThreads(); askTitles();
     announce(arrived);
     announceFinished();
     renderUpdate();

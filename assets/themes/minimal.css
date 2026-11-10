@@ -272,7 +272,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .risk-brief button:hover>span,[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-summary:hover>strong{text-decoration:underline;text-decoration-color:var(--line-neutral-4);text-underline-offset:4px}
 /* A closed comment is such a line: what it says, and where. Its kind, its author and the rest come when it opens. */
 [data-theme^="minimal-"] .overview-reading .review-thread:has(>.thread-details:not([open])){display:block;margin:0;padding:0;border:0}
-[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-file,[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-summary>:not(strong,.thread-at){display:none}
+[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-file,[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-summary>:not(strong,.thread-at,.thread-go){display:none}
 [data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-summary{justify-content:space-between;gap:24px;padding:7px 0}
 [data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-summary>strong{font-size:14px;font-weight:400;color:var(--ink)}
 [data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-at{display:block;order:2}
@@ -331,7 +331,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 /* Open: a title, one quiet line about it, the text, and what became of it. */
 [data-theme^="minimal-"] .overview-reading .review-thread:has(>.thread-details[open]){margin:10px 0 14px;padding:18px 0 20px}
 [data-theme^="minimal-"] .review-thread:has(>.thread-details[open]) .thread-summary{display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:baseline;padding:0;background:transparent}
-[data-theme^="minimal-"] .review-thread:has(>.thread-details[open]) .thread-summary>:not(strong,.thread-at){display:none}
+[data-theme^="minimal-"] .review-thread:has(>.thread-details[open]) .thread-summary>:not(strong,.thread-at,.thread-go){display:none}
 [data-theme^="minimal-"] .review-thread:has(>.thread-details[open]) .thread-summary>strong{font-size:16px;font-weight:600;line-height:1.4}
 [data-theme^="minimal-"] .review-thread:has(>.thread-details[open]) .thread-at{display:block}
 [data-theme^="minimal-"] .thread-meta{display:flex;flex-wrap:wrap;gap:2px 8px;margin:4px 0 16px;color:var(--minimal-faint);font-size:12.5px}
@@ -365,7 +365,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .review-thread .thread-summary>:is(strong,.thread-at){grid-column:auto!important;grid-row:1!important}
 [data-theme^="minimal-"] .review-thread .thread-summary>.thread-at{grid-column:2!important;justify-self:end}
 [data-theme^="minimal-"] .review-thread .thread-summary>strong{grid-column:1!important}
-[data-theme^="minimal-"] .review-thread .thread-summary>:not(strong,.thread-at){display:none!important}
+[data-theme^="minimal-"] .review-thread .thread-summary>:not(strong,.thread-at,.thread-go){display:none!important}
 [data-theme^="minimal-"] .overview-settled .review-thread:has(>.thread-details:not([open])) .thread-summary>strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400}
 [data-theme^="minimal-"] .overview-reading .overview-settled{display:flex;flex-direction:column;gap:30px}
 [data-theme^="minimal-"] .overview-resolved .thread-at[data-state]::before{content:none}
@@ -801,12 +801,10 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] #ledger .ledger-item:nth-child(1 of [data-ledger]:not([data-conversation]))::before{content:"Your comments"}
 [data-theme^="minimal-"] #ledger .ledger-item:nth-child(1 of [data-by="person"])::before{content:"From GitHub"}
 /* Your own row is drawn as the agent's: your face, the short title, the file and line, who answered. */
-[data-theme^="minimal-"] #ledger .ledger-item[data-ledger]:not([data-conversation]) .ledger-meta,[data-theme^="minimal-"] #ledger .ledger-item .dcr-new{display:none}
+[data-theme^="minimal-"] #ledger .ledger-item[data-ledger]:not([data-conversation]) .ledger-meta :is([data-resolve],[data-copy]),[data-theme^="minimal-"] #ledger .ledger-item .dcr-new{display:none}
 [data-theme^="minimal-"] #ledger .ledger-item[data-ledger] .ledger-msg>.comment-avatar img{border-radius:50%}
 [data-theme^="minimal-"] #ledger .ledger-item[data-ledger] .ledger-subject{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-[data-theme^="minimal-"] #ledger .ledger-item[data-ledger] .ledger-at:has(.name-head){display:flex;max-width:150px}
-[data-theme^="minimal-"] #ledger .ledger-at .name-head{min-width:0;overflow:hidden;text-overflow:ellipsis}
-[data-theme^="minimal-"] #ledger .ledger-at .name-tail{flex:none}
+
 /* On the Overview the comments are headed the same way: Agent comments, then Your comments. */
 html[data-theme^="minimal-"] #content .overview-reading .overview-comments:not(:has(.overview-clear))>h2{display:block;font-size:0}
 [data-theme^="minimal-"] .overview-reading .overview-comments:not(:has(.overview-clear))>h2::before{content:"Agent comments";font-size:12px}
@@ -839,6 +837,44 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
 
 /* Your comments on the Overview: the short title, the file cut in its middle, no "yours" (the heading says it). */
 [data-theme^="minimal-"] .review-thread.is-own .thread-at[data-state]::before{content:none}
-[data-theme^="minimal-"] #content .thread-summary .thread-at:has(.name-head){display:flex;max-width:220px;overflow:hidden}
 [data-theme^="minimal-"] .thread-at .name-head{min-width:0;overflow:hidden;text-overflow:ellipsis}
 [data-theme^="minimal-"] .thread-at .name-tail{flex:none}
+
+/* --- The way to the code is an icon, not the file's name: it takes you there, and the name is in its
+   tooltip, so the title keeps the room. In Your review and on the Overview alike. --- */
+[data-theme^="minimal-"] #ledger .ledger-item[data-ledger] .ledger-at{display:grid;place-items:center;align-self:start;width:24px;height:24px;margin-top:-2px;border-radius:6px;color:var(--minimal-faint)}
+[data-theme^="minimal-"] #ledger .ledger-item[data-ledger] .ledger-at:hover{background:var(--minimal-soft);color:var(--ink);text-decoration:none}
+[data-theme^="minimal-"] :is(#ledger .ledger-at,.thread-go) svg{width:14px;height:14px;stroke-width:1.8}
+[data-theme^="minimal-"] #content .overview-reading .thread-summary:has(.thread-go) .thread-at{display:none}
+[data-theme^="minimal-"] .overview-reading .thread-go{display:grid;place-items:center;width:24px;height:24px;padding:0;border:0;border-radius:6px;background:none;color:var(--minimal-faint);cursor:pointer}
+[data-theme^="minimal-"] .overview-reading .thread-go:hover{background:var(--minimal-soft);color:var(--ink)}
+/* The risk ranking's files, under its row: the score first (a number and a short bar, darker the higher),
+   then why, then the file as a link; a migration is just "migration". */
+[data-theme^="minimal-"] .overview-reading .dcr-try-risk .risk-brief ol{display:grid;gap:0;margin:0;padding:0;list-style:none}
+[data-theme^="minimal-"] .overview-reading .dcr-try-risk .risk-brief li{display:grid;grid-template-columns:120px minmax(0,1fr) auto;align-items:center;gap:0 12px;padding:5px 0;font-size:13.5px}
+[data-theme^="minimal-"] .risk-brief-score{display:flex;align-items:center;gap:8px;color:var(--ink-neutral-3)}
+[data-theme^="minimal-"] .risk-brief-score b{width:34px;font:600 12px var(--mono)}
+[data-theme^="minimal-"] .risk-brief-score>i{display:block;width:52px;height:3px;border-radius:2px;background:var(--line)}
+[data-theme^="minimal-"] .risk-brief-score>i>i{display:block;height:3px;border-radius:2px;background:currentColor}
+[data-theme^="minimal-"] .risk-brief li:is(.risk-high,.risk-critical) .risk-brief-score{color:var(--ink)}
+[data-theme^="minimal-"] .risk-brief li.risk-low .risk-brief-score{color:var(--minimal-faint)}
+[data-theme^="minimal-"] .risk-brief-why{min-width:0}
+[data-theme^="minimal-"] .overview-reading .risk-brief .risk-brief-go{display:inline-flex;align-items:center;gap:4px;width:auto;padding:0;border:0;background:none;color:var(--minimal-faint);font:12px var(--mono);white-space:nowrap;cursor:pointer}
+[data-theme^="minimal-"] .overview-reading .risk-brief button.risk-brief-go:hover{color:var(--ink)}
+[data-theme^="minimal-"] .risk-brief-go svg{width:12px;height:12px;stroke-width:1.8}
+[data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-about code{padding:0 3px;border-radius:4px;background:var(--minimal-soft);font:12px var(--mono)}
+/* Your own comment, opened: its words line up under its title, like the agent's, with no label over them. */
+[data-theme^="minimal-"] .overview-reading .review-thread.is-own .thread-body{padding-left:0}
+[data-theme^="minimal-"] .overview-reading .review-thread.is-own .thread-meta{display:none}
+
+/* The panels' icons sit outside the panels, over the page's edge: the page keeps a gutter for each, so
+   text never runs under them as it scrolls. */
+@media(min-width:1200px){
+  html[data-theme^="minimal-"] body:not(.sidebar-collapsed):not(.zen) main#content{padding-left:52px}
+  html[data-theme^="minimal-"] body.ledger-open:not(.zen) main#content{padding-right:52px}
+}
+/* Below 1500px Your review lies over the page at 420px: the page's column for it is as wide. */
+@media(min-width:1100px) and (max-width:1499px){
+  html[data-theme^="minimal-"] body.ledger-open:not(.sidebar-collapsed):not(.zen) .workspace{grid-template-columns:384px minmax(0,1fr) min(var(--ledger-w,420px),92vw)}
+  html[data-theme^="minimal-"] body.ledger-open.sidebar-collapsed:not(.zen) .workspace{grid-template-columns:minmax(0,1fr) min(var(--ledger-w,420px),92vw)}
+}
