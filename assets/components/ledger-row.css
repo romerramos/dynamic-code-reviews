@@ -3,7 +3,7 @@
    answered. The list puts the agent's comments first, then yours, then GitHub's, each group under
    its heading (--ledger-group-prefix goes before the heading's words). The place and the name stay
    in the markup for a theme that shows them. */
-.ui-ledger-row{position:static;display:flex;flex-wrap:wrap;align-items:center;padding-bottom:12px}
+.ui-ledger-row{display:flex;flex-wrap:wrap;align-items:center;padding-bottom:12px}
 .ui-ledger-row::before{display:none}
 .ui-ledger-row>.ledger-place,.ui-ledger-row>.ledger-msg>.ledger-by{display:none}
 .ui-ledger-row>.ledger-msg{flex:1 0 100%;grid-template-columns:var(--ledger-face-col,18px) minmax(0,1fr) auto;column-gap:var(--ledger-gap,12px);align-items:baseline;padding:14px 18px 0 22px}
@@ -24,7 +24,7 @@
 .ui-ledger-row[data-by="agent"]{order:0}
 .ui-ledger-row:not([data-conversation]){order:1}
 .ui-ledger-row[data-by="person"]{order:2}
-.ui-ledger-row:is(:nth-child(1 of [data-by="agent"]),:nth-child(1 of [data-ledger]:not([data-conversation])),:nth-child(1 of [data-by="person"]))::before{display:block;flex:1 0 100%;padding:16px 22px 2px;background:none;color:var(--comment-quiet);font-size:12px}
+.ui-ledger-row:is(:nth-child(1 of [data-by="agent"]),:nth-child(1 of [data-ledger]:not([data-conversation])),:nth-child(1 of [data-by="person"]))::before{position:static;display:block;flex:1 0 100%;width:auto;height:auto;padding:16px 22px 2px;background:none;color:var(--comment-quiet);font-size:12px}
 .ui-ledger-row:nth-child(1 of [data-by="agent"])::before{content:var(--ledger-group-prefix,"") "Agent comments"}
 .ui-ledger-row:nth-child(1 of [data-ledger]:not([data-conversation]))::before{content:var(--ledger-group-prefix,"") "Your comments"}
 .ui-ledger-row:nth-child(1 of [data-by="person"])::before{content:var(--ledger-group-prefix,"") "From GitHub"}

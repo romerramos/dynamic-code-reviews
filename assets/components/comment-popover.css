@@ -25,3 +25,5 @@
 .ui-popover-comment .comment-actions .btn.gh-act{color:var(--ink-neutral-2);background:var(--bg-neutral-1);border-color:var(--line-neutral-3)}
 .ui-popover-comment .comment-actions .more-toggle{background:transparent;border-color:transparent}
 .ui-popover-comment>.thread-footer .btn{--avatar-size:var(--comment-action-face)}
+/* Its conversation's messages, in the popover's own columns where the theme sets them. */
+.ui-popover-comment{--message-face-col:var(--popover-message-face,32px);--message-gap:var(--popover-message-gap,10px)}

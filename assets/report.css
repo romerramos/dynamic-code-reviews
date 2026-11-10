@@ -1349,9 +1349,6 @@ dialog.palette::backdrop{background:color-mix(in srgb,var(--ink) 14%,transparent
 @media(min-width:741px) and (max-width:1499px){body.ledger-open .review-bar{left:calc(50% - min(var(--ledger-w,420px),92vw) / 2);width:min(640px,calc(100% - min(var(--ledger-w,420px),92vw) - 28px))}}
 body.zen.ledger-open .review-bar{left:calc(50% - min(var(--ledger-w,420px),92vw) / 2);width:min(640px,calc(100% - min(var(--ledger-w,420px),92vw) - 28px))}
 .review-bar .bar-agent{display:grid;place-items:center;width:20px;margin-left:-4px;padding:0}
-.review-bar .bar-agent span{width:8px;height:8px;border-radius:50%;background:var(--dcr-off)}
-.review-bar .bar-agent[data-tone="ok"] span{background:var(--dcr-ok)}
-.review-bar .bar-agent[data-tone="work"] span{background:var(--dcr-work)}
 
 /* The Overview opens with what the change does, said once and large enough to read; the rest of
    the summary follows more quietly, and the facts about the review are one small line. */
@@ -1433,16 +1430,13 @@ details.thread-was:not([open])>summary{margin-bottom:0}
 .composer-agent-mark{display:inline-grid;place-items:center;width:14px;height:14px;margin-right:6px;vertical-align:-2px}
 .composer-agent-mark svg{width:14px;height:14px}
 /* The bar's mark of the agent: faint when none is listening, full when one is, breathing while it works. */
-.review-bar .bar-agent{width:22px}
-.review-bar .bar-agent span{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:transparent;color:var(--ink);opacity:.35;filter:grayscale(1)}
-.review-bar .bar-agent span svg{width:14px;height:14px}
-.review-bar .bar-agent[data-tone="ok"] span{background:transparent;opacity:1;filter:none}
-.review-bar .bar-agent[data-tone="work"] span{background:transparent;opacity:1;filter:none;animation:bar-agent-work 1.4s ease-in-out infinite}
-@keyframes bar-agent-work{50%{opacity:.4}}
-@media(prefers-reduced-motion:reduce){.review-bar .bar-agent[data-tone="work"] span{animation:none}}
+.review-bar .bar-agent{width:22px;--presence-size:6px}
+/* The agent's mark in ink, its PresenceDot on its corner (the mark's own grid cell, no offsets). */
+.review-bar .bar-agent .bar-agent-mark{display:grid;place-items:center;width:18px;height:18px;color:var(--ink)}
+.review-bar .bar-agent .bar-agent-mark svg{width:14px;height:14px}
 /* Going back from a definition is its own small card above the bar, so the bar keeps its room. */
 .review-bar #bar-back{position:absolute;left:0;bottom:calc(100% + 8px);max-width:100%;height:30px;padding:0 12px;border:1px solid var(--line);border-radius:calc(10px * var(--round));background:var(--surface);box-shadow:0 6px 18px color-mix(in srgb,var(--shade) 7%,transparent);color:var(--ink);font-weight:500}
-.composer-agent-mark svg,.review-bar .bar-agent span svg{fill:currentColor!important;stroke:none!important}
+.composer-agent-mark svg,.review-bar .bar-agent-mark svg{fill:currentColor;stroke:none}
 .composer-mode .composer-agent-mark{display:inline-grid!important;flex:none;width:14px;height:14px}
 .composer-mode .composer-agent-mark svg{display:block;width:14px!important;height:14px!important;min-width:14px}
 
@@ -1520,7 +1514,7 @@ main#content{padding-bottom:104px}
 .settings-agents .dcr-presence-who span{color:var(--muted);font-size:11.5px}
 .settings-agents .dcr-presence-word{display:inline-flex;align-items:center;gap:6px;margin-left:auto;color:var(--muted);font-size:12px}
 .settings-agents .dcr-presence-line{margin:0 0 0 30px;color:var(--muted);font-size:12.5px}
-.settings-agents .dcr-presence-line .ui-presence-dot{display:none}
+.settings-agents .dcr-presence-line{--presence-dot:none}
 .settings-agents :is(.dcr-presence-help,.dcr-presence-cmd){margin-left:30px}
 .settings-agents .dcr-adv{margin-top:18px;padding:16px 0 0;border-color:var(--line)}
 .settings-agents .dcr-adv-title{color:var(--muted);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
@@ -1532,13 +1526,6 @@ main#content{padding-bottom:104px}
 .settings-agents .dcr-voice-link::after{content:" ›"}
 /* The presence dot: the same tiny dot as a chat app's, on the corner of the agent's mark. */
 .settings-agents .dcr-presence-word{--presence-size:6px}
-.review-bar .bar-agent{position:relative}
-.review-bar .bar-agent span{opacity:1;filter:none}
-.review-bar .bar-agent::after{content:"";position:absolute;right:1px;bottom:5px;width:6px;height:6px;box-sizing:border-box;border:1.5px solid var(--muted);border-radius:50%;background:var(--surface);box-shadow:0 0 0 2px var(--surface)}
-.review-bar .bar-agent[data-tone="ok"]::after{border:0;background:var(--dcr-ok)}
-.review-bar .bar-agent[data-tone="work"]::after{border:0;background:var(--dcr-work);animation:bar-agent-work 1.4s ease-in-out infinite}
-.review-bar .bar-agent[data-tone="work"] span{animation:none}
-@media(prefers-reduced-motion:reduce){.review-bar .bar-agent[data-tone="work"]::after{animation:none}}
 #ledger .dcr-detail-bar [data-dcr-close]{display:none}
 #ledger .dcr-detail-bar .dcr-back{color:var(--muted);font-weight:400}
 #ledger .dcr-detail-title{display:grid;grid-template-columns:18px minmax(0,1fr);gap:4px 12px;align-items:start;border:0}
@@ -1556,13 +1543,10 @@ main#content{padding-bottom:104px}
 #ledger .dcr-detail .dcr-msg>.ui-avatar{--avatar-size:18px;margin-top:1px}
 #ledger .dcr-detail .dcr-origin.dcr-agent{padding-top:10px}
 #ledger .dcr-detail .dcr-origin.dcr-agent>.ui-avatar{visibility:hidden}
-#ledger .dcr-detail .dcr-msg-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;font-size:12px;color:var(--muted)}
-#ledger .dcr-detail .dcr-msg-head>strong,#ledger .dcr-detail .dcr-msg-head :is(.dcr-model,.thread-model){display:none}
-#ledger .dcr-detail .dcr-adversary .dcr-msg-head .dcr-role{display:none}
-#ledger .dcr-detail .dcr-msg.dcr-you .dcr-msg-head>strong{display:inline;color:var(--ink);font-weight:500}
+#ledger .dcr-detail{--message-head-size:12px;--message-head-ink:var(--comment-quiet);--message-name:none;--message-you-name:inline;--message-model:none;--message-text-top:3px;--message-text-size:13.5px;--message-text-line:1.6}
+#ledger .dcr-detail .dcr-adversary{--message-role:none}
 #ledger .dcr-detail .dcr-msg-head :is(.dcr-verdict,.dcr-badge,[class*="dcr-v-"]){padding:0;border:0;background:none;color:var(--ink-neutral-3);font-size:12px;font-weight:400}
 #ledger .dcr-detail .dcr-msg-head :is(.dcr-verdict,.dcr-badge) svg{display:none}
-#ledger .dcr-detail .dcr-body{margin-top:3px;font-size:13.5px;line-height:1.6}
 #ledger :is(.dcr-detail-title strong,.ledger-subject) code{padding:0;border:0;background:none;font-family:var(--mono);font-size:.92em}
 /* An adversary that did not answer: its mark, faint, and the words, in line with the answers. */
 #ledger .dcr-detail :is(.dcr-opinions,.dcr-ops,ul:has(>.dcr-op)){margin:16px 0 0;padding:0;border:0;list-style:none}

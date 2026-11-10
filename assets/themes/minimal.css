@@ -34,7 +34,7 @@
 [data-theme^="minimal-"]{--pane-ring:transparent;--cursor-line:color-mix(in srgb,var(--ink) 6%,transparent);scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 /* --- components: plain ink marks, and a comment that opens as a row between two rules, not a card --- */
 [data-theme^="minimal-"]{--section-rule:transparent;
-  --button-border-color:transparent;--button-bg:transparent;--button-shadow:none;--button-ink:var(--ink-neutral-3);--button-hover-bg:var(--minimal-soft);--button-hover-ink:var(--ink);--button-focus-outline:1px solid var(--muted);--button-focus-offset:1px;--button-primary-border:transparent;--button-primary-shadow:none;--button-primary-bg:initial;--button-close-border:transparent;--button-close-bg:transparent;--button-close-ink:var(--muted);--button-close-hover-ink:var(--ink);--split-gap:0;--split-join-radius:0;--split-join-border:0;--split-writing:none;--comment-action-face:14px;
+  --button-border-color:transparent;--button-bg:transparent;--button-shadow:none;--button-ink:var(--ink-neutral-3);--button-hover-bg:var(--minimal-soft);--button-hover-ink:var(--ink);--button-focus-outline:1px solid var(--muted);--button-focus-offset:1px;--button-primary-border:transparent;--button-primary-shadow:none;--button-primary-bg:initial;--button-close-border:transparent;--button-close-bg:transparent;--button-close-ink:var(--muted);--button-close-hover-ink:var(--ink);--split-gap:0;--split-join-radius:0;--split-join-border:0;--split-writing:none;--presence-off-ink:var(--minimal-faint);--comment-action-face:14px;
   --avatar-style:mono;--avatar-mono-mark:72%;
   --comment-inset:0px;--comment-row-rule:transparent;--comment-row-rule-width:0px;--comment-card-edge:var(--line);--comment-card-sides:0px;--comment-card-radius:0;--comment-card-bg:transparent;--comment-card-gap:14px;
   --comment-face-col:18px;--comment-face-size:18px;--comment-message-face:18px;--comment-gap:12px;--comment-line-top:8px;--comment-line-bottom:8px;
@@ -43,9 +43,9 @@
   --comment-meta:flex;--comment-own-meta:none;--comment-body-bottom:0px;--comment-text-size:14.5px;--comment-text-line:1.7;--comment-text-width:640px;--comment-source:none;--comment-thread-top:22px;--comment-thread-pad-top:0px;--comment-open-line-bottom:0px;
   --comment-footer-top:20px;--comment-footer-pad-top:0px;--comment-footer-pad-bottom:20px;--comment-footer-indent:calc(var(--comment-face-col) + var(--comment-gap));--comment-footer-rule:0 solid transparent;
   --comment-action-height:28px;--comment-action-pad:0 11px;--comment-action-border:1px solid var(--line);--comment-action-radius:8px;--comment-action-bg:var(--surface);--comment-action-ink:var(--ink-neutral-3);--comment-action-size:13px;--comment-action-weight:500;--comment-action-shadow:none;
-  --message-name:none;--message-you-name:none;--message-extras:none;--message-head-size:12.5px;--message-head-ink:var(--minimal-faint);
+  --message-name:none;--message-you-name:none;--message-model:none;--message-role:none;--message-head-size:12.5px;--message-head-ink:var(--minimal-faint);
   --verdict-pad:0;--verdict-border:0;--verdict-bg:none;--verdict-ink:var(--ink-neutral-3);--verdict-size:12.5px;--verdict-weight:400;--verdict-icon:none;--op-face-opacity:.4;--peek-face:14px;
-  --popover-pad:0;--popover-divider:var(--line);--popover-space:16px;--popover-where:none;--popover-tags:none;--popover-face:grid;--popover-face-col:18px;--popover-gap:12px;--popover-title-room:30px;--popover-title-size:15px;--popover-title-line:1.4;--popover-title-ink:var(--ink);--popover-place:block;--popover-text-ink:var(--ink-neutral-3);--popover-text-size:14px;--popover-footer-top:18px}
+  --popover-pad:0;--popover-divider:var(--line);--popover-space:16px;--popover-where:none;--popover-tags:none;--popover-face:grid;--popover-face-col:18px;--popover-gap:12px;--popover-title-room:30px;--popover-title-size:15px;--popover-title-line:1.4;--popover-title-ink:var(--ink);--popover-place:block;--popover-text-ink:var(--ink-neutral-3);--popover-text-size:14px;--popover-footer-top:18px;--popover-message-face:18px;--popover-message-gap:12px}
 [data-theme^="minimal-"] .dcr-card{--message-space:14px}
 [data-theme^="minimal-"] .dcr-popover{--message-space:12px}
 [data-theme^="minimal-"] #ledger .dcr-detail{--message-you-name:inline}
@@ -117,7 +117,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .modal-box{border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 64px color-mix(in srgb,var(--shade) 12%,transparent)}
 [data-theme^="minimal-"] .modal-box>:is(header,footer),[data-theme^="minimal-"] .modal-box form>:is(header,footer){border-color:transparent;background:transparent}
 [data-theme^="minimal-"] .modal-box>header{padding-bottom:8px}
-[data-theme^="minimal-"] :is(.settings-box,.view-menu,.keys-box) section:not(#settings-view:not(:empty)+section){border-color:transparent}
+[data-theme^="minimal-"] :is(.settings-box,.view-menu,.keys-box) section:not(:where(#settings-view:not(:empty)+section)){border-color:transparent}
 [data-theme^="minimal-"] .modal-box header h2{font-size:15px;font-weight:600;letter-spacing:0}
 /* A section is named in a quiet line, and space separates it from the next. */
 [data-theme^="minimal-"] :is(.settings-box,.view-menu) section>h2,[data-theme^="minimal-"] .keys-box h3{color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
@@ -505,7 +505,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] #navigation .nav-section .step-done .review-icon{display:inline-block;width:13px;height:13px;margin-left:6px;vertical-align:-2px;stroke-width:2.25}
 
 /* A comment opened in the code: the Overview's thread, on a card. No header band, path or badges. */
-[data-theme^="minimal-"] .comment-popover[popover]{width:600px;max-height:min(560px,calc(100dvh - 24px));padding:16px 18px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 16px 44px color-mix(in srgb,var(--shade) 12%,transparent)}
+[data-theme^="minimal-"] .comment-popover[popover]{max-height:min(560px,calc(100dvh - 24px));padding:16px 18px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 16px 44px color-mix(in srgb,var(--shade) 12%,transparent)}
 [data-theme^="minimal-"] .comment-popover .popover-heading{position:absolute;top:12px;right:12px;padding:0;border:0;background:transparent}
 [data-theme^="minimal-"] .comment-popover .popover-heading strong{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 [data-theme^="minimal-"] .comment-popover .popover-heading{--button-square:28px;--button-close-border:transparent;--button-close-bg:transparent;--button-close-ink:var(--muted)}
@@ -589,13 +589,6 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .settings-agents .dcr-voice-link{display:block;margin-top:18px;padding:16px 0 0;border:0;border-top:1px solid var(--line);background:none;color:var(--ink);font:inherit;font-size:13px;text-align:left;cursor:pointer}
 [data-theme^="minimal-"] .settings-agents .dcr-voice-link::after{content:" ›"}
 /* The presence dot: the same tiny dot as a chat app's, on the corner of the agent's mark. */
-[data-theme^="minimal-"] .review-bar .bar-agent{position:relative}
-[data-theme^="minimal-"] .review-bar .bar-agent span{opacity:1;filter:none}
-[data-theme^="minimal-"] .review-bar .bar-agent::after{content:"";position:absolute;right:1px;bottom:5px;width:6px;height:6px;box-sizing:border-box;border:1.5px solid var(--minimal-faint);border-radius:50%;background:var(--surface);box-shadow:0 0 0 2px var(--surface)}
-[data-theme^="minimal-"] .review-bar .bar-agent[data-tone="ok"]::after{border:0;background:var(--dcr-ok)}
-[data-theme^="minimal-"] .review-bar .bar-agent[data-tone="work"]::after{border:0;background:var(--dcr-work);animation:bar-agent-work 1.4s ease-in-out infinite}
-[data-theme^="minimal-"] .review-bar .bar-agent[data-tone="work"] span{animation:none}
-@media(prefers-reduced-motion:reduce){[data-theme^="minimal-"] .review-bar .bar-agent[data-tone="work"]::after{animation:none}}
 
 /* The page keeps a gutter for Your review's icon, open or hidden, so the section pager stops before it. */
 @media(min-width:1200px){

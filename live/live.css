@@ -1,4 +1,23 @@
 @layer app{
+/* An answer, a closing block or a preview, as Markdown: paragraphs, lists, code and tables in its column.
+   Its size and ink are tokens a context (or a theme) may set: --message-text-size, -line, -ink. */
+.dcr-body{margin:0;max-width:68ch;color:var(--message-text-ink,var(--ink));font-size:var(--message-text-size,14px);line-height:var(--message-text-line,1.55);overflow-wrap:anywhere}
+.dcr-body.is-clamped:not(.is-open){max-height:calc(7 * 1.55em);overflow:hidden;-webkit-mask-image:linear-gradient(#000 72%,transparent);mask-image:linear-gradient(#000 72%,transparent)}
+.dcr-body p{margin:0 0 .5em}
+.dcr-body>:last-child{margin-bottom:0}
+.dcr-body ul,.dcr-body ol{margin:.15em 0 .5em;padding-left:1.3em;list-style-position:outside}
+.dcr-body ul{list-style-type:disc}
+.dcr-body ol{list-style-type:decimal}
+.dcr-body li{margin:.15em 0}
+.dcr-body code{padding:1px 5px;border-radius:calc(5px * var(--round));background:color-mix(in oklab,currentColor 8%,transparent);font:12.5px/1.4 var(--mono)}
+.dcr-body pre{margin:.4em 0 .8em;padding:10px 12px;overflow:auto;border-radius:calc(8px * var(--round));background:color-mix(in oklab,currentColor 6%,transparent)}
+.dcr-body pre code{padding:0;background:none}
+.dcr-body :is(h3,h4,h5,h6){margin:.9em 0 .4em;font-size:1em;font-weight:700;line-height:1.4}.dcr-body h3{font-size:1.1em}.dcr-body .md-table{margin:.4em 0 .8em;overflow-x:auto}.dcr-body table{border-collapse:collapse;font-size:.92em}.dcr-body :is(th,td){padding:4px 10px;border:1px solid color-mix(in oklab,currentColor 18%,transparent);text-align:left;vertical-align:top;overflow-wrap:normal}.dcr-body th{font-weight:700;background:color-mix(in oklab,currentColor 6%,transparent)}
+.dcr-body a{color:var(--accent)}
+.dcr-more{margin:2px 0 0;padding:5px 0;border:0;background:none;color:var(--accent);font-size:13px;font-weight:550}
+.dcr-more:hover{text-decoration:underline}
+.dcr-body{max-width:none}
+.dcr-body>:is(p,ul,ol,h1,h2,h3,h4,h5,h6,blockquote){max-width:68ch}
 /* Scoped to the conversation layer; the review keeps its own styles. */
 #dcr-panel[hidden]{display:none!important}
 #dcr-panel{display:grid;gap:10px;width:100%}
@@ -170,15 +189,11 @@ body.qa-live .evidence-strip:not(:has(button:not(.visual-qa-option))){display:no
 .dcr-ledger{display:flex!important;flex:1;flex-direction:column;min-height:0}
 .dcr-ledger .dcr-scroll{flex:1;min-height:0;overflow-y:auto;padding:14px 16px 8px;overscroll-behavior:contain}
 .dcr-ledger .dcr-convo{grid-template-columns:minmax(0,1fr);gap:14px}
-.dcr-ledger .dcr-msg-main{min-width:0}
 .dcr-ledger .dcr-convo::before{display:none}
-.dcr-ledger .dcr-msg-head{margin:0 0 2px;font-size:12px}
-.dcr-ledger .dcr-msg-head strong{font-size:12.5px}
-.dcr-ledger .dcr-agent .dcr-msg-head strong{color:var(--accent)}
-.dcr-ledger .dcr-msg-head time{font-size:12px}
+.dcr-ledger{--message-head-size:12px;--message-name-size:12.5px;--message-time-size:12px;--message-text-size:13.5px}
+.dcr-ledger .dcr-agent{--message-name-ink:var(--accent)}
 /* The panel is as wide as the reader drags it, so its messages take that width. */
 .dcr-ledger .dcr-body,.dcr-detail .dcr-body{max-width:none}
-.dcr-ledger .dcr-body{margin:0;font-size:13.5px;line-height:1.55}
 .dcr-ledger .dcr-body code{font-size:12px}
 .dcr-ledger .dcr-body pre{padding:8px 10px;font-size:12px}
 .dcr-ledger .dcr-state{margin:14px 0 0;font-size:12px}
@@ -321,7 +336,7 @@ body.dcr-no-app #qa-panel,body.dcr-no-app .visual-qa-option,body.dcr-no-app .evi
 .dcr-closure-main>.ui-avatar,.dcr-check-body>.ui-avatar{margin-top:2px}
 .dcr-closure-by,.dcr-check-by{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 6px;margin:0 0 4px;font-size:13px;line-height:1.5;color:var(--muted)}
 .dcr-closure-by strong,.dcr-check-by strong{font-weight:600;color:var(--ink)}
-.dcr-closure .dcr-body{max-width:72ch;font-size:13.5px;line-height:1.6}.dcr-closure .dcr-body>:last-child{margin-bottom:0}
+.dcr-closure{--message-text-size:13.5px;--message-text-line:1.6}.dcr-closure .dcr-body{max-width:72ch}.dcr-closure .dcr-body>:last-child{margin-bottom:0}
 .dcr-checks{display:flex;flex-wrap:wrap;align-items:center;gap:2px 18px;margin-top:10px;font-size:13px}
 /* Where the agents differ the block's own two buttons close the comment; the card's Resolve would be a third. */
 .review-thread:has(.dcr-closure-actions)>.thread-footer>[data-resolve]{display:none}
@@ -409,7 +424,7 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 
 /* The comment a conversation is about: its first message, a little apart from the replies. */
 .dcr-origin{margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--line)}
-.dcr-ledger .dcr-origin .dcr-body{color:var(--ink)}
+.dcr-ledger .dcr-origin{--message-text-ink:var(--ink)}
 .dcr-origin .dcr-more{margin-left:0}
 
 /* Who is here: the agent's mark with a presence dot on its corner, and what it is doing in words. */
@@ -418,7 +433,7 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 #dcr-presence:hover,#dcr-presence[aria-expanded="true"]{border-color:color-mix(in oklab,var(--ink) 22%,var(--line))}
 #dcr-presence:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .dcr-presence-face{position:relative;display:inline-flex}
-#dcr-presence[data-tone="off"] .ui-presence-dot{display:none}
+#dcr-presence[data-tone="off"]{--presence-dot:none}
 .dcr-presence-face{--presence-size:9px}
 #dcr-presence[data-tone="off"]{color:var(--muted)}
 #dcr-presence[data-tone="off"] .ui-avatar{filter:grayscale(1);opacity:.55}

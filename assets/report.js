@@ -4148,9 +4148,10 @@
     // The agent running the review is a dot: its colour says whether one is listening or working.
     const chip = document.getElementById('dcr-presence');
     $('bar-agent').hidden = !chip;
-    if (chip && $('bar-agent').dataset.tone !== chip.dataset.tone) $('bar-agent').dataset.tone = chip.dataset.tone || 'off';
+    // The agent's mark with its PresenceDot on its corner, drawn again when either changes.
+    const tone = chip?.dataset.tone || 'off';
     const slug = mainAgent();
-    if (chip && $('bar-agent').dataset.agent !== slug) { $('bar-agent').dataset.agent = slug; $('bar-agent').firstElementChild.innerHTML = UI.AgentMark(slug); }
+    if (chip && ($('bar-agent').dataset.tone !== tone || $('bar-agent').dataset.agent !== slug)) { $('bar-agent').dataset.tone = tone; $('bar-agent').dataset.agent = slug; $('bar-agent').innerHTML = `<span class="ui-presence"><span class="bar-agent-mark" aria-hidden="true">${UI.AgentMark(slug)}</span>${UI.PresenceDot(tone)}</span>`; }
     if (chip && $('bar-agent').title !== chip.title) { $('bar-agent').title = chip.title; $('bar-agent').setAttribute('aria-label', chip.getAttribute('aria-label') || chip.title); }
     // How many files need the reader, from the verdict strip, for a theme that shows it by the progress instead.
     const need = document.querySelector('#dcr-jev .dcr-jev-yours');
