@@ -468,6 +468,7 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 .dcr-presence-who{display:grid}
 .dcr-presence-who strong{font-size:14px;font-weight:600}
 .dcr-presence-who span{color:var(--muted);font-size:12px}
+.dcr-presence-word{display:none}
 .dcr-presence-line{display:flex;align-items:baseline;gap:8px;margin:0;line-height:1.45}
 .dcr-presence-line .dcr-presence-dot{flex:none;transform:translateY(1px)}
 .dcr-presence-help{margin:12px 0 6px;color:var(--muted);line-height:1.45}

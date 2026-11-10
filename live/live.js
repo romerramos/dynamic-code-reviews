@@ -1553,7 +1553,8 @@
     const runs = agent && listenerModel ? tools.modelHTML(listenerModel) : '';
     const who = agent ? `<strong>${tools.escape(agent.name)}</strong>${agent.company || runs ? `<span>${tools.escape(agent.company)}${agent.company && runs ? ' · ' : ''}${runs}</span>` : ''}` : `<strong>${model.tone === 'off' ? 'No agent connected' : 'Your agent'}</strong>`;
     const connect = model.tone === 'off' && online ? `<p class="dcr-presence-help">Ask your agent to continue this review, or run this where it works:</p><div class="dcr-presence-cmd"><code>${tools.escape(connectCommand())}</code><button type="button" class="icon-button" data-dcr-copy-wait aria-label="Copy the command" title="Copy">${ico('copy')}</button></div>` : '';
-    const html = `<header>${tools.avatarHTML(model.face, '')}<div class="dcr-presence-who">${who}</div></header><p class="dcr-presence-line dcr-presence-${model.tone}"><span class="dcr-presence-dot" aria-hidden="true"></span>${tools.escape(model.hint)}</p>${connect}`;
+    const word = {ok: 'online', work: 'answering', off: 'offline'}[model.tone] || '';
+    const html = `<header>${tools.avatarHTML(model.face, '')}<div class="dcr-presence-who">${who}</div><span class="dcr-presence-word dcr-presence-${model.tone}"><span class="dcr-presence-dot" aria-hidden="true"></span>${word}</span></header><p class="dcr-presence-line dcr-presence-${model.tone}"><span class="dcr-presence-dot" aria-hidden="true"></span>${tools.escape(model.hint)}</p>${connect}`;
     if (presenceMain.dataset.html !== html) { presenceMain.innerHTML = html; presenceMain.dataset.html = html; }
   };
   // The Adversaries section: every agent CLI here, a switch each, and the model and effort of those on.
@@ -1649,6 +1650,7 @@
   const renderAgent = () => {
     const model = presenceModel();
     presence.hidden = !model;
+    settingsDialog?.classList.toggle('has-agents', !!model);
     if (!model) { presenceCard.hidden = true; return; }
     presence.dataset.tone = model.tone;
     const face = `${tools.avatarHTML(model.face, 'dcr-face-sm')}<span class="dcr-presence-dot" aria-hidden="true"></span>`;
@@ -1680,7 +1682,26 @@
     presenceCard.style.top = `${Math.round(below ? box.bottom + 8 : Math.max(8, box.top - 8 - height))}px`;
     presenceCard.style.left = `${Math.round(Math.max(12, Math.min(box.left, window.innerWidth - width - 12)))}px`;
   };
+  // A theme can show the agent and its adversaries in Settings, under Agents, instead of on this
+  // card: they go wherever they are shown, and are listed afresh when that tab opens.
+  const settingsDialog = document.getElementById('settings-dialog');
+  const settingsAgents = settingsDialog?.querySelector('.settings-agents');
+  const agentParts = [presenceMain, advPanel, presenceCard.querySelector('.dcr-voice-link')];
+  const agentsInSettings = () => !!settingsAgents && settingsDialog.open && getComputedStyle(settingsAgents).display !== 'none';
+  const homeAgentParts = () => {
+    const into = agentsInSettings() ? settingsAgents : presenceCard;
+    if (presenceMain.parentNode === into) return false;
+    into.append(...agentParts);
+    return into === settingsAgents;
+  };
+  if (settingsDialog) new MutationObserver(() => { if (homeAgentParts()) loadCatalog(); }).observe(settingsDialog, {attributes: true, attributeFilter: ['open', 'data-tab']});
+  settingsAgents?.addEventListener('click', event => { if (event.target.closest('[data-dcr-copy-wait]')) copyWait(); });
+  const copyWait = async () => {
+    try { await navigator.clipboard.writeText(connectCommand()); flash('Copied. Run it where your agent works.'); }
+    catch { getSelection().selectAllChildren(presenceMain.querySelector('code')); flash('Select and copy the command.'); }
+  };
   const togglePresenceCard = open => {
+    if (open) homeAgentParts();
     presenceCard.hidden = !open;
     presence.setAttribute('aria-expanded', String(open));
     if (open) { placePresenceCard(); loadCatalog(); }
@@ -1693,9 +1714,7 @@
   window.addEventListener('resize', () => { if (!presenceCard.hidden) placePresenceCard(); });
   presenceCard.addEventListener('click', async event => {
     if (event.target.closest('[data-presence-close]')) { togglePresenceCard(false); presence.focus(); return; }
-    if (!event.target.closest('[data-dcr-copy-wait]')) return;
-    try { await navigator.clipboard.writeText(connectCommand()); flash('Copied. Run it where your agent works.'); }
-    catch { getSelection().selectAllChildren(presenceCard.querySelector('code')); flash('Select and copy the command.'); }
+    if (event.target.closest('[data-dcr-copy-wait]')) copyWait();
   });
 
   // Unread answers: a count in the tab title and a dot on Your review, until they have been seen.

@@ -693,3 +693,45 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .ledger-item[data-conversation] .dcr-new::before{content:"· "}
 /* Template previews have the Previews tab and ⌘K. */
 [data-theme^="minimal-"] .ledger-previews{display:none}
+
+/* --- Settings in two tabs: General, as it was, and Agents: your agent, its adversaries, how you
+   write on GitHub. The bar's mark opens Agents; its dot says whether the agent is there. --- */
+[data-theme^="minimal-"] #settings-dialog.has-agents .settings-tabs{display:flex;gap:20px;margin:6px 0 14px}
+[data-theme^="minimal-"] .settings-tabs button{padding:0 0 3px;border:0;background:none;color:var(--muted);font:inherit;font-size:13px;cursor:pointer}
+[data-theme^="minimal-"] .settings-tabs button[aria-selected="true"]{color:var(--ink);font-weight:500;box-shadow:inset 0 -1.5px var(--ink)}
+[data-theme^="minimal-"] #settings-dialog.has-agents[data-tab="agents"] .settings-body>:not(.settings-agents){display:none}
+[data-theme^="minimal-"] #settings-dialog.has-agents[data-tab="agents"] .settings-agents{display:block}
+[data-theme^="minimal-"] .settings-agents header{display:flex;align-items:center;gap:10px;margin:0 0 4px}
+[data-theme^="minimal-"] .settings-agents header .dcr-avatar{width:20px;height:20px;background:transparent;color:var(--ink)}
+[data-theme^="minimal-"] .settings-agents .dcr-presence-who{display:flex;align-items:baseline;gap:8px;min-width:0}
+[data-theme^="minimal-"] .settings-agents .dcr-presence-who strong{font-size:13px;font-weight:500}
+[data-theme^="minimal-"] .settings-agents .dcr-presence-who span{color:var(--minimal-faint);font-size:11.5px}
+[data-theme^="minimal-"] .settings-agents .dcr-presence-word{display:inline-flex;align-items:center;gap:6px;margin-left:auto;color:var(--minimal-faint);font-size:12px}
+[data-theme^="minimal-"] .settings-agents .dcr-presence-line{margin:0 0 0 30px;color:var(--muted);font-size:12.5px}
+[data-theme^="minimal-"] .settings-agents .dcr-presence-line .dcr-presence-dot{display:none}
+[data-theme^="minimal-"] .settings-agents :is(.dcr-presence-help,.dcr-presence-cmd){margin-left:30px}
+[data-theme^="minimal-"] .settings-agents .dcr-adv{margin-top:18px;padding:16px 0 0;border-color:var(--line)}
+[data-theme^="minimal-"] .settings-agents .dcr-adv-title{color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
+[data-theme^="minimal-"] .settings-agents .dcr-adv-list{gap:10px;margin:8px 0 0}
+[data-theme^="minimal-"] .settings-agents .dcr-adv-row,[data-theme^="minimal-"] .settings-agents .dcr-adv-row.is-on{padding:0;background:none}
+[data-theme^="minimal-"] .settings-agents .dcr-adv-who strong{font-weight:500}
+[data-theme^="minimal-"] .settings-agents .dcr-adv-status::before{display:none}
+[data-theme^="minimal-"] .settings-agents .dcr-face-sm{background:transparent;color:var(--ink)}
+[data-theme^="minimal-"] .settings-agents .dcr-voice-link{display:block;margin-top:18px;padding:16px 0 0;border:0;border-top:1px solid var(--line);background:none;color:var(--ink);font:inherit;font-size:13px;text-align:left;cursor:pointer}
+[data-theme^="minimal-"] .settings-agents .dcr-voice-link::after{content:" ›"}
+/* The presence dot: the same tiny dot as a chat app's, on the corner of the agent's mark. */
+[data-theme^="minimal-"] .settings-agents .dcr-presence-word .dcr-presence-dot{width:6px;height:6px;box-sizing:border-box;border-radius:50%;background:var(--dcr-ok)}
+[data-theme^="minimal-"] .settings-agents .dcr-presence-word.dcr-presence-work .dcr-presence-dot{background:var(--dcr-work)}
+[data-theme^="minimal-"] .settings-agents .dcr-presence-word.dcr-presence-off .dcr-presence-dot{border:1.5px solid var(--minimal-faint);background:transparent}
+[data-theme^="minimal-"] .review-bar .bar-agent{position:relative}
+[data-theme^="minimal-"] .review-bar .bar-agent span{opacity:1;filter:none}
+[data-theme^="minimal-"] .review-bar .bar-agent::after{content:"";position:absolute;right:1px;bottom:5px;width:6px;height:6px;box-sizing:border-box;border:1.5px solid var(--minimal-faint);border-radius:50%;background:var(--surface);box-shadow:0 0 0 2px var(--surface)}
+[data-theme^="minimal-"] .review-bar .bar-agent[data-tone="ok"]::after{border:0;background:var(--dcr-ok)}
+[data-theme^="minimal-"] .review-bar .bar-agent[data-tone="work"]::after{border:0;background:var(--dcr-work);animation:bar-agent-work 1.4s ease-in-out infinite}
+[data-theme^="minimal-"] .review-bar .bar-agent[data-tone="work"] span{animation:none}
+@media(prefers-reduced-motion:reduce){[data-theme^="minimal-"] .review-bar .bar-agent[data-tone="work"]::after{animation:none}}
+
+/* Reading with Your review hidden: the page keeps a gutter for its icon, so the pager stops before it. */
+@media(min-width:1200px){
+  html[data-theme^="minimal-"] body:not(.ledger-open):not(.zen) .focus-file-actions{margin-right:46px}
+}

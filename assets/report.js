@@ -3800,17 +3800,25 @@
   // Settings is one dialog, opened by name from the sidebar. What is flipped while reading (the
   // reading mode, the diff layout, comments, whitespace) is also in the toolbar's View menu:
   // the same controls, moved into whichever of the two is open.
-  const openSettings = () => {
+  // A theme can split Settings in two tabs, General and Agents (your agent and its adversaries).
+  const settingsTab = tab => {
+    $('settings-dialog').dataset.tab = tab;
+    $('settings-dialog').querySelectorAll('[data-settings-tab]').forEach(button => button.setAttribute('aria-selected', String(button.dataset.settingsTab === tab)));
+  };
+  const openSettings = (tab = 'general') => {
     $('view-menu').hidePopover?.();
     $('settings-view').append(...document.querySelectorAll('#view-menu [data-view-switch]'));
+    settingsTab(tab);
     $('settings-dialog').showModal();
   };
-  $('settings-toggle').onclick = openSettings;
+  $('settings-toggle').onclick = () => openSettings();
   // On a phone the toolbar's tab is named Settings, so it opens them, with no menu in between.
   $('settings-dialog').addEventListener('close', () => $('view-menu').prepend(...document.querySelectorAll('#settings-view [data-view-switch]')));
   $('settings-dialog').addEventListener('click', event => {
     if (event.target.closest('[data-close]')) $('settings-dialog').close();
     if (event.target.closest('[data-open-keys]')) { $('settings-dialog').close(); $('keys-dialog').showModal(); }
+    const tab = event.target.closest('[data-settings-tab]');
+    if (tab) settingsTab(tab.dataset.settingsTab);
   });
   $('view-menu').addEventListener('click', event => {
     if (event.target.closest('[data-open-settings]')) openSettings();
@@ -4154,6 +4162,9 @@
   $('bar-meta').addEventListener('click', () => { if ($('bar-meta').classList.contains('is-link')) document.querySelector('.dcr-todo-link')?.click(); });
   // The agent's card opens from its chip, which the dot presses.
   $('bar-agent').addEventListener('click', () => {
+    // Where Settings has an Agents tab, the agent and its adversaries are there.
+    const tabs = document.querySelector('#settings-dialog .settings-tabs');
+    if (tabs && getComputedStyle(tabs).display !== 'none') { openSettings('agents'); return; }
     const chip = document.getElementById('dcr-presence');
     // After this click has run its course: the card closes on a click outside itself and its chip.
     setTimeout(() => {

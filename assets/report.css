@@ -1550,5 +1550,7 @@ details.thread-was:not([open])>summary{margin-bottom:0}
 .step-done{display:none}
 .sidebar-top{display:contents}
 .sidebar-hide,.sidebar-show,.ledger-hide,.ledger-show,.step-next,.ledger-at{display:none}
+/* Settings split in General and Agents, for a theme that shows the agent there instead of on its card. */
+.settings-tabs,.settings-agents{display:none}
 .step-end{white-space:nowrap}
 .popover-comment .thread-footer{padding:12px 0 0;border:0;background:none}
