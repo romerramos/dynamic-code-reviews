@@ -549,3 +549,23 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]))>button{margin-left:-5px;padding-left:13px;width:calc(100% + 5px)}
 [data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{padding:0 8px}
 [data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]){margin-left:-5px!important;padding-left:13px!important;width:calc(100% + 5px)!important}
+
+/* --- one mark that is clicked, one that is read ----------------------------------------------------------
+   A file's box is a real checkbox: square, always drawn, filled in ink with a white check once reviewed;
+   it is the only thing in the list you tick. A step is not ticked: once all its files are read its name
+   goes grey and a small check follows it on its own line of text. */
+[data-theme^="minimal-"] #navigation .nav-section button[data-view]{display:flex!important;align-items:baseline;gap:0;padding-right:8px}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body{order:1;flex:0 1 auto;min-width:0}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number{order:2;flex:none;position:static;width:auto;margin:0 0 0 6px;visibility:visible}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number:not(:has(svg)){display:none!important}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number .review-icon{width:12px;height:12px;vertical-align:-1px;color:var(--minimal-faint)}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view]:has(.step-number svg) .step-body strong{color:var(--minimal-faint)}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view]:not(:has(.step-number svg)) .step-body strong{color:var(--ink-neutral-3)}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view]:is([aria-current="page"],[aria-expanded="true"]) .step-body strong{color:var(--ink)}
+[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view][aria-current="page"])>.nav-files{margin-left:16px}
+[data-theme^="minimal-"] .sidebar nav .file-status{flex:0 0 14px;width:14px;height:14px;margin:0;border:1.5px solid var(--line-neutral-5);border-radius:4px;background:var(--surface);cursor:pointer}
+[data-theme^="minimal-"] .sidebar nav .file-status:hover{border-color:var(--ink)}
+[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status{display:grid;place-items:center;border-color:var(--ink-neutral-3);background:var(--ink-neutral-3);color:var(--surface)}
+[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status .review-icon{width:10px;height:10px;stroke-width:3}
+[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status:hover{border-color:var(--ink);background:var(--ink);color:var(--surface)}
+[data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{padding:0 8px 0 0}
