@@ -141,3 +141,43 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 
 /* The agent's card opens over its dot in the bar, since its chip went with the toolbar. */
 [data-theme^="minimal-"] #dcr-presence-card{left:var(--bar-agent-left,12px)!important;top:auto!important;bottom:84px!important;max-height:calc(100dvh - 108px)!important;overflow-y:auto;border-color:var(--line);box-shadow:0 16px 40px color-mix(in srgb,var(--shade) 10%,transparent)}
+
+/* --- the app: it fills the window, and its controls are one bar at the bottom, where the review's
+   bar is. During a QA review that bar says what the agent is doing, and its notes sit just above. --- */
+[data-theme^="minimal-"] dialog.stage.dcr-app[open]{grid-template-rows:minmax(0,1fr)}
+[data-theme^="minimal-"] dialog.stage.dcr-app{inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;border:0;border-radius:0;box-shadow:none;grid-template-rows:minmax(0,1fr)}
+[data-theme^="minimal-"] .dcr-app .stage-bar{position:absolute;z-index:5;left:50%;bottom:22px;transform:translateX(-50%);width:min(940px,calc(100% - 28px));box-sizing:border-box;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 8px 28px color-mix(in srgb,var(--shade) 9%,transparent)}
+[data-theme^="minimal-"] .dcr-app-address{height:32px;border-color:transparent;background:var(--minimal-soft)}
+[data-theme^="minimal-"] .dcr-app-address:focus-within{border-color:transparent;box-shadow:none}
+[data-theme^="minimal-"] .dcr-app-record{border-color:transparent;background:transparent;font-weight:500}
+[data-theme^="minimal-"] .dcr-app :is(button,a,input,textarea,select):focus-visible{outline:1px solid var(--muted);outline-offset:1px}
+/* The bar has its own strip under the app, so it never covers the app or shows in a recording. */
+[data-theme^="minimal-"] .dcr-app .dcr-app-canvas{padding-bottom:76px!important;background:var(--surface);background-image:none}
+[data-theme^="minimal-"] .dcr-app-foot{position:absolute;z-index:5;left:14px;bottom:28px;min-height:0;padding:4px 10px;border:0;border-radius:999px;background:var(--surface)}
+[data-theme^="minimal-"] .dcr-app-foot:not(:has(.dcr-app-sharing:not([hidden]))),[data-theme^="minimal-"] .dcr-app-foot .dcr-app-status{display:none}
+[data-theme^="minimal-"] .dcr-app-rail{border-color:var(--line);padding-bottom:84px}
+[data-theme^="minimal-"] .dcr-app-rail-head,[data-theme^="minimal-"] .dcr-app-row{border-color:transparent}
+[data-theme^="minimal-"] .dcr-app-row::before{display:none}
+/* A QA review: the bar is the agent's, and says so in one line. */
+[data-theme^="minimal-"] .dcr-app.is-agent-driving :is(.dcr-app-lead,.stage-tools){display:none}
+[data-theme^="minimal-"] .dcr-app.is-agent-driving .dcr-app-pane{outline:0}
+[data-theme^="minimal-"] .dcr-app.is-agent-driving .stage-bar{flex-wrap:nowrap}
+[data-theme^="minimal-"] .dcr-qa-banner{flex:1 1 auto;min-width:0;gap:10px;padding:2px 0 2px 10px;border-radius:0;background:transparent;color:var(--ink)}
+[data-theme^="minimal-"] .dcr-qa-banner .dcr-qa-pulse{background:var(--ink)}
+[data-theme^="minimal-"] .dcr-qa-banner .dcr-qa-text{flex:1 1 auto}
+[data-theme^="minimal-"] .dcr-qa-banner :is(.dcr-qa-progress,button){flex:none;white-space:nowrap}
+[data-theme^="minimal-"] .dcr-qa-banner .dcr-qa-progress{color:var(--minimal-faint);font-size:12px;font-weight:400}
+[data-theme^="minimal-"] .dcr-qa-banner .dcr-qa-text{display:flex;align-items:baseline;gap:10px;min-width:0}
+[data-theme^="minimal-"] .dcr-qa-banner .dcr-qa-text strong{font-size:14px;font-weight:500;white-space:nowrap}
+[data-theme^="minimal-"] .dcr-qa-banner .dcr-qa-text span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--minimal-faint);font-size:12px}
+[data-theme^="minimal-"] .dcr-qa-banner .act-quiet{border-color:transparent;color:var(--muted)}
+[data-theme^="minimal-"] .dcr-qa-banner .act-quiet:hover{background:var(--minimal-soft);color:var(--ink)}
+[data-theme^="minimal-"] .dcr-app-prep{align-items:flex-end;padding-bottom:16px}
+[data-theme^="minimal-"] .dcr-app-prep-card{border-color:var(--line);box-shadow:0 8px 28px color-mix(in srgb,var(--shade) 9%,transparent)}
+[data-theme^="minimal-"] .dcr-app-prep-spin{width:16px;height:16px;margin-top:3px;border-width:2px}
+[data-theme^="minimal-"] .dcr-app-prep{background:color-mix(in srgb,var(--surface) 45%,transparent);-webkit-backdrop-filter:none;backdrop-filter:none}
+[data-theme^="minimal-"] .file-card.is-viewed>summary{background:transparent;color:var(--minimal-faint)}
+[data-theme^="minimal-"] .context-details{border-color:transparent;background:transparent;padding-left:0;padding-right:0}
+[data-theme^="minimal-"] :is(dialog,.modal-box):focus-visible{outline:0}
+[data-theme^="minimal-"] .modal-box :is(input:not([type="checkbox"],[type="radio"]),textarea,select){border-color:var(--line);background:var(--surface);box-shadow:none}
+[data-theme^="minimal-"] .modal-box :is(input:not([type="checkbox"],[type="radio"]),textarea,select):focus{border-color:var(--muted);outline:0}

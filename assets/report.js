@@ -3934,7 +3934,7 @@
   function updateBar() {
     queueBar.pending = false;
     const ask = composerMode() === 'agent';
-    const where = selection ? `line${selection.start === selection.end ? ` ${selection.start}` : `s ${selection.start}–${selection.end}`}` : pagedReading() ? 'this file' : state.view === 'overview' ? (ask ? 'this change' : 'this review') : 'these changes';
+    const where = selection ? `line${selection.start === selection.end ? ` ${selection.start}` : `s ${selection.start}–${selection.end}`}` : pagedReading() ? 'this file' : state.view === 'overview' ? (ask ? 'this change' : 'this review') : layers.some(layer => layer.id === state.view) ? 'this step' : 'these changes';
     const prompt = selection ? `${ask ? 'Ask about' : 'Comment on'} ${where}` : ask ? `Ask about ${where}` : `Comment on ${where}`;
     if ($('bar-input').placeholder !== prompt) { $('bar-input').placeholder = prompt; $('bar-input').setAttribute('aria-label', prompt); }
     // The agent running the review is a dot: its colour says whether one is listening or working.
