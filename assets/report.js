@@ -893,14 +893,14 @@
       // A file still in the change is marked reviewed here as in its step; one the revision took out has nothing to mark.
       const current = filesByPath.get(file.path);
       const viewed = current && fileViewed(current);
-      return `<li><button class="nav-file ${viewed ? 'is-viewed' : ''}" data-since-file="${index}" aria-current="${index === sinceIndex ? 'location' : 'false'}" aria-label="${escape(`Open ${file.path}${current ? (viewed ? ', reviewed' : ', not reviewed') : ''}`)}">${current ? `<span class="file-status" aria-hidden="true" title="${viewed ? 'Reviewed. Click to unmark' : 'Mark as reviewed'}">${viewed ? icon('check') : ''}</span>` : ''}<span class="nav-file-label"><span class="nav-file-name">${escape(file.path.slice(slash + 1))}</span>${slash < 0 ? '' : `<small class="nav-file-directory">${pathFit(file.path.slice(0, slash))}</small>`}</span></button></li>`;
+      return `<li><button class="nav-file ${viewed ? 'is-viewed' : ''}" data-since-file="${index}" aria-current="${index === sinceIndex ? 'location' : 'false'}" aria-label="${escape(`Open ${file.path}${current ? (viewed ? ', reviewed' : ', not reviewed') : ''}`)}">${current ? `<span class="file-status" aria-hidden="true" title="${viewed ? 'Reviewed. Click to unmark' : 'Mark as reviewed'}">${viewed ? icon('check') : ''}</span>` : ''}<span class="nav-file-label"><span class="nav-file-name">${fileNameParts(file.path.slice(slash + 1))}</span>${slash < 0 ? '' : `<small class="nav-file-directory">${pathFit(file.path.slice(0, slash))}</small>`}</span></button></li>`;
     }).join('')}</ul>` : ''}</li>` : ''}</ul>`;
     const fileLink = (id, layer) => {
       const file = files.get(id);
       const slash = file.path.lastIndexOf('/');
       const filename = file.path.slice(slash + 1);
       const directory = slash < 0 ? '' : file.path.slice(0, slash);
-      return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" aria-current="${state.navFile === id && state.view === layer.id ? 'location' : 'false'}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', reviewed' : ', not reviewed'}`)}"><span class="file-status" aria-hidden="true" title="${fileViewed(file) ? 'Reviewed. Click to unmark' : 'Mark as reviewed'}">${fileViewed(file) ? icon('check') : ''}</span><span class="nav-file-label"><span class="nav-file-name">${escape(filename)}</span>${directory ? `<small class="nav-file-directory">${pathFit(directory)}</small>` : ''}</span>${needMark(file)}${navPreviewMark(file)}</button></li>${query ? matchList(id, layer, query) : ''}`;
+      return `<li><button class="nav-file ${fileViewed(file) ? 'is-viewed' : ''}" data-file-link="${id}" data-file-layer="${layer.id}" aria-current="${state.navFile === id && state.view === layer.id ? 'location' : 'false'}" aria-label="${escape(`Open ${file.path}${fileViewed(file) ? ', reviewed' : ', not reviewed'}`)}"><span class="file-status" aria-hidden="true" title="${fileViewed(file) ? 'Reviewed. Click to unmark' : 'Mark as reviewed'}">${fileViewed(file) ? icon('check') : ''}</span><span class="nav-file-label"><span class="nav-file-name">${fileNameParts(filename)}</span>${directory ? `<small class="nav-file-directory">${pathFit(directory)}</small>` : ''}</span>${needMark(file)}${navPreviewMark(file)}</button></li>${query ? matchList(id, layer, query) : ''}`;
     };
     // With something typed the sidebar is what search found, not the walkthrough: first the files
     // whose name has it (the file's own name before its folders'), then the files with it in their
@@ -4055,6 +4055,14 @@
     }
     return -1;
   };
+  // A file name in two parts, so a theme that keeps it on one line can cut the start and keep
+  // the end: the last word and the extension (_test.rb), else the extension.
+  function fileNameParts(name) {
+    const dot = name.indexOf('.', 1), stem = dot < 0 ? name : name.slice(0, dot), ext = dot < 0 ? '' : name.slice(dot);
+    const cut = Math.max(stem.lastIndexOf('_'), stem.lastIndexOf('-'));
+    const at = cut > 0 && stem.length - cut + ext.length <= 16 ? cut : stem.length;
+    return `<span class="name-head">${escape(name.slice(0, at))}</span><span class="name-tail">${escape(name.slice(at))}</span>`;
+  }
   // A finished step's check stays on the line with the title's last word.
   function stepTitle(title, done) {
     if (!done) return escape(title);

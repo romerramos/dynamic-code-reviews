@@ -428,8 +428,8 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 
 /* --- room: a wider list, so step names fit on a line, and a wider page for the lines ------------- */
 @media(min-width:1100px){
-  html[data-theme^="minimal-"] body:not(.sidebar-collapsed):not(.zen) .workspace{grid-template-columns:360px minmax(0,1fr)}
-  html[data-theme^="minimal-"] body.ledger-open:not(.sidebar-collapsed):not(.zen) .workspace{grid-template-columns:360px minmax(0,1fr) var(--ledger-w,380px)}
+  html[data-theme^="minimal-"] body:not(.sidebar-collapsed):not(.zen) .workspace{grid-template-columns:384px minmax(0,1fr)}
+  html[data-theme^="minimal-"] body.ledger-open:not(.sidebar-collapsed):not(.zen) .workspace{grid-template-columns:384px minmax(0,1fr) var(--ledger-w,380px)}
 }
 [data-theme^="minimal-"] .overview-reading{max-width:880px}
 [data-theme^="minimal-"] .overview-intro .lead-rest{max-width:680px}
@@ -630,3 +630,9 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .overview-reading .overview-comments:has(.overview-clear)~.overview-settled{margin-top:24px}
 [data-theme^="minimal-"] .overview-clear>div{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
 [data-theme^="minimal-"] .overview-clear p{margin:0}
+
+/* A file name stays on one line, its box under the step's text; too long, it loses its middle, never its end. */
+[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view][aria-current="page"])>.nav-files{margin-left:0}
+[data-theme^="minimal-"] .sidebar nav button.nav-file .nav-file-name{display:flex;min-width:0;white-space:nowrap;overflow-wrap:normal}
+[data-theme^="minimal-"] .sidebar nav button.nav-file .name-head{min-width:0;overflow:hidden;text-overflow:ellipsis}
+[data-theme^="minimal-"] .sidebar nav button.nav-file .name-tail{flex:none}
