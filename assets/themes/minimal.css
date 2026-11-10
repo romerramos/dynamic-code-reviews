@@ -522,3 +522,30 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"])){margin-left:0;padding-left:0;border-left:0}
 [data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]))>button{margin-left:-5px;padding-left:13px;box-shadow:inset 1px 0 var(--line-neutral-4)}
 [data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{margin:8px 0 2px;padding:0 8px;color:var(--minimal-faint);font-size:11px;font-weight:400;letter-spacing:0;text-transform:none}
+
+/* --- marks on the left, where they belong to their line ------------------------------------------------
+   A finished step's check sits before its name; a file's review mark is a small square before its name,
+   empty until it is reviewed, then a check: it looks like what it is, something to click. */
+[data-theme^="minimal-"] #navigation .nav-section button[data-view]{display:grid;grid-template-columns:14px minmax(0,1fr);column-gap:6px;align-items:baseline;padding-right:8px}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number{position:static;order:0;grid-column:1;width:14px;min-width:0;color:var(--minimal-faint)}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number:not(:has(svg)){display:block;visibility:hidden}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number .review-icon{width:12px;height:12px;vertical-align:-1px}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body{grid-column:2;order:0}
+[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view][aria-current="page"])>.nav-files{margin-left:28px}
+[data-theme^="minimal-"] .sidebar nav button.nav-file{align-items:center}
+[data-theme^="minimal-"] .sidebar nav .file-status{flex:0 0 12px;width:12px;height:12px;margin:0;border:1px solid var(--line-neutral-5);border-radius:3px;background:var(--surface);cursor:pointer}
+[data-theme^="minimal-"] .sidebar nav .file-status:hover{border-color:var(--ink)}
+[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status{display:grid;place-items:center;border-color:transparent;background:transparent;color:var(--muted)}
+[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status .review-icon{width:12px;height:12px}
+[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status:hover{color:var(--ink)}
+/* Tests fold away until asked for: the word and how many, nothing more. */
+[data-theme^="minimal-"] .sidebar nav .nav-tests-toggle{display:inline-flex;align-items:baseline;gap:5px;padding:2px 0;color:var(--minimal-faint);cursor:pointer}
+[data-theme^="minimal-"] .sidebar nav .nav-tests-toggle:hover{color:var(--ink)}
+[data-theme^="minimal-"] .sidebar nav .nav-tests-count{display:inline}
+[data-theme^="minimal-"] .sidebar nav .nav-tests-toggle::after{content:"›";display:inline-block;transition:transform .12s}
+[data-theme^="minimal-"] .sidebar nav .nav-tests-toggle[aria-expanded="true"]::after{transform:rotate(90deg)}
+[data-theme^="minimal-"] .sidebar nav .nav-tests-label:has(>.nav-tests-toggle[aria-expanded="false"]) ~ li{display:none}
+[data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{margin:6px 0 0;padding:0 8px 0 28px}
+[data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]))>button{margin-left:-5px;padding-left:13px;width:calc(100% + 5px)}
+[data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{padding:0 8px}
+[data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]){margin-left:-5px!important;padding-left:13px!important;width:calc(100% + 5px)!important}

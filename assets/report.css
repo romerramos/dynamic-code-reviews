@@ -1533,3 +1533,6 @@ details.thread-was:not([open])>summary{margin-bottom:0}
 .composer-agent-mark svg,.review-bar .bar-agent span svg{fill:currentColor!important;stroke:none!important}
 .composer-mode .composer-agent-mark{display:inline-grid!important;flex:none;width:14px;height:14px}
 .composer-mode .composer-agent-mark svg{display:block;width:14px!important;height:14px!important;min-width:14px}
+
+.sidebar nav .nav-tests-toggle{all:unset;cursor:default;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit}
+.sidebar nav .nav-tests-count{display:none}

@@ -941,7 +941,9 @@
           }).join('')}</div></li>`;
         }).join('');
         const testLinks = ordered.tests.map(id => fileLink(id, layer)).join('');
-        const tests = testLinks ? `<li class="nav-tests-label" role="presentation">Tests</li>${testLinks}` : '';
+        // Tests are a label that a theme may make a fold: how many, and the reader opens them when they want them.
+        const testsOpen = (state.testsOpen || []).includes(layer.id) || ordered.tests.includes(state.navFile);
+        const tests = testLinks ? `<li class="nav-tests-label" role="presentation"><button type="button" class="nav-tests-toggle" data-tests-toggle="${layer.id}" aria-expanded="${testsOpen}">Tests <span class="nav-tests-count">${ordered.tests.length}</span></button></li>${testLinks}` : '';
         const expanded = state.view === layer.id;
         html += `<li><button data-view="${layer.id}" aria-current="${state.view === layer.id ? 'page' : 'false'}" aria-expanded="${expanded}" aria-controls="nav-files-${layer.id}"><span class="step-number">${completed.total && completed.viewed === completed.total ? icon('check') : layers.indexOf(layer) + 1}</span><span class="step-body"><strong>${escape(titleWithoutNumber(group.layers.length === 1 ? group.title : layer.title))}</strong><small>${progressText(completed)}${count ? ` · ${count} comments` : ''}</small></span></button>${expanded ? `<ul id="nav-files-${layer.id}" class="nav-files">${links}${tests}</ul>` : `<ul id="nav-files-${layer.id}" hidden></ul>`}</li>`;
       });
@@ -3475,6 +3477,15 @@
       return;
     }
     if (sinceLink) { sinceFile(Number(sinceLink.dataset.sinceFile)); return; }
+    const testsToggle = event.target.closest('[data-tests-toggle]');
+    if (testsToggle) {
+      const id = testsToggle.dataset.testsToggle;
+      const open = new Set(state.testsOpen || []);
+      open.has(id) ? open.delete(id) : open.add(id);
+      state.testsOpen = [...open];
+      persist(); renderNavigation();
+      return;
+    }
     const matchLine = event.target.closest('.nav-match');
     if (matchLine) { openMatch(matchLine); renderNavigation(); return; }
     const fileLink = event.target.closest('[data-file-link]');
