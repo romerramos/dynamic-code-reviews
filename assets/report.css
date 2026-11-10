@@ -1570,7 +1570,7 @@ details.thread-was:not([open])>summary{margin-bottom:0}
 .popover-title{display:contents}
 .step-done{display:none}
 .sidebar-top{display:contents}
-.sidebar-hide,.sidebar-show,.ledger-hide,.ledger-show,.step-next,.ledger-at,.thread-go{display:none}
+.sidebar-hide,.sidebar-show,.ledger-hide,.ledger-show,.step-next,.ledger-at,.thread-go,.qa-preview-flow{display:none}
 /* Settings split in General and Agents, for a theme that shows the agent there instead of on its card. */
 .settings-tabs,.settings-agents{display:none}
 .step-end{white-space:nowrap}

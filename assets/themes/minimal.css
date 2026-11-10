@@ -965,3 +965,31 @@ html[data-theme^="minimal-"]{--agent-claude:var(--ink)!important;--agent-codex:v
 /* The result's check is the plain mark, no circle behind it. */
 [data-theme^="minimal-"] .dcr-qa-done .dcr-qa-check{display:inline-grid;place-items:center;width:18px;height:18px;margin-top:1px;border:0;border-radius:0;background:none!important;box-shadow:none;color:var(--ink)}
 [data-theme^="minimal-"] .dcr-qa-done .dcr-qa-check svg{width:16px;height:16px}
+
+/* --- What QA recorded, drawn as the rest of the Overview: no grey cards. In a comment, Actual and
+   Expected are the comment's own size and the recording a small framed still with one quiet line;
+   Other flows checked is a heading like Agent comments, each flow a row. --- */
+[data-theme^="minimal-"] .overview-reading .qa-journey{margin:10px 0 0;padding:0;border:0;background:none;font-size:14.5px}
+[data-theme^="minimal-"] .overview-reading .qa-journey .qa-route:empty{display:none}
+[data-theme^="minimal-"] .overview-reading .qa-journey :is(.qa-result,.qa-expected){margin:0 0 6px;padding:0;border:0;background:none;color:var(--ink);font-size:inherit;line-height:1.6}
+[data-theme^="minimal-"] .overview-reading .qa-journey :is(.qa-result,.qa-expected) strong{margin-right:4px;color:var(--minimal-faint);font-weight:400}
+[data-theme^="minimal-"] .overview-reading .qa-preview{display:flex;align-items:center;gap:14px;width:auto;max-width:100%;margin:8px 0 0;padding:0;border:0;border-radius:0;background:none!important;box-shadow:none;color:var(--ink);text-align:left;cursor:pointer}
+[data-theme^="minimal-"] .overview-reading .qa-preview-image{position:relative;flex:none;width:112px;height:70px;overflow:hidden;border:1px solid var(--line);border-radius:8px;background:var(--minimal-soft)}
+[data-theme^="minimal-"] .overview-reading .qa-preview-image :is(img,video){width:100%;height:100%;object-fit:cover;object-position:top}
+[data-theme^="minimal-"] .overview-reading .qa-preview-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:color-mix(in srgb,var(--ink) 75%,transparent);color:var(--surface);font-size:10px}
+[data-theme^="minimal-"] .overview-reading .qa-preview-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
+[data-theme^="minimal-"] .overview-reading .qa-preview:not(.qa-preview-compact) .qa-preview-copy>strong{display:none}
+[data-theme^="minimal-"] .overview-reading .qa-preview-flow{display:block;font-size:13px}
+[data-theme^="minimal-"] .overview-reading .qa-preview-action{color:var(--minimal-faint);font-size:12px;font-weight:400}
+[data-theme^="minimal-"] .overview-reading .qa-preview:hover :is(.qa-preview-flow,.qa-preview-copy>strong){text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+[data-theme^="minimal-"] .overview-reading .other-checks{margin:44px 0 0;padding:0;border:0;background:none}
+[data-theme^="minimal-"] .overview-reading .other-checks>h2{margin:0 0 6px;color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
+[data-theme^="minimal-"] .overview-reading .other-checks>h2 .badge{display:none}
+[data-theme^="minimal-"] .overview-reading .qa-check-list{display:grid;gap:0}
+[data-theme^="minimal-"] .overview-reading .qa-preview-compact{display:grid;grid-template-columns:112px minmax(0,1fr);gap:0 16px;align-items:start;margin:0;padding:10px 0}
+[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-copy{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 16px}
+[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-copy>strong{grid-column:1;font-size:14px;font-weight:400}
+[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status{grid-column:2;grid-row:1;padding:0;border:0;background:none;color:var(--minimal-faint);font-size:12px;font-weight:400;text-transform:none}
+[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status.failed{color:var(--ink)}
+[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-action{display:none}
+[data-theme^="minimal-"] .overview-reading .qa-preview-compact small{grid-column:1 / -1;color:var(--minimal-faint);font-size:12.5px;line-height:1.5}
