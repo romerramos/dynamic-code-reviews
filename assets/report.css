@@ -1425,3 +1425,7 @@ dialog.palette::backdrop{background:color-mix(in srgb,var(--ink) 14%,transparent
 /* Your review floats over the reading area on a narrower window: the bar keeps to what is left of it. */
 @media(min-width:741px) and (max-width:1499px){body.ledger-open .review-bar{left:calc(50% - min(var(--ledger-w,420px),92vw) / 2);width:min(640px,calc(100% - min(var(--ledger-w,420px),92vw) - 28px))}}
 body.zen.ledger-open .review-bar{left:calc(50% - min(var(--ledger-w,420px),92vw) / 2);width:min(640px,calc(100% - min(var(--ledger-w,420px),92vw) - 28px))}
+.review-bar .bar-agent{display:grid;place-items:center;width:20px;margin-left:-4px;padding:0}
+.review-bar .bar-agent span{width:8px;height:8px;border-radius:50%;background:var(--dcr-off)}
+.review-bar .bar-agent[data-tone="ok"] span{background:var(--dcr-ok)}
+.review-bar .bar-agent[data-tone="work"] span{background:var(--dcr-work)}

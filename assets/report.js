@@ -3937,6 +3937,11 @@
     const where = selection ? `line${selection.start === selection.end ? ` ${selection.start}` : `s ${selection.start}–${selection.end}`}` : pagedReading() ? 'this file' : state.view === 'overview' ? (ask ? 'this change' : 'this review') : 'these changes';
     const prompt = selection ? `${ask ? 'Ask about' : 'Comment on'} ${where}` : ask ? `Ask about ${where}` : `Comment on ${where}`;
     if ($('bar-input').placeholder !== prompt) { $('bar-input').placeholder = prompt; $('bar-input').setAttribute('aria-label', prompt); }
+    // The agent running the review is a dot: its colour says whether one is listening or working.
+    const chip = document.getElementById('dcr-presence');
+    $('bar-agent').hidden = !chip;
+    if (chip && $('bar-agent').dataset.tone !== chip.dataset.tone) $('bar-agent').dataset.tone = chip.dataset.tone || 'off';
+    if (chip && $('bar-agent').title !== chip.title) { $('bar-agent').title = chip.title; $('bar-agent').setAttribute('aria-label', chip.getAttribute('aria-label') || chip.title); }
     const last = definitionTrail.at(-1);
     $('bar-back').hidden = !last;
     if (last) $('bar-back').textContent = `← Back to ${last.label}`;
@@ -3955,6 +3960,16 @@
   $('bar-keys').textContent = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K';
   $('bar-action').addEventListener('click', () => { barRun?.(); queueBar(); });
   $('bar-back').addEventListener('click', () => definitionBack());
+  // The agent's card opens from its chip, which the dot presses.
+  $('bar-agent').addEventListener('click', () => {
+    const chip = document.getElementById('dcr-presence');
+    // After this click has run its course: the card closes on a click outside itself and its chip.
+    setTimeout(() => {
+      chip?.click();
+      // Where the dot is, for a theme that hides the chip and so places the card itself.
+      document.documentElement.style.setProperty('--bar-agent-left', `${Math.max(12, Math.round($('bar-agent').getBoundingClientRect().left) - 14)}px`);
+    });
+  });
   $('bar-update').addEventListener('click', () => document.getElementById('dcr-update')?.click());
   $('bar-nav').addEventListener('click', () => $('nav-toggle').click());
   $('bar-commands').addEventListener('click', () => openPalette());
@@ -3970,7 +3985,7 @@
     if (ask) composer.sender(comment.id, 'ask');
   });
   // The served review's own buttons (Update, what is left to settle) change without the page drawing again.
-  if (typeof MutationObserver !== 'undefined') new MutationObserver(queueBar).observe(document.querySelector('.header-actions') || document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ['hidden', 'class', 'disabled']});
+  if (typeof MutationObserver !== 'undefined') document.querySelectorAll('.header-actions, .review-toolbar').forEach(node => new MutationObserver(queueBar).observe(node, {subtree: true, childList: true, attributes: true, attributeFilter: ['hidden', 'class', 'disabled', 'data-tone', 'title']}));
 
   // ⌘K: everything the page can do, the steps, the files and the code, narrowed as you type.
   let paletteRows = [], paletteAt = 0;
@@ -3985,7 +4000,7 @@
       next.run && {label: next.label, run: next.run},
       reading && {label: fileViewed(reading) ? 'Mark this file as not reviewed' : 'Mark this file reviewed', keys: 'm', run: () => markViewed(reading, !fileViewed(reading))},
       ...leaderCommands(markKeyboardFile).filter(command => command.key !== ' ').map(command => ({label: command.label, keys: `space ${command.key}`, run: command.run})),
-      document.getElementById('dcr-presence') && !agentChip() && {label: 'Agents and adversaries', run: () => document.getElementById('dcr-presence').click()},
+      document.getElementById('dcr-presence') && !agentChip() && {label: 'Agents and adversaries', run: () => $('bar-agent').click()},
       qa && {label: 'Start QA review', run: () => { select('overview'); qa.click(); }},
       update && !update.hidden && !update.disabled && {label: update.textContent.trim() === 'Update' ? 'Update the review to the code as it is' : update.textContent.trim(), run: () => update.click()},
       ...[...(revisions?.options || [])].filter(option => !option.selected).map(option => ({label: `Open ${option.textContent.trim()}`, run: () => { revisions.value = option.value; revisions.onchange({target: revisions}); }})),

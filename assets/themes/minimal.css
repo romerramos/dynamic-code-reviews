@@ -99,3 +99,45 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 /* --- what floats over the page: one plain surface, a hairline, no tint ---------------------------- */
 [data-theme^="minimal-"] :is(.comment-popover,.review-note-popover){border-color:var(--line)}
 [data-theme^="minimal-"] :is(.comment-popover,.review-note-popover) .popover-heading{background:transparent;border-color:var(--line);color:var(--muted)}
+
+/* --- dialogs: the page stays in sight under a light wash; one surface, a hairline, no bands -------- */
+[data-theme^="minimal-"] dialog.modal{background:color-mix(in srgb,var(--ink) 10%,transparent)}
+[data-theme^="minimal-"] dialog::backdrop{background:color-mix(in srgb,var(--ink) 4%,transparent);-webkit-backdrop-filter:none;backdrop-filter:none}
+[data-theme^="minimal-"] .modal-box{border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 64px color-mix(in srgb,var(--shade) 12%,transparent)}
+[data-theme^="minimal-"] .modal-box>:is(header,footer),[data-theme^="minimal-"] .modal-box form>:is(header,footer){border-color:transparent;background:transparent}
+[data-theme^="minimal-"] .modal-box>header{padding-bottom:8px}
+[data-theme^="minimal-"] .modal-box header h2{font-size:15px;font-weight:600;letter-spacing:0}
+/* A section is named in a quiet line, and space separates it from the next. */
+[data-theme^="minimal-"] :is(.settings-box,.view-menu,.keys-box) section{border-color:transparent}
+[data-theme^="minimal-"] :is(.settings-box,.view-menu) section>h2,[data-theme^="minimal-"] .keys-box h3{color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
+[data-theme^="minimal-"] .view-menu{border-color:var(--line);box-shadow:0 16px 40px color-mix(in srgb,var(--shade) 10%,transparent)}
+/* Closing is a small cross, never a ringed button. */
+[data-theme^="minimal-"] .btn-circle.btn-ghost{border-color:transparent;background:transparent;box-shadow:none;color:var(--muted)}
+[data-theme^="minimal-"] .btn-circle.btn-ghost:hover{color:var(--ink)}
+[data-theme^="minimal-"] :is(.btn,.icon-button,.header-button):focus-visible{outline:1px solid var(--muted);outline-offset:1px}
+/* Buttons: one solid one for what comes next, words for the rest. */
+[data-theme^="minimal-"] .btn:not(.btn-primary,.btn-circle){border-color:transparent;background:transparent;box-shadow:none;color:var(--ink-neutral-3)}
+[data-theme^="minimal-"] .btn:not(.btn-primary,.btn-circle):hover{background:var(--minimal-soft);color:var(--ink)}
+[data-theme^="minimal-"] .btn-primary{border-color:transparent;box-shadow:none}
+
+/* --- writing on a line: the box under the line is the one place to type, so the bar steps aside --- */
+[data-theme^="minimal-"] body:has(#inline-composer) .review-bar{display:none}
+[data-theme^="minimal-"] .composer{border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px color-mix(in srgb,var(--shade) 7%,transparent)}
+[data-theme^="minimal-"] .composer textarea{border-color:transparent;background:var(--minimal-soft);box-shadow:none;outline:0}
+
+/* --- Your review: a plain column --------------------------------------------------------------------- */
+[data-theme^="minimal-"] .ledger{border-color:var(--line);box-shadow:none}
+[data-theme^="minimal-"] :is(.ledger-head,.ledger-footer){border-color:transparent;background:transparent}
+[data-theme^="minimal-"] .diff-table td.user-range-selected{background:var(--minimal-soft)!important;box-shadow:none!important}
+[data-theme^="minimal-"] .diff-table td.gutter.user-range-selected:first-child{box-shadow:inset 2px 0 var(--ink)!important}
+
+/* --- All changes and the walkthrough: a file is its name and its code, not a card ------------------- */
+[data-theme^="minimal-"] .file-card{border:0;border-radius:0;background:transparent}
+[data-theme^="minimal-"] .file-card>summary{padding-left:0;padding-right:0;border-color:transparent;background:transparent}
+[data-theme^="minimal-"] .file-card .file-icon{display:none}
+[data-theme^="minimal-"] .diff-table .range-heading td{padding-left:0;border-color:transparent;background:transparent;color:var(--muted)}
+[data-theme^="minimal-"] .diff-table .range-heading .range-label{color:var(--minimal-faint);font-weight:400;letter-spacing:.04em}
+[data-theme^="minimal-"] .badge{border-color:transparent}
+
+/* The agent's card opens over its dot in the bar, since its chip went with the toolbar. */
+[data-theme^="minimal-"] #dcr-presence-card{left:var(--bar-agent-left,12px)!important;top:auto!important;bottom:84px!important;max-height:calc(100dvh - 108px)!important;overflow-y:auto;border-color:var(--line);box-shadow:0 16px 40px color-mix(in srgb,var(--shade) 10%,transparent)}
