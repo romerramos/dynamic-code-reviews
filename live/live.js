@@ -1846,7 +1846,11 @@
   // from the tab or on Overview. Otherwise a notice says so, and a button in the header stays
   // until they take it, however the notice went.
   // A newer revision opens on what it changed; a save into this one, on the Overview.
-  const openLatest = () => { history.replaceState(null, '', latest > (review.history?.revision || 0) ? '/#since' : '/#overview'); location.reload(); };
+  const openLatest = () => {
+    const since = latest > (review.history?.revision || 0);
+    if (!since) try { sessionStorage.setItem('dcr-land', 'overview'); } catch { /* opens where the reader stopped */ }
+    history.replaceState(null, '', since ? '/#since' : '/#overview'); location.reload();
+  };
   const newerButton = Object.assign(document.createElement('button'), {type: 'button', id: 'dcr-newer', className: 'header-button', hidden: true, onclick: openLatest});
   document.querySelector('.header-actions')?.prepend(newerButton);
   const shownRevision = review.history?.revision || 0;

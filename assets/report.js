@@ -31,8 +31,8 @@
   const storageKey = `dynamic-review:${snapshot.fingerprint}${review.history ? `:${review.history.series}:${review.history.revision}` : ""}`;
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { /* file:// storage may be disabled */ }
-  // Each opening starts at the review summary. Persist reading progress, not the last page;
-  // an explicit hash remains available for links directly to a walkthrough or All changes.
+  // The view starts as the Overview and is settled once the page is built (see ReviewTools.landing):
+  // the reader comes back to the file, and the place in it, where they stopped.
   const state = {notes:{}, personalComments:[], resolvedComments:[], fileOpen:{}, groupOpen:{}, componentFiles:{}, ...saved, view:'overview'};
   const focusOrder = ReviewTools.focusFiles(layers, files);
   let focusMode = true;
@@ -2700,10 +2700,12 @@
     state.navFile = focusOrder[focusIndex]?.file;
     if (focusOrder[focusIndex]) {
       state.view = focusOrder[focusIndex].layer.id;
+      history.replaceState(null, '', `#${state.view}`);
       activateComponentFile(focusOrder[focusIndex].layer, focusOrder[focusIndex].file);
     }
     selectedChange = null;
     clearSelection(); render(); $('content').scrollTo({top:0, behavior:'instant'}); revealFirstChange(); updateChangeNavigation();
+    persist();
   }
   // Full source can open with its first change below the fold; land on it like the Next section arrow does.
   function revealFirstChange() {
@@ -3081,6 +3083,7 @@
     state.view = view;
     history.replaceState(null, '', `#${view}`);
     render();
+    persist();
     if (scroll) { $('content').scrollTop = 0; revealFirstChange(); }
   }
   function navigateFile(layer, id) {
@@ -3896,9 +3899,11 @@
   $('repo-label').textContent = workspace || snapshot.repo.split('/').pop();
   const scope = ReviewTools.scopeLabel(snapshot, review);
   $('scope').innerHTML = `<span class="badge neutral" title="${escape(scope)}">${escape(scope)}</span>`;
-  const hash = location.hash.slice(1);
-  if (views().includes(hash)) state.view = hash;
+  let forced = null;
+  try { forced = sessionStorage.getItem('dcr-land'); sessionStorage.removeItem('dcr-land'); } catch { /* opens where the reader stopped */ }
+  state.view = ReviewTools.landing(location.hash.slice(1), saved.view, views(), forced);
   if (state.view !== saved.view) state.navFile = null;
+  history.replaceState(null, '', `#${state.view}`);
   window.addEventListener('hashchange', () => {
     const view = location.hash.slice(1);
     if (views().includes(view)) select(view);
@@ -3906,5 +3911,13 @@
   const initialFile = focusOrder.findIndex(entry => entry.layer.id === state.view && (!state.navFile || entry.file === state.navFile));
   if (initialFile >= 0) focusIndex = initialFile;
   setFontSize(state.codeFontSize);
+  // The place in the file comes back too, once the page is drawn, and is kept as the reader scrolls.
+  const here = () => `${state.view}:${state.navFile || ''}`;
+  if (state.scroll?.at === here()) requestAnimationFrame(() => { $('content').scrollTop = state.scroll.top; });
+  let scrollSaved = null;
+  $('content').addEventListener('scroll', () => {
+    clearTimeout(scrollSaved);
+    scrollSaved = setTimeout(() => { state.scroll = {at: here(), top: Math.round($('content').scrollTop)}; persist(); }, 500);
+  }, {passive: true});
   render();
 })();

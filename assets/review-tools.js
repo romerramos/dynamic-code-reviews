@@ -588,6 +588,14 @@ globalThis.ReviewTools = (() => {
   const riskTag = tag => RISK_TAGS[tag] || tag;
   // Most risky first; files of equal score keep the agent's order.
   const riskFiles = ranking => [...(ranking?.files || [])].sort((a, b) => b.score - a.score);
+  // Where a review opens. An address that names a step or a view is a link to it. A bare address,
+  // or the Overview link every command prints, resumes where the reader stopped, like a bookmark
+  // in a book. forced: the page itself reloads onto a view (the Overview, to show new QA clips).
+  const landing = (hash, savedView, views, forced) => {
+    if (views.includes(forced)) return forced;
+    if (hash !== 'overview' && views.includes(hash)) return hash;
+    return views.includes(savedView) ? savedView : 'overview';
+  };
 
-  return {whenText, ledgerPlace, ledgerBy, pathParts, pathFit, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, scopeLabel, sha256, githubLink, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  return {whenText, ledgerPlace, ledgerBy, pathParts, pathFit, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, scopeLabel, sha256, githubLink, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();

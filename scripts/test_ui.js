@@ -38,6 +38,18 @@ console.log('PASS component pairs respect directory and layer boundaries without
   assert.equal(tools.whenText(''), '');
   console.log('PASS a row of Your review names where it is and the day and time it was said');
 }
+{
+  // A review opens where the reader stopped; only an address naming a step or view goes elsewhere.
+  const views = ['overview', 'files', 'g0l0', 'g0l1'];
+  assert.equal(tools.landing('', undefined, views), 'overview', 'a first opening starts on the Overview');
+  assert.equal(tools.landing('overview', 'g0l1', views), 'g0l1', 'the printed Overview link resumes the reading');
+  assert.equal(tools.landing('', 'g0l1', views), 'g0l1');
+  assert.equal(tools.landing('overview', 'overview', views), 'overview', 'a reader who went back to the Overview stays there');
+  assert.equal(tools.landing('g0l0', 'g0l1', views), 'g0l0', 'a link to a step wins');
+  assert.equal(tools.landing('overview', 'g9l9', views), 'overview', 'a step this review no longer has');
+  assert.equal(tools.landing('g0l1', 'g0l1', views, 'overview'), 'overview', 'the page can reload onto the Overview');
+  console.log('PASS a review opens where the reader stopped, unless the address names another place');
+}
 assert.equal(tools.category('app/views/rentals/show.html.erb'), 'Design / UI');
 assert.equal(tools.category('app/assets/stylesheets/rentals.scss'), 'Design / UI');
 assert.equal(tools.category('app/javascript/controllers/rental_controller.js'), 'Frontend');

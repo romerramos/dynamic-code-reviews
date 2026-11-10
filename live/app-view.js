@@ -668,7 +668,7 @@
     openButtonDone.textContent = newer ? 'See the clips' : 'Back to the review';
     // The clips are in the saved review, not in this page, so leaving this dialog by any way (the button, Close, Esc)
     // opens it. The address is often already /#overview, where assigning it would not load anything.
-    done.onclose = newer ? () => { history.replaceState(null, '', '/#overview'); location.reload(); } : null;
+    done.onclose = newer ? () => { try { sessionStorage.setItem('dcr-land', 'overview'); } catch { /* opens where the reader stopped */ } history.replaceState(null, '', '/#overview'); location.reload(); } : null;
     done.querySelector('[data-done-close]').hidden = !!newer;
     openButtonDone.onclick = () => done.close();
     done.showModal();

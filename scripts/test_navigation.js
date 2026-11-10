@@ -260,8 +260,8 @@ assert.match(videoEvidence, /Inspect 2 original frames/);
 assert.doesNotMatch(videoEvidence, /data-qa-sequence=/);
 console.log('PASS video evidence retains one-click previews, native controls, PNG posters and readable stills');
 
-// Every normal opening starts on Overview, even when reading mode or a previous
-// destination was saved. Explicit links to a report section still work.
+// A first opening starts on Overview; a later one resumes where the reader stopped, also from
+// the Overview link the commands print. Explicit links to a report section still work.
 const startup = () => {
   vm.runInContext(source.replace(/  render\(\);\n\}\)\(\);\s*$/, '  globalThis.startupState = {view:state.view, navFile:state.navFile, focusIndex};\n})();'), sandbox);
   return sandbox.startupState;
@@ -270,20 +270,29 @@ sandbox.location.hash = '';
 sandbox.localStorage.getItem = () => null;
 assert.equal(startup().view, 'overview');
 sandbox.localStorage.getItem = key => key === 'dynamic-review:reading-mode' ? 'walkthrough' : JSON.stringify({view:'g0l0',notes:{g0l0:'Saved note'}});
-assert.equal(startup().view, 'overview');
+assert.equal(startup().view, 'g0l0');
+sandbox.location.hash = '#overview';
+assert.equal(startup().view, 'g0l0');
 sandbox.location.hash = '#files';
 assert.equal(startup().view, 'files');
 sandbox.location.hash = '#g0l0';
 assert.equal(startup().view, 'g0l0');
 sandbox.location.hash = '#unknown';
-assert.equal(startup().view, 'overview');
+assert.equal(startup().view, 'g0l0'); // not a place in this review: resume
 sandbox.location.hash = '#g0l0';
 sandbox.localStorage.getItem = key => key === 'dynamic-review:reading-mode' ? null : JSON.stringify({view:'g1l0',navFile:'f2'});
 const linked = startup();
 assert.equal(linked.view, 'g0l0');
 assert.equal(linked.navFile, null);
 assert.equal(linked.focusIndex, 0);
-console.log('PASS reports open on Overview and honor explicit deep links');
+// The file within the step comes back with it.
+sandbox.location.hash = '#overview';
+sandbox.localStorage.getItem = key => key === 'dynamic-review:reading-mode' ? null : JSON.stringify({view:'g0l0',navFile:'f2'});
+const resumed = startup();
+assert.equal(resumed.view, 'g0l0');
+assert.equal(resumed.navFile, 'f2');
+assert.equal(resumed.focusIndex, 2);
+console.log('PASS a report opens on Overview the first time, resumes the step and file the reader stopped on, and honors explicit deep links');
 
 // Since revision reads like file by file: one file at a time, whole, with no range headings to
 // work out, and the sidebar lists its files under it.
