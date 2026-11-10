@@ -486,11 +486,13 @@ module SeriesChecks
           rejects('A tag outside the rubric was posted') { map.call(risk.merge('files' => [risk['files'][0].merge('tags' => ['browser-history'])])) }
           rejects('A file ranked twice was posted') { map.call(risk.merge('files' => risk['files'] * 2)) }
           rejects('A reason with a line break was posted') { map.call(risk.merge('files' => [risk['files'][0].merge('reason' => "One\nTwo")])) }
+          rejects('A title longer than a line was posted') { map.call(risk.merge('files' => [risk['files'][0].merge('title' => 'x' * 61)])) }
           DCR::LiveCLI.risk_ranking(state, {none: 'Only copy changed'}, series)
           assert(state.read.dig('risk_rankings', key, 'none') == 'Only copy changed', 'Saying no file stands out was not kept')
           File.binwrite(File.join(out, 'screen.png'), "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==".unpack1('m'))
           File.write(File.join(out, 'shot.json'), JSON.generate('id' => 'two', 'path' => 'screen.png', 'title' => 'The value shows two', 'paths' => ['sample.rb']))
           DCR::LiveCLI.screenshot(state, {file: File.join(out, 'shot.json')}, series)
+          map.call(risk.merge('files' => [risk['files'][0].merge('title' => 'Every caller gets two')]))
           map.call(risk)
           assert(state.read.dig('risk_rankings', key, 'files').length == 1, 'The posted risk ranking is not on the open review')
           rejects('An increment built on an unfinished review') { ReviewSeries.prepare(repo: root, name: 'live-check', out: File.join(out, 'prepared')) }

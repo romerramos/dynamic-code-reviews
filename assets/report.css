@@ -1513,3 +1513,5 @@ details.thread-was:not([open])>summary{margin-bottom:0}
 .overview-intro :is(.lead,.lead-rest) code{padding:0 3px;border-radius:calc(4px * var(--round));background:var(--bg-neutral-3);font:.88em var(--mono);white-space:nowrap}
 .overview-intro .lead-rest p{margin:0 0 12px}
 .overview-intro .lead-rest p:last-child{margin-bottom:0}
+
+.thread-face{display:none}

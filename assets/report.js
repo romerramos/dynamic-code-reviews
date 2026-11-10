@@ -2125,6 +2125,18 @@
     const by = slug ? escape(AGENT_NAMES[slug] || slug.charAt(0).toUpperCase() + slug.slice(1)) : '';
     return `<p class="thread-meta">${[kind, by, comment.decoration && !comment.personal ? escape(comment.decoration) : '', range ? `<span class="thread-meta-path" title="${escape(path || '')}">${escape(range)}</span>` : ''].filter(Boolean).join('<i aria-hidden="true">·</i>')}</p>`;
   };
+  // Who wrote a comment, as a small face: the reader, a teammate on GitHub, or an agent's mark.
+  function authorFace(comment) {
+    if (comment.personal) return youAvatar().replace('class="comment-avatar"', 'class="thread-face is-you" title="You"');
+    if (comment.author) {
+      const login = comment.author.login || 'someone';
+      const face = /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(comment.author.avatar || '') ? `<img src="${comment.author.avatar}" alt="">` : `<b>${escape(login.charAt(0).toUpperCase())}</b>`;
+      return `<span class="thread-face is-person" title="@${escape(login)} on GitHub" aria-hidden="true">${face}</span>`;
+    }
+    const slug = comment.agent || 'claude';
+    const name = AGENT_NAMES[slug] || slug;
+    return `<span class="thread-face" data-agent="${escape(slug)}" title="${escape(name)}" aria-hidden="true">${window.ReviewBrands?.[slug] || `<b>${escape(name.charAt(0))}</b>`}</span>`;
+  }
   function commentCard(comment, closed = false) {
     const found = ReviewTools.anchor(snapshot, comment);
     if (!found && !comment.general) return '';
@@ -2137,7 +2149,7 @@
     const earlier = comment.follows && comments.find(other => other.id === comment.follows);
     const earlierWas = earlier && ReviewTools.outdatedWhere(earlier);
     const follows = earlier ? `<details class="thread-follows"><summary>Follows up on “${escape(earlier.subject)}”${earlierWas?.revision ? `, from revision ${escape(earlierWas.revision)}` : ''}</summary>${earlier.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(earlier.discussion)}</div>` : ''}${earlierWas?.code ? `<details class="thread-was"><summary>The code it was written on</summary><pre><code>${escape(earlierWas.code)}</code></pre></details>` : ''}</details>` : '';
-    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''} ${closed ? 'is-earlier' : ''}${comment.personal ? ' is-own' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${pathFit(found?.file.path || was?.path || 'General comment', '', true)}</span><span class="thread-range">${found ? range : was ? `<span class="thread-outdated" title="These lines changed after the comment was written">Outdated</span>${escape(was.lines)}${closed && was.revision ? ` in revision ${escape(was.revision)}` : ''}` : ''}</span></div><details class="thread-details" data-thread-fold="${id}" ${threadsOpen.has(comment.id) ? 'open' : ''}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}">${comment.personal ? youAvatar() : ''}<span class="thread-badges">${comment.personal ? `<b class="thread-you you-name">${youName()}</b>${comment.audience === 'agent' ? (comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : '') + ghBadgeSlot(comment) : threadBadges(comment, true)}` : threadBadges(comment)}</span><strong>${prose(comment.subject)}</strong><span class="thread-at" ${stateWord(comment, closed)}>${place(found ? found.file.path : was?.path, found ? comment.start : comment.outdated?.start)}</span><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${threadMeta(comment, found?.file.path || was?.path, found ? range : was?.lines)}${comment.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(comment.discussion)}</div>` : ''}${wasCode}${follows}${commentShots(comment)}${commentEvidence(comment)}</div>${found ? found.fullFile ? `<button class="thread-source btn btn-sm btn-ghost" type="button" data-comment="${id}">View in file · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : `<button class="thread-source btn btn-sm btn-ghost" type="button" data-open-code="${id}" aria-haspopup="dialog" aria-label="${escape(`View code for ${found.file.path}, ${range}: ${comment.subject}`)}">View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : ''}</details><div class="thread-footer"><div class="comment-actions">${commentActions(comment)}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
+    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''} ${closed ? 'is-earlier' : ''}${comment.personal ? ' is-own' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${pathFit(found?.file.path || was?.path || 'General comment', '', true)}</span><span class="thread-range">${found ? range : was ? `<span class="thread-outdated" title="These lines changed after the comment was written">Outdated</span>${escape(was.lines)}${closed && was.revision ? ` in revision ${escape(was.revision)}` : ''}` : ''}</span></div><details class="thread-details" data-thread-fold="${id}" ${threadsOpen.has(comment.id) ? 'open' : ''}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}">${comment.personal ? youAvatar() : ''}<span class="thread-badges">${comment.personal ? `<b class="thread-you you-name">${youName()}</b>${comment.audience === 'agent' ? (comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : '') + ghBadgeSlot(comment) : threadBadges(comment, true)}` : threadBadges(comment)}</span>${authorFace(comment)}<strong title="${escape(comment.subject)}">${prose(comment.author ? shortTitle(comment.subject, 90) : comment.subject)}</strong><span class="thread-at" ${stateWord(comment, closed)}>${place(found ? found.file.path : was?.path, found ? comment.start : comment.outdated?.start)}</span><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${threadMeta(comment, found?.file.path || was?.path, found ? range : was?.lines)}${comment.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(comment.discussion)}</div>` : ''}${wasCode}${follows}${commentShots(comment)}${commentEvidence(comment)}</div>${found ? found.fullFile ? `<button class="thread-source btn btn-sm btn-ghost" type="button" data-comment="${id}">View in file · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : `<button class="thread-source btn btn-sm btn-ghost" type="button" data-open-code="${id}" aria-haspopup="dialog" aria-label="${escape(`View code for ${found.file.path}, ${range}: ${comment.subject}`)}">View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : ''}</details><div class="thread-footer"><div class="comment-actions">${commentActions(comment)}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
   }
   function toggleResolved(id) {
     const comment = comments.find(comment => comment.id === id);
@@ -2561,7 +2573,7 @@
     const line = top ? `${plural(ranked.length, 'file')} to read first, ${top.path.split('/').pop()} highest at ${ranked[0].score}%` : 'No file stands out';
     const brief = ranked.slice(0, 4).map(entry => {
       const layer = layerOf(entry.file), file = files.get(entry.file);
-      return `<li><button type="button" ${layer ? `data-file-link="${escape(entry.file)}" data-file-layer="${escape(layer.id)}"` : 'disabled'} title="${escape(`${file.path}, risk ${entry.score}%`)}"><span>${escape(entry.reason)}</span><code>${escape(file.path.split('/').pop())}</code></button></li>`;
+      return `<li><button type="button" ${layer ? `data-file-link="${escape(entry.file)}" data-file-layer="${escape(layer.id)}"` : 'disabled'} title="${escape(`${entry.reason} (${file.path}, risk ${entry.score}%)`)}"><span>${prose(entry.title || shortTitle(entry.reason))}</span><code>${escape(file.path.split('/').pop())}</code></button></li>`;
     }).join('');
     return `<section class="risk-brief" aria-label="Read these first"><h2>Read these first</h2><ol>${brief}</ol></section><details class="overview-fold risk-fold" data-fold="risk" ${foldsOpen.has('risk') ? 'open' : ''}><summary><strong class="risk-fold-title">Risk ranking</strong><span class="risk-fold-line">${escape(line)}</span>${icon('chevron-down')}</summary><section class="risk-rank" aria-labelledby="risk-title"><header class="risk-head"><h2 id="risk-title">Risk ranking</h2>${riskRanking.summary ? `<p>${escape(riskRanking.summary)}</p>` : ''}${riskRedo()}</header><ol class="risk-rows">${rows}</ol>${calm > 0 ? `<p class="risk-calm">${calm} other ${calm === 1 ? 'file' : 'files'}: low risk.</p>` : ''}</section></details>`;
   }
@@ -2611,9 +2623,22 @@
       at.head && at.base && `<span class="where-branches"><span class="where-branch">${escape(at.head)}</span><span aria-label="into">→</span><span class="where-branch">${escape(at.base)}</span></span>`].filter(Boolean);
     return `<p class="overview-where" title="${escape(ReviewTools.comparisonText(snapshot, review))}">${parts.join('<i aria-hidden="true">·</i>')}</p>`;
   }
+  // A title for a one-line list. Text written for a sentence is cut at its first clause, so it ends
+  // where a thought ends rather than mid-word.
+  function shortTitle(text, limit = 64) {
+    let said = String(text || '').trim()
+      .replace(/^(?:@[\w-]+[\s,:]+)+/, '')
+      .replace(/https?:\/\/github\.com\/[^\s/]+\/[^\s/]+\/pull\/(\d+)\S*/g, 'PR #$1')
+      .replace(/https?:\/\/(?:www\.)?([^\s/]+)\S*/g, '$1');
+    said = said.charAt(0).toUpperCase() + said.slice(1);
+    if (said.length <= limit) return said;
+    const clause = said.match(/^(.{18,}?)(?:[,;:—–]\s|\s[—–]\s|\.\s)/)?.[1];
+    if (clause && clause.length <= limit) return clause;
+    return `${said.slice(0, said.lastIndexOf(' ', limit - 1) > 24 ? said.lastIndexOf(' ', limit - 1) : limit - 1)}…`;
+  }
   // Prose the agent wrote, made easy to read: `code` in backticks, and the names that are plainly
   // code (snake_case, Class::Name, CamelCase, method?, file.rb), set in the code's face.
-  const CODE_WORD = /(`[^`\n]+`)|(\b[\w-]+(?:\.[\w-]+)*\.(?:rb|erb|js|ts|tsx|jsx|py|sh|json|ya?ml|md|css|html|sql)\b|(?:[A-Za-z_][\w]*::)+[A-Za-z_]\w*[?!]?|\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+[?!]?|\b[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]+)+\b|#[a-z_]\w*[?!]?)/g;
+  const CODE_WORD = /(`[^`\n]+`)|(\b[\w-]+(?:\.[\w-]+)*\.(?:rb|erb|js|ts|tsx|jsx|py|sh|json|ya?ml|md|css|html|sql)\b|(?:[A-Za-z_][\w]*::)+[A-Za-z_]\w*[?!]?|(?<![\w`])(?:_[a-z]\w*|[a-z][a-z0-9]*(?:_[a-z0-9]+)+)(?:=\w+)?[?!]?|\b[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]+)+\b|#[a-z_]\w*[?!]?)/g;
   const prose = text => escape(text).replace(CODE_WORD, (all, ticked, bare) => `<code>${ticked ? ticked.slice(1, -1) : bare}</code>`);
   // Sentences, without breaking on the dot of a file name or a version.
   // A sentence ends at . ! or ? followed by a space and a capital (or a quote or code), so

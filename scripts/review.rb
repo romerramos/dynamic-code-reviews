@@ -320,7 +320,7 @@ module DynamicReviews
     raise ArgumentError, 'A risk ranking lists 1 to 12 files; send --none when no file stands out' unless ranked.length.between?(1, 12)
     ranked.each do |entry|
       raise ArgumentError, 'Each ranked file is an object' unless entry.is_a?(Hash)
-      unknown = entry.keys - %w[file score tags reason line]
+      unknown = entry.keys - %w[file score tags reason line title]
       raise ArgumentError, "Unknown ranked file field(s): #{unknown.join(', ')}" unless unknown.empty?
       raise ArgumentError, "Unknown file in the risk ranking: #{entry['file'].inspect}" unless files.key?(entry['file'])
       raise ArgumentError, "#{entry['file']} needs a score from 0 to 100" unless entry['score'].is_a?(Integer) && entry['score'].between?(0, 100)
@@ -329,6 +329,7 @@ module DynamicReviews
         raise ArgumentError, "#{entry['file']} needs 1 to 3 tags from: #{RISK_TAGS.join(', ')}"
       end
       raise ArgumentError, "#{entry['file']} needs a one-sentence reason (at most 160 characters)" unless text.call(entry['reason'], 160)
+      raise ArgumentError, "#{entry['file']} title is a few words, at most 60 characters" if entry.key?('title') && !text.call(entry['title'], 60)
       raise ArgumentError, "#{entry['file']} line must be a positive line number" if entry.key?('line') && !(entry['line'].is_a?(Integer) && entry['line'].positive?)
     end
     raise ArgumentError, 'Rank each file once' unless ranked.map { |entry| entry['file'] }.uniq.length == ranked.length
