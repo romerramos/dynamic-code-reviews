@@ -282,8 +282,8 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] #my-review .section-heading{display:flex;align-items:baseline;justify-content:space-between;margin:0 0 6px}
 [data-theme^="minimal-"] #my-review .section-heading h2{margin:0}
 [data-theme^="minimal-"] #my-review .section-heading h2 .badge{display:none}
-[data-theme^="minimal-"] #my-review .comment-actions .btn{height:auto;min-height:0;padding:0 0 0 16px;color:var(--minimal-faint);font-size:12px;font-weight:400}
-[data-theme^="minimal-"] #my-review .comment-actions .btn:hover{background:none;color:var(--ink)}
+[data-theme^="minimal-"] #my-review .section-heading .comment-actions .btn{height:auto;min-height:0;padding:0 0 0 16px;color:var(--minimal-faint);font-size:12px;font-weight:400}
+[data-theme^="minimal-"] #my-review .section-heading .comment-actions .btn:hover{background:none;color:var(--ink)}
 /* What is settled: two quiet lines at the end. */
 [data-theme^="minimal-"] .overview-settled .overview-fold,[data-theme^="minimal-"] .overview-settled .overview-fold:last-child{margin:0;border:0}
 [data-theme^="minimal-"] .overview-settled .overview-fold>summary{min-height:0;padding:7px 0}
