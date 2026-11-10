@@ -16,7 +16,7 @@
       + `<span class="ui-comment-face">${face}</span>`
       + `<strong class="ui-comment-title"${UI.attrs({title: subject})}>${title}${way ? ` ${way}` : ''}</strong>`
       + `<span class="ui-comment-tags">${tags}</span>`
-      + `<span class="ui-comment-place thread-at"${UI.attrs({'data-state': state || null, 'data-go': go ? '' : null})}>${place}</span>`
+      + `<span class="ui-comment-place"${UI.attrs({'data-state': state || null, 'data-go': go ? '' : null})}>${place}</span>`
       + `<span class="ui-comment-chevron thread-chevron">${UI.icon('chevron-down')}</span></summary>`;
   };
 })(globalThis);

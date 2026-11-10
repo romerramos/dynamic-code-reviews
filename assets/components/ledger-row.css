@@ -1,0 +1,30 @@
+/* LedgerRow (ledger-row.js): a comment in Your review, the agent's and yours alike, as one quiet row:
+   the face, the short title (two lines at most), the way to the code at the right; under it, who
+   answered. The list puts the agent's comments first, then yours, then GitHub's, each group under
+   its heading (--ledger-group-prefix goes before the heading's words). The place and the name stay
+   in the markup for a theme that shows them. */
+.ui-ledger-row{position:static;display:flex;flex-wrap:wrap;align-items:center;padding-bottom:12px}
+.ui-ledger-row::before{display:none}
+.ui-ledger-row>.ledger-place,.ui-ledger-row>.ledger-msg>.ledger-by{display:none}
+.ui-ledger-row>.ledger-msg{flex:1 0 100%;grid-template-columns:var(--ledger-face-col,18px) minmax(0,1fr) auto;column-gap:var(--ledger-gap,12px);align-items:baseline;padding:14px 18px 0 22px}
+.ui-ledger-row>.ledger-msg>.ui-avatar{grid-row:auto;align-self:start;--avatar-size:var(--ledger-face-col,18px);margin-top:1px}
+.ui-ledger-row .ledger-subject{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:14px;line-height:1.45}
+.ui-ledger-row .ledger-subject code{padding:0;border:0;background:none;font-family:var(--mono);font-size:.92em}
+.ui-ledger-row[data-state="resolved"] .ledger-subject{color:var(--muted);text-decoration:line-through}
+.ui-ledger-row .ledger-at{display:grid;place-items:center;align-self:start;width:24px;height:20px;padding:0;border:0;border-radius:calc(6px * var(--round));background:none;color:var(--comment-quiet);cursor:pointer}
+.ui-ledger-row .ledger-at:hover{background:var(--bg-neutral-2);color:var(--ink)}
+.ui-ledger-row .ledger-at svg{width:14px;height:14px;stroke-width:1.8}
+.ui-ledger-row .dcr-peek{width:auto;padding:5px 0 0 52px}
+.ui-ledger-row .dcr-peek :is(b,.dcr-peek-when,.dcr-peek-end){display:none}
+.ui-ledger-row .dcr-peek-faces{gap:6px}
+.ui-ledger-row .dcr-peek-faces>.ui-avatar{--avatar-size:var(--peek-face,18px);margin:0;box-shadow:none;filter:none;opacity:1}
+.ui-ledger-row .ledger-meta{display:flex;align-items:center;gap:6px;margin:5px 0 0 8px;padding:0}
+.ui-ledger-row .ledger-meta .gh-slot,.ui-ledger-row:not([data-conversation]) .ledger-meta :is([data-resolve],[data-copy]),.ui-ledger-row .dcr-new{display:none}
+/* The list: the agent's comments, then yours, then GitHub's, each group under its heading. */
+.ui-ledger-row[data-by="agent"]{order:0}
+.ui-ledger-row:not([data-conversation]){order:1}
+.ui-ledger-row[data-by="person"]{order:2}
+.ui-ledger-row:is(:nth-child(1 of [data-by="agent"]),:nth-child(1 of [data-ledger]:not([data-conversation])),:nth-child(1 of [data-by="person"]))::before{display:block;flex:1 0 100%;padding:16px 22px 2px;background:none;color:var(--comment-quiet);font-size:12px}
+.ui-ledger-row:nth-child(1 of [data-by="agent"])::before{content:var(--ledger-group-prefix,"") "Agent comments"}
+.ui-ledger-row:nth-child(1 of [data-ledger]:not([data-conversation]))::before{content:var(--ledger-group-prefix,"") "Your comments"}
+.ui-ledger-row:nth-child(1 of [data-by="person"])::before{content:var(--ledger-group-prefix,"") "From GitHub"}

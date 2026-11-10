@@ -27,6 +27,8 @@ const MODES = list('modes', 'light,dark');
 const VIEWPORTS = list('viewports', '1440x900,1280x800').map(size => { const [width, height] = size.split('x').map(Number); return {width, height, name: size}; });
 const STATES = list('states', 'overview,resolved,open-one,open-all,sidebar-collapsed,ledger,conversation,popover,settings,offline');
 const NO_FAIL = args.includes('--no-fail');
+// --probe file.js: print what an expression in that file returns in each combination, and nothing else.
+const PROBE = option('probe', null) && fs.readFileSync(option('probe'), 'utf8');
 
 // --- the made-up review, offline and served ------------------------------------------------------
 // The Ruby on this PATH (mise's, say), not whatever a login shell finds first.
@@ -109,7 +111,9 @@ function measure(context) {
   const out = [];
   const add = (check, pass, detail = '') => out.push({check, pass: !!pass, detail: String(detail).slice(0, 300)});
   const visible = node => { if (!node || !node.isConnected) return false; const r = node.getBoundingClientRect(); if (r.width < 1 || r.height < 1) return false; const s = getComputedStyle(node); return s.visibility !== 'hidden' && s.display !== 'none' && Number(s.opacity) > 0.05; };
-  const rgba = color => { const m = String(color).match(/rgba?\(([^)]+)\)/); if (!m) { const c = document.createElement('canvas').getContext('2d'); c.fillStyle = color; return rgba(c.fillStyle.startsWith('#') ? `rgb(${parseInt(c.fillStyle.slice(1, 3), 16)},${parseInt(c.fillStyle.slice(3, 5), 16)},${parseInt(c.fillStyle.slice(5, 7), 16)})` : 'rgba(0,0,0,0)'); } const p = m[1].split(/[ ,/]+/).filter(Boolean).map(Number); return {r: p[0], g: p[1], b: p[2], a: p.length > 3 ? p[3] : 1}; };
+  // Any CSS colour (rgb, color(srgb ...), oklch ...) as {r, g, b, a}, by painting one pixel with it.
+  const paint = document.createElement('canvas').getContext('2d', {willReadFrequently: true});
+  const rgba = color => { paint.clearRect(0, 0, 1, 1); paint.fillStyle = 'rgba(0,0,0,0)'; paint.fillStyle = String(color); paint.fillRect(0, 0, 1, 1); const [r, g, b, a] = paint.getImageData(0, 0, 1, 1).data; return {r, g, b, a: a / 255}; };
   const distance = (a, b) => Math.hypot(a.r - b.r, a.g - b.g, a.b - b.b);
   const backgroundOf = node => { for (let at = node; at; at = at.parentElement) { const c = rgba(getComputedStyle(at).backgroundColor); if (c.a > 0.5) return c; } return rgba(getComputedStyle(document.body).backgroundColor); };
   const label = node => node ? `${node.tagName.toLowerCase()}${node.id ? `#${node.id}` : ''}${[...node.classList].slice(0, 2).map(name => `.${name}`).join('')}` : '?';
@@ -118,6 +122,7 @@ function measure(context) {
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     for (let text = walker.nextNode(); text; text = walker.nextNode()) {
       if (!text.textContent.trim() || !visible(text.parentElement)) continue;
+      if ([text.parentElement, text.parentElement.parentElement].some(node => node && getComputedStyle(node).clipPath.startsWith('inset(50%'))) continue; // read only by screen readers
       const range = document.createRange(); range.selectNodeContents(text);
       for (const r of range.getClientRects()) if (r.width > 1 && r.height > 1) rects.push({r, node: text.parentElement});
     }
@@ -286,7 +291,7 @@ function measure(context) {
 async function lineStability(page) {
   const results = [];
   for (const id of ['fee-window', 'mine-file-note', 'refund-route']) {
-    const where = `(() => { const row = document.querySelector('.review-thread[data-thread-id="${id}"]'); if (!row) return null; const box = node => { const r = node?.getBoundingClientRect(); return r && r.width ? [r.left, r.top + document.getElementById('content').scrollTop, r.width] : null; }; return {face: box(row.querySelector('.thread-summary > :is(.thread-face,.comment-avatar,.ui-avatar):not([hidden])')), title: box(row.querySelector('.thread-summary > strong')), chevron: box(row.querySelector('.thread-chevron'))}; })()`;
+    const where = `(() => { const row = document.querySelector('.review-thread[data-thread-id="${id}"]'); if (!row) return null; const box = node => { const r = node?.getBoundingClientRect(); return r && r.width ? [r.left, r.top + document.getElementById('content').scrollTop, r.width] : null; }; return {face: box(row.querySelector('.thread-summary :is(.thread-face,.comment-avatar,.ui-avatar):not([hidden])')), title: box(row.querySelector('.thread-summary > strong')), chevron: box(row.querySelector('.thread-chevron'))}; })()`;
     const before = await page.evaluate(where);
     if (!before) continue;
     await toggle(page, id);
@@ -356,6 +361,7 @@ async function backToOverview(page) {
       await steps[state](page);
       await sleep(300);
       const name = `${theme}-${mode}-${state}-${viewport.name}`;
+      if (PROBE) { console.log(name, JSON.stringify(await page.evaluate(PROBE))); await page.close(); await sleep(400); continue; }
       await page.screenshot(path.join(OUT, `${name}.png`));
       const checks = await page.evaluate(`(${measure})(${JSON.stringify({expectedStyle: expected[theme], plainTags: theme === 'minimal'})})`);
       if (state === 'overview') { checks.push(await lineStability(page)); checks.push(await backToOverview(page)); }

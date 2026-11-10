@@ -23,7 +23,19 @@
    - --review-font-family, --mono: the interface and code fonts. A theme may load its own with
      @font-face, naming a .woff2 file under vendor/fonts/ in its url(); the page embeds the file.
    Syntax colours (--tok-*) and agent marks (--agent-*) belong to the syntax theme and the
-   agents, not to a theme; they follow data-mode. */
+   agents, not to a theme; they follow data-mode.
+
+   Components (assets/components) are drawn from the tokens below; a theme sets their values and
+   never selects a component's classes (scripts/test_themes.rb holds it to that).
+   - --avatar-style: brand | mono. A variant: an agent's face in its company colours, or its plain
+     mark in ink with nothing behind it.
+   - --tag-radius, --tag-pad: the shape of a comment's kind (Tag) in its line.
+   - --comment-*: a comment on the Overview (CommentRow, CommentCard). Its line: --comment-face-col,
+     --comment-face-size, --comment-gap, --comment-line-top/-bottom, --comment-title-*, and which of
+     its parts show (--comment-tags, --comment-place, --comment-chevron: a display value or none).
+     Open: --comment-inset (how far the card grows past the reading column), --comment-card-* (edge,
+     sides 1px for a card or 0 for a row between rules, radius, surface, gap below), the words
+     (--comment-text-*), --comment-meta, --comment-source, and its footer (--comment-footer-*). */
 :root{
   --review-font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
   --mono:ui-monospace,"SF Mono",SFMono-Regular,"Cascadia Code",Menlo,Consolas,monospace;
@@ -59,4 +71,12 @@
   --ring-amber-1:color-mix(in srgb,var(--color-warning) 75%,var(--color-base-content));
   --ring-accent-1:color-mix(in srgb,var(--color-primary) 53%,var(--color-base-100));--ring-accent-2:color-mix(in srgb,var(--color-primary) 82%,var(--color-base-100));--ring-accent-3:color-mix(in srgb,var(--color-primary) 82%,var(--color-base-content));
   --ring-neutral-1:color-mix(in srgb,var(--color-base-content) 2%,var(--color-base-100));--ring-neutral-2:color-mix(in srgb,var(--color-base-content) 59%,var(--color-base-100));
+  /* Components */
+  --section-rule:var(--line-neutral-2);--avatar-style:brand;--tag-radius:calc(999px * var(--round));--tag-pad:1px 8px;
+  --comment-inset:25px;--comment-row-rule:var(--line-neutral-2);--comment-card-edge:var(--line-neutral-2);--comment-card-sides:1px;--comment-card-radius:calc(12px * var(--round));--comment-card-bg:var(--bg-neutral-1);--comment-card-gap:16px;
+  --comment-face-col:28px;--comment-face-size:24px;--comment-message-face:32px;--comment-gap:10px;--comment-line-top:11px;--comment-line-bottom:2px;
+  --comment-title-size:15px;--comment-title-weight:550;--comment-title-line:1.4;--comment-title-ink:var(--ink-neutral-2);--comment-open-title-weight:600;--comment-earlier-ink:var(--ink-neutral-2);
+  --comment-tags:flex;--comment-place:none;--comment-chevron:inline-flex;--comment-quiet:var(--muted);--comment-hover-underline:none;
+  --comment-meta:none;--comment-body-top:0px;--comment-body-bottom:18px;--comment-text-size:16px;--comment-text-line:1.65;--comment-text-width:none;--comment-source:inline-flex;--comment-thread-top:0px;
+  --comment-footer-top:0px;--comment-footer-pad-top:14px;--comment-footer-pad-bottom:14px;--comment-footer-indent:0px;--comment-footer-rule:1px solid var(--line-neutral-2);
 }

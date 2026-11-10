@@ -1,0 +1,28 @@
+/* CommentRow (comment-row.js): one line, the same open or closed. Columns: the face, the title (the
+   way to the code right after its last word), then whatever the theme shows of the kind (Tag), the
+   place and the chevron. A part the theme hides takes no column, so nothing leaves a gap.
+   Tokens: --comment-face-col, --comment-face-size, --comment-gap, --comment-line-top,
+   --comment-line-bottom, --comment-title-*, --comment-tags, --comment-place, --comment-chevron. */
+.ui-comment-line{display:grid;grid-template-columns:var(--comment-face-col,28px) minmax(0,1fr);grid-auto-flow:column;grid-auto-columns:auto;align-items:center;column-gap:var(--comment-gap,10px);padding:var(--comment-line-top,11px) 0 var(--comment-line-bottom,2px);list-style:none;cursor:pointer}
+.ui-comment-line::-webkit-details-marker{display:none}
+.ui-comment-line::after{content:none}
+.ui-comment-line:focus-visible{outline:2px solid var(--line-accent-6);outline-offset:-3px}
+.ui-comment-face{display:grid;place-items:center;--avatar-size:var(--comment-face-size,24px)}
+.ui-comment-title{display:block;min-width:0;margin:0;font-size:var(--comment-title-size,15px);font-weight:var(--comment-title-weight,550);line-height:var(--comment-title-line,1.4);color:var(--comment-title-ink,var(--ink-neutral-2))}
+.ui-comment-title code{font:.9em var(--mono)}
+details[open]>.ui-comment-line .ui-comment-title{font-weight:var(--comment-open-title-weight,600)}
+.ui-comment-tags{display:var(--comment-tags,flex);align-items:center;gap:6px}
+.ui-comment-tags:empty{display:none}
+.ui-comment-place{display:var(--comment-place,none);color:var(--comment-quiet,var(--muted));font:12px var(--mono);white-space:nowrap}
+.ui-comment-place:empty,.ui-comment-place[data-go]{display:none}
+.is-earlier>details>.ui-comment-line .ui-comment-place[data-state]::before{content:attr(data-state) "  ·  ";white-space:pre;font-family:var(--review-font-family)}
+.ui-comment-chevron{display:var(--comment-chevron,inline-flex);width:16px;color:var(--ink-neutral-5)}
+details[open]>.ui-comment-line .ui-comment-chevron{transform:rotate(180deg)}
+/* The way to the code: an icon right after the title's last word, while the comment is closed. */
+.ui-comment-title .thread-go{display:inline-grid;place-items:center;width:20px;height:20px;margin-left:2px;padding:0;border:0;border-radius:calc(4px * var(--round));background:none;color:var(--comment-quiet,var(--muted));vertical-align:-4px;cursor:pointer}
+.ui-comment-title .thread-go:hover{color:var(--ink)}
+.ui-comment-title .thread-go svg{width:14px;height:14px;stroke-width:1.8}
+/* Open, the way to the code is View in file; the icon keeps its room, so the line does not move. */
+details[open]>.ui-comment-line .thread-go{visibility:hidden}
+.ui-comment-line:hover .ui-comment-title{text-decoration:var(--comment-hover-underline,none);text-decoration-color:var(--line-neutral-4);text-underline-offset:4px}
+details[open]>.ui-comment-line:hover .ui-comment-title{text-decoration:none}

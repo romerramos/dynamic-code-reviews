@@ -65,19 +65,13 @@ main#content{position:relative;overflow-y:auto;scroll-behavior:smooth;min-width:
 .comment-popover .popover-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 15px;border-bottom:1px solid var(--line-amber-1);background:var(--bg-amber-1);font:12px/1.5 var(--review-font-family)}
 .comment-popover .popover-heading strong{font-weight:600;color:var(--ink-amber-3)}
 .comment-popover .popover-heading .btn{width:23px;height:23px;min-height:23px}
-.popover-comment{padding:14px 16px;font:13px/1.65 var(--review-font-family)}
-.popover-comment+.popover-comment{border-top:1px solid var(--line-amber-1)}
-.popover-comment .comment-meta{justify-content:flex-start;gap:8px;margin-bottom:10px}
-.popover-comment h4{font-size:13px;font-weight:600;line-height:1.55;color:var(--ink-amber-1);letter-spacing:0;margin:0 0 9px}
-.popover-comment p{font-size:13px;color:var(--ink-amber-3);margin:0 0 12px}
-.popover-comment .btn{font-size:11px;height:26px;min-height:26px;padding:3px 9px;color:var(--ink-amber-3);background:var(--bg-amber-4);border:1px solid var(--line-amber-1)}
 @media print{.comment-trigger,.comment-popover{display:none!important}}
 /* Review series keep navigation compact and history prose readable. */
 .header-actions{display:flex;align-items:center;gap:12px}.revision-control{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted)}.revision-control .select{width:145px;min-width:145px;min-height:36px;height:36px;padding-inline:12px 36px;font-size:12px;line-height:1.4;flex-shrink:0}.increment-card{max-width:1050px}.increment-card h2{margin:5px 0 12px}.increment-card details{margin:16px 0}.increment-card summary{font-size:13px;font-weight:600}.increment-card>a{display:inline-block;margin-top:12px;font-size:13px}.increment-card code{font-size:12px;overflow-wrap:anywhere}.finding-state{margin:16px 0}.finding-state strong{display:block;font-size:13px;margin-top:6px}.finding-state p{margin:5px 0}.group-title h3 .badge{vertical-align:middle;margin-left:7px}
 @media(max-width:1050px){.header-actions{gap:4px}.revision-control>span{display:none}.header-title #scope{display:none}}
 .verdict.alert-warning{background:var(--bg-amber-1);border-color:var(--line-amber-2);color:var(--ink-amber-2)}.verdict.alert-warning small{color:var(--ink-amber-5)}
 /* Review reading flow: distinct observations, bounded prose, direct code access. */
-.review-section,.evidence-section{max-width:1050px;margin:36px 0}.section-heading{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:18px}.section-heading h2{margin:0 0 7px}.section-heading p{color:var(--ink-neutral-5);font-size:13px;margin:0}.review-comment{background:var(--bg-neutral-1);border:1px solid var(--line-neutral-2);border-radius:calc(10px * var(--round));padding:22px 24px;margin:12px 0}.review-comment h3{font-size:16px;line-height:1.5;letter-spacing:-.01em;margin:10px 0;color:var(--ink-neutral-2);max-width:78ch}.comment-location{font:12px/1.65 var(--mono);color:var(--ink-neutral-5);overflow-wrap:anywhere;margin:8px 0}.comment-discussion{font-size:14px;line-height:1.75;max-width:78ch;overflow-wrap:anywhere;color:var(--ink-neutral-3);margin:10px 0 15px}.comment-discussion p{margin:0 0 .75em}.comment-discussion>:last-child{margin-bottom:0}.comment-discussion ul,.comment-discussion ol{margin:.2em 0 .75em;padding-left:1.3em}.comment-discussion ul{list-style:disc}.comment-discussion ol{list-style:decimal}.comment-discussion li{margin:.15em 0}.comment-discussion code{padding:1px 5px;border-radius:calc(5px * var(--round));background:color-mix(in oklab,currentColor 8%,transparent);font:.88em/1.4 var(--mono)}.comment-discussion pre{margin:.4em 0 .8em;padding:10px 12px;overflow:auto;border-radius:calc(8px * var(--round));background:color-mix(in oklab,currentColor 6%,transparent)}.comment-discussion pre code{padding:0;background:none}.comment-discussion :is(h3,h4,h5,h6){margin:.9em 0 .4em;font-size:1em;font-weight:700;line-height:1.4}.comment-discussion h3{font-size:1.1em}.comment-discussion .md-table{margin:.4em 0 .8em;overflow-x:auto}.comment-discussion table{border-collapse:collapse;font-size:.92em}.comment-discussion :is(th,td){padding:4px 10px;border:1px solid color-mix(in oklab,currentColor 18%,transparent);text-align:left;vertical-align:top;overflow-wrap:normal}.comment-discussion th{font-weight:700;background:color-mix(in oklab,currentColor 6%,transparent)}.comment-discussion a{text-decoration:underline}.comment-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}.comment-actions .btn{height:30px;min-height:30px}.review-comment .comment-meta{justify-content:flex-start;gap:12px;color:var(--ink-neutral-5)}.snippet-details{margin:14px 0;color:var(--ink-neutral-5);font-size:12px}.snippet-details summary{width:fit-content}.comment-snippet{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.8 var(--mono);background:var(--bg-neutral-2);color:var(--ink-neutral-3);border:1px solid var(--line-neutral-2);border-radius:calc(7px * var(--round));padding:12px 16px;margin:12px 0;max-height:220px;overflow:auto}.personal-comment{border-left:3px solid var(--line-accent-5)}.review-empty{border:1px dashed var(--line-neutral-3);border-radius:calc(9px * var(--round));padding:22px;color:var(--ink-neutral-5);font-size:14px;max-width:85ch}.evidence-section{border-top:1px solid var(--line-neutral-2);padding:25px 0 0}.evidence-section h2{font-size:18px;margin:0 0 15px}.evidence-section p,.evidence-section li{font-size:14px;line-height:1.8;color:var(--ink-neutral-3);max-width:80ch}.evidence-section ul{padding-left:22px;margin:16px 0}.evidence-section li{margin:12px 0}.popover-comment .comment-actions{margin-top:12px}.popover-comment .comment-location{font-size:10px;color:var(--ink-amber-5)}.popover-comment p{white-space:pre-wrap}.review-section .badge{font-size:11px}
+.review-section,.evidence-section{max-width:1050px;margin:36px 0}.section-heading{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:18px}.section-heading h2{margin:0 0 7px}.section-heading p{color:var(--ink-neutral-5);font-size:13px;margin:0}.review-comment{background:var(--bg-neutral-1);border:1px solid var(--line-neutral-2);border-radius:calc(10px * var(--round));padding:22px 24px;margin:12px 0}.review-comment h3{font-size:16px;line-height:1.5;letter-spacing:-.01em;margin:10px 0;color:var(--ink-neutral-2);max-width:78ch}.comment-location{font:12px/1.65 var(--mono);color:var(--ink-neutral-5);overflow-wrap:anywhere;margin:8px 0}.comment-discussion{font-size:14px;line-height:1.75;max-width:78ch;overflow-wrap:anywhere;color:var(--ink-neutral-3);margin:10px 0 15px}.comment-discussion p{margin:0 0 .75em}.comment-discussion>:last-child{margin-bottom:0}.comment-discussion ul,.comment-discussion ol{margin:.2em 0 .75em;padding-left:1.3em}.comment-discussion ul{list-style:disc}.comment-discussion ol{list-style:decimal}.comment-discussion li{margin:.15em 0}.comment-discussion code{padding:1px 5px;border-radius:calc(5px * var(--round));background:color-mix(in oklab,currentColor 8%,transparent);font:.88em/1.4 var(--mono)}.comment-discussion pre{margin:.4em 0 .8em;padding:10px 12px;overflow:auto;border-radius:calc(8px * var(--round));background:color-mix(in oklab,currentColor 6%,transparent)}.comment-discussion pre code{padding:0;background:none}.comment-discussion :is(h3,h4,h5,h6){margin:.9em 0 .4em;font-size:1em;font-weight:700;line-height:1.4}.comment-discussion h3{font-size:1.1em}.comment-discussion .md-table{margin:.4em 0 .8em;overflow-x:auto}.comment-discussion table{border-collapse:collapse;font-size:.92em}.comment-discussion :is(th,td){padding:4px 10px;border:1px solid color-mix(in oklab,currentColor 18%,transparent);text-align:left;vertical-align:top;overflow-wrap:normal}.comment-discussion th{font-weight:700;background:color-mix(in oklab,currentColor 6%,transparent)}.comment-discussion a{text-decoration:underline}.comment-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}.comment-actions .btn{height:30px;min-height:30px}.review-comment .comment-meta{justify-content:flex-start;gap:12px;color:var(--ink-neutral-5)}.snippet-details{margin:14px 0;color:var(--ink-neutral-5);font-size:12px}.snippet-details summary{width:fit-content}.comment-snippet{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.8 var(--mono);background:var(--bg-neutral-2);color:var(--ink-neutral-3);border:1px solid var(--line-neutral-2);border-radius:calc(7px * var(--round));padding:12px 16px;margin:12px 0;max-height:220px;overflow:auto}.personal-comment{border-left:3px solid var(--line-accent-5)}.review-empty{border:1px dashed var(--line-neutral-3);border-radius:calc(9px * var(--round));padding:22px;color:var(--ink-neutral-5);font-size:14px;max-width:85ch}.evidence-section{border-top:1px solid var(--line-neutral-2);padding:25px 0 0}.evidence-section h2{font-size:18px;margin:0 0 15px}.evidence-section p,.evidence-section li{font-size:14px;line-height:1.8;color:var(--ink-neutral-3);max-width:80ch}.evidence-section ul{padding-left:22px;margin:16px 0}.evidence-section li{margin:12px 0}.review-section .badge{font-size:11px}
 /* All changes renders the full diff once, grouped by responsibility. */
 .category-filters{display:flex;flex-wrap:wrap;gap:6px;position:sticky;top:-30px;padding:12px 0;background:var(--canvas);z-index:3;border-bottom:1px solid var(--line-neutral-2);margin:20px 0 30px}.category-filters .btn{font-size:12px;height:32px;min-height:32px}.category-filters button span{opacity:.7;margin-left:4px}.category-heading{padding:4px 0 0;margin:30px 0 12px}.category-heading h2{margin:0 0 7px}.category-heading p{font-size:13px;color:var(--ink-neutral-5);max-width:85ch}.category-section>.file-card{margin-top:16px}
 /* Line buttons work with mouse, keyboard, or consecutive tablet taps. */
@@ -86,43 +80,21 @@ main#content{position:relative;overflow-y:auto;scroll-behavior:smooth;min-width:
 @media(max-width:1199px){.app-header{grid-template-columns:minmax(0,1fr) auto;height:70px;padding:0 18px}.header-title{display:none}.workspace{height:calc(100dvh - 70px - var(--status-h));grid-template-columns:minmax(0,1fr)}.sidebar{display:none}.navigation-open .sidebar{display:flex;position:fixed;top:130px;bottom:0;left:0;width:320px;max-width:85vw;z-index:15;box-shadow:8px 8px 28px color-mix(in srgb,var(--shade) 14.9%,transparent)}.review-toolbar{padding:10px 18px;min-height:60px;flex-wrap:wrap;gap:8px}#nav-toggle{display:inline-flex;align-items:center;justify-content:center}main#content{padding:24px 18px 100px}.focus main#content{padding-inline:18px}.category-filters{top:-24px}.diff-table.unified{min-width:0}.diff-table td.code{padding-right:8px}.section-heading{align-items:flex-start;flex-wrap:wrap}.brand small{max-width:30ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.review-comment{padding:18px}.toolbar-options{gap:6px}.toolbar-options .btn{padding:5px 10px}.toolbar-navigation span{display:none}}
 @media(max-width:650px){.brand strong{font-size:12px}.brand-icon,.brand-icon svg{width:32px;height:32px}.brand-icon{flex-basis:32px}.brand{gap:8px}.header-actions{gap:0}.revision-control{display:none}.app-header .btn{font-size:11px;padding:5px}.toolbar-options #focus{display:none}.review-toolbar{padding:8px 12px}.toolbar-options fieldset button{padding:5px 8px}.diff-table col.gutter{width:47px}.diff-table td.gutter{padding-left:21px;padding-right:4px}.diff-table td.code code{font-size:12px;line-height:24px}.comment-trigger{left:2px}.range-actions{bottom:10px;gap:7px;padding:10px;left:14px;right:14px;transform:none}.range-actions>div{min-width:0;flex:1}.range-actions strong{max-width:100%}.range-actions small{font-size:10px}.review-comment{padding:15px}.section-heading .btn{white-space:normal;height:auto;min-height:32px}.modal-box>footer{align-items:flex-start;flex-direction:column}}
 /* Overview threads: source first, one reading column, explicit local resolution. */
-.review-thread{display:block;min-width:0;max-width:960px;margin:18px 0 24px;padding:0;background:var(--bg-neutral-1);border:1px solid var(--line-neutral-3);border-radius:calc(10px * var(--round));overflow:hidden}
-.thread-file{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:13px 18px;background:var(--bg-neutral-2);border-bottom:1px solid var(--line-neutral-2)}
-.thread-file-path{font:600 12px/1.7 var(--mono);overflow-wrap:anywhere;min-width:0;color:var(--ink-neutral-3)}
-.thread-range{font-size:12px;white-space:nowrap;color:var(--ink-neutral-4)}
 .thread-outdated{display:inline-block;margin-right:8px;padding:1px 8px;border:1px solid var(--line-amber-3);border-radius:calc(5px * var(--round));background:var(--bg-amber-1);color:var(--ink-neutral-3);font-size:11px;line-height:1.5;font-weight:650}
 .thread-follows{margin:14px 0 0;font-size:13px;color:var(--ink-neutral-5)}.thread-follows summary{cursor:pointer}.thread-follows .comment-discussion{margin-top:8px}
 .thread-was{margin:14px 0 0}.thread-was figcaption{margin-bottom:6px;font-size:12px;color:var(--ink-neutral-5)}
 .thread-was pre{margin:0;padding:10px 12px;overflow-x:auto;border:1px solid var(--line-neutral-2);border-radius:calc(6px * var(--round));background:var(--bg-neutral-2);color:var(--ink-neutral-4);font:12px/1.6 var(--mono)}
-.review-thread .thread-details{display:block;margin:0;padding:0;border:0;border-radius:0;background:transparent}
-.review-thread .thread-summary{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:16px 20px;cursor:pointer;list-style:none;background:var(--bg-neutral-1)}
-.thread-summary::-webkit-details-marker{display:none}
-.thread-summary:after{display:none}
-.thread-chevron{display:inline-flex;margin-left:auto;color:var(--ink-neutral-5)}
-.thread-summary>strong{display:block;flex-basis:100%;font-size:15px;line-height:1.5;color:var(--ink-neutral-2)}
 .thread-disclosure{font-size:12px;color:var(--ink-neutral-5)}
-.thread-details[open]>.thread-summary{padding:7px 18px;background:var(--bg-neutral-2);border-bottom:1px solid var(--line-neutral-2)}
-.thread-details[open]>.thread-summary>.thread-badges,.thread-details[open]>.thread-summary>strong{display:none}
-.thread-details[open]>.thread-summary>.thread-chevron{transform:rotate(180deg)}
-.thread-body{display:block;padding:20px 24px 22px}
 .thread-badges{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
-.thread-type{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--thread-ink)}
-.thread-type-icon{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:calc(7px * var(--round));background:var(--thread-tint);font:700 15px/1 var(--review-font-family)}
 .review-icon{display:inline-block;flex:none;width:16px;height:16px;vertical-align:middle;stroke-width:1.8}
-.thread-type-icon .review-icon{width:17px;height:17px}
 .thread-priority .review-icon{width:13px;height:13px;margin-right:4px}
 .thread-resolved{display:inline-flex;align-items:center;gap:5px}
 .comment-trigger .review-icon{width:14px;height:14px}
-.type-blue{--thread-ink:var(--type-blue-ink);--thread-tint:var(--type-blue-tint)}.type-green{--thread-ink:var(--type-green-ink);--thread-tint:var(--type-green-tint)}.type-purple{--thread-ink:var(--type-purple-ink);--thread-tint:var(--type-purple-tint)}.type-amber{--thread-ink:var(--type-amber-ink);--thread-tint:var(--type-amber-tint)}.type-red{--thread-ink:var(--type-red-ink);--thread-tint:var(--type-red-tint)}.type-teal{--thread-ink:var(--type-teal-ink);--thread-tint:var(--type-teal-tint)}.type-slate{--thread-ink:var(--type-slate-ink);--thread-tint:var(--type-slate-tint)}
 .thread-priority{display:inline-flex;align-items:center;padding:3px 9px;border:1px solid;border-radius:calc(5px * var(--round));font-size:11px;line-height:1.5;font-weight:650}
 .thread-priority.is-blocking{background:var(--bg-red-3);color:var(--ink-neutral-9);border-color:var(--line-red-3)}.thread-priority.is-optional{background:var(--bg-neutral-1);color:var(--ink-neutral-5);border-color:var(--line-neutral-3)}
 .thread-resolved{color:var(--ink-green-1);font-size:12px;font-weight:650}.thread-author{font-size:12px;color:var(--ink-neutral-5)}
-.thread-body .thread-type-hint{margin:7px 0 16px;font-size:12px;line-height:1.5;color:var(--ink-neutral-5)}
-.thread-body h3{margin:0 0 8px;font-size:16px;font-weight:650;line-height:1.6;color:var(--ink-neutral-2);max-width:78ch}
-.thread-body .comment-discussion{margin:0;font-size:14px;line-height:1.8;color:var(--ink-neutral-3);max-width:78ch}
 .thread-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:12px 18px;border-top:1px solid var(--line-neutral-2);background:var(--bg-neutral-1)}
 .thread-footer .comment-actions{display:flex;flex-wrap:wrap;gap:8px;margin:0}
-.review-thread.is-resolved{background:var(--bg-neutral-2);border-color:var(--line-neutral-2)}
 .overview-fold{margin:0 0 6px}
 .overview-fold>summary{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 14px;padding:10px 2px;list-style:none;cursor:pointer;color:var(--ink-neutral-4)}
 .overview-fold>summary::-webkit-details-marker{display:none}
@@ -132,15 +104,8 @@ main#content{position:relative;overflow-y:auto;scroll-behavior:smooth;min-width:
 .overview-fold[open]>summary>.review-icon{transform:rotate(180deg)}
 .overview-fold[open]>summary{margin-bottom:12px}
 .overview-fold>summary:focus-visible{outline:2px solid var(--line-accent-6);outline-offset:2px}
-.review-thread.is-earlier{background:var(--bg-neutral-2);border-color:var(--line-neutral-2)}
-/* Folded, a comment from an earlier revision is its file and its subject; opened, all of it. */
-.review-thread.is-earlier:has(>.thread-details:not([open]))>:is(.dcr-thread,.thread-footer){display:none}
-.review-thread.is-earlier:has(>.thread-details:not([open])) .thread-summary{padding-top:12px;padding-bottom:12px}
-/* The section already says these are on code that changed: one tag a card, what became of it. */
-.review-thread.is-earlier .thread-outdated{display:none}
-.review-thread.is-earlier .thread-summary strong{font-weight:550;color:var(--ink-neutral-4)}
-.thread-summary:focus-visible,.thread-code:focus-visible{outline:2px solid var(--line-accent-6);outline-offset:-3px}
-@media(max-width:767px){.thread-file{flex-direction:column;gap:2px}.thread-body{padding:18px}.thread-footer{padding:12px}.thread-code-line{grid-template-columns:44px minmax(0,1fr)}.thread-code-line>code{padding:0 10px}.thread-line-number{padding:0 8px}}
+.thread-code:focus-visible{outline:2px solid var(--line-accent-6);outline-offset:-3px}
+@media(max-width:767px){.thread-code-line{grid-template-columns:44px minmax(0,1fr)}.thread-code-line>code{padding:0 10px}.thread-line-number{padding:0 8px}}
 
 /* Captured QA is optional and stays secondary to the review. */
 .qa-flow { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--line-neutral-2); }
@@ -214,7 +179,6 @@ main#content{position:relative;overflow-y:auto;scroll-behavior:smooth;min-width:
 .related-tests-summary { display: block; margin: 8px 0 0 16px; font-size: 14px; line-height: 1.6; color: var(--muted); }
 .related-tests-content { padding: 0 16px 8px; }
 .related-tests .file-card { background: var(--bg-neutral-1); }
-button.thread-source { display: flex; width: calc(100% - 56px); justify-content: space-between; padding: 12px 14px; text-align: left; }
 @media(max-width:767px) { .expanded-diff-header { padding: 16px 56px 14px 16px; } .expanded-diff-header h2 { font-size: 15px; } .expanded-diff-body { padding: 8px; } }
 
 /* Keep controls usable when the navigation rail has more content than height. */
@@ -253,10 +217,6 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 .overview-update strong{font-weight:600;color:var(--ink-neutral-3)}
 .overview-status{margin:0 0 18px;font-size:14px;line-height:1.6;color:var(--ink-neutral-5)}.overview-status strong{font-weight:600;color:var(--ink-neutral-2)}.overview-status[hidden]{display:none}
 .overview-fold+.overview-status{margin-top:14px}
-.comment-own{display:grid;grid-template-columns:32px minmax(0,1fr);column-gap:10px;align-items:start}
-.comment-own-head{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:0 0 2px;font-size:12px;line-height:1.35}
-.comment-own-head strong{font-size:13px;font-weight:600;color:var(--ink-neutral-2)}
-.comment-own-main h4{margin:0;font-size:14px;font-weight:500;line-height:1.55}
 /* What is typed shows as typed. JetBrains Mono joins ... or => through its contextual alternates
    (calt): the first characters become empty spacers and the last one is drawn wide over them, which a
    field clips, so characters seem to vanish once the word is done. A field does not take the page's
@@ -268,27 +228,8 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 .since-outdated{padding:14px 16px;border-top:1px solid var(--line-neutral-2)}.since-outdated h3{margin:0 0 10px;font-size:12px;font-weight:600;color:var(--ink-neutral-5)}
 .overview-history{display:flex;flex-wrap:wrap;gap:18px;font-size:13px}
 .overview-notice{padding:12px 16px;border-left:3px solid var(--line-amber-5);background:var(--bg-amber-1);font-size:14px;line-height:1.6}
-.overview-comments .review-thread{max-width:none;margin:0 0 28px;border-color:var(--line-neutral-2);border-radius:calc(12px * var(--round))}
-.overview-reading .thread-file{background:var(--bg-neutral-2);padding:12px 24px}
-.overview-reading .thread-file-path{font-weight:500;color:var(--ink-neutral-5)}
-.overview-reading .thread-summary,.overview-reading .thread-details[open]>.thread-summary{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px 16px;padding:24px 28px 18px;background:var(--bg-neutral-1);border-bottom:0}
-.overview-reading .thread-summary>.thread-badges,.overview-reading .thread-details[open]>.thread-summary>.thread-badges{display:flex;grid-column:1}
-.overview-reading .thread-summary>strong,.overview-reading .thread-details[open]>.thread-summary>strong{display:block;grid-column:1;grid-row:2;font-size:20px;line-height:1.4;font-weight:600}
-.overview-reading .thread-chevron{grid-column:2;grid-row:1 / 3;align-self:start}
-.overview-reading .thread-body{padding:0 28px 24px}
-/* The reader's own comment is a message, laid out as every message under it is: the face in a column
-   of its own, and the name, the words and what follows them all on one edge beside it (28px + 12px). */
-.overview-reading .review-thread.is-own .thread-summary,.overview-reading .review-thread.is-own .thread-details[open]>.thread-summary{grid-template-columns:32px minmax(0,1fr) auto;column-gap:10px;row-gap:2px}
-.overview-reading .review-thread.is-own .thread-summary>.comment-avatar{grid-column:1;grid-row:1 / 3;align-self:start;font-size:13px}
-.overview-reading .review-thread.is-own .thread-summary>:is(.thread-badges,strong){grid-column:2}
-.overview-reading .review-thread.is-own .thread-chevron{grid-column:3}
-.overview-reading .review-thread.is-own .thread-summary>strong{font-size:14px;font-weight:500;line-height:1.55}
-.overview-reading .review-thread.is-own .thread-body{padding-left:70px}
-.overview-reading .review-thread.is-own .thread-source{margin-left:70px}
-.overview-reading .comment-discussion{font-size:16px;line-height:1.65;color:var(--ink-neutral-3);max-width:none}
-.overview-reading .thread-footer{padding:14px 24px;background:var(--bg-neutral-2)}
+.overview-reading .review-comment .comment-discussion{font-size:16px;line-height:1.65;color:var(--ink-neutral-3);max-width:none}
 .thread-severity{font-size:12px;font-weight:600;color:var(--ink-neutral-5)}
-.thread-source{margin:0 28px 20px;border:1px solid var(--line-neutral-2);border-radius:calc(7px * var(--round));overflow:hidden}
 .overview-reading .qa-asset{margin:22px 0 0}
 .overview-reading .qa-asset img,.overview-reading .qa-asset video{width:auto;height:auto;max-height:none}
 .overview-reading .qa-asset figcaption{font-size:13px;line-height:1.55;color:var(--ink-neutral-5)}
@@ -299,14 +240,6 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
   .overview-reading{margin-top:0}
   .overview-intro h1{font-size:25px}
   .overview-intro .lead{font-size:16px}
-  .overview-reading .thread-file{padding:12px 16px;align-items:flex-start}
-  .overview-reading .thread-summary,.overview-reading .thread-details[open]>.thread-summary{padding:20px 18px 16px}
-  .overview-reading .thread-summary>strong,.overview-reading .thread-details[open]>.thread-summary>strong{font-size:18px}
-  .overview-reading .thread-body{padding:0 18px 20px}
-  .overview-reading .review-thread.is-own .thread-body{padding-left:60px}
-  .overview-reading .review-thread.is-own .thread-source{margin-left:60px}
-  .overview-reading .thread-footer{padding:12px 16px}
-  .thread-source{margin:0 18px 18px}
 }
 
 /* Scope describes code; revision updates describe the report. */
@@ -329,7 +262,8 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 .other-checks h2{font-size:18px;margin:0 0 14px}
 .other-checks h2 .badge{vertical-align:middle}
 @media(max-width:520px){.qa-preview,.qa-preview-compact{grid-template-columns:100px minmax(0,1fr)}.qa-preview-image,.qa-preview-compact .qa-preview-image{height:72px}.qa-evidence-modal>header{padding:16px 18px 12px}.qa-evidence-scroll{padding:14px 18px 20px}}
-#my-review{margin-top:24px;border-top:1px solid var(--line-neutral-2);padding-top:28px}
+/* Your comments reach past the reading column for their cards; the rule above them keeps to the column. */
+#my-review{margin-top:24px;padding-top:28px;background:linear-gradient(var(--section-rule),var(--section-rule)) top center / calc(100% - 2 * var(--comment-inset)) 1px no-repeat}
 #my-review .section-heading{flex-wrap:wrap;gap:16px}
 #my-review .section-heading p{font-size:14px;max-width:60ch;line-height:1.6}
 .thread-footer{flex-wrap:wrap;gap:12px}
@@ -423,8 +357,6 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 .review-note-popover[popover]{border-color:var(--line-accent-2);background:var(--bg-neutral-1)}
 .review-note-popover .popover-heading{border-bottom-color:var(--line-accent-1);background:var(--bg-accent-2)}
 .review-note-popover .popover-heading strong{color:var(--ink-accent-3)}
-.review-note-popover .popover-comment p{color:var(--ink-accent-2)}
-.review-note-popover .popover-comment small{color:var(--ink-accent-5)}
 .focus-reader td.code:has(>.review-note-trigger){padding-left:36px}
 @media(max-width:650px){.review-note-trigger{left:2px}}
 
@@ -789,7 +721,6 @@ body.ledger-open .ledger{display:flex}
 .ledger-name{font-size:12.5px;font-weight:600;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ledger-when{flex:none;font-size:11.5px;color:var(--muted)}
 .ledger-msg:hover .ledger-subject{text-decoration:underline}
-.thread-you{font-weight:600;color:var(--ink-neutral-2)}
 .ledger-group h3{margin:14px 0 2px;padding:0 16px;font-size:12px;font-weight:600;color:var(--muted);overflow-wrap:anywhere}
 .ledger-list{list-style:none;margin:0;padding:0}
 .ledger-item{position:relative;border-top:1px solid var(--line)}
@@ -1049,10 +980,6 @@ dialog.stage::backdrop{background:color-mix(in srgb,var(--bg-neutral-8) 40%,tran
 .act-pr{background:var(--ink);color:var(--surface)}
 .act-pr:hover:not(:disabled){background:color-mix(in oklab,var(--ink) 88%,var(--surface))}
 .act[hidden]{display:none}
-.popover-comment .comment-actions .btn.btn-primary{color:var(--ink-neutral-9);background:var(--bg-accent-5);border-color:var(--line-accent-8)}
-.popover-comment .comment-actions .btn.dcr-act-reply{color:var(--ink-accent-3);background:var(--bg-neutral-1);border-color:var(--line-accent-8)}
-.popover-comment .comment-actions .btn.gh-act{color:var(--ink-neutral-2);background:var(--bg-neutral-1);border-color:var(--line-neutral-3)}
-.popover-comment .comment-actions .more-toggle{background:transparent;border-color:transparent}
 
 /* GitHub, as GitHub shows it: green for what commits to the pull request (Start a review, Submit
    review), neutral for a single comment, an amber Pending tag while a comment waits in your review
@@ -1342,12 +1269,6 @@ button.risk-path:hover .path-name{text-decoration:underline}
 .ui-changes-none{margin:18px 0 0;font-size:13px;color:var(--muted)}
 .ui-changes-none strong{margin-right:8px;color:var(--ink-neutral-3);font-weight:600}
 /* A comment from an earlier revision is history: folded, it is one quiet line; open, that line stays and closes it again. */
-.review-thread.is-earlier>.thread-file{padding:8px 16px}
-.review-thread.is-earlier>.thread-details>.thread-summary,.overview-reading .review-thread.is-earlier>.thread-details>.thread-summary{display:flex;flex-wrap:nowrap;align-items:center;gap:10px;padding:9px 16px;background:transparent;border-bottom:0}
-.review-thread.is-earlier>.thread-details[open]>.thread-summary{border-bottom:1px solid var(--line-neutral-2)}
-.review-thread.is-earlier>.thread-details>.thread-summary>.thread-badges,.overview-reading .review-thread.is-earlier>.thread-details>.thread-summary>.thread-badges{display:flex;flex:none;flex-wrap:nowrap;font-size:12px}
-.review-thread.is-earlier>.thread-details>.thread-summary>strong,.overview-reading .review-thread.is-earlier>.thread-details>.thread-summary>strong{display:block;flex:1 1 auto;min-width:0;font-size:13px;line-height:1.5;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.review-thread.is-earlier>.thread-details>.thread-summary :is(.thread-priority,.thread-severity,.thread-resolved){display:none}
 /* Go to definition: a name defined in the review is underlined under the pointer; the line it opens on glows once. */
 #content td.code .symbol-link{cursor:pointer;border-radius:2px}
 #content td.code .symbol-link:hover{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
@@ -1440,10 +1361,6 @@ body.zen.ledger-open .review-bar{left:calc(50% - min(var(--ledger-w,420px),92vw)
 .overview-facts :is(p,nav){margin:0;font-size:inherit;color:inherit}
 .overview-facts .overview-history{display:flex;gap:14px}
 .overview-settled{margin-top:28px}
-/* A comment is one line (where it is, what it says) until the reader opens it. */
-.review-thread:has(>.thread-details:not([open]))>:is(.dcr-thread,.thread-footer){display:none}
-.review-thread:has(>.thread-details:not([open])) .thread-summary{padding-top:10px;padding-bottom:12px}
-.review-thread:has(>.thread-details:not([open])) .thread-summary strong{font-size:15px}
 /* The risk ranking is a line until it is asked for, like the other things the Overview offers. */
 .risk-fold{margin:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .risk-fold>summary{display:grid;grid-template-columns:150px minmax(0,1fr) auto;align-items:baseline;gap:4px 18px;padding:11px 0;font-size:14px}
@@ -1452,22 +1369,8 @@ body.zen.ledger-open .review-bar{left:calc(50% - min(var(--ledger-w,420px),92vw)
 .risk-fold[open]>summary{margin-bottom:4px}
 .risk-fold .risk-rank{margin:0 0 12px;padding:0;border:0;background:transparent;box-shadow:none}
 .risk-fold .risk-head h2{display:none}
-/* A closed comment: what it says, then where, in two short lines with a hairline between comments. */
-.review-thread:has(>.thread-details:not([open])){display:flex;flex-direction:column-reverse;margin:0;border-width:0 0 1px;border-radius:0;background:transparent}
-.review-thread:has(>.thread-details:not([open])) .thread-file{padding:0 0 11px;border:0;background:transparent;font-size:12px}
-.review-thread:has(>.thread-details:not([open])) .thread-summary{display:flex!important;align-items:center;flex-wrap:nowrap!important;gap:10px;padding:11px 0 2px;background:transparent}
-.review-thread:has(>.thread-details:not([open])) .thread-summary>strong{order:1;flex:1 1 0!important;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14.5px;font-weight:550}
-.review-thread:has(>.thread-details:not([open])) .thread-summary>.thread-chevron{order:3}
-.review-thread:has(>.thread-details:not([open])) .thread-summary>:not(strong,.thread-chevron){order:2;flex:none}
-.review-thread:has(>.thread-details[open]){margin-top:14px}
-/* Closed, its line is its kind and what it says; who wrote it and how urgent it is come with the rest. */
-.review-thread:has(>.thread-details:not([open])) .thread-badges{display:contents}
-.review-thread:has(>.thread-details:not([open])) .thread-badges>:is(.thread-priority.is-optional,.thread-severity,.thread-by,.gh-slot:empty){display:none}
-.review-thread:has(>.thread-details:not([open])) .thread-badges>.thread-type{order:0;flex:none;min-width:86px}
 .overview-comments{margin-top:30px}
 .overview-comments>h2{margin-bottom:6px}
-.review-thread:has(>.thread-details[open]) .thread-summary>strong{font-size:17px}
-.review-thread:has(>.thread-details:not([open])) .thread-summary>:first-child:not(.thread-badges){order:0}
 
 /* Above the title: where the review is working, in one small line. A long branch name is cut, not wrapped. */
 .overview-where{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;margin:0 0 10px;color:var(--muted);font-size:12.5px}
@@ -1508,14 +1411,12 @@ body.dcr-has-app .ui-changes{display:none}
    only what it alone offers (the app's recordings, QA, the risk ranking). */
 .overview-reading :is(.overview-intro .overview-revision,.dcr-try-previews,.dcr-try-more [data-try="browse"]){display:none}
 /* With nothing to settle, space alone separates All clear from your comments. */
-.overview-reading:has(.overview-clear) #my-review{margin-top:44px;padding-top:0;border-top:0}
+.overview-reading:has(.overview-clear) #my-review{margin-top:44px;padding-top:0;background:none}
 /* The recordings are opened from where they are counted. */
 .overview-reading .dcr-try-about [data-try-shots]{margin-left:10px;padding:0;border:0;background:none;color:var(--ink-accent-1);font:inherit;font-size:13px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 
 /* Pieces only some themes show: a closed comment's place in a few characters, and the files that stand out as plain lines. */
-.thread-at,.risk-brief{display:none}
 
-.thread-meta{display:none}
 details.thread-was>summary{margin-bottom:6px;font-size:12px;color:var(--ink-neutral-5);cursor:pointer}
 details.thread-was:not([open])>summary{margin-bottom:0}
 
@@ -1547,14 +1448,17 @@ details.thread-was:not([open])>summary{margin-bottom:0}
 
 .sidebar nav .nav-tests-toggle{all:unset;cursor:default;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit}
 .sidebar nav .nav-tests-count{display:none}
-.popover-title{display:contents}
 .step-done{display:none}
 .sidebar-top{display:contents}
-.sidebar-hide,.sidebar-show,.ledger-hide,.ledger-show,.step-next,.ledger-at,.thread-go,.qa-preview-flow{display:none}
+.risk-brief{display:none}
+/* A review note beside the code: its summary and its ranges. */
+.review-note-popover .popover-comment{padding:14px 16px;font:13px/1.65 var(--review-font-family)}
+.review-note-popover .popover-comment p{margin:0 0 12px;font-size:13px;color:var(--ink-accent-2);white-space:pre-wrap}
+.review-note-popover .popover-comment small{color:var(--ink-accent-5)}
+.sidebar-hide,.sidebar-show,.ledger-hide,.ledger-show,.step-next,.ledger-at,.qa-preview-flow{display:none}
 /* Settings split in General and Agents, for a theme that shows the agent there instead of on its card. */
 .settings-tabs,.settings-agents,.settings-round,.ledger-export{display:none}
 .step-end{white-space:nowrap}
-.popover-comment .thread-footer{padding:12px 0 0;border:0;background:none}
 
 /* ==========================================================================================
    One layout for every theme (each draws it in its own look): a slim header with the review's
@@ -1602,24 +1506,6 @@ main#content{padding-bottom:104px}
 @media(min-width:1200px){
   html body:not(.ledger-open):not(.zen) .ledger-show{display:grid;position:fixed;top:calc(var(--chrome-h) + 10px);right:18px;z-index:30}
 }
-/* Each comment one quiet row, as on the Overview: the agent's mark, the title, the file and line;
-   under it, the marks of the agents who answered, and new when it is. */
-.ledger-item::before{display:none}
-.ledger-item[data-ledger] .ledger-place,.ledger-item[data-ledger] .ledger-by{display:none}
-.ledger-item[data-ledger] .ledger-msg{grid-template-columns:18px minmax(0,1fr) auto;column-gap:12px;align-items:baseline;padding:14px 18px 0 22px}
-.ledger-item[data-ledger] .ledger-msg>.ui-avatar{grid-row:auto;align-self:start;--avatar-size:18px;margin-top:1px}
-.ledger-item[data-ledger] .ledger-subject{font-size:14px;line-height:1.45}
-.ledger-item[data-ledger] .ledger-at{display:block;padding:0;border:0;background:none;color:var(--muted);font:11.5px var(--mono);white-space:nowrap;cursor:pointer}
-.ledger-item[data-ledger] .ledger-at:hover{color:var(--ink);text-decoration:underline}
-.ledger-item[data-ledger]{display:flex;flex-wrap:wrap;align-items:center;padding-bottom:12px}
-.ledger-item[data-ledger]>.ledger-msg{flex:1 0 100%}
-.ledger-item[data-ledger] .dcr-peek{width:auto;padding:5px 0 0 52px}
-.ledger-item[data-ledger] .dcr-peek :is(b,.dcr-peek-when,.dcr-peek-end){display:none}
-.ledger-item[data-ledger] .dcr-peek-faces{gap:6px}
-/* Who answered: each agent's own small logo, in its colours, as the adversaries' toggle shows them. */
-.ledger-item[data-ledger] .dcr-peek-faces>.ui-avatar{--avatar-size:18px;margin:0;box-shadow:none;filter:none;opacity:1}
-.ledger-item[data-ledger] .dcr-peek-faces>* img{width:100%;height:100%}
-.ledger-item[data-ledger] .ledger-meta{display:flex;align-items:center;gap:6px;margin:5px 0 0 8px;padding:0}
 /* Template previews have the Previews tab and ⌘K. */
 .ledger-previews{display:none}
 #settings-dialog.has-agents .settings-tabs{display:flex;gap:20px;margin:6px 0 14px}
@@ -1684,27 +1570,12 @@ main#content{padding-bottom:104px}
 #ledger .dcr-detail .dcr-op-line{color:var(--muted);font-size:12px}
 #ledger .dcr-detail .dcr-op-line strong{color:inherit;font-weight:400}
 
-/* --- Your review in two groups, as on the Overview: the agent's comments, then yours. A comment the
-   agent adds in a new revision joins its own group, so nothing lands in the middle of yours. --- */
 #ledger .ledger-list{display:flex;flex-direction:column}
-#ledger .ledger-item[data-by="agent"]{order:0}
-#ledger .ledger-item[data-ledger]:not([data-conversation]){order:1}
-#ledger .ledger-item[data-by="person"]{order:2}
-#ledger .ledger-item:is(:nth-child(1 of [data-by="agent"]),:nth-child(1 of [data-ledger]:not([data-conversation])),:nth-child(1 of [data-by="person"]))::before{position:static;display:block;flex:1 0 100%;width:auto;height:auto;padding:16px 22px 2px;background:none;color:var(--muted);font-size:12px}
-#ledger .ledger-item:nth-child(1 of [data-by="agent"])::before{content:"Agent comments"}
-#ledger .ledger-item:nth-child(1 of [data-ledger]:not([data-conversation]))::before{content:"Your comments"}
-#ledger .ledger-item:nth-child(1 of [data-by="person"])::before{content:"From GitHub"}
-/* Your own row is drawn as the agent's: your face, the short title, the file and line, who answered. */
-#ledger .ledger-item[data-ledger]:not([data-conversation]) .ledger-meta :is([data-resolve],[data-copy]),#ledger .ledger-item .dcr-new{display:none}
-#ledger .ledger-item[data-ledger] .ledger-subject{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 #ledger .dcr-detail-code{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#ledger .ledger-item[data-ledger] .ledger-at{display:grid;place-items:center;align-self:start;width:24px;height:24px;margin-top:-2px;border-radius:6px;color:var(--muted)}
-#ledger .ledger-item[data-ledger] .ledger-at:hover{background:var(--bg-neutral-2);color:var(--ink);text-decoration:none}
-:is(#ledger .ledger-at,.thread-go) svg{width:14px;height:14px;stroke-width:1.8}
 #dcr-panel .dcr-foot-status{display:none}
 /* An adversary that did not answer keeps its mark beside the words, on the Overview too. */
-:is(.popover-comment,.review-thread,#ledger) .dcr-op>.ui-avatar{--avatar-size:18px}
-:is(.popover-comment,.review-thread,#ledger) .dcr-op-line{display:flex;gap:6px;white-space:nowrap}
+:is(.dcr-popover,.dcr-card,#ledger) .dcr-op>.ui-avatar{--avatar-size:18px;opacity:var(--op-face-opacity,1)}
+:is(.dcr-popover,.dcr-card,#ledger) .dcr-op-line{display:flex;gap:6px;white-space:nowrap}
 #ledger-footer{display:none}
 .ledger-head h2{display:flex;align-items:center}
 .ledger-head .ledger-export:not([hidden]){display:grid;place-items:center;width:26px;height:26px;margin:0 auto 0 6px;padding:0;border:0;border-radius:6px;background:none;color:var(--muted);cursor:pointer}
@@ -1724,38 +1595,12 @@ main#content{padding-bottom:104px}
   body.ledger-open:not(.zen) .ledger{position:static;width:auto;max-width:none;box-shadow:none;animation:none}
   body.ledger-open:not(.zen) .review-bar{left:50%;width:min(640px,calc(100% - 28px))}
 }
-/* A row says who answered; whether it is on GitHub is in its conversation. */
-#ledger .ledger-item[data-ledger] .ledger-meta .gh-slot{display:none}
 /* A panel's icon holds both of its states; it shows the one that says what a click will do. */
 :is(.sidebar-show,.ledger-show) .when-open{display:none}
 body:not(.sidebar-collapsed) .sidebar-show .when-open,body.ledger-open .ledger-show .when-open{display:contents}
 body:not(.sidebar-collapsed) .sidebar-show .when-closed,body.ledger-open .ledger-show .when-closed{display:none}
 
-/* A closed comment on the Overview is one line, the same for every comment: the face, the type as a
-   plain word, a check when resolved, the title, and an icon to the code. The file and lines show once
-   it is open; the name is the face. */
-.overview-reading .review-thread:has(>.thread-details:not([open])) .thread-file{display:none}
-.overview-reading .thread-summary :is(.thread-you,.thread-type-icon,.thread-priority,.thread-by){display:none}
-.overview-reading .thread-summary>.comment-avatar{order:-1}
-.overview-reading .thread-summary .thread-type{padding:0;border:0;background:none;color:var(--muted);font-weight:500}
-.overview-reading .thread-summary .thread-resolved{font-size:0;padding:0;border:0;background:none;color:var(--muted)}
-.overview-reading .thread-summary .thread-resolved svg{width:14px;height:14px}
-.overview-reading .thread-summary:has(.thread-go) .thread-at{display:none}
-.overview-reading .thread-summary .thread-go:hover{color:var(--ink)}
-.overview-reading .thread-summary .thread-go svg{width:14px;height:14px}
-/* A comment carried from an earlier revision is still yours: same place and colour as the others. */
-.overview-reading #my-review .review-thread.is-earlier .thread-summary{padding-left:0}
-.overview-reading #my-review .review-thread.is-earlier .thread-summary strong{color:var(--ink-neutral-2)}
-.overview-reading .thread-summary{align-items:center}
-.overview-reading .review-thread .thread-summary .thread-resolved{font-size:0!important;letter-spacing:0}
-.overview-reading .review-thread .thread-summary .thread-resolved::before,.overview-reading .review-thread .thread-summary .thread-resolved::after{content:none}
-/* The way to a comment's code sits right after its title, not at the far edge; an open comment has
-   View in file instead. */
-.overview-reading .review-thread:has(>.thread-details[open]) .thread-go{display:none}
 
-/* --- A comment on the Overview is one line, open or closed, in every theme: the face, the type as a
-   plain word, a check when resolved, then the title with the way to its code right after its last
-   word. Opening it shows the rest under that same line; nothing in the line moves. --- */
 
 
 /* On a dark page a shadow barely shows, so what floats is lifted the way dark interfaces lift it: its

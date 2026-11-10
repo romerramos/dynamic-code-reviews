@@ -1,3 +1,4 @@
+@layer app{
 /* Scoped to the conversation layer; the review keeps its own styles. */
 #dcr-panel[hidden]{display:none!important}
 #dcr-panel{display:grid;gap:10px;width:100%}
@@ -34,29 +35,9 @@
    then who and when, muted, on one line; the words straight under it. One rhythm everywhere a message
    is shown, scaled down only in the narrow Your review panel. */
 .dcr-convo{position:relative;display:grid;gap:18px}
-.dcr-msg{display:grid;grid-template-columns:32px minmax(0,1fr);column-gap:10px;align-items:start}
-.dcr-msg>.ui-avatar{--avatar-size:32px}
 /* A resolved card folds whole: its conversation shows again when it is opened. */
 .review-thread.is-resolved:has(>.thread-details:not([open]))>.dcr-thread{display:none}
-.dcr-msg-head{display:flex;align-items:baseline;gap:8px;margin:0 0 2px;font-size:13px;line-height:1.35}
-.dcr-msg-head strong{font-weight:600;color:var(--ink)}
-.dcr-msg-head time{color:var(--muted);font-size:12.5px}
 .dcr-new{padding:0 7px;border-radius:calc(9px * var(--round));background:var(--accent);color:var(--ink-neutral-9);font-size:11px;font-weight:600;line-height:17px}
-.dcr-body{margin:0;max-width:68ch;color:var(--ink);font-size:14px;line-height:1.55;overflow-wrap:anywhere}
-.dcr-body.is-clamped:not(.is-open){max-height:calc(7 * 1.55em);overflow:hidden;-webkit-mask-image:linear-gradient(#000 72%,transparent);mask-image:linear-gradient(#000 72%,transparent)}
-.dcr-body p{margin:0 0 .5em}
-.dcr-body>:last-child{margin-bottom:0}
-.dcr-body ul,.dcr-body ol{margin:.15em 0 .5em;padding-left:1.3em;list-style-position:outside}
-.dcr-body ul{list-style-type:disc}
-.dcr-body ol{list-style-type:decimal}
-.dcr-body li{margin:.15em 0}
-.dcr-body code{padding:1px 5px;border-radius:calc(5px * var(--round));background:color-mix(in oklab,currentColor 8%,transparent);font:12.5px/1.4 var(--mono)}
-.dcr-body pre{margin:.4em 0 .8em;padding:10px 12px;overflow:auto;border-radius:calc(8px * var(--round));background:color-mix(in oklab,currentColor 6%,transparent)}
-.dcr-body pre code{padding:0;background:none}
-.dcr-body :is(h3,h4,h5,h6){margin:.9em 0 .4em;font-size:1em;font-weight:700;line-height:1.4}.dcr-body h3{font-size:1.1em}.dcr-body .md-table{margin:.4em 0 .8em;overflow-x:auto}.dcr-body table{border-collapse:collapse;font-size:.92em}.dcr-body :is(th,td){padding:4px 10px;border:1px solid color-mix(in oklab,currentColor 18%,transparent);text-align:left;vertical-align:top;overflow-wrap:normal}.dcr-body th{font-weight:700;background:color-mix(in oklab,currentColor 6%,transparent)}
-.dcr-body a{color:var(--accent)}
-.dcr-more{margin:2px 0 0;padding:5px 0;border:0;background:none;color:var(--accent);font-size:13px;font-weight:550}
-.dcr-more:hover{text-decoration:underline}
 
 .dcr-reply{margin:16px 0 0 40px}
 .dcr-reply[hidden]{display:none}
@@ -191,7 +172,6 @@ body.qa-live .evidence-strip:not(:has(button:not(.visual-qa-option))){display:no
 .dcr-ledger .dcr-convo{grid-template-columns:minmax(0,1fr);gap:14px}
 .dcr-ledger .dcr-msg-main{min-width:0}
 .dcr-ledger .dcr-convo::before{display:none}
-.dcr-ledger .dcr-msg{grid-template-columns:minmax(0,1fr)}
 .dcr-ledger .dcr-msg-head{margin:0 0 2px;font-size:12px}
 .dcr-ledger .dcr-msg-head strong{font-size:12.5px}
 .dcr-ledger .dcr-agent .dcr-msg-head strong{color:var(--accent)}
@@ -378,7 +358,6 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 .dcr-role{color:var(--muted);font-size:12px;white-space:nowrap}
 .dcr-role+time{margin-left:-4px}
 .dcr-role+time::before{content:"· "}
-.dcr-msg-head{flex-wrap:wrap;row-gap:4px}
 /* Other opinions: under the conversation, not in a box. A hairline, a small heading with how the
    panel came out, then one row per agent (mark, name, verdict, the start of its answer). A row
    opens in place; the answer lines up with the name above it, so nothing repeats. */
@@ -424,8 +403,8 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 .dcr-faces .ui-avatar{--avatar-size:18px;box-shadow:0 0 0 1.5px var(--surface)}
 
 /* In Your review the chat is narrow: small faces beside each message, the opinions full width. */
-.dcr-ledger .dcr-msg{grid-template-columns:24px minmax(0,1fr);column-gap:10px}
-.dcr-ledger .dcr-msg>.ui-avatar{--avatar-size:24px}
+.dcr-ledger{--message-face-col:24px}
+
 .dcr-ledger .dcr-opinions{margin:18px 0 4px}
 
 /* The comment a conversation is about: its first message, a little apart from the replies. */
@@ -688,6 +667,5 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 .dcr-app-head{display:none}
 /* Prose keeps a readable measure; a table or a code block in an answer may use the message's whole
    width, so it does not scroll inside a narrow column while there is room beside it. */
-.dcr-body{max-width:none}
-.dcr-body>:is(p,ul,ol,h1,h2,h3,h4,h5,h6,blockquote){max-width:68ch}
 .dcr-closure .dcr-body>:is(p,ul,ol,h1,h2,h3,h4,h5,h6,blockquote){max-width:72ch}
+}

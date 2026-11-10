@@ -437,7 +437,7 @@
       let chip = head?.querySelector('.dcr-earlier-outcome');
       if (head && !chip) { chip = document.createElement('span'); head.prepend(chip); }
       if (chip && chip.textContent !== label) { chip.className = `dcr-earlier-outcome dcr-c-${state}`; chip.textContent = label; }
-      const at = card.querySelector('.thread-at');
+      const at = card.querySelector('.ui-comment-place');
       if (at && at.dataset.state !== label.toLowerCase()) at.dataset.state = label.toLowerCase();
     });
     // One the reader has to close went back up: then something is waiting.
@@ -1168,11 +1168,13 @@
   // A title as the Overview prints it: `code` in backticks set as code, everything else as text.
   const titleHTML = text => tools.escape(text).replace(/`([^`]+)`/g, '<code>$1</code>');
   // The way to a comment's place in the code, for a theme that shows it beside the title: an icon, the place in its tooltip.
-  const shortPlace = (comment, path, earlier) => comment.general && !comment.outdated || !path ? '' : `<button type="button" class="ledger-at" data-ledger-jump="${tools.escape(comment.id)}" title="${tools.escape(`${path} · ${placeLines(comment, earlier)}`)}" aria-label="${tools.escape(`Show in the code: ${path}, ${placeLines(comment, earlier)}`)}">${ico('arrow-up-right')}</button>`;
   const rowFor = (comment, earlier = false) => {
     const path = earlier ? globalThis.ReviewTools.outdatedWhere(comment)?.path : (globalThis.ReviewTools.anchor(snapshot, comment)?.file.path || globalThis.ReviewTools.outdatedWhere(comment)?.path);
     const at = startedAt(comment, threads[comment.id]);
-    return `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-conversation="1" data-by="${comment.author ? 'person' : 'agent'}" data-at="${tools.escape(at)}"${earlier ? ' data-earlier="1"' : ''}>${globalThis.ReviewTools.ledgerPlace(comment.id, comment.general && !comment.outdated ? '' : path, placeLines(comment, earlier))}<div class="ledger-msg">${byFace(comment)}${globalThis.ReviewTools.ledgerBy(tools.escape(byName(comment)), at)}<span class="ledger-subject">${titleHTML(comment.subject)}</span>${shortPlace(comment, path, earlier)}</div><div class="ledger-meta"></div></li>`;
+    const go = comment.general && !comment.outdated || !path ? null : {path, where: placeLines(comment, earlier)};
+    return UI.LedgerRow({id: comment.id, data: {conversation: '1', by: comment.author ? 'person' : 'agent', at, earlier: earlier ? '1' : null},
+      place: globalThis.ReviewTools.ledgerPlace(comment.id, comment.general && !comment.outdated ? '' : path, placeLines(comment, earlier)),
+      face: byFace(comment), by: globalThis.ReviewTools.ledgerBy(tools.escape(byName(comment)), at), subject: titleHTML(comment.subject), go});
   };
   const chevron = '<svg class="dcr-peek-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
   // Under the row, the replies in a line (who, how many, when last).

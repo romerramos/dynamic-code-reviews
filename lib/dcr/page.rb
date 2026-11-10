@@ -76,6 +76,12 @@ module DCR
     def component_scripts = (FIRST + %w[agent-mark.js avatar.js] + Dir[File.join(COMPONENTS, '*.js')].map { |path| File.basename(path) }.sort).uniq.map { |name| File.read(File.join(COMPONENTS, name)) }
     def component_head = FIRST.map { |name| File.read(File.join(COMPONENTS, name)) }.join("\n")
     def component_styles = Dir[File.join(COMPONENTS, '*.css')].sort.map { |path| File.read(path) }.join("\n")
+    # The page's own styles in cascade layers: the app's rules (report.css, and live.css on a served
+    # page, in the same layer), then the components', which own their parts; a context reaches a
+    # component only through its tokens. A theme is in no layer, so its tokens and rules win over
+    # both without !important.
+    LAYERS = '@layer vendor, app, components;'
+    def app_styles = "@layer app{\n#{File.read(File.join(ASSETS, 'report.css'))}\n}\n@layer components{\n#{component_styles}\n}"
     def theme_files = (['base'] + themes).map { |name| File.join(ASSETS, 'themes', "#{name}.css") }
     # A theme's own fonts are embedded, so the saved page still needs nothing from the network.
     def theme_styles
@@ -141,7 +147,7 @@ module DCR
 
       def styles
         licenses = %w[DAISYUI-LICENSE PRISM-LICENSE lucide/LICENSE glightbox/LICENSE].map { |name| asset(File.join('vendor', name)) }.join("\n")
-        "/* Third-party licenses\n#{licenses}\n*/\n#{Page.daisyui}\n#{asset('vendor/glightbox/glightbox.min.css')}\n#{Page.theme_styles}\n#{asset('report.css')}\n#{Page.component_styles}"
+        "/* Third-party licenses\n#{licenses}\n*/\n#{Page.daisyui}\n#{LAYERS}\n@layer vendor{\n#{asset('vendor/glightbox/glightbox.min.css')}\n}\n#{Page.theme_styles}\n#{Page.app_styles}"
       end
 
       def scripts
@@ -165,7 +171,7 @@ module DCR
 
       private
 
-      def styles = Page.daisyui + Page.theme_styles + asset('report.css') + Page.component_styles
+      def styles = "#{Page.daisyui}\n#{LAYERS}\n#{Page.theme_styles}\n#{Page.app_styles}"
       def name = @history['name']
       def revisions = @history['revisions']
       def latest?(entry) = entry == revisions.last

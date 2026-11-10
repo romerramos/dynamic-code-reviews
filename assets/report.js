@@ -1417,16 +1417,15 @@
   // reads as their message, in a chat: their face, You, then what they wrote.
   function commentHTML(comment) {
     const lines = `:${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}${comment.side === 'new' ? '' : ' (before)'}`;
-    const where = `<p class="comment-location">${pathFit(ReviewTools.anchor(snapshot, comment)?.file.path || '', lines, true)}</p>`;
     const body = ReviewTools.commentBody(comment, review.qa) ? `<div class="comment-discussion">${ReviewTools.markdown(ReviewTools.commentBody(comment, review.qa))}</div>` : '';
     const evidence = ReviewTools.evidenceFlows(review.qa, comment).length ? `<button class="btn btn-xs btn-soft" data-evidence="${escape(comment.id)}">See visual evidence</button>` : '';
     const actions = `<div class="comment-actions">${commentActions(comment, 'xs')}</div>`;
-    if (comment.personal) {
-      const tags = comment.audience === 'agent' ? (comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : '') : threadBadges(comment, true);
-      return `<section class="popover-comment is-own" data-comment-id="${escape(comment.id)}">${where}<div class="comment-own">${youAvatar()}<div class="comment-own-main"><p class="comment-own-head"><strong class="you-name">${youName()}</strong>${tags}</p><h4>${escape(comment.subject)}</h4>${body}</div></div>${evidence}${actions}</section>`;
-    }
     const found = ReviewTools.anchor(snapshot, comment);
-    return `<section class="popover-comment" data-comment-id="${escape(comment.id)}">${where}<div class="thread-badges">${threadBadges(comment)}</div><div class="popover-title">${authorFace(comment)}<h4>${prose(comment.subject)}</h4><span class="thread-at">${escape(lines)}</span></div>${threadMeta(comment, found?.file.path, lines.slice(1))}${body}${evidence}<div class="thread-footer">${actions}<button class="btn btn-xs ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${escape(comment.id)}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></section>`;
+    const tags = comment.personal && comment.audience === 'agent' ? (comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : '') : threadBadges(comment, comment.personal);
+    return UI.CommentPopover({id: comment.id, own: comment.personal, where: pathFit(found?.file.path || '', lines, true), tags, face: authorFace(comment),
+      title: comment.personal ? escape(comment.subject) : prose(comment.subject), place: escape(lines),
+      meta: threadMeta(comment, found?.file.path, lines.slice(1)), body: `${body}${evidence}`,
+      footer: `${actions}${comment.personal ? '' : UI.Button({html: comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`, variant: comment.resolved ? 'ghost' : 'soft', size: 'xs', attrs: {'data-resolve': comment.id}})}`});
   }
 
   // A comment that asks nothing more of the reader (resolved, or praise) keeps its icon, faintly, and marks no lines.
@@ -2155,10 +2154,7 @@
     const label = `${path.split('/').pop()}${line ? `:${line}` : ''}`;
     return label.length > 28 ? `<span class="name-head">${escape(label.slice(0, -16))}</span><span class="name-tail">${escape(label.slice(-16))}</span>` : escape(label);
   };
-  const stateWord = (comment, closed) => {
-    const word = comment.personal && !comment.resolved ? 'yours' : comment.resolved ? 'resolved' : closed && comment.outdated?.revision ? `revision ${comment.outdated.revision}` : '';
-    return word ? `data-state="${escape(word)}"` : '';
-  };
+  const stateWord = (comment, closed) => comment.personal && !comment.resolved ? 'yours' : comment.resolved ? 'resolved' : closed && comment.outdated?.revision ? `revision ${comment.outdated.revision}` : '';
   // Who wrote it, what kind it is and how much it matters, where it is: one line under the title.
   const threadMeta = (comment, path, range) => {
     const kind = comment.personal ? (comment.audience === 'agent' ? 'Your question' : 'Your comment') : (comment.label ? comment.label.charAt(0).toUpperCase() + comment.label.slice(1) : 'Comment');
@@ -2191,7 +2187,19 @@
     // Your own comment is titled by a summary, so its body is the whole of what you wrote.
     const told = comment.personal ? [comment.subject, comment.discussion].filter(Boolean).join('\n\n') : comment.discussion;
     const follows = earlier ? `<details class="thread-follows"><summary>Follows up on “${escape(earlier.subject)}”${earlierWas?.revision ? `, from revision ${escape(earlierWas.revision)}` : ''}</summary>${earlier.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(earlier.discussion)}</div>` : ''}${earlierWas?.code ? `<details class="thread-was"><summary>The code it was written on</summary><pre><code>${escape(earlierWas.code)}</code></pre></details>` : ''}</details>` : '';
-    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''} ${closed ? 'is-earlier' : ''}${comment.personal ? ' is-own' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${pathFit(found?.file.path || was?.path || 'General comment', '', true)}</span><span class="thread-range">${found ? range : was ? `<span class="thread-outdated" title="These lines changed after the comment was written">Outdated</span>${escape(was.lines)}${closed && was.revision ? ` in revision ${escape(was.revision)}` : ''}` : ''}</span></div><details class="thread-details" data-thread-fold="${id}" ${threadsOpen.has(comment.id) ? 'open' : ''}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}">${comment.personal ? youAvatar() : ''}<span class="thread-badges">${comment.personal ? `<b class="thread-you you-name">${youName()}</b>${comment.audience === 'agent' ? (comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : '') + ghBadgeSlot(comment) : threadBadges(comment, true)}` : threadBadges(comment)}</span>${authorFace(comment)}<strong title="${escape(comment.subject)}">${prose(comment.personal ? comment.title || shortTitle(comment.subject, 64) : comment.author ? shortTitle(comment.subject, 90) : comment.subject)}${found && comment.hunk ? ` <button type="button" class="thread-go" data-comment="${id}" title="${escape(`${found.file.path} · ${range}`)}" aria-label="${escape(`Show in the code: ${found.file.path}, ${range}`)}">${icon('arrow-up-right')}</button>` : ''}</strong><span class="thread-at" ${stateWord(comment, closed)}>${place(found ? found.file.path : was?.path, found ? comment.start : comment.outdated?.start)}</span><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${threadMeta(comment, found?.file.path || was?.path, found ? range : was?.lines)}${told ? `<div class="comment-discussion">${ReviewTools.markdown(told)}</div>` : ''}${wasCode}${follows}${commentShots(comment)}${commentEvidence(comment)}</div>${found ? found.fullFile ? `<button class="thread-source btn btn-sm btn-ghost" type="button" data-comment="${id}">View in file · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : `<button class="thread-source btn btn-sm btn-ghost" type="button" data-open-code="${id}" aria-haspopup="dialog" aria-label="${escape(`View code for ${found.file.path}, ${range}: ${comment.subject}`)}">View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : ''}</details><div class="thread-footer"><div class="comment-actions">${commentActions(comment)}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
+    const title = prose(comment.personal ? comment.title || shortTitle(comment.subject, 64) : comment.author ? shortTitle(comment.subject, 90) : comment.subject);
+    const lines = found ? `${found.lines.length} line${found.lines.length === 1 ? '' : 's'}` : '';
+    const source = !found ? '' : found.fullFile
+      ? UI.Button({html: `View in file · ${lines} ${icon('arrow-right')}`, variant: 'ghost', className: 'thread-source', attrs: {'data-comment': comment.id}})
+      : UI.Button({html: `View code · ${lines} ${icon('arrow-right')}`, variant: 'ghost', className: 'thread-source', attrs: {'data-open-code': comment.id, 'aria-haspopup': 'dialog', 'aria-label': `View code for ${found.file.path}, ${range}: ${comment.subject}`}});
+    return UI.CommentCard({id: comment.id, open: threadsOpen.has(comment.id), resolved: comment.resolved, earlier: closed, own: comment.personal,
+      row: {subject: comment.subject, title, face: authorFace(comment), go: found && comment.hunk ? {path: found.file.path, range} : null,
+        tags: comment.personal && comment.audience === 'agent' ? '' : UI.Tag(comment.label),
+        place: place(found ? found.file.path : was?.path, found ? comment.start : comment.outdated?.start), state: stateWord(comment, closed)},
+      meta: threadMeta(comment, found?.file.path || was?.path, found ? range : was?.lines),
+      body: `${told ? `<div class="comment-discussion">${ReviewTools.markdown(told)}</div>` : ''}${wasCode}${follows}${commentShots(comment)}${commentEvidence(comment)}`,
+      source,
+      footer: `<div class="comment-actions">${commentActions(comment)}</div>${UI.Button({html: comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`, variant: comment.resolved ? 'ghost' : 'soft', attrs: {'data-resolve': comment.id}})}`});
   }
   function toggleResolved(id) {
     const comment = comments.find(comment => comment.id === id);
@@ -3028,14 +3036,14 @@
     // One list, in the order things were said: your comments here, and on the served page the
     // conversations you joined and the comments on GitHub, each row drawn the same way (ledgerRow).
     const ordered = entries.map((entry, index) => [entry, index]).sort(([a, i], [b, j]) => (Date.parse(a.at) || 0) - (Date.parse(b.at) || 0) || i - j).map(([entry]) => entry);
-    // The way to a comment's place in the code, for a theme that shows it beside the title.
-    const ledgerAt = entry => {
+
+    const row = entry => {
       const comment = comments.find(item => item.id === entry.id);
-      if (entry.path === 'General' || !entry.path || !comment?.start) return '';
-      // An icon, not the name: it takes you there, and the name is in its tooltip.
-      return `<button type="button" class="ledger-at" data-ledger-jump="${escape(entry.id)}" title="${escape(`${entry.path} · ${entry.where}`)}" aria-label="${escape(`Show in the code: ${entry.path}, ${entry.where}`)}">${icon('arrow-up-right')}</button>`;
+      const go = entry.path === 'General' || !entry.path || !comment?.start ? null : {path: entry.path, where: entry.where};
+      return UI.LedgerRow({id: entry.id, data: {at: entry.at, state: entry.resolved ? 'resolved' : 'draft'}, place: ReviewTools.ledgerPlace(entry.id, entry.path === 'General' ? '' : entry.path, entry.where),
+        face: youAvatar(), by: ReviewTools.ledgerBy(youName(), entry.at, 'you-name'), subject: escape(entry.title || shortTitle(entry.subject)), subjectTitle: entry.subject, go,
+        meta: `${ghBadgeSlot(comment || {})}<button type="button" data-resolve="${escape(entry.id)}">${entry.resolved ? 'Reopen' : 'Resolve'}</button><button type="button" data-copy="${escape(entry.id)}">Copy for LLMs</button>`});
     };
-    const row = entry => `<li class="ledger-item" data-ledger="${escape(entry.id)}" data-at="${escape(entry.at)}" data-state="${entry.resolved ? 'resolved' : 'draft'}">${ReviewTools.ledgerPlace(entry.id, entry.path === 'General' ? '' : entry.path, entry.where)}<div class="ledger-msg">${youAvatar()}${ReviewTools.ledgerBy(youName(), entry.at, 'you-name')}<span class="ledger-subject" title="${escape(entry.subject)}">${escape(entry.title || shortTitle(entry.subject))}</span>${ledgerAt(entry)}</div><div class="ledger-meta">${ghBadgeSlot(comments.find(comment => comment.id === entry.id) || {})}<button type="button" data-resolve="${escape(entry.id)}">${entry.resolved ? 'Reopen' : 'Resolve'}</button><button type="button" data-copy="${escape(entry.id)}">Copy for LLMs</button></div></li>`;
     const byFile = ordered.length ? `<section class="ledger-group ledger-thread"><ul class="ledger-list" data-ledger-list>${ordered.map(row).join('')}</ul></section>` : '';
     const stepNotes = notes.length ? `<section class="ledger-group"><h3>Step notes</h3><ul class="ledger-list">${notes.map(note => `<li class="ledger-item" data-state="draft"><button type="button" class="ledger-jump" data-ledger-step="${escape(note.id)}"><span class="ledger-where">${escape(note.title)}</span><span class="ledger-subject">${escape(note.text)}</span></button></li>`).join('')}</ul></section>` : '';
     const empty = !entries.length && !notes.length ? '<p class="ledger-note">Select lines in a diff and write a comment. What you say, and what your agent answers, collects here.</p>' : '';

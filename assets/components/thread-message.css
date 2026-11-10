@@ -1,0 +1,36 @@
+/* ThreadMessage (thread-message.js): the face in its column, then who and when, then the words.
+   Where it sits sets its columns: --message-face-col, --message-gap, --message-face. The words are
+   an answer as Markdown: paragraphs, lists, code, tables, all inside its column. */
+.dcr-msg{display:grid;grid-template-columns:var(--message-face-col,32px) minmax(0,1fr);column-gap:var(--message-gap,10px);align-items:start}
+.dcr-msg{--avatar-size:var(--message-face,var(--message-face-col,32px))}
+.dcr-msg-head{display:flex;align-items:baseline;gap:8px;margin:0 0 2px;font-size:13px;line-height:1.35}
+.dcr-msg-head strong{font-weight:600;color:var(--ink)}
+.dcr-msg-head time{color:var(--muted);font-size:12.5px}
+.dcr-body{margin:0;max-width:68ch;color:var(--ink);font-size:14px;line-height:1.55;overflow-wrap:anywhere}
+.dcr-body.is-clamped:not(.is-open){max-height:calc(7 * 1.55em);overflow:hidden;-webkit-mask-image:linear-gradient(#000 72%,transparent);mask-image:linear-gradient(#000 72%,transparent)}
+.dcr-body p{margin:0 0 .5em}
+.dcr-body>:last-child{margin-bottom:0}
+.dcr-body ul,.dcr-body ol{margin:.15em 0 .5em;padding-left:1.3em;list-style-position:outside}
+.dcr-body ul{list-style-type:disc}
+.dcr-body ol{list-style-type:decimal}
+.dcr-body li{margin:.15em 0}
+.dcr-body code{padding:1px 5px;border-radius:calc(5px * var(--round));background:color-mix(in oklab,currentColor 8%,transparent);font:12.5px/1.4 var(--mono)}
+.dcr-body pre{margin:.4em 0 .8em;padding:10px 12px;overflow:auto;border-radius:calc(8px * var(--round));background:color-mix(in oklab,currentColor 6%,transparent)}
+.dcr-body pre code{padding:0;background:none}
+.dcr-body :is(h3,h4,h5,h6){margin:.9em 0 .4em;font-size:1em;font-weight:700;line-height:1.4}.dcr-body h3{font-size:1.1em}.dcr-body .md-table{margin:.4em 0 .8em;overflow-x:auto}.dcr-body table{border-collapse:collapse;font-size:.92em}.dcr-body :is(th,td){padding:4px 10px;border:1px solid color-mix(in oklab,currentColor 18%,transparent);text-align:left;vertical-align:top;overflow-wrap:normal}.dcr-body th{font-weight:700;background:color-mix(in oklab,currentColor 6%,transparent)}
+.dcr-body a{color:var(--accent)}
+.dcr-more{margin:2px 0 0;padding:5px 0;border:0;background:none;color:var(--accent);font-size:13px;font-weight:550}
+.dcr-more:hover{text-decoration:underline}
+.dcr-msg-head{flex-wrap:wrap;row-gap:4px}
+.dcr-body{max-width:none}
+.dcr-body>:is(p,ul,ol,h1,h2,h3,h4,h5,h6,blockquote){max-width:68ch}
+/* What a theme may leave out of a message's line, or draw plainly: the name (--message-name, and
+   --message-you-name for the reader's own), the model and role (--message-extras), the verdict
+   (--verdict-*); the line's size and ink (--message-head-*); the space above each (--message-space). */
+.dcr-msg{padding-top:var(--message-space,revert-layer)}
+.dcr-msg-head{font-size:var(--message-head-size,revert-layer);color:var(--message-head-ink,revert-layer)}
+.dcr-msg-head>strong{display:var(--message-name,revert-layer)}
+.dcr-you>.dcr-msg-main>.dcr-msg-head>strong{display:var(--message-you-name,var(--message-name,revert-layer))}
+.dcr-msg-head :is(.dcr-model,.thread-model,.dcr-role){display:var(--message-extras,revert-layer)}
+.dcr-msg-head :is(.dcr-verdict,.dcr-badge){padding:var(--verdict-pad,revert-layer);border:var(--verdict-border,revert-layer);background:var(--verdict-bg,revert-layer);color:var(--verdict-ink,revert-layer);font-size:var(--verdict-size,revert-layer);font-weight:var(--verdict-weight,revert-layer)}
+.dcr-msg-head :is(.dcr-verdict,.dcr-badge) svg{display:var(--verdict-icon,revert-layer)}
