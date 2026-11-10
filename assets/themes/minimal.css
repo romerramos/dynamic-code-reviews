@@ -901,18 +901,27 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
 [data-theme^="minimal-"] :is(.popover-comment,.review-thread) .dcr-op-line{color:var(--minimal-faint);font-size:12px}
 [data-theme^="minimal-"] :is(.popover-comment,.review-thread) .dcr-op-line strong{color:inherit;font-weight:400}
 
-/* --- A QA review says one thing at a time. While the agent gets the app ready, the bar says it (with
-   its clock) and nothing covers the app; the sharing pill steps aside, since the bar implies it. --- */
+/* --- A QA review says one thing at a time. While the agent gets the app ready, the app blurs and one
+   card in its middle says what it is doing, for how long, and how to stop; nothing is recorded then.
+   While it records there is no blur, and the bar says so on two lines. The sharing pill steps aside. --- */
 [data-theme^="minimal-"] #dcr-app.is-agent-driving .dcr-app-foot{display:none!important}
-[data-theme^="minimal-"] #dcr-app.is-preparing .dcr-app-prep{display:none}
-[data-theme^="minimal-"] #dcr-app.is-preparing .dcr-qa-text>:is([data-qa-title],[data-qa-detail]){display:none}
-[data-theme^="minimal-"] #dcr-app.is-preparing .dcr-qa-text>[data-qa-prep]{display:inline}
-[data-theme^="minimal-"] #dcr-app .dcr-qa-text>[data-qa-prep-title]{font-size:14px;font-weight:500;white-space:nowrap}
-[data-theme^="minimal-"] #dcr-app .dcr-qa-text>.dcr-qa-clock{color:var(--minimal-faint);font:12px var(--mono)}
-[data-theme^="minimal-"] #dcr-app .dcr-qa-text>[data-qa-prep-detail]{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--minimal-faint);font-size:12px}
-[data-theme^="minimal-"] #dcr-app.is-preparing .dcr-qa-pulse{width:12px;height:12px;box-sizing:border-box;border:2px solid var(--line);border-top-color:var(--ink);border-radius:50%;background:none;animation:dcr-qa-spin 1s linear infinite}
-@keyframes dcr-qa-spin{to{transform:rotate(360deg)}}
-@media(prefers-reduced-motion:reduce){[data-theme^="minimal-"] #dcr-app.is-preparing .dcr-qa-pulse{animation:none}}
+[data-theme^="minimal-"] #dcr-app .dcr-app-prep{align-items:center;justify-content:center;padding:24px;background:color-mix(in srgb,var(--surface) 45%,transparent);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+[data-theme^="minimal-"] #dcr-app .dcr-app-prep-card{width:min(440px,100%);box-sizing:border-box;padding:18px 20px 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 16px 40px color-mix(in srgb,var(--shade) 10%,transparent);pointer-events:auto}
+[data-theme^="minimal-"] #dcr-app .dcr-app-prep-spin{display:none}
+[data-theme^="minimal-"] #dcr-app .dcr-app-prep-head{display:flex;align-items:baseline;gap:10px;margin:0}
+[data-theme^="minimal-"] #dcr-app .dcr-app-prep-head strong{font-size:14px;font-weight:600}
+[data-theme^="minimal-"] #dcr-app .dcr-app-prep-head .dcr-app-prep-clock{margin-left:auto;color:var(--minimal-faint);font:12px var(--mono)}
+[data-theme^="minimal-"] #dcr-app .dcr-app-prep-now{margin:6px 0 0;color:var(--ink-neutral-3);font-size:13px}
+[data-theme^="minimal-"] #dcr-app .dcr-app-prep-now .dcr-app-prep-clock{margin-left:8px;color:var(--minimal-faint);font:11.5px var(--mono)}
+[data-theme^="minimal-"] #dcr-app .dcr-app-prep-log{margin:6px 0 0;padding:0;list-style:none;color:var(--minimal-faint);font-size:12px}
+[data-theme^="minimal-"] #dcr-app .dcr-app-prep-stop{display:block;margin:12px 0 0 auto;padding:0;border:0;background:none;color:var(--ink-neutral-3);font:inherit;font-size:13px;font-weight:500;cursor:pointer}
+[data-theme^="minimal-"] #dcr-app .dcr-app-prep-stop:hover{color:var(--ink)}
+[data-theme^="minimal-"] #dcr-app.is-preparing .stage-bar{display:none}
+/* Recording: the bar's words on two lines, the title over what to do; no pulse and no count. */
+[data-theme^="minimal-"] #dcr-app .dcr-qa-banner .dcr-qa-pulse,[data-theme^="minimal-"] #dcr-app .dcr-qa-banner .dcr-qa-progress{display:none}
+[data-theme^="minimal-"] #dcr-app .dcr-qa-banner .dcr-qa-text{display:flex;flex-direction:column;align-items:flex-start;gap:1px}
+[data-theme^="minimal-"] #dcr-app .dcr-qa-banner .dcr-qa-text strong{white-space:normal}
+[data-theme^="minimal-"] #dcr-app .dcr-qa-banner .dcr-qa-text span{white-space:normal}
 /* The result: what came of it, then the agent's words as plain text, not a box inside the box. */
 [data-theme^="minimal-"] .dcr-qa-done .modal-box{width:min(560px,calc(100vw - 32px));padding:22px 24px 18px;border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 64px color-mix(in srgb,var(--shade) 12%,transparent)}
 [data-theme^="minimal-"] .dcr-qa-done header{display:flex;gap:10px;align-items:flex-start;margin:0 0 14px}
@@ -952,3 +961,7 @@ html[data-theme^="minimal-"]{--agent-claude:var(--ink)!important;--agent-codex:v
 /* One line between two comments, not one under each and another over the next. */
 [data-theme^="minimal-"] .overview-reading .review-thread .thread-footer{border-bottom:0}
 [data-theme^="minimal-"] .overview-reading .review-thread{border-top:0}
+
+/* The result's check is the plain mark, no circle behind it. */
+[data-theme^="minimal-"] .dcr-qa-done .dcr-qa-check{display:inline-grid;place-items:center;width:18px;height:18px;margin-top:1px;border:0;border-radius:0;background:none!important;box-shadow:none;color:var(--ink)}
+[data-theme^="minimal-"] .dcr-qa-done .dcr-qa-check svg{width:16px;height:16px}

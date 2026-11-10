@@ -70,7 +70,7 @@
     </header>
     <div class="dcr-app-body">
       <div class="dcr-app-canvas">
-        <div class="dcr-app-pane"><iframe title="The app under review" name="dcr-app-frame"></iframe><div class="dcr-app-prep" hidden><div class="dcr-app-prep-card"><span class="dcr-app-prep-spin" aria-hidden="true"></span><div class="dcr-app-prep-text"><p class="dcr-app-prep-head"><strong data-prep-title></strong><span class="dcr-app-prep-clock" data-prep-clock aria-hidden="true"></span></p><p class="dcr-app-prep-now" role="status" aria-live="polite"><span data-prep-detail></span><span class="dcr-app-prep-clock" data-prep-since aria-hidden="true"></span></p><ol class="dcr-app-prep-log" data-prep-log hidden></ol></div></div></div></div>
+        <div class="dcr-app-pane"><iframe title="The app under review" name="dcr-app-frame"></iframe><div class="dcr-app-prep" hidden><div class="dcr-app-prep-card"><span class="dcr-app-prep-spin" aria-hidden="true"></span><div class="dcr-app-prep-text"><p class="dcr-app-prep-head"><strong data-prep-title></strong><span class="dcr-app-prep-clock" data-prep-clock aria-hidden="true"></span></p><p class="dcr-app-prep-now" role="status" aria-live="polite"><span data-prep-detail></span><span class="dcr-app-prep-clock" data-prep-since aria-hidden="true"></span></p><ol class="dcr-app-prep-log" data-prep-log hidden></ol><button type="button" class="dcr-app-prep-stop" data-qa-stop-prep>Stop QA review</button></div></div></div></div>
         <form class="dcr-app-compose" data-app-compose hidden aria-label="Comment on this element">
           <p class="dcr-app-target"></p>
           <textarea name="body" rows="3" placeholder="What should change here?" aria-label="Your comment"></textarea>
@@ -696,6 +696,8 @@
     else if (answered) finishQA(answered);
     else setDriving(null);
   };
+  // A theme that puts the getting-ready card in the middle of the app gives it its own Stop.
+  $('[data-qa-stop-prep]').addEventListener('click', () => $('[data-qa-stop]').click());
   $('[data-qa-stop]').addEventListener('click', async () => {
     const id = qaActive;
     if (!id) return;
