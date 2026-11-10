@@ -2123,7 +2123,8 @@
     const kind = comment.personal ? (comment.audience === 'agent' ? 'Your question' : 'Your comment') : (comment.label ? comment.label.charAt(0).toUpperCase() + comment.label.slice(1) : 'Comment');
     const slug = comment.personal ? '' : comment.agent || '';
     const by = slug ? escape(AGENT_NAMES[slug] || slug.charAt(0).toUpperCase() + slug.slice(1)) : '';
-    return `<p class="thread-meta">${[kind, by, comment.decoration && !comment.personal ? escape(comment.decoration) : '', range ? `<span class="thread-meta-path" title="${escape(path || '')}">${escape(range)}</span>` : ''].filter(Boolean).join('<i aria-hidden="true">·</i>')}</p>`;
+    // Who wrote it is the face beside the title, and where it is is at the right of it: only what kind of comment it is is said.
+    return `<p class="thread-meta" title="${escape([by, path && range ? `${path}, ${range}` : ''].filter(Boolean).join(' · '))}">${[kind, comment.decoration && !comment.personal ? escape(comment.decoration) : ''].filter(Boolean).join('<i aria-hidden="true">·</i>')}</p>`;
   };
   // Who wrote a comment, as a small face: the reader, a teammate on GitHub, or an agent's mark.
   function authorFace(comment) {
