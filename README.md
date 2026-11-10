@@ -191,6 +191,20 @@ shows and open the local address: `ssh -L 52318:127.0.0.1:52318 -L 50186:127.0.0
 read the saved HTML file (`.reviews/<series>/current.html`) anywhere; it works offline but cannot talk
 to the agent.
 
+## Workspace names
+
+Apps that make worktrees name the folders their own way (T3 Code's `t3-c6839a9e`), so with several
+open it is hard to tell which review is which. A tool that names its workspaces can say so in
+`workspace.json` in the checkout's git dir (`git rev-parse --absolute-git-dir`), which git never commits:
+
+```json
+{"name": "orion", "app": "https://app.orion.test"}
+```
+
+The served review then shows `orion` in its header and tab title, `dcr serve` and `dcr link` print it,
+and `dcr serve` shows `app` inside the review when no `--app` is given. Both fields are optional. The
+workspace kit's `ws` writes it for its workspaces; without a marker the folder name is shown, as before.
+
 ## Stopping reviews
 
 A review keeps its server running in the background so you can come back to it. Ask the agent to close
@@ -233,7 +247,7 @@ commands. Everything runs as `<skill>/bin/dcr <command>`, with Ruby 3.1+ (under 
 | `screenshot` | Post screenshots of the running app to the review: in the Overview's Seen in the app, or on a comment. A later QA clip of the same thing takes a screenshot's place. |
 | `log` | What the agent's commands did to a review, one line each: what ran, what was refused and why, who ran it and with which copy of the skill. |
 | `sync` | Update a review to the code as it is now, with no new analysis: comments follow their lines or become outdated. The served page's Update button does the same. A pull request's review is updated from GitHub: `--pull-request` (and Update in the page) takes its head as pushed now; it shows the checkout only when its reviewer asks (`--follow-checkout`, or Update from my checkout behind Update's arrow). A review of the checkout becomes its branch's pull request's once there is one (`--switch-to-pull-request`, or Switch to pull request behind Update's arrow), keeping comments, conversations and progress. |
-| `serve [--share] [--app <url>]` | Serve a review live: conversation, previews, the running app, tailnet sharing. In a Conductor workspace, `--app` defaults to the App preview URL it declares; `--without-app '<why>'` says the change needs no app. |
+| `serve [--share] [--app <url>]` | Serve a review live: conversation, previews, the running app, tailnet sharing. `--app` defaults to the app the checkout's workspace marker names (see Workspace names); `--without-app '<why>'` says the change needs no app. |
 | `focus` / `link` | Bring the review's browser tab to the front; print its local and tailnet addresses. |
 | `comment` | Post a review comment to a review in progress. With `"follows"`, it takes up an outdated comment on the new lines. |
 | `reply --outcome` | After the code changed, say what became of a comment: `addressed`, `still-applies` or `not-relevant`. The adversaries then check it on their own. |
@@ -346,6 +360,7 @@ ruby scripts/test_github_inbox.rb  # teammates' GitHub comments taken in, handed
 ruby scripts/test_publish.rb       # the review's report: what it counts, what it leaves out, publishing it once and in place
 ruby scripts/test_live_previews.rb # preview requests, stylesheets, stand-ins
 ruby scripts/test_app_proxy.rb     # the running app inside the review
+ruby scripts/test_workspace.rb     # the workspace marker: its name in the served review, its app for serve
 node scripts/test_ui.js            # the review page's own logic
 node --check assets/report.js
 ```

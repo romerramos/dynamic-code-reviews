@@ -6,6 +6,9 @@
   <meta http-equiv="Content-Security-Policy" content="<%= csp %>">
   <meta name="dcr-ui" content="<%= ui_version %>">
 <%- if served -%>
+<%- if served.workspace -%>
+  <meta name="dcr-workspace" content="<%= h served.workspace %>">
+<%- end -%>
   <script>(function(){try{var b=<%= script_json(served.progress) %>;Object.keys(b).forEach(function(k){localStorage.setItem(k,JSON.stringify(b[k]))})}catch(e){}})()</script>
 <%- end -%>
 <%- if export -%>

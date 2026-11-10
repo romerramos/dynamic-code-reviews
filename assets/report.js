@@ -3889,8 +3889,11 @@
       if (entries.some(entry => entry.number === number)) location.href = `${review.history.preview ? '' : '../'}revision-${String(number).padStart(3, '0')}.html`;
     };
   }
-  document.title = `${review.title} · Dynamic Code Reviews`;
-  $('repo-label').textContent = snapshot.repo.split('/').pop();
+  // A served review names the checkout's workspace (orion) when it has one, since its folder name
+  // is often an app's id (t3-c6839a9e).
+  const workspace = document.querySelector('meta[name="dcr-workspace"]')?.content;
+  document.title = `${workspace ? `[${workspace}] ` : ''}${review.title} · Dynamic Code Reviews`;
+  $('repo-label').textContent = workspace || snapshot.repo.split('/').pop();
   const scope = ReviewTools.scopeLabel(snapshot, review);
   $('scope').innerHTML = `<span class="badge neutral" title="${escape(scope)}">${escape(scope)}</span>`;
   const hash = location.hash.slice(1);

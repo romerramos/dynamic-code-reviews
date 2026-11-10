@@ -637,6 +637,9 @@ module DCR
       endpoint = File.join(directory, '.serve.json')
       raise ArgumentError, 'The review is not being served. Run `dcr serve` first.' unless File.file?(endpoint)
       served = JSON.parse(File.read(endpoint))
+      require_relative 'workspace'
+      workspace = Workspace.find(File.expand_path('../..', directory))&.dig('name')
+      puts "Workspace: #{workspace}" if workspace
       puts "On this computer: http://127.0.0.1:#{served.fetch('port')}/#overview"
       puts served['shared'] ? "On your tailnet: #{served['shared']}/#overview" : 'Not shared on your tailnet (serve with --share to open it from your other devices).'
     end

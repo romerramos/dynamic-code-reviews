@@ -3,6 +3,7 @@
 require_relative 'http'
 require_relative 'live_api'
 require_relative 'page'
+require_relative 'workspace'
 
 module DCR
   # The served review: the current review page (rendered for serving), its saved sibling pages,
@@ -72,7 +73,9 @@ module DCR
     def review_page(request)
       @on_first_view&.call
       @on_first_view = nil
-      served = Page::Served.new(token: @token, progress: @live.progress, app: @app&.describe(shared: request.shared?), no_app: @no_app)
+      # The series lives in <checkout>/.reviews/<name>; the marker is read again so a renamed workspace shows.
+      workspace = Workspace.find(File.expand_path('../..', @series))&.dig('name')
+      served = Page::Served.new(token: @token, progress: @live.progress, app: @app&.describe(shared: request.shared?), no_app: @no_app, workspace: workspace)
       HTTP.html(Page.review(Page.payload(File.read(@report, encoding: 'UTF-8')), served: served), csp: served.csp)
     end
 

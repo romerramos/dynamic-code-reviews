@@ -16,7 +16,7 @@ OptionParser.new do |parser|
   parser.on('--repo PATH', 'With --name: serve that series\' current review') { |value| options[:repo] = value }
   parser.on('--name SLUG') { |value| options[:name] = value }
   parser.on('--port NUMBER', Integer) { |value| options[:port] = value }
-  parser.on('--app URL', 'The running app to show inside the review, like http://localhost:3000 or https://app.myproject.test; with --name in a Conductor workspace, its App preview URL when omitted') { |value| options[:app] = value }
+  parser.on('--app URL', 'The running app to show inside the review, like http://localhost:3000 or https://app.myproject.test; with --name, the app its workspace marker names when omitted') { |value| options[:app] = value }
   parser.on('--app-ca PATH', 'A local CA certificate the app\'s HTTPS uses (mkcert\'s root is found automatically)') { |value| options[:app_ca] = value }
   parser.on('--without-app REASON', 'Why this change needs no running app (no UI in it), in a few words; the Overview says so') { |value| options[:no_app] = value.strip }
   parser.on('--share', 'Also serve it on your tailnet with Tailscale Serve, for your own login; stays local when Tailscale cannot') { options[:share] = true }
@@ -36,10 +36,12 @@ if (name = options.delete(:name))
     ReviewSeries.refresh(repo: repo, name: name)
     warn 'Refreshed the saved report with the current review UI. Saved revisions are unchanged.'
   end
+  require_relative '../lib/dcr/workspace'
+  marker = DCR::Workspace.find(File.expand_path(repo))
+  puts "Workspace: #{marker['name']}" if marker&.key?('name')
   unless options[:app] || options[:no_app]
-    require_relative '../lib/dcr/harness_app'
-    options[:app], source = DCR::HarnessApp.find(File.expand_path(repo))
-    puts "No --app given: using #{options[:app]}, #{source}." if options[:app]
+    options[:app] = marker&.dig('app')
+    puts "No --app given: using #{options[:app]}, from #{marker['path']}." if options[:app]
   end
 end
 options.delete(:repo)
