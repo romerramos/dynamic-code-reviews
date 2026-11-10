@@ -238,6 +238,8 @@ body.dcr-has-app #qa-panel{display:none}
 .dcr-try{margin:0 0 6px}
 .dcr-try > h2{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .dcr-try-rows{margin:0;padding:0;list-style:none}
+/* A header for themes that draw these rows as a markdown table. */
+.dcr-try-head,.dcr-try-rule{display:none}
 .dcr-try-row,.risk-rank.risk-none{display:grid;grid-template-columns:150px minmax(0,1fr) auto;align-items:baseline;gap:4px 18px;padding:11px 0;border-top:1px solid var(--line);font-size:14px}
 .dcr-try-do,.risk-rank.risk-none h2{margin:0;padding:0;border:0;background:none;color:var(--ink);font:inherit;font-weight:600;text-align:left}
 button.dcr-try-do{cursor:pointer}

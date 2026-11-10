@@ -51,7 +51,7 @@
       <span class="dcr-try-more"><button type="button" data-try-all>Open previews</button></span>
       <ul class="dcr-try-templates"></ul>
     </li>` : '';
-  band.innerHTML = `<h2 id="dcr-try-title">Try the change</h2><ul class="dcr-try-rows">${appHTML}${previewsHTML}</ul>`;
+  band.innerHTML = `<h2 id="dcr-try-title">Try the change</h2><ul class="dcr-try-rows"><li class="dcr-try-head" aria-hidden="true"><span>item</span><span>now</span><span>next</span></li><li class="dcr-try-rule" aria-hidden="true"><span></span><span></span><span></span></li>${appHTML}${previewsHTML}</ul>`;
 
   const stateOf = template => {
     const preview = livePreviews[template.path];

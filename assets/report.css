@@ -1495,8 +1495,13 @@ body.dcr-has-app .ui-changes{display:none}
 .overview-reading .risk-rank.risk-none .risk-redo .review-icon{display:none}
 .overview-reading .dcr-try-templates{grid-column:2 / -1;gap:2px 22px;color:var(--muted);font-size:13px}
 .overview-reading .overview-intro{margin-bottom:0}
-.overview-reading .dcr-try{margin:24px 0 0}
-.overview-reading .risk-fold{border:0}
+/* The rows are a table on a card: the app's row on top, the risk ranking under it, a hairline between. */
+.overview-reading .dcr-try{margin:28px 0 0;border:1px solid var(--line);border-bottom:0;border-radius:calc(9px * var(--round)) calc(9px * var(--round)) 0 0;background:var(--surface)}
+.overview-reading .dcr-try:not(:has(.dcr-try-row:not(.dcr-try-previews))){display:none}
+.overview-reading :is(.risk-fold,.risk-rank.risk-none){margin:0;border:1px solid var(--line);border-radius:0 0 calc(9px * var(--round)) calc(9px * var(--round));background:var(--surface)}
+.overview-reading:not(:has(.dcr-try .dcr-try-row:not(.dcr-try-previews))) :is(.risk-fold,.risk-rank.risk-none){margin-top:28px;border-radius:calc(9px * var(--round))}
+.overview-reading :is(.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary){padding:12px 18px}
+.overview-reading .risk-fold>.risk-rank{padding:0 18px 14px}
 /* The header already has the revision menu, the App tab and the Previews tab: the Overview keeps
    only what it alone offers (the app's recordings, QA, the risk ranking). */
 .overview-reading :is(.overview-intro .overview-revision,.dcr-try-previews,.dcr-try-more [data-try="browse"]){display:none}

@@ -342,3 +342,27 @@
   [data-theme^="terminal-"] .dcr-jev-verdict{margin-left:0}
   [data-theme^="terminal-"] .dcr-jev-actions{padding-right:12px}
 }
+
+/* The Overview's rows as a markdown table: item | now | next, a dashed rule under the header, pipes that line up. */
+[data-theme^="terminal-"] .overview-reading :is(.dcr-try,.risk-fold,.risk-rank.risk-none){margin:0;border:0;border-radius:0;background:transparent}
+[data-theme^="terminal-"] .overview-reading .dcr-try{margin-top:26px}
+[data-theme^="terminal-"] .overview-reading :is(.dcr-try-head,.dcr-try-rule,.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary){display:grid;grid-template-columns:16ch minmax(0,1fr) 22ch 1ch;gap:0;align-items:baseline;min-height:0;padding:0;border:0;font-size:12px;line-height:1.9}
+[data-theme^="terminal-"] .overview-reading :is(.dcr-try-head,.dcr-try-rule,.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary)>:not(svg,[hidden]){min-width:0;overflow:hidden;white-space:nowrap}
+[data-theme^="terminal-"] .overview-reading :is(.dcr-try-head,.dcr-try-rule,.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary)>:not(svg,[hidden])::before{content:"| ";color:var(--terminal-overlay0)}
+[data-theme^="terminal-"] .overview-reading :is(.dcr-try-head,.dcr-try-rule,.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary)::after{content:"|";color:var(--terminal-overlay0)}
+[data-theme^="terminal-"] .overview-reading .dcr-try-head{color:var(--terminal-overlay0)}
+[data-theme^="terminal-"] .overview-reading .dcr-try-rule>span{color:var(--terminal-overlay0)}
+[data-theme^="terminal-"] .overview-reading .dcr-try-rule>span::after{content:"--------------------------------------------------------------------------------------------------------------------------------"}
+[data-theme^="terminal-"] .overview-reading :is(.dcr-try-more,.risk-redo){justify-self:stretch;display:block;text-align:left}
+[data-theme^="terminal-"] .overview-reading .dcr-try-more>[hidden]{display:none}
+[data-theme^="terminal-"] .overview-reading .risk-rank.risk-none h2::before{content:"| "}
+[data-theme^="terminal-"] .overview-reading .risk-fold>summary>svg{display:none}
+[data-theme^="terminal-"] .overview-reading .risk-fold>summary{list-style:none}
+[data-theme^="terminal-"] .overview-reading .risk-fold>summary::-webkit-details-marker{display:none}
+[data-theme^="terminal-"] .overview-reading .risk-fold.overview-fold>summary::after{grid-row:1;grid-column:3;content:"| [ show ]";color:var(--terminal-overlay0)}
+[data-theme^="terminal-"] .overview-reading .risk-fold>summary::before{grid-row:1;grid-column:4;content:"|";color:var(--terminal-overlay0)}
+[data-theme^="terminal-"] .overview-reading .risk-fold.overview-fold[open]>summary::after{content:"| [ hide ]"}
+[data-theme^="terminal-"] .overview-reading .dcr-try-rows>.dcr-try-previews{display:none}
+[data-theme^="terminal-"] .overview-reading .dcr-try-more button:not([hidden])::before{content:"[ ";color:var(--terminal-overlay0)}
+[data-theme^="terminal-"] .overview-reading .dcr-try-more button:not([hidden])::after{content:" ]";color:var(--terminal-overlay0)}
+[data-theme^="terminal-"] .overview-reading .risk-fold>.risk-rank{padding:6px 0 0 2ch}
