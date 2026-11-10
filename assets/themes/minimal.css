@@ -1,0 +1,101 @@
+/* Minimal: the review, and little else. Black, white and grey: one ink does the work of an
+   accent, grey does the hierarchy, and the only colours left are the ones that carry meaning
+   (added and removed code, an agent's verdict, recording). No fills, borders or shadows around
+   the parts of the page; space groups them. See base.css for what each token is for.
+   @syntax classic @mode light */
+:root:has(input.theme-controller[value=minimal-light]:checked),[data-theme="minimal-light"]{
+  color-scheme:light;
+  --color-base-100:#fdfdfc;--color-base-200:#fdfdfc;--color-base-300:#ececea;--color-base-content:#1a1a1a;
+  --color-primary:#1a1a1a;--color-primary-content:#fdfdfc;--color-secondary:#6a5fa8;--color-secondary-content:#fdfdfc;
+  --color-accent:#2f7f79;--color-accent-content:#fdfdfc;--color-neutral:#1a1a1a;--color-neutral-content:#fdfdfc;
+  --color-info:#3d6a9e;--color-info-content:#fdfdfc;--color-success:#2f8a57;--color-success-content:#fdfdfc;
+  --color-warning:#a9741a;--color-warning-content:#fdfdfc;--color-error:#c8372d;--color-error-content:#fdfdfc;
+  --radius-selector:.5rem;--radius-field:.5rem;--radius-box:.75rem;--size-selector:.25rem;--size-field:.25rem;--border:1px;--depth:0;--noise:0;
+  --shade:#000;
+  --surface:#fdfdfc;--canvas:#fdfdfc;--line:#ececea;--ink:#1a1a1a;--muted:#6b6b6b;--accent:#1a1a1a;--accent-soft:#f3f3f1;
+  --added:#f1f8f3;--removed:#fbf1f0;
+  --minimal-soft:#f5f5f3;--minimal-faint:#757575;--minimal-added:#a9d6b8;--minimal-removed:#e8b4ae;
+}
+:root:has(input.theme-controller[value=minimal-dark]:checked),[data-theme="minimal-dark"]{
+  color-scheme:dark;
+  --color-base-100:#111112;--color-base-200:#111112;--color-base-300:#242426;--color-base-content:#ededed;
+  --color-primary:#ededed;--color-primary-content:#111112;--color-secondary:#b9b2e8;--color-secondary-content:#111112;
+  --color-accent:#8fcfc8;--color-accent-content:#111112;--color-neutral:#242426;--color-neutral-content:#ededed;
+  --color-info:#9dbfe6;--color-info-content:#111112;--color-success:#7fcf9f;--color-success-content:#111112;
+  --color-warning:#e0b56a;--color-warning-content:#111112;--color-error:#ef8a80;--color-error-content:#111112;
+  --radius-selector:.5rem;--radius-field:.5rem;--radius-box:.75rem;--size-selector:.25rem;--size-field:.25rem;--border:1px;--depth:0;--noise:0;
+  --shade:#000;
+  --surface:#111112;--canvas:#111112;--line:#242426;--ink:#ededed;--muted:#9a9a9e;--accent:#ededed;--accent-soft:#1c1c1e;
+  --added:#141d18;--removed:#211616;
+  --minimal-soft:#19191b;--minimal-faint:#85858a;--minimal-added:#2f6b4a;--minimal-removed:#7a3a35;
+}
+
+/* --- quiet everywhere: no rings, thin scrollbars, nothing lifts ---------------------------------- */
+[data-theme^="minimal-"]{--pane-ring:transparent;--cursor-line:color-mix(in srgb,var(--ink) 6%,transparent);scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+[data-theme^="minimal-"] *{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+
+/* --- the list: step names, and nothing around them ------------------------------------------------ */
+[data-theme^="minimal-"] .sidebar{padding:22px 14px 18px 22px;background:var(--surface);border:0}
+[data-theme^="minimal-"] #search{height:32px;border:0;background:var(--minimal-soft);box-shadow:none;font-size:13px}
+[data-theme^="minimal-"] #navigation button{gap:8px;padding:5px 8px;background:transparent;border:0;box-shadow:none;color:var(--muted)}
+[data-theme^="minimal-"] .sidebar nav button{min-height:0;margin:0;align-items:baseline}
+[data-theme^="minimal-"] .sidebar nav :is(li,.menu){margin:0;padding:0;gap:0}
+[data-theme^="minimal-"] .sidebar nav .nav-section{margin:18px 0 0}
+[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view][aria-current="page"])>.nav-files{margin:0 0 8px 12px}
+[data-theme^="minimal-"] .sidebar nav button.nav-file[aria-current="location"]{background:transparent;color:var(--ink)}
+[data-theme^="minimal-"] .sidebar nav button.nav-file[aria-current="location"] .nav-file-name{color:var(--ink);font-weight:600}
+[data-theme^="minimal-"] .sidebar nav .nav-file-directory{display:none}
+[data-theme^="minimal-"] #navigation button:hover{color:var(--ink)}
+[data-theme^="minimal-"] #navigation button:is([aria-current="page"],[aria-current="true"],[aria-current="location"],[aria-expanded="true"]){background:transparent;color:var(--ink)}
+[data-theme^="minimal-"] #navigation button:is([aria-current="page"],[aria-current="true"],[aria-current="location"]) strong{font-weight:600}
+[data-theme^="minimal-"] #navigation .step-body strong{font-size:13px;font-weight:400;color:inherit}
+/* How far a step is shows once you are in it; the list itself stays names. */
+[data-theme^="minimal-"] #navigation .step-body small{display:none}
+[data-theme^="minimal-"] #navigation button[aria-expanded="true"] .step-body small{display:block;color:var(--minimal-faint)}
+[data-theme^="minimal-"] #navigation .step-number{order:2;margin-left:auto;width:auto;min-width:16px;height:auto;border:0;background:transparent;box-shadow:none;color:var(--minimal-faint);font-size:11px;font-weight:400}
+[data-theme^="minimal-"] #navigation .step-number .review-icon{width:13px;height:13px}
+[data-theme^="minimal-"] #navigation .step-body{order:1}
+[data-theme^="minimal-"] .nav-group-title{color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
+[data-theme^="minimal-"] .sidebar-settings{padding:5px 8px;color:var(--muted);font-size:12px;font-weight:400}
+[data-theme^="minimal-"] .sidebar-settings:hover{background:transparent;color:var(--ink)}
+[data-theme^="minimal-"] .sidebar-settings #settings-icon{display:none}
+[data-theme^="minimal-"] .sidebar-footer{border-top:0;margin-top:4px;padding:6px 8px 0;color:var(--minimal-faint)}
+[data-theme^="minimal-"] .sidebar-footer progress{height:2px}
+
+/* --- the page: one column, no boxes ----------------------------------------------------------------- */
+[data-theme^="minimal-"] :is(.app-header,.review-toolbar){background:var(--surface);border-color:transparent}
+[data-theme^="minimal-"] .overview-reading :is(.dcr-try,.risk-rank,.evidence-strip,.review-thread){border:0;background:transparent;box-shadow:none}
+
+/* --- code: a thin rule says added or removed; the line itself stays clean -------------------------- */
+[data-theme^="minimal-"] .diff-table td:is(.code,.gutter).add{background:transparent}
+[data-theme^="minimal-"] .diff-table td:is(.code,.gutter).del{background:var(--removed)}
+[data-theme^="minimal-"] .diff-table tr.code-row>td.gutter.add:first-child{box-shadow:inset 2px 0 var(--minimal-added)}
+[data-theme^="minimal-"] .diff-table tr.code-row>td.gutter.del:first-child{box-shadow:inset 2px 0 var(--minimal-removed)}
+
+/* --- a list, a page and one bar: the header and the toolbar give way to the bar and to ⌘K ---------- */
+html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
+/* What the bar says and does is not said again above the file: where it sits in the walkthrough is
+   the list's to show, and marking it reviewed and moving on is the bar's button. */
+[data-theme^="minimal-"] .focus-file-header :is(.focus-group,.focus-progress-actions){display:none}
+[data-theme^="minimal-"] .focus-file-header{border:0;background:var(--surface)}
+[data-theme^="minimal-"] .focus-file-actions{margin-left:auto;border:0;background:transparent;color:var(--minimal-faint)}
+[data-theme^="minimal-"] main#content{padding-top:22px}
+[data-theme^="minimal-"] :is(.app-header,.review-toolbar,.definition-back){display:none}
+[data-theme^="minimal-"] .review-bar{display:flex}
+[data-theme^="minimal-"] main#content{padding-bottom:104px}
+[data-theme^="minimal-"] :is(#toast,.range-actions,.leader-menu){bottom:84px}
+
+/* --- the Overview: prose and plain rows -------------------------------------------------------------- */
+[data-theme^="minimal-"] .overview-reading :is(.risk-rank,.dcr-try-app){padding:0;border:0;background:transparent;box-shadow:none}
+[data-theme^="minimal-"] .overview-reading h2{font-size:15px;font-weight:600;letter-spacing:0}
+[data-theme^="minimal-"] .overview-reading .eyebrow{color:var(--minimal-faint);font-weight:400;letter-spacing:.04em}
+[data-theme^="minimal-"] .overview-reading :is(.thread-file,.thread-footer){padding-left:0;padding-right:0;border-color:transparent;background:transparent}
+[data-theme^="minimal-"] .overview-reading :is(.thread-summary,.thread-body,.dcr-thread){padding-left:0;padding-right:0;background:transparent}
+[data-theme^="minimal-"] .overview-reading .review-thread{padding:18px 0;border-top:1px solid var(--line)}
+/* Overview and All changes are places, not steps: no mark beside them. */
+[data-theme^="minimal-"] #navigation>ul .step-number{display:none}
+[data-theme^="minimal-"] .overview-reading .review-thread .thread-details>summary.thread-summary{padding-left:0;padding-right:0}
+
+/* --- what floats over the page: one plain surface, a hairline, no tint ---------------------------- */
+[data-theme^="minimal-"] :is(.comment-popover,.review-note-popover){border-color:var(--line)}
+[data-theme^="minimal-"] :is(.comment-popover,.review-note-popover) .popover-heading{background:transparent;border-color:var(--line);color:var(--muted)}

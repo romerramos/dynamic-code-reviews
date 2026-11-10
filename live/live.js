@@ -74,6 +74,13 @@
       if (blob && typeof blob === 'object' && !Array.isArray(blob)) api('/api/state', {key: name, blob}).catch(() => {});
     }, 400));
   };
+  // Leaving the page sends what is still waiting, or the next opening would start from an older place.
+  window.addEventListener('pagehide', () => {
+    timers.forEach((timer, name) => {
+      clearTimeout(timer);
+      try { fetch('/api/state', {method: 'POST', keepalive: true, headers: {'X-QA-Token': token, 'Content-Type': 'application/json'}, body: JSON.stringify({key: name, blob: JSON.parse(localStorage.getItem(name))})}).catch(() => {}); } catch { /* nothing valid to save */ }
+    });
+  });
   let settingsTimer;
   const pushSettings = () => {
     clearTimeout(settingsTimer);

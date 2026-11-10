@@ -330,8 +330,19 @@ References: [review JSON](references/report-schema.md), [incremental reviews](re
   `assets/vendor/fonts/` and embedded in the page. AIda (`aida.css`) is the look the app was drawn
   with; Terminal (`terminal.css`) draws it as a terminal app in JetBrains Mono, in Catppuccin Mocha's
   colours in the dark and Rosé Pine Dawn's in the light, and asks for the matching syntax theme in each
-  (`@syntax`, and `@syntax-light` for the mode that differs, in its opening comment). Terminal is the default (`@default`). A
+  (`@syntax`, and `@syntax-light` for the mode that differs, in its opening comment). Terminal is the default (`@default`). Minimal
+  (`minimal.css`) is black, white and grey and shows three things: the list of steps, what is being
+  read, and the bar. It hides the header and the toolbar, whose controls are all behind ⌘K. A
   new file in that folder appears in the Theme list under Settings.
+- **The bar and ⌘K** (`assets/report.js`). The bar (`#review-bar`) sits under what is being read and
+  changes with it: its field asks or comments on the selected lines, the line the keyboard is on,
+  the file or the review; its button is the next step (Start reading, Reviewed and next, what is
+  left to settle); Back from a definition and a newer push show in it. A theme shows it with
+  `.review-bar{display:flex}`. ⌘K (Ctrl K) is in every theme: every command, the steps, the files
+  and the lines of code, narrowed as you type.
+- **Where a review opens** (`ReviewTools.landing`). On the step, file and scroll position where the
+  reader stopped, kept with the review's progress and, for a refresh, in the tab. An address that
+  names a step or view goes there.
 - **State** lives in the series folder: `manifest.json` and the saved pages for revisions, and
   `state.json` for the reviewer's progress and threads (`lib/dcr/state.rb`). The progress (viewed
   files, resolved comments, notes, the reviewer's own comments) is also kept outside the worktree, in

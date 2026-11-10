@@ -136,6 +136,7 @@
   function persist() {
     let stored = true;
     try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch { stored = false; }
+    queueBar();
     $('progress').textContent = progressText({viewed:state.viewedFiles.length, total:files.size});
     document.body.dataset.progress = $('progress').textContent; // for a theme that draws a status line
     $('progress-bar').max = Math.max(1, files.size);
@@ -839,6 +840,7 @@
   function showBack() {
     const last = definitionTrail.at(-1);
     backButton.hidden = !last;
+    queueBar();
     if (last) backButton.innerHTML = `${icon('arrow-left')} Back to ${escape(last.label)} <kbd>Ctrl O</kbd>`;
   }
   function definitionBack() {
@@ -1061,11 +1063,13 @@
   }
   function clearSelection() {
     selection = null;
+    queueBar();
     $('range-actions').hidden = true;
     document.querySelectorAll('.user-range-selected').forEach(cell => cell.classList.remove('user-range-selected'));
     removeComposer(true);
   }
   function paintSelection() {
+    queueBar();
     document.querySelectorAll('.user-range-selected').forEach(cell => cell.classList.remove('user-range-selected'));
     if (!selection) return removeComposer();
     document.querySelectorAll('.gutter[data-line]').forEach(cell => {
@@ -3426,7 +3430,8 @@
     const viewerMode = event.target.closest('[data-viewer-layout]');
     if (viewerMode) { viewerLayout = viewerMode.dataset.viewerLayout; renderExpandedCode(); return; }
     const navigation = event.target.closest('[data-view]');
-    if (navigation) select(navigation.dataset.view);
+    // Only a step or a view of the review: the header's Code and App buttons name other things.
+    if (navigation && views().includes(navigation.dataset.view)) select(navigation.dataset.view);
     const evidence = event.target.closest('[data-evidence]');
     if (evidence) {
       const comment = comments.find(comment => comment.id === evidence.dataset.evidence);
@@ -3892,6 +3897,166 @@
       if (entries.some(entry => entry.number === number)) location.href = `${review.history.preview ? '' : '../'}revision-${String(number).padStart(3, '0')}.html`;
     };
   }
+  // --- The bar, and every command behind ⌘K ---------------------------------------------------
+  // The bar sits under what is being read and changes with it: its field asks or comments on what
+  // is in front of the reader (the selected lines, the line the keyboard is on, the file, the
+  // review), its one button is the next step, and going back from a definition or taking a newer
+  // push shows up in it when there is one. A theme decides whether it is shown.
+  const otherUnviewed = from => {
+    for (let step = 1; step <= focusOrder.length; step++) {
+      const at = (from + step + focusOrder.length) % focusOrder.length;
+      if (at !== from && !fileViewed(files.get(focusOrder[at].file))) return at;
+    }
+    return -1;
+  };
+  function barNext() {
+    const reading = fileReadingActive() ? readingFile() : null;
+    if (reading) {
+      const viewed = fileViewed(reading), next = otherUnviewed(focusIndex);
+      return {meta: `${focusIndex + 1} of ${focusOrder.length}`, label: viewed ? (next >= 0 ? 'Next file' : 'Overview') : next >= 0 ? 'Reviewed, next' : 'Reviewed',
+        run: () => { if (!viewed) markViewed(reading, true); if (next >= 0) focusFile(next); else select('overview'); }};
+    }
+    if (layers.some(layer => layer.id === state.view)) return {meta: $('position').textContent, label: 'Next step', run: () => $('next').click()};
+    if (state.view === 'since') return {meta: '', label: '', run: null};
+    const next = otherUnviewed(-1);
+    if (next >= 0) return {meta: '', label: state.viewedFiles.length ? 'Continue reading' : 'Start reading', run: () => (focusMode ? focusFile(next) : select(focusOrder[next].layer.id))};
+    const todo = document.querySelector('.dcr-todo-link');
+    return todo ? {meta: '', label: todo.textContent.trim(), run: () => todo.click()} : {meta: '', label: 'Your review', run: () => setLedger(true)};
+  }
+  // What the field would be about: the selected lines, else the line the keyboard is on, else the
+  // top of the file being read, else the review as a whole.
+  function barAnchor() {
+    if (selection) return selection;
+    const line = $('content').querySelector('tr.is-cursor [data-select-line]') || (pagedReading() ? $('content').querySelector('[data-select-line]') : null);
+    return line ? {hunk: line.dataset.rangeHunk, side: line.dataset.rangeSide, start: Number(line.dataset.selectLine), end: Number(line.dataset.selectLine)} : null;
+  }
+  let barRun = null;
+  function updateBar() {
+    queueBar.pending = false;
+    const ask = composerMode() === 'agent';
+    const where = selection ? `line${selection.start === selection.end ? ` ${selection.start}` : `s ${selection.start}–${selection.end}`}` : pagedReading() ? 'this file' : state.view === 'overview' ? (ask ? 'this change' : 'this review') : 'these changes';
+    const prompt = selection ? `${ask ? 'Ask about' : 'Comment on'} ${where}` : ask ? `Ask about ${where}` : `Comment on ${where}`;
+    if ($('bar-input').placeholder !== prompt) { $('bar-input').placeholder = prompt; $('bar-input').setAttribute('aria-label', prompt); }
+    const last = definitionTrail.at(-1);
+    $('bar-back').hidden = !last;
+    if (last) $('bar-back').textContent = `← Back to ${last.label}`;
+    const update = document.getElementById('dcr-update');
+    const stale = !!update && !update.hidden && !update.disabled && update.classList.contains('is-stale');
+    $('bar-update').hidden = !stale;
+    if (stale) $('bar-update').textContent = update.textContent.trim();
+    const next = barNext();
+    barRun = next.run;
+    $('bar-meta').textContent = next.meta;
+    $('bar-action').hidden = !next.run;
+    $('bar-action').textContent = next.label;
+  }
+  // Declared as a function so what runs while the page is being built can already ask for it.
+  function queueBar() { if (queueBar.pending) return; queueBar.pending = true; requestAnimationFrame(updateBar); }
+  $('bar-keys').textContent = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K';
+  $('bar-action').addEventListener('click', () => { barRun?.(); queueBar(); });
+  $('bar-back').addEventListener('click', () => definitionBack());
+  $('bar-update').addEventListener('click', () => document.getElementById('dcr-update')?.click());
+  $('bar-nav').addEventListener('click', () => $('nav-toggle').click());
+  $('bar-commands').addEventListener('click', () => openPalette());
+  $('bar-form').addEventListener('submit', event => {
+    event.preventDefault();
+    const entered = splitComment($('bar-input').value);
+    if (!entered.subject) return;
+    const ask = composerMode() === 'agent', line = barAnchor();
+    const comment = {...(line ? {hunk: line.hunk, side: line.side, start: line.start, end: line.end} : {general: true}), id: `mine-${crypto.randomUUID()}`, at: new Date().toISOString(),
+      label: ask ? 'question' : 'thought', decoration: 'non-blocking', audience: ask ? 'agent' : 'pr', subject: entered.subject, discussion: entered.discussion};
+    $('bar-input').value = '';
+    commitComment(comment, ask ? false : undefined);
+    if (ask) composer.sender(comment.id, 'ask');
+  });
+  // The served review's own buttons (Update, what is left to settle) change without the page drawing again.
+  if (typeof MutationObserver !== 'undefined') new MutationObserver(queueBar).observe(document.querySelector('.header-actions') || document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ['hidden', 'class', 'disabled']});
+
+  // ⌘K: everything the page can do, the steps, the files and the code, narrowed as you type.
+  let paletteRows = [], paletteAt = 0;
+  function paletteCommands() {
+    const press = id => () => $(id).click();
+    const reading = pagedReading() ? readingFile() : null;
+    const revisions = $('revision-navigation').querySelector('select');
+    const update = document.getElementById('dcr-update');
+    const qa = [...document.querySelectorAll('.dcr-try button')].find(button => /^Start QA review/.test(button.textContent.trim()));
+    const next = barNext();
+    return [
+      next.run && {label: next.label, run: next.run},
+      reading && {label: fileViewed(reading) ? 'Mark this file as not reviewed' : 'Mark this file reviewed', keys: 'm', run: () => markViewed(reading, !fileViewed(reading))},
+      ...leaderCommands(markKeyboardFile).filter(command => command.key !== ' ').map(command => ({label: command.label, keys: `space ${command.key}`, run: command.run})),
+      document.getElementById('dcr-presence') && !agentChip() && {label: 'Agents and adversaries', run: () => document.getElementById('dcr-presence').click()},
+      qa && {label: 'Start QA review', run: () => { select('overview'); qa.click(); }},
+      update && !update.hidden && !update.disabled && {label: update.textContent.trim() === 'Update' ? 'Update the review to the code as it is' : update.textContent.trim(), run: () => update.click()},
+      ...[...(revisions?.options || [])].filter(option => !option.selected).map(option => ({label: `Open ${option.textContent.trim()}`, run: () => { revisions.value = option.value; revisions.onchange({target: revisions}); }})),
+      {label: focusMode ? 'Read as a walkthrough' : 'Read file by file', keys: 'z', run: press(focusMode ? 'walkthrough' : 'focus')},
+      {label: document.body.classList.contains('zen') ? 'Leave focus mode' : 'Focus mode', keys: 'f', run: () => setZen(!document.body.classList.contains('zen'))},
+      {label: 'Diff: unified', run: press('unified')},
+      {label: 'Diff: split', run: press('split')},
+      {label: $('comments-toggle').checked ? 'Hide review comments in the code' : 'Show review comments in the code', run: press('comments-toggle')},
+      {label: $('whitespace-toggle').checked ? 'Show whitespace changes' : 'Ignore whitespace changes', run: press('whitespace-toggle')},
+      {label: 'Appearance: light', run: press('mode-light')},
+      {label: 'Appearance: dark', run: press('mode-dark')},
+      {label: 'Appearance: as the system', run: press('mode-system')}
+    ].filter(Boolean).map(command => ({...command, group: 'Commands'}));
+  }
+  function paletteFind(typed) {
+    const query = typed.trim().toLowerCase();
+    const commands = paletteCommands();
+    if (!query) return commands;
+    const words = query.split(/\s+/);
+    const has = text => { const lower = text.toLowerCase(); return words.every(word => lower.includes(word)); };
+    const first = (a, b) => Number(b.label.toLowerCase().startsWith(query)) - Number(a.label.toLowerCase().startsWith(query));
+    const steps = layers.filter(layer => has(`${layer.title} ${layer.group.title}`)).map(layer => ({group: 'Steps', label: layer.title, detail: layer.group.title === layer.title ? '' : layer.group.title, run: () => { select(layer.id); setPane('main'); }}));
+    const found = focusOrder.filter(entry => has(files.get(entry.file).path)).map(entry => ({group: 'Files', code: true, label: files.get(entry.file).path, detail: fileViewed(files.get(entry.file)) ? 'reviewed' : '', run: () => { navigateFile(entry.layer, entry.file); setPane('main'); }}));
+    const lines = [];
+    for (const entry of focusOrder) {
+      if (lines.length >= 8) break;
+      linesFound(entry.file, query).slice(0, 2).forEach(line => lines.push({group: 'In the code', code: true, label: line.text.trim(), html: matchSnippet(line.text, query), detail: `${files.get(entry.file).path.split('/').pop()}:${line.number}`,
+        run: () => openMatch({dataset: {matchFile: entry.file, matchLayer: entry.layer.id, matchSide: line.side, matchLine: String(line.number), ...(line.full ? {matchFull: ''} : {})}})}));
+    }
+    return [...commands.filter(command => has(command.label)).sort(first), ...steps.sort(first).slice(0, 6), ...found.sort(first).slice(0, 8), ...lines.slice(0, 8)];
+  }
+  function renderPalette() {
+    paletteRows = paletteFind($('palette-input').value);
+    paletteAt = Math.max(0, Math.min(paletteRows.length - 1, paletteAt));
+    let group = null;
+    $('palette-list').innerHTML = paletteRows.length ? paletteRows.map((row, index) => {
+      const heading = row.group === group ? '' : `<h2>${escape(row.group)}</h2>`;
+      group = row.group;
+      return `${heading}<button type="button" role="option" id="palette-row-${index}" data-palette="${index}" aria-selected="${index === paletteAt}"><span class="${row.code ? 'palette-code' : ''}">${row.html || escape(row.label)}</span>${row.detail ? `<small>${escape(row.detail)}</small>` : ''}${row.keys ? `<kbd>${escape(row.keys)}</kbd>` : ''}</button>`;
+    }).join('') : '<p>Nothing in this review matches.</p>';
+    $('palette-input').setAttribute('aria-activedescendant', paletteRows.length ? `palette-row-${paletteAt}` : '');
+    $('palette-list').querySelector('[aria-selected="true"]')?.scrollIntoView({block: 'nearest'});
+  }
+  function openPalette() {
+    if ($('palette').open) { $('palette').close(); return; }
+    endLeader();
+    $('palette-input').value = '';
+    paletteAt = 0;
+    renderPalette();
+    $('palette').showModal();
+    $('palette-input').focus();
+  }
+  function runPalette(index) {
+    const row = paletteRows[index];
+    $('palette').close();
+    row?.run();
+    queueBar();
+  }
+  $('palette-input').addEventListener('input', () => { paletteAt = 0; renderPalette(); });
+  $('palette-input').addEventListener('keydown', event => {
+    const by = {ArrowDown: 1, ArrowUp: -1}[event.key] || (event.ctrlKey && {n: 1, p: -1}[event.key]);
+    if (by) { event.preventDefault(); paletteAt = (paletteAt + by + paletteRows.length) % (paletteRows.length || 1); renderPalette(); }
+    if (event.key === 'Enter') { event.preventDefault(); runPalette(paletteAt); }
+    event.stopPropagation(); // the page's own single-key shortcuts stay out of the field
+  });
+  $('palette-list').addEventListener('click', event => { const row = event.target.closest('[data-palette]'); if (row) runPalette(Number(row.dataset.palette)); });
+  $('palette').addEventListener('click', event => { if (event.target === $('palette')) $('palette').close(); });
+  document.addEventListener('keydown', event => {
+    if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'k') { event.preventDefault(); event.stopImmediatePropagation(); openPalette(); }
+  }, true);
+
   // A served review names the checkout's workspace (orion) when it has one, since its folder name
   // is often an app's id (t3-c6839a9e).
   const workspace = document.querySelector('meta[name="dcr-workspace"]')?.content;
@@ -3901,9 +4066,13 @@
   $('scope').innerHTML = `<span class="badge neutral" title="${escape(scope)}">${escape(scope)}</span>`;
   let forced = null;
   try { forced = sessionStorage.getItem('dcr-land'); sessionStorage.removeItem('dcr-land'); } catch { /* opens where the reader stopped */ }
+  // This tab's own note of the place is newer than what the server had time to take in before a refresh.
+  const placeKey = `dcr-place:${storageKey}`;
+  try { const place = JSON.parse(sessionStorage.getItem(placeKey) || 'null'); if (place) { saved.view = place.view; state.navFile = place.navFile; state.scroll = place.scroll; } } catch { /* the saved place stands */ }
   state.view = ReviewTools.landing(location.hash.slice(1), saved.view, views(), forced);
   if (state.view !== saved.view) state.navFile = null;
-  history.replaceState(null, '', `#${state.view}`);
+  // The address says where the reader is, unless it names something else of the page's (#app, the running app).
+  if (!location.hash || views().includes(location.hash.slice(1))) history.replaceState(null, '', `#${state.view}`);
   window.addEventListener('hashchange', () => {
     const view = location.hash.slice(1);
     if (views().includes(view)) select(view);
@@ -3913,11 +4082,14 @@
   setFontSize(state.codeFontSize);
   // The place in the file comes back too, once the page is drawn, and is kept as the reader scrolls.
   const here = () => `${state.view}:${state.navFile || ''}`;
-  if (state.scroll?.at === here()) requestAnimationFrame(() => { $('content').scrollTop = state.scroll.top; });
+  if (state.scroll?.at === here()) requestAnimationFrame(() => $('content').scrollTo({top: state.scroll.top, behavior: 'instant'}));
   let scrollSaved = null;
-  $('content').addEventListener('scroll', () => {
-    clearTimeout(scrollSaved);
-    scrollSaved = setTimeout(() => { state.scroll = {at: here(), top: Math.round($('content').scrollTop)}; persist(); }, 500);
-  }, {passive: true});
+  const saveScroll = () => { clearTimeout(scrollSaved); state.scroll = {at: here(), top: Math.round($('content').scrollTop)}; persist(); };
+  $('content').addEventListener('scroll', () => { clearTimeout(scrollSaved); scrollSaved = setTimeout(saveScroll, 500); }, {passive: true});
+  // Leaving at once (a refresh, a closed tab) still keeps the place.
+  window.addEventListener('pagehide', () => {
+    saveScroll();
+    try { sessionStorage.setItem(placeKey, JSON.stringify({view: state.view, navFile: state.navFile, scroll: state.scroll})); } catch { /* the server's copy is the fallback */ }
+  });
   render();
 })();
