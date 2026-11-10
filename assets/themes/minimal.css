@@ -13,7 +13,7 @@
   --radius-selector:.5rem;--radius-field:.5rem;--radius-box:.75rem;--size-selector:.25rem;--size-field:.25rem;--border:1px;--depth:0;--noise:0;
   --shade:#000;
   --surface:#fdfdfc;--canvas:#fdfdfc;--line:#ececea;--ink:#1a1a1a;--muted:#6b6b6b;--accent:#1a1a1a;--accent-soft:#f3f3f1;
-  --added:#f1f8f3;--removed:#fbf1f0;
+  --added:#e9f5ec;--removed:#fbecea;
   --minimal-soft:#f5f5f3;--minimal-faint:#757575;--minimal-added:#a9d6b8;--minimal-removed:#e8b4ae;
 }
 :root:has(input.theme-controller[value=minimal-dark]:checked),[data-theme="minimal-dark"]{
@@ -26,7 +26,7 @@
   --radius-selector:.5rem;--radius-field:.5rem;--radius-box:.75rem;--size-selector:.25rem;--size-field:.25rem;--border:1px;--depth:0;--noise:0;
   --shade:#000;
   --surface:#111112;--canvas:#111112;--line:#242426;--ink:#ededed;--muted:#9a9a9e;--accent:#ededed;--accent-soft:#1c1c1e;
-  --added:#141d18;--removed:#211616;
+  --added:#16271d;--removed:#2c1918;
   --minimal-soft:#19191b;--minimal-faint:#85858a;--minimal-added:#2f6b4a;--minimal-removed:#7a3a35;
 }
 
@@ -67,8 +67,6 @@
 [data-theme^="minimal-"] .overview-reading :is(.dcr-try,.risk-rank,.evidence-strip,.review-thread){border:0;background:transparent;box-shadow:none}
 
 /* --- code: a thin rule says added or removed; the line itself stays clean -------------------------- */
-[data-theme^="minimal-"] .diff-table td:is(.code,.gutter).add{background:transparent}
-[data-theme^="minimal-"] .diff-table td:is(.code,.gutter).del{background:var(--removed)}
 [data-theme^="minimal-"] .diff-table tr.code-row>td.gutter.add:first-child{box-shadow:inset 2px 0 var(--minimal-added)}
 [data-theme^="minimal-"] .diff-table tr.code-row>td.gutter.del:first-child{box-shadow:inset 2px 0 var(--minimal-removed)}
 
@@ -393,3 +391,25 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .review-thread .dcr-msg-head :is(.dcr-model,.thread-model,.dcr-role){display:none}
 [data-theme^="minimal-"] .review-thread .dcr-msg-head :is(.dcr-verdict,.dcr-badge,[class*="dcr-v-"]){padding:0;border:0;background:none;color:var(--muted);font-size:12.5px;font-weight:400}
 [data-theme^="minimal-"] .review-thread .dcr-msg-head :is(.dcr-verdict,.dcr-badge,[class*="dcr-v-"]) svg{display:none}
+
+/* --- the summary: the lead on its own line, then short paragraphs with air between them ------------- */
+[data-theme^="minimal-"] .overview-intro .lead{display:block;margin:0 0 14px;color:var(--ink);font-size:17px;line-height:1.55}
+[data-theme^="minimal-"] .overview-intro .lead::after{content:none}
+[data-theme^="minimal-"] .overview-intro .lead-rest{display:block;max-width:640px;color:var(--ink-neutral-3);font-size:15px;line-height:1.7}
+[data-theme^="minimal-"] .overview-intro .lead-rest p{margin:0 0 14px}
+[data-theme^="minimal-"] .overview-intro :is(.lead,.lead-rest) code{background:var(--minimal-soft)}
+
+/* --- the foot of the list: one line, how far and how many need you, beside a small gear ------------ */
+[data-theme^="minimal-"] .sidebar{position:relative}
+[data-theme^="minimal-"] .sidebar-footer{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:8px 10px;margin:0;padding:10px 8px 0}
+[data-theme^="minimal-"] .sidebar-footer #progress{grid-column:1;font-size:12px;color:var(--minimal-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[data-theme^="minimal-"] .sidebar-footer .progress-need{grid-column:1;grid-row:1;justify-self:end;font-size:12px}
+[data-theme^="minimal-"] .sidebar-footer progress{grid-column:1 / -1;grid-row:2;width:100%}
+[data-theme^="minimal-"] .sidebar-footer .dcr-todo-link{display:none}
+[data-theme^="minimal-"] .sidebar-settings{position:absolute;right:20px;bottom:17px;width:auto;margin:0;padding:2px;gap:0;color:var(--minimal-faint)}
+[data-theme^="minimal-"] .sidebar-settings>span:not(#settings-icon){position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+[data-theme^="minimal-"] .sidebar-settings #settings-icon{display:inline-grid}
+[data-theme^="minimal-"] .sidebar-settings .review-icon{width:15px;height:15px}
+[data-theme^="minimal-"] .sidebar-footer{padding-right:34px}
+[data-theme^="minimal-"] .sidebar-footer #progress{grid-row:1}
+[data-theme^="minimal-"] .review-thread .thread-summary>strong code{font:.9em var(--mono)}

@@ -2137,7 +2137,7 @@
     const earlier = comment.follows && comments.find(other => other.id === comment.follows);
     const earlierWas = earlier && ReviewTools.outdatedWhere(earlier);
     const follows = earlier ? `<details class="thread-follows"><summary>Follows up on “${escape(earlier.subject)}”${earlierWas?.revision ? `, from revision ${escape(earlierWas.revision)}` : ''}</summary>${earlier.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(earlier.discussion)}</div>` : ''}${earlierWas?.code ? `<details class="thread-was"><summary>The code it was written on</summary><pre><code>${escape(earlierWas.code)}</code></pre></details>` : ''}</details>` : '';
-    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''} ${closed ? 'is-earlier' : ''}${comment.personal ? ' is-own' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${pathFit(found?.file.path || was?.path || 'General comment', '', true)}</span><span class="thread-range">${found ? range : was ? `<span class="thread-outdated" title="These lines changed after the comment was written">Outdated</span>${escape(was.lines)}${closed && was.revision ? ` in revision ${escape(was.revision)}` : ''}` : ''}</span></div><details class="thread-details" data-thread-fold="${id}" ${threadsOpen.has(comment.id) ? 'open' : ''}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}">${comment.personal ? youAvatar() : ''}<span class="thread-badges">${comment.personal ? `<b class="thread-you you-name">${youName()}</b>${comment.audience === 'agent' ? (comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : '') + ghBadgeSlot(comment) : threadBadges(comment, true)}` : threadBadges(comment)}</span><strong>${escape(comment.subject)}</strong><span class="thread-at" ${stateWord(comment, closed)}>${place(found ? found.file.path : was?.path, found ? comment.start : comment.outdated?.start)}</span><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${threadMeta(comment, found?.file.path || was?.path, found ? range : was?.lines)}${comment.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(comment.discussion)}</div>` : ''}${wasCode}${follows}${commentShots(comment)}${commentEvidence(comment)}</div>${found ? found.fullFile ? `<button class="thread-source btn btn-sm btn-ghost" type="button" data-comment="${id}">View in file · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : `<button class="thread-source btn btn-sm btn-ghost" type="button" data-open-code="${id}" aria-haspopup="dialog" aria-label="${escape(`View code for ${found.file.path}, ${range}: ${comment.subject}`)}">View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : ''}</details><div class="thread-footer"><div class="comment-actions">${commentActions(comment)}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
+    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''} ${closed ? 'is-earlier' : ''}${comment.personal ? ' is-own' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${pathFit(found?.file.path || was?.path || 'General comment', '', true)}</span><span class="thread-range">${found ? range : was ? `<span class="thread-outdated" title="These lines changed after the comment was written">Outdated</span>${escape(was.lines)}${closed && was.revision ? ` in revision ${escape(was.revision)}` : ''}` : ''}</span></div><details class="thread-details" data-thread-fold="${id}" ${threadsOpen.has(comment.id) ? 'open' : ''}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}">${comment.personal ? youAvatar() : ''}<span class="thread-badges">${comment.personal ? `<b class="thread-you you-name">${youName()}</b>${comment.audience === 'agent' ? (comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : '') + ghBadgeSlot(comment) : threadBadges(comment, true)}` : threadBadges(comment)}</span><strong>${prose(comment.subject)}</strong><span class="thread-at" ${stateWord(comment, closed)}>${place(found ? found.file.path : was?.path, found ? comment.start : comment.outdated?.start)}</span><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${threadMeta(comment, found?.file.path || was?.path, found ? range : was?.lines)}${comment.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(comment.discussion)}</div>` : ''}${wasCode}${follows}${commentShots(comment)}${commentEvidence(comment)}</div>${found ? found.fullFile ? `<button class="thread-source btn btn-sm btn-ghost" type="button" data-comment="${id}">View in file · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : `<button class="thread-source btn btn-sm btn-ghost" type="button" data-open-code="${id}" aria-haspopup="dialog" aria-label="${escape(`View code for ${found.file.path}, ${range}: ${comment.subject}`)}">View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : ''}</details><div class="thread-footer"><div class="comment-actions">${commentActions(comment)}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
   }
   function toggleResolved(id) {
     const comment = comments.find(comment => comment.id === id);
@@ -2611,11 +2611,29 @@
       at.head && at.base && `<span class="where-branches"><span class="where-branch">${escape(at.head)}</span><span aria-label="into">→</span><span class="where-branch">${escape(at.base)}</span></span>`].filter(Boolean);
     return `<p class="overview-where" title="${escape(ReviewTools.comparisonText(snapshot, review))}">${parts.join('<i aria-hidden="true">·</i>')}</p>`;
   }
+  // Prose the agent wrote, made easy to read: `code` in backticks, and the names that are plainly
+  // code (snake_case, Class::Name, CamelCase, method?, file.rb), set in the code's face.
+  const CODE_WORD = /(`[^`\n]+`)|(\b[\w-]+(?:\.[\w-]+)*\.(?:rb|erb|js|ts|tsx|jsx|py|sh|json|ya?ml|md|css|html|sql)\b|(?:[A-Za-z_][\w]*::)+[A-Za-z_]\w*[?!]?|\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+[?!]?|\b[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]+)+\b|#[a-z_]\w*[?!]?)/g;
+  const prose = text => escape(text).replace(CODE_WORD, (all, ticked, bare) => `<code>${ticked ? ticked.slice(1, -1) : bare}</code>`);
+  // Sentences, without breaking on the dot of a file name or a version.
+  // A sentence ends at . ! or ? followed by a space and a capital (or a quote or code), so
+  // "has_changes? too" and "version 1.2" stay whole.
+  const sentences = text => text.split(/(?<=[.!?])\s+(?=[A-Z`"“(])/).map(part => part.trim()).filter(Boolean);
+  // A paragraph the agent left as one block is cut into short ones, about two sentences each, so
+  // each idea has its own; paragraphs it already separated with a blank line are kept.
+  const paragraphs = text => String(text || '').trim().split(/\n\s*\n/).flatMap(block => {
+    const parts = sentences(block.replace(/\s*\n\s*/g, ' '));
+    const out = [];
+    parts.forEach(part => { const last = out.at(-1); if (last && last.length < 2 && last.join(' ').length + part.length < 260) last.push(part); else out.push([part]); });
+    return out.map(group => group.join(' '));
+  });
+  // The summary reads in two steps: what the change does, in the reader's ink, then the rest of
+  // it, quieter, in short paragraphs. The pull request and its branches are said above the title,
+  // so a summary that opens with them starts after.
   function summaryLead(summary) {
-    // The pull request and its branches are said above the title, so a summary that opens with them starts after.
     const text = String(summary || '').trim().replace(/^(?:On\s+)?PR\s+#\d+\s*(?:\([^)]*\))?[,:]?\s+(\S)/i, (all, letter) => letter.toUpperCase());
-    const [, first, rest] = text.match(/^(.+?[.!?])\s+(?=[A-Z0-9])([\s\S]+)$/) || [null, text, ''];
-    return `<p class="lead">${escape(first)}</p>${rest ? `<p class="lead-rest">${escape(rest)}</p>` : ''}`;
+    const [first, ...rest] = paragraphs(text).flatMap((paragraph, index) => index ? [paragraph] : (() => { const [lead, ...more] = sentences(paragraph); return [lead, more.join(' ')].filter(Boolean); })());
+    return `<p class="lead">${prose(first || '')}</p>${rest.length ? `<div class="lead-rest">${rest.map(paragraph => `<p>${prose(paragraph)}</p>`).join('')}</div>` : ''}`;
   }
   function renderOverview() {
     const generated = comments.filter(comment => !comment.personal);
@@ -3982,7 +4000,7 @@
   function updateBar() {
     queueBar.pending = false;
     const ask = composerMode() === 'agent';
-    const where = selection ? `line${selection.start === selection.end ? ` ${selection.start}` : `s ${selection.start}–${selection.end}`}` : pagedReading() ? 'this file' : state.view === 'overview' ? (ask ? 'this change' : 'this review') : layers.some(layer => layer.id === state.view) ? 'this step' : 'these changes';
+    const where = selection ? `line${selection.start === selection.end ? ` ${selection.start}` : `s ${selection.start}–${selection.end}`}` : pagedReading() ? 'this file' : state.view === 'overview' ? 'this review'  : layers.some(layer => layer.id === state.view) ? 'this step' : 'these changes';
     const prompt = selection ? `${ask ? 'Ask about' : 'Comment on'} ${where}` : ask ? `Ask about ${where}` : `Comment on ${where}`;
     if ($('bar-input').placeholder !== prompt) { $('bar-input').placeholder = prompt; $('bar-input').setAttribute('aria-label', prompt); }
     // The agent running the review is a dot: its colour says whether one is listening or working.
@@ -4009,7 +4027,11 @@
     if (stale) $('bar-update').textContent = update.textContent.trim();
     const next = barNext();
     barRun = next.run;
-    $('bar-meta').textContent = next.meta;
+    // What is left to settle, when the button says something else: a note that takes you there.
+    const todo = document.querySelector('.dcr-todo-link');
+    const left = !next.meta && todo && !todo.hidden && !/^0\b/.test(todo.textContent.trim()) && todo.textContent.trim() !== next.label ? todo.textContent.trim() : '';
+    $('bar-meta').textContent = next.meta || left;
+    $('bar-meta').classList.toggle('is-link', !!left);
     $('bar-action').hidden = !next.run;
     $('bar-action').textContent = next.label;
   }
@@ -4018,6 +4040,7 @@
   $('bar-keys').textContent = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K';
   $('bar-action').addEventListener('click', () => { barRun?.(); queueBar(); });
   $('bar-back').addEventListener('click', () => definitionBack());
+  $('bar-meta').addEventListener('click', () => { if ($('bar-meta').classList.contains('is-link')) document.querySelector('.dcr-todo-link')?.click(); });
   // The agent's card opens from its chip, which the dot presses.
   $('bar-agent').addEventListener('click', () => {
     const chip = document.getElementById('dcr-presence');
