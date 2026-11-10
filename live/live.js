@@ -2422,7 +2422,8 @@
     const published = publishCheck?.published;
     const code = stepOf('code');
     const where = code?.done ? `${tools.escape(code.repo)} #${tools.escape(code.number)}${me?.login ? ` · as <b>@${tools.escape(me.login)}</b>` : ''}` : 'The pull request gets a short report: counts and outcomes, never what anyone wrote.';
-    const preview = publishCheck?.markdown ? tools.markdown(publishCheck.markdown.replace(/^<!--.*?-->\n/, '')) : '';
+    // A leading emoji is wrapped, so a theme can leave it out of the preview (GitHub still shows it).
+    const preview = publishCheck?.markdown ? tools.markdown(publishCheck.markdown.replace(/^<!--.*?-->\n/, '')).replace(/(<(?:p|h\d|strong)[^>]*>)(\p{Extended_Pictographic}\uFE0F?)\s*/u, '$1<span class="dcr-emoji">$2 </span>') : '';
     publishDialog.innerHTML = `<form method="dialog" class="modal-box dcr-gh-box dcr-publish-box">
       <header><div><h2 id="dcr-publish-title">Publish your review</h2><p class="muted">${where}</p></div><button type="button" class="act act-quiet act-icon" data-publish-close aria-label="Close" title="Close (Esc)">${ico('x')}</button></header>
       <ol class="dcr-publish-steps">${publishStepsHTML()}</ol>
