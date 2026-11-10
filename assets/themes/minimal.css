@@ -430,6 +430,8 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 @media(min-width:1100px){
   html[data-theme^="minimal-"] body:not(.sidebar-collapsed):not(.zen) .workspace{grid-template-columns:384px minmax(0,1fr)}
   html[data-theme^="minimal-"] body.ledger-open:not(.sidebar-collapsed):not(.zen) .workspace{grid-template-columns:384px minmax(0,1fr) var(--ledger-w,380px)}
+  /* With the list hidden, Your review still keeps its column, so the page never runs under it. */
+  html[data-theme^="minimal-"] body.ledger-open.sidebar-collapsed:not(.zen) .workspace{grid-template-columns:minmax(0,1fr) var(--ledger-w,380px)}
 }
 [data-theme^="minimal-"] .overview-reading{max-width:880px}
 [data-theme^="minimal-"] .overview-intro .lead-rest{max-width:680px}
@@ -806,7 +808,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] #ledger .ledger-at .name-head{min-width:0;overflow:hidden;text-overflow:ellipsis}
 [data-theme^="minimal-"] #ledger .ledger-at .name-tail{flex:none}
 /* On the Overview the comments are headed the same way: Agent comments, then Your comments. */
-[data-theme^="minimal-"] .overview-reading .overview-comments:not(:has(.overview-clear))>h2{display:block;font-size:0}
+html[data-theme^="minimal-"] #content .overview-reading .overview-comments:not(:has(.overview-clear))>h2{display:block;font-size:0}
 [data-theme^="minimal-"] .overview-reading .overview-comments:not(:has(.overview-clear))>h2::before{content:"Agent comments";font-size:12px}
 [data-theme^="minimal-"] .overview-reading .overview-todo{display:none}
 /* Your review is a column of its own here, so the bar centres on what is left without taking it off twice. */
@@ -814,3 +816,29 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
   html[data-theme^="minimal-"] body.ledger-open:not(.zen) .review-bar{left:50%;width:min(640px,calc(100% - 28px))}
 }
 [data-theme^="minimal-"] #ledger .dcr-detail-code{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* --- Try the change: the three things to do with the change as quiet rows, like the comments under
+   them: a faint icon, what it is, where it stands, the one way in. The risk ranking unfolds its files
+   under its row; the recorder row opens the recorder when the app is not in the page. --- */
+html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;margin:44px 0 0;padding:0}
+[data-theme^="minimal-"] .overview-reading .dcr-try>h2{position:static;width:auto;height:auto;overflow:visible;clip-path:none;margin:0 0 6px;color:var(--minimal-faint);font-size:12px;font-weight:400}
+[data-theme^="minimal-"] .overview-reading .dcr-try :is(.dcr-try-row,.dcr-try-line){display:grid;grid-template-columns:18px 120px minmax(0,1fr) auto;align-items:baseline;gap:0 12px;padding:8px 0;border:0;background:none;font-size:14px}
+[data-theme^="minimal-"] .overview-reading .dcr-try :is(.dcr-try-row,.dcr-try-line)[hidden]{display:none}
+[data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-icon{display:grid;align-self:center;place-items:center;color:var(--minimal-faint)}
+[data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-icon svg{width:15px;height:15px;stroke-width:1.8}
+[data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-do{font-weight:400}
+[data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-about{min-width:0;color:var(--minimal-faint);font-size:13px}
+[data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-about button{color:var(--ink-neutral-3);font-size:13px}
+[data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-more button{color:var(--ink);font-size:13px;font-weight:500;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:4px}
+[data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-more button:hover{text-decoration-color:currentColor}
+[data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-templates{display:none}
+[data-theme^="minimal-"] .overview-reading .dcr-try-risk .risk-brief{display:none!important}
+[data-theme^="minimal-"] .overview-reading .dcr-try-risk.is-open .risk-brief{display:block!important;grid-column:2 / -1;margin:4px 0 4px}
+[data-theme^="minimal-"] .overview-reading .dcr-try-risk .risk-brief h2{display:none}
+[data-theme^="minimal-"] .overview-reading .dcr-try-risk .risk-brief button{padding:5px 0;font-size:13.5px}
+
+/* Your comments on the Overview: the short title, the file cut in its middle, no "yours" (the heading says it). */
+[data-theme^="minimal-"] .review-thread.is-own .thread-at[data-state]::before{content:none}
+[data-theme^="minimal-"] #content .thread-summary .thread-at:has(.name-head){display:flex;max-width:220px;overflow:hidden}
+[data-theme^="minimal-"] .thread-at .name-head{min-width:0;overflow:hidden;text-overflow:ellipsis}
+[data-theme^="minimal-"] .thread-at .name-tail{flex:none}

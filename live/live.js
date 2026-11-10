@@ -1214,6 +1214,12 @@
     const subject = item.querySelector(':scope > .ledger-msg > .ledger-subject');
     if (thread?.title && subject && subject.dataset.title !== thread.title) { subject.innerHTML = titleHTML(thread.title); subject.dataset.title = thread.title; }
   };
+  // The same title on the Overview, in Your comments.
+  const titleOwnThreads = () => document.querySelectorAll('#content .review-thread.is-own[data-thread-id]').forEach(card => {
+    const title = threads[card.dataset.threadId]?.title;
+    const strong = card.querySelector('.thread-summary > strong');
+    if (title && strong && strong.dataset.title !== title) { strong.innerHTML = titleHTML(title); strong.dataset.title = title; }
+  });
 
   // The open conversation: it takes the panel's place until Back (or Escape).
   const ledgerPanel = document.getElementById('ledger');
@@ -2469,7 +2475,7 @@
     });
     const arrived = tools.unseen(threads, seen).filter(item => !announced.has(item.id));
     arrived.forEach(item => announced.add(item.id));
-    decorate(); autoResolve(); decorateLedger(); window.ReviewGitHub?.refresh(); renderPanel(); renderUnsent(); renderAgent(); refreshUnread(); renderBubble();
+    decorate(); autoResolve(); decorateLedger(); window.ReviewGitHub?.refresh(); renderPanel(); renderUnsent(); renderAgent(); refreshUnread(); renderBubble(); titleOwnThreads();
     announce(arrived);
     announceFinished();
     renderUpdate();

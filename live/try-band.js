@@ -26,17 +26,20 @@
     seenNames.add(name);
     templates.push({name, path: file.path});
   });
-  if (!app && !noApp && !templates.length) return;
+  // The recorder card (record the app's own tab) is the way in when the app is not in the page.
+  const recorder = () => !app && !noApp && document.getElementById('qa-panel');
+  if (!app && !noApp && !templates.length && !recorder() && !document.querySelector('.risk-fold')) return;
   const reviewed = new Set((review.previews || []).filter(preview => preview.status === 'rendered').flatMap(preview => preview.files || []));
   let livePreviews = {};
 
+  const icon = name => (window.ReviewIcons?.[name] || '').replace('<svg', '<svg aria-hidden="true" focusable="false"');
   const band = document.createElement('section');
   band.className = 'dcr-try';
   band.setAttribute('aria-labelledby', 'dcr-try-title');
   // Each thing a reader can do with the change is one row: what it is, a few words on it, the ways in.
   const appHTML = app ? `
     <li class="dcr-try-row dcr-try-app">
-      <strong class="dcr-try-do">In the app</strong>
+      <span class="dcr-try-icon">${icon('video')}</span><strong class="dcr-try-do">In the app</strong>
       <span class="dcr-try-about"><span data-try-seen>Nothing recorded yet.</span><button type="button" data-try-shots title="The screenshots and recordings from the app" hidden>See them</button></span>
       <span class="dcr-try-more"><button type="button" data-try="qa" title="Your agent records the flows behind the comments, in this tab">Start QA review</button><button type="button" data-try="browse" title="${esc(app.upstream)} (A). Comment on it from there.">Open the app</button></span>
     </li>` : noApp ? `
@@ -46,12 +49,26 @@
     </li>` : '';
   const previewsHTML = templates.length ? `
     <li class="dcr-try-row dcr-try-previews">
-      <strong class="dcr-try-do">Previews</strong>
+      <span class="dcr-try-icon">${icon('layout-template')}</span><strong class="dcr-try-do">Previews</strong>
       <span class="dcr-try-about">${templates.length === 1 ? 'One changed template' : `${templates.length} changed templates`}</span>
       <span class="dcr-try-more"><button type="button" data-try-all>Open previews</button></span>
       <ul class="dcr-try-templates"></ul>
     </li>` : '';
-  band.innerHTML = `<h2 id="dcr-try-title">Try the change</h2><ul class="dcr-try-rows"><li class="dcr-try-head" aria-hidden="true"><span>item</span><span>now</span><span>next</span></li><li class="dcr-try-rule" aria-hidden="true"><span></span><span></span><span></span></li>${appHTML}${previewsHTML}</ul>`;
+  // For a theme that keeps the risk ranking and the recorder as rows here rather than cards of their own:
+  // the ranking's one line, unfolding its files under it; and the recorder, one click away.
+  const riskHTML = `
+    <li class="dcr-try-line dcr-try-risk" hidden>
+      <span class="dcr-try-icon">${icon('gauge')}</span><strong class="dcr-try-do">Risk ranking</strong>
+      <span class="dcr-try-about" data-try-risk-line></span>
+      <span class="dcr-try-more"><button type="button" data-try-risk aria-expanded="false">Show</button></span>
+    </li>`;
+  const recordHTML = `
+    <li class="dcr-try-line dcr-try-record" hidden>
+      <span class="dcr-try-icon">${icon('video')}</span><strong class="dcr-try-do">Record the app</strong>
+      <span class="dcr-try-about">Share the app’s tab to record clips and screenshots</span>
+      <span class="dcr-try-more"><button type="button" data-try-record>Record</button></span>
+    </li>`;
+  band.innerHTML = `<h2 id="dcr-try-title">Try the change</h2><ul class="dcr-try-rows"><li class="dcr-try-head" aria-hidden="true"><span>item</span><span>now</span><span>next</span></li><li class="dcr-try-rule" aria-hidden="true"><span></span><span></span><span></span></li>${riskHTML}${appHTML}${recordHTML}${previewsHTML}</ul>`;
 
   const stateOf = template => {
     const preview = livePreviews[template.path];
@@ -71,7 +88,14 @@
   };
   renderTemplates();
 
+  let riskShown = false;
   band.addEventListener('click', event => {
+    if (event.target.closest('[data-try-risk]')) { riskShown = !riskShown; mount(); return; }
+    if (event.target.closest('[data-try-record]')) {
+      document.body.classList.add('qa-recorder-shown');
+      requestAnimationFrame(() => document.getElementById('qa-panel')?.scrollIntoView({block: 'center', behavior: 'smooth'}));
+      return;
+    }
     if (event.target.closest('[data-try-shots]')) { document.querySelector('.ui-changes [data-open-shots]')?.click(); return; }
     const trigger = event.target.closest('[data-try]');
     if (trigger) { window.DCRApp?.open(trigger.dataset.try); return; }
@@ -97,6 +121,22 @@
     const about = band.querySelector('[data-try-seen]'), view = band.querySelector('[data-try-shots]');
     if (about && about.textContent !== (seen || 'Nothing recorded yet.')) about.textContent = seen || 'Nothing recorded yet.';
     if (view && view.hidden !== !seen) view.hidden = !seen;
+    // The risk ranking's line, and its files under the row while shown.
+    const fold = content?.querySelector('.overview-reading .risk-fold');
+    const riskRow = band.querySelector('.dcr-try-risk');
+    const line = fold?.querySelector('summary .risk-fold-line, summary span:not(.risk-fold-title)')?.textContent.trim() || '';
+    if (riskRow.hidden !== !fold) riskRow.hidden = !fold;
+    const riskLine = band.querySelector('[data-try-risk-line]');
+    if (riskLine.textContent !== line) riskLine.textContent = line;
+    const brief = content?.querySelector('.overview-reading .risk-brief');
+    if (brief && brief.parentNode !== riskRow) { riskRow.querySelectorAll('.risk-brief').forEach(old => old.remove()); riskRow.append(brief); }
+    // With only those two rows, a theme that keeps its own cards for them has nothing to show here.
+    band.classList.toggle('dcr-try-theme-only', !app && !noApp && !templates.length);
+    riskRow.classList.toggle('is-open', riskShown);
+    const toggle = band.querySelector('[data-try-risk]');
+    if (toggle.textContent !== (riskShown ? 'Hide' : 'Show')) { toggle.textContent = riskShown ? 'Hide' : 'Show'; toggle.setAttribute('aria-expanded', String(riskShown)); }
+    const recordRow = band.querySelector('.dcr-try-record');
+    if (recordRow.hidden !== !recorder()) recordRow.hidden = !recorder();
   };
   if (content) new MutationObserver(mount).observe(content, {childList: true, subtree: true});
   mount();
