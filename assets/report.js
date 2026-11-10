@@ -3828,10 +3828,21 @@
   $('nav-toggle').innerHTML = icon('panel-left');
   $('sidebar-hide').innerHTML = icon('panel-left-close');
   $('ledger-hide').innerHTML = icon('panel-right-close');
-  $('ledger-show').innerHTML = icon('panel-right-open');
+  // A theme can keep each panel's icon outside it, the one button that opens and closes it:
+  // it holds both icons, and says what it will do.
+  $('ledger-show').innerHTML = `<span class="when-closed">${icon('panel-right-open')}</span><span class="when-open">${icon('panel-right-close')}</span>`;
   $('ledger-hide').addEventListener('click', () => setLedger(false));
-  $('ledger-show').addEventListener('click', () => setLedger(true));
-  $('sidebar-show').innerHTML = icon('panel-left-open');
+  $('ledger-show').addEventListener('click', () => setLedger(!document.body.classList.contains('ledger-open')));
+  $('sidebar-show').innerHTML = `<span class="when-closed">${icon('panel-left-open')}</span><span class="when-open">${icon('panel-left-close')}</span>`;
+  const labelPanelIcons = () => {
+    const ledger = document.body.classList.contains('ledger-open') ? 'Hide your review' : 'Show your review';
+    const list = document.body.classList.contains('sidebar-collapsed') ? 'Show the list' : 'Hide the list';
+    [['ledger-show', ledger], ['sidebar-show', list]].forEach(([id, label]) => { if ($(id).title !== label) { $(id).title = label; $(id).setAttribute('aria-label', label); } });
+  };
+  if (typeof MutationObserver !== 'undefined') {
+    new MutationObserver(labelPanelIcons).observe(document.body, {attributes: true, attributeFilter: ['class']});
+    requestAnimationFrame(labelPanelIcons);
+  }
   ['sidebar-hide', 'sidebar-show'].forEach(id => $(id).addEventListener('click', () => $('nav-toggle').click()));
   $('prev').innerHTML = icon('chevron-left');
   $('next').innerHTML = icon('chevron-right');

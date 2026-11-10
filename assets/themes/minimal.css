@@ -645,7 +645,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] :is(.sidebar-hide,.sidebar-show) .review-icon{width:17px;height:17px;stroke-width:1.8}
 @media(min-width:1200px){
   html[data-theme^="minimal-"] .sidebar-hide{display:grid;flex:none}
-  html[data-theme^="minimal-"] body.sidebar-collapsed .sidebar-show{display:grid;position:fixed;top:16px;left:18px;z-index:30}
+  html[data-theme^="minimal-"] body.sidebar-collapsed .sidebar-show{display:grid;position:fixed;top:28px;left:18px;z-index:30}
 }
 
 /* --- The Overview while you read ------------------------------------------------------------------ */
@@ -669,7 +669,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] :is(.ledger-hide,.ledger-show) .review-icon{width:17px;height:17px;stroke-width:1.8}
 [data-theme^="minimal-"] .ledger-hide{display:grid}
 @media(min-width:1200px){
-  html[data-theme^="minimal-"] body:not(.ledger-open):not(.zen) .ledger-show{display:grid;position:fixed;top:16px;right:18px;z-index:30}
+  html[data-theme^="minimal-"] body:not(.ledger-open):not(.zen) .ledger-show{display:grid;position:fixed;top:14px;right:18px;z-index:30}
 }
 /* Each comment one quiet row, as on the Overview: the agent's mark, the title, the file and line;
    under it, the marks of the agents who answered, and new when it is. */
@@ -731,7 +731,61 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .review-bar .bar-agent[data-tone="work"] span{animation:none}
 @media(prefers-reduced-motion:reduce){[data-theme^="minimal-"] .review-bar .bar-agent[data-tone="work"]::after{animation:none}}
 
-/* Reading with Your review hidden: the page keeps a gutter for its icon, so the pager stops before it. */
+/* The page keeps a gutter for Your review's icon, open or hidden, so the section pager stops before it. */
 @media(min-width:1200px){
-  html[data-theme^="minimal-"] body:not(.ledger-open):not(.zen) .focus-file-actions{margin-right:46px}
+  html[data-theme^="minimal-"] body:not(.zen) .focus-file-actions{margin-right:46px}
 }
+
+/* --- One icon per panel, just outside it: the same button opens and closes it, and stays on the
+   panel's edge, so neither panel looks like an app of its own. The finder takes the list's width. --- */
+[data-theme^="minimal-"] :is(.sidebar-show,.ledger-show) .when-open{display:none}
+[data-theme^="minimal-"] body:not(.sidebar-collapsed) .sidebar-show .when-open,[data-theme^="minimal-"] body.ledger-open .ledger-show .when-open{display:contents}
+[data-theme^="minimal-"] body:not(.sidebar-collapsed) .sidebar-show .when-closed,[data-theme^="minimal-"] body.ledger-open .ledger-show .when-closed{display:none}
+@media(min-width:1200px){
+  html[data-theme^="minimal-"] :is(.sidebar-hide,.ledger-hide){display:none}
+  html[data-theme^="minimal-"] body:not(.zen) .sidebar-show{display:grid;position:fixed;top:28px;left:392px;z-index:30}
+  html[data-theme^="minimal-"] body.sidebar-collapsed:not(.zen) .sidebar-show{left:18px}
+  html[data-theme^="minimal-"] body:not(.zen) .ledger-show{display:grid;position:fixed;top:14px;right:18px;z-index:30}
+  /* Your review lies over the page below 1500px, at its own width, and is a column above it. */
+  html[data-theme^="minimal-"] body.ledger-open:not(.zen) .ledger-show{right:calc(min(var(--ledger-w,420px),92vw) + 8px)}
+}
+@media(min-width:1500px){
+  html[data-theme^="minimal-"] body.ledger-open:not(.zen) .ledger-show{right:calc(var(--ledger-w,380px) + 8px)}
+}
+
+/* --- Your review on one conversation, drawn as the Overview draws it: the agent's mark and the title
+   first, the file and line as the link to the code, then each answer as a mark and a quiet line. --- */
+[data-theme^="minimal-"] #ledger .dcr-detail-bar [data-dcr-close]{display:none}
+[data-theme^="minimal-"] #ledger .dcr-detail-bar .dcr-back{color:var(--minimal-faint);font-weight:400}
+[data-theme^="minimal-"] #ledger .dcr-detail-title{display:grid;grid-template-columns:18px minmax(0,1fr);gap:4px 12px;align-items:start;border:0}
+[data-theme^="minimal-"] #ledger .dcr-detail-title .ledger-where{display:none}
+[data-theme^="minimal-"] #ledger .dcr-detail-mark{display:grid;grid-column:1;grid-row:1;place-items:center;width:18px;height:18px;margin-top:1px}
+[data-theme^="minimal-"] #ledger .dcr-detail-mark .dcr-avatar{width:16px;height:16px;background:transparent;color:var(--ink)}
+[data-theme^="minimal-"] #ledger .dcr-detail-mark .dcr-avatar svg{width:14px;height:14px}
+[data-theme^="minimal-"] #ledger .dcr-detail-title strong{grid-column:2;grid-row:1;font-size:15px;font-weight:600;line-height:1.4}
+[data-theme^="minimal-"] #ledger .dcr-detail-code{grid-column:2;justify-self:start;min-height:0;height:auto;padding:0;border:0;background:none;color:var(--ink-neutral-3);font:12px var(--mono);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+[data-theme^="minimal-"] #ledger .dcr-detail-code:hover{color:var(--ink);text-decoration-color:currentColor}
+[data-theme^="minimal-"] #ledger .dcr-detail-code>:not(.dcr-detail-at){display:none}
+[data-theme^="minimal-"] #ledger .dcr-detail-code .dcr-detail-at:not(:empty){display:inline}
+[data-theme^="minimal-"] #ledger .dcr-detail-code:has(.dcr-detail-at:empty){display:none}
+[data-theme^="minimal-"] #ledger .dcr-detail .dcr-msg{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;padding:16px 0 0;border:0;background:none}
+[data-theme^="minimal-"] #ledger .dcr-detail .dcr-msg>.dcr-avatar{display:inline-grid;place-items:center;width:18px;height:18px;margin-top:1px;overflow:hidden;border-radius:50%;background:transparent;color:var(--ink)}
+[data-theme^="minimal-"] #ledger .dcr-detail .dcr-msg>.dcr-avatar :is(svg,img){width:13px;height:13px}
+[data-theme^="minimal-"] #ledger .dcr-detail .dcr-msg>.dcr-avatar img{width:100%;height:100%;object-fit:cover}
+[data-theme^="minimal-"] #ledger .dcr-detail .dcr-origin.dcr-agent{padding-top:10px}
+[data-theme^="minimal-"] #ledger .dcr-detail .dcr-origin.dcr-agent>.dcr-avatar{visibility:hidden}
+[data-theme^="minimal-"] #ledger .dcr-detail .dcr-msg-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;font-size:12px;color:var(--minimal-faint)}
+[data-theme^="minimal-"] #ledger .dcr-detail .dcr-msg-head>strong,[data-theme^="minimal-"] #ledger .dcr-detail .dcr-msg-head :is(.dcr-model,.thread-model){display:none}
+[data-theme^="minimal-"] #ledger .dcr-detail .dcr-adversary .dcr-msg-head .dcr-role{display:none}
+[data-theme^="minimal-"] #ledger .dcr-detail .dcr-msg.dcr-you .dcr-msg-head>strong{display:inline;color:var(--ink);font-weight:500}
+[data-theme^="minimal-"] #ledger .dcr-detail .dcr-msg-head :is(.dcr-verdict,.dcr-badge,[class*="dcr-v-"]){padding:0;border:0;background:none;color:var(--ink-neutral-3);font-size:12px;font-weight:400}
+[data-theme^="minimal-"] #ledger .dcr-detail .dcr-msg-head :is(.dcr-verdict,.dcr-badge) svg{display:none}
+[data-theme^="minimal-"] #ledger .dcr-detail .dcr-body{margin-top:3px;font-size:13.5px;line-height:1.6}
+[data-theme^="minimal-"] #ledger :is(.dcr-detail-title strong,.ledger-subject) code{padding:0;border:0;background:none;font-family:var(--mono);font-size:.92em}
+/* An adversary that did not answer: its mark, faint, and the words, in line with the answers. */
+[data-theme^="minimal-"] #ledger .dcr-detail :is(.dcr-opinions,.dcr-ops,ul:has(>.dcr-op)){margin:16px 0 0;padding:0;border:0;list-style:none}
+[data-theme^="minimal-"] #ledger .dcr-detail .dcr-op{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;align-items:center;padding:6px 0 0;border:0;background:none}
+[data-theme^="minimal-"] #ledger .dcr-detail .dcr-op>.dcr-avatar{display:inline-grid;place-items:center;width:18px;height:18px;background:transparent;color:var(--ink);opacity:.4}
+[data-theme^="minimal-"] #ledger .dcr-detail .dcr-op>.dcr-avatar svg{width:13px;height:13px}
+[data-theme^="minimal-"] #ledger .dcr-detail .dcr-op-line{color:var(--minimal-faint);font-size:12px}
+[data-theme^="minimal-"] #ledger .dcr-detail .dcr-op-line strong{color:inherit;font-weight:400}

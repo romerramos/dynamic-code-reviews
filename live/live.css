@@ -170,6 +170,7 @@ body.qa-live .evidence-strip:not(:has(button:not(.visual-qa-option))){display:no
 .ledger-item:has(.dcr-peek) .ledger-meta:not(:has(> :not(:empty):not([hidden]))){display:none}
 
 #ledger.dcr-in-convo>:is(.ledger-head,.ledger-body,.ledger-footer){display:none}
+.dcr-detail-mark,.dcr-detail-at{display:none}
 .dcr-detail{display:flex;flex:1;flex-direction:column;min-height:0}
 .dcr-detail[hidden]{display:none}
 @media(prefers-reduced-motion:no-preference){.dcr-detail:not([hidden]){animation:dcr-detail-in .14s ease-out}}

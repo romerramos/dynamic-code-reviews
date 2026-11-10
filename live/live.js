@@ -1167,11 +1167,13 @@
   // When a comment was made: when it was posted, else its conversation's first message.
   const startedAt = (comment, thread) => comment?.at || comment?.posted_at || [...(thread?.messages || [])].map(message => message.at).filter(Boolean).sort()[0] || '';
   // The same place in a few characters (eligibility.rb:20), for a theme that shows it beside the title.
+  // A title as the Overview prints it: `code` in backticks set as code, everything else as text.
+  const titleHTML = text => tools.escape(text).replace(/`([^`]+)`/g, '<code>$1</code>');
   const shortPlace = (comment, path, earlier) => comment.general && !comment.outdated || !path ? '' : `<button type="button" class="ledger-at" data-ledger-jump="${tools.escape(comment.id)}" title="${tools.escape(`${path} · ${placeLines(comment, earlier)}`)}">${tools.escape(`${path.split('/').pop()}:${comment.start}`)}</button>`;
   const rowFor = (comment, earlier = false) => {
     const path = earlier ? globalThis.ReviewTools.outdatedWhere(comment)?.path : (globalThis.ReviewTools.anchor(snapshot, comment)?.file.path || globalThis.ReviewTools.outdatedWhere(comment)?.path);
     const at = startedAt(comment, threads[comment.id]);
-    return `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-conversation="1" data-at="${tools.escape(at)}"${earlier ? ' data-earlier="1"' : ''}>${globalThis.ReviewTools.ledgerPlace(comment.id, comment.general && !comment.outdated ? '' : path, placeLines(comment, earlier))}<div class="ledger-msg">${byFace(comment)}${globalThis.ReviewTools.ledgerBy(tools.escape(byName(comment)), at)}<span class="ledger-subject">${tools.escape(comment.subject)}</span>${shortPlace(comment, path, earlier)}</div><div class="ledger-meta"></div></li>`;
+    return `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-conversation="1" data-at="${tools.escape(at)}"${earlier ? ' data-earlier="1"' : ''}>${globalThis.ReviewTools.ledgerPlace(comment.id, comment.general && !comment.outdated ? '' : path, placeLines(comment, earlier))}<div class="ledger-msg">${byFace(comment)}${globalThis.ReviewTools.ledgerBy(tools.escape(byName(comment)), at)}<span class="ledger-subject">${titleHTML(comment.subject)}</span>${shortPlace(comment, path, earlier)}</div><div class="ledger-meta"></div></li>`;
   };
   const chevron = '<svg class="dcr-peek-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
   // Under the row, the replies in a line (who, how many, when last).
@@ -1217,7 +1219,7 @@
   view.hidden = true;
   view.setAttribute('aria-label', 'Conversation with your agent');
   view.innerHTML = `<header class="dcr-detail-bar"><button type="button" class="dcr-back" data-dcr-back>${ico('chevron-left')}<span>Your review</span></button><button type="button" class="icon-button" data-dcr-close aria-label="Close your review" title="Close">${ico('x')}</button></header>
-    <div class="dcr-detail-title"><span class="ledger-where"></span><strong></strong><button type="button" class="dcr-detail-code" data-ledger-jump>${ico('arrow-up-right')}<span>Show in the code</span></button></div><div class="dcr-detail-slot"></div>`;
+    <div class="dcr-detail-title"><span class="dcr-detail-mark"></span><span class="ledger-where"></span><strong></strong><button type="button" class="dcr-detail-code" data-ledger-jump>${ico('arrow-up-right')}<span>Show in the code</span><span class="dcr-detail-at"></span></button></div><div class="dcr-detail-slot"></div>`;
   ledgerPanel?.append(view);
   let current = null;
   const openConversation = (id, {focus = true} = {}) => {
@@ -1226,9 +1228,15 @@
     if (!document.body.classList.contains('ledger-open')) document.getElementById('ledger-toggle')?.click();
     current = id;
     view.querySelector('.dcr-detail-title .ledger-where').innerHTML = whereOf(comment);
-    view.querySelector('.dcr-detail-title strong').textContent = comment.subject;
+    view.querySelector('.dcr-detail-title strong').innerHTML = titleHTML(comment.subject);
     view.querySelector('.dcr-detail-title strong').hidden = !!comment.personal; // it is the first message below
     view.querySelector('[data-ledger-jump]').dataset.ledgerJump = id;
+    // For a theme that leads with the title: the author's mark beside it, and the file and line as the link.
+    const path = globalThis.ReviewTools.anchor(snapshot, comment)?.file.path || globalThis.ReviewTools.outdatedWhere(comment)?.path;
+    view.querySelector('.dcr-detail-mark').innerHTML = comment.personal ? '' : byFace(comment);
+    const at = view.querySelector('.dcr-detail-at');
+    at.textContent = path && !(comment.general && !comment.outdated) ? `${path.split('/').pop()}:${comment.start}` : '';
+    at.closest('button').title = path ? `${path} · ${placeLines(comment)}` : '';
     const block = cardBlock(id, 'ledger', comment);
     view.querySelector('.dcr-detail-slot').replaceChildren(block);
     view.hidden = false;
