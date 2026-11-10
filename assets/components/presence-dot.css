@@ -1,0 +1,10 @@
+/* PresenceDot (presence-dot.js). On a face's corner it sits in the face's own grid cell (.ui-presence),
+   so it needs no offsets: the cell is the face, the dot its bottom-right corner. */
+.ui-presence-dot{display:inline-block;flex:none;box-sizing:border-box;width:var(--presence-size,8px);height:var(--presence-size,8px);border-radius:50%;background:var(--dcr-ok)}
+.ui-presence-dot[data-tone="work"]{background:var(--dcr-work);animation:ui-presence-work 1.4s ease-in-out infinite}
+.ui-presence-dot[data-tone="off"]{border:1.5px solid var(--muted);background:var(--surface)}
+@keyframes ui-presence-work{50%{opacity:.4}}
+@media(prefers-reduced-motion:reduce){.ui-presence-dot[data-tone="work"]{animation:none}}
+.ui-presence{display:inline-grid;flex:none}
+.ui-presence>*{grid-area:1 / 1}
+.ui-presence>.ui-presence-dot{align-self:end;justify-self:end;box-shadow:0 0 0 2px var(--surface)}

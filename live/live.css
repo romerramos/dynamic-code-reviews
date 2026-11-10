@@ -35,10 +35,7 @@
    is shown, scaled down only in the narrow Your review panel. */
 .dcr-convo{position:relative;display:grid;gap:18px}
 .dcr-msg{display:grid;grid-template-columns:32px minmax(0,1fr);column-gap:10px;align-items:start}
-.dcr-msg>.dcr-avatar{width:32px;height:32px;font-size:13px}
-.dcr-avatar{position:relative;z-index:1;flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:calc(50% * var(--round));background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:600}
-.dcr-you .dcr-avatar{background:var(--line);color:var(--ink)}
-.dcr-avatar>img{width:100%;height:100%;border-radius:inherit;object-fit:cover}
+.dcr-msg>.ui-avatar{--avatar-size:32px}
 /* A resolved card folds whole: its conversation shows again when it is opened. */
 .review-thread.is-resolved:has(>.thread-details:not([open]))>.dcr-thread{display:none}
 .dcr-msg-head{display:flex;align-items:baseline;gap:8px;margin:0 0 2px;font-size:13px;line-height:1.35}
@@ -66,7 +63,7 @@
 .dcr-card-fix[hidden]{display:none}
 .dcr-split{display:inline-flex;align-items:center;gap:0}
 .dcr-split-main{display:inline-flex}.dcr-split.is-narrow .dcr-split-main{display:none}
-.dcr-split-main .btn{gap:6px}.dcr-split-main .btn .dcr-face{flex:none}
+.dcr-split-main .btn{gap:6px}
 .dcr-split .btn>svg{flex:none;width:15px;height:15px}
 .dcr-split-menu[hidden]{display:none}
 .dcr-split-cancel[hidden]{display:none}
@@ -195,7 +192,6 @@ body.qa-live .evidence-strip:not(:has(button:not(.visual-qa-option))){display:no
 .dcr-ledger .dcr-msg-main{min-width:0}
 .dcr-ledger .dcr-convo::before{display:none}
 .dcr-ledger .dcr-msg{grid-template-columns:minmax(0,1fr)}
-.dcr-ledger .dcr-avatar{display:none}
 .dcr-ledger .dcr-msg-head{margin:0 0 2px;font-size:12px}
 .dcr-ledger .dcr-msg-head strong{font-size:12.5px}
 .dcr-ledger .dcr-agent .dcr-msg-head strong{color:var(--accent)}
@@ -315,10 +311,6 @@ body.dcr-no-app #qa-panel,body.dcr-no-app .visual-qa-option,body.dcr-no-app .evi
 .dcr-gh-box [hidden]{display:none}
 
 /* Who wrote it: each agent's mark on a soft disc in its own colour, or its initial. */
-.dcr-face-sm{width:20px;height:20px}
-.dcr-face-sm b{font-size:10px}
-.dcr-face-xs{width:16px;height:16px}
-.dcr-face-xs b{font-size:9px}
 .dcr-thinking{animation:dcr-breathe 1.6s infinite ease-in-out}
 @keyframes dcr-breathe{50%{transform:scale(.88);opacity:.7}}
 @media(prefers-reduced-motion:reduce){.dcr-thinking{animation:none}}
@@ -346,7 +338,7 @@ body.dcr-no-app #qa-panel,body.dcr-no-app .visual-qa-option,body.dcr-no-app .evi
 .dcr-closure.dcr-c-differ .dcr-closure-head strong{color:var(--dcr-partly)}.dcr-closure.dcr-c-applies .dcr-closure-head strong{color:var(--dcr-disagree)}.dcr-closure.dcr-c-waiting .dcr-closure-head strong{color:var(--ink)}
 .dcr-closure-rev{margin-left:auto;font-size:12px}
 .dcr-closure-main,.dcr-check-body{display:grid;grid-template-columns:20px minmax(0,1fr);column-gap:12px;align-items:start}
-.dcr-closure-main>.dcr-face,.dcr-check-body>.dcr-face{margin-top:2px}
+.dcr-closure-main>.ui-avatar,.dcr-check-body>.ui-avatar{margin-top:2px}
 .dcr-closure-by,.dcr-check-by{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 6px;margin:0 0 4px;font-size:13px;line-height:1.5;color:var(--muted)}
 .dcr-closure-by strong,.dcr-check-by strong{font-weight:600;color:var(--ink)}
 .dcr-closure .dcr-body{max-width:72ch;font-size:13.5px;line-height:1.6}.dcr-closure .dcr-body>:last-child{margin-bottom:0}
@@ -419,25 +411,22 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 .dcr-op-chevron{color:var(--muted);transition:transform .15s}
 .dcr-op.is-open .dcr-op-chevron{transform:rotate(90deg)}
 .dcr-op.is-failed{opacity:.6}
-.dcr-op.is-waiting .dcr-face{animation:dcr-breathe 1.6s infinite ease-in-out}
+.dcr-op.is-waiting .ui-avatar{animation:dcr-breathe 1.6s infinite ease-in-out}
 /* .dcr-op .dcr-op-body outranks the panel's own .dcr-ledger .dcr-body, so the answer lines up under the name. */
 .dcr-op .dcr-op-body{margin:0 0 8px 29px;font-size:13.5px;line-height:1.55}
 .dcr-op-short>:last-child{margin-bottom:0}
 @media(prefers-reduced-motion:no-preference){.dcr-op-body:not(.dcr-op-short){animation:dcr-detail-in .14s ease-out}}
-@media(prefers-reduced-motion:reduce){.dcr-op-chevron,.dcr-op-toggle{transition:none}.dcr-op.is-waiting .dcr-face{animation:none}}
+@media(prefers-reduced-motion:reduce){.dcr-op-chevron,.dcr-op-toggle{transition:none}.dcr-op.is-waiting .ui-avatar{animation:none}}
 
 /* A row in Your review: the other agents that weighed in, as small marks after a plus. */
 .dcr-faces{display:inline-flex;align-items:center;gap:2px}
 .dcr-faces-plus{margin-right:1px;color:var(--muted);font-size:12px;font-weight:600}
-.dcr-faces .dcr-face{width:18px;height:18px;box-shadow:0 0 0 1.5px var(--surface)}
-.dcr-faces .dcr-face b{font-size:10px}
+.dcr-faces .ui-avatar{--avatar-size:18px;box-shadow:0 0 0 1.5px var(--surface)}
 
 /* In Your review the chat is narrow: small faces beside each message, the opinions full width. */
 .dcr-ledger .dcr-msg{grid-template-columns:24px minmax(0,1fr);column-gap:10px}
-.dcr-ledger .dcr-avatar{display:grid;width:24px;height:24px;font-size:11px}
-.dcr-ledger .dcr-you .dcr-avatar{font-size:10px}
+.dcr-ledger .dcr-msg>.ui-avatar{--avatar-size:24px}
 .dcr-ledger .dcr-opinions{margin:18px 0 4px}
-.dcr-state .dcr-face{width:20px;height:20px}
 
 /* The comment a conversation is about: its first message, a little apart from the replies. */
 .dcr-origin{margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--line)}
@@ -450,30 +439,24 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 #dcr-presence:hover,#dcr-presence[aria-expanded="true"]{border-color:color-mix(in oklab,var(--ink) 22%,var(--line))}
 #dcr-presence:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .dcr-presence-face{position:relative;display:inline-flex}
-.dcr-presence-face .dcr-face{width:20px;height:20px}
-.dcr-presence-dot{width:9px;height:9px;border-radius:calc(50% * var(--round));background:var(--dcr-off)}
-.dcr-presence-face .dcr-presence-dot{position:absolute;z-index:2;right:-2px;bottom:-2px;box-shadow:0 0 0 2px var(--surface)}
-#dcr-presence[data-tone="ok"] .dcr-presence-dot,.dcr-presence-ok .dcr-presence-dot{background:var(--dcr-ok)}
-#dcr-presence[data-tone="work"] .dcr-presence-dot,.dcr-presence-work .dcr-presence-dot{background:var(--dcr-work);animation:dcr-pulse 1.4s infinite ease-in-out}
-#dcr-presence[data-tone="off"] .dcr-presence-face .dcr-presence-dot{display:none}
+#dcr-presence[data-tone="off"] .ui-presence-dot{display:none}
+.dcr-presence-face{--presence-size:9px}
 #dcr-presence[data-tone="off"]{color:var(--muted)}
-#dcr-presence[data-tone="off"] .dcr-face{filter:grayscale(1);opacity:.55}
+#dcr-presence[data-tone="off"] .ui-avatar{filter:grayscale(1);opacity:.55}
 .dcr-presence-state{color:var(--dcr-ok)}
 #dcr-presence .dcr-typing{margin-left:4px;color:var(--dcr-work)}
 @media(max-width:1180px){#dcr-presence .dcr-presence-text{display:none}#dcr-presence{padding:0 5px;border-color:transparent;background:none}}
-@media(prefers-reduced-motion:reduce){#dcr-presence .dcr-presence-dot{animation:none}}
 /* The card it opens: who, what, and how to connect one when nothing is listening. */
 #dcr-presence-card{position:fixed;z-index:30;box-sizing:border-box;overflow-y:auto;padding:14px 16px;border:1px solid var(--line);border-radius:calc(12px * var(--round));background:var(--surface);color:var(--ink);font-size:13px;box-shadow:0 12px 32px color-mix(in srgb,var(--shade) 18%,transparent)}
 #dcr-presence-card[hidden]{display:none}
 .dcr-presence-bar{display:none}
 #dcr-presence-card header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-#dcr-presence-card header .dcr-avatar{width:32px;height:32px}
 .dcr-presence-who{display:grid}
 .dcr-presence-who strong{font-size:14px;font-weight:600}
 .dcr-presence-who span{color:var(--muted);font-size:12px}
 .dcr-presence-word{display:none}
 .dcr-presence-line{display:flex;align-items:baseline;gap:8px;margin:0;line-height:1.45}
-.dcr-presence-line .dcr-presence-dot{flex:none;transform:translateY(1px)}
+.dcr-presence-line .ui-presence-dot{align-self:center}
 .dcr-presence-help{margin:12px 0 6px;color:var(--muted);line-height:1.45}
 .dcr-presence-cmd{display:flex;align-items:flex-start;gap:6px;padding:8px 6px 8px 10px;border-radius:calc(8px * var(--round));background:color-mix(in oklab,var(--ink) 5%,transparent)}
 .dcr-presence-cmd code{flex:1;min-width:0;font:12px/1.5 var(--mono);overflow-wrap:anywhere;user-select:all}
@@ -481,10 +464,6 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 @media(prefers-reduced-motion:no-preference){#dcr-presence-card:not([hidden]){animation:dcr-unsent-in .14s ease-out}}
 
 /* Adversaries. Marks that overlap, one per agent; a count past the few that fit. */
-.dcr-stack{display:inline-flex;align-items:center}
-.dcr-stack .dcr-face{box-shadow:0 0 0 1.5px var(--surface)}
-.dcr-stack .dcr-face+.dcr-face,.dcr-stack .dcr-face+.dcr-stack-more{margin-left:-4px}
-.dcr-stack-more{display:inline-grid;place-items:center;min-width:16px;height:16px;padding:0 3px;border-radius:calc(999px * var(--round));background:var(--line);box-shadow:0 0 0 1.5px var(--surface);color:var(--ink);font-size:9.5px;font-weight:700}
 .dcr-adv-plus{color:var(--muted);font-size:12px;font-weight:650;line-height:1}
 /* On the chip: who checks the review beside your agent. */
 .dcr-presence-adv{display:inline-flex;align-items:center;gap:3px;margin-left:-2px;padding-left:8px;border-left:1px solid var(--line)}
@@ -493,12 +472,12 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 /* The + on a question: tick it and the adversaries answer too. Grey and dashed until ticked. */
 .dcr-adv-toggle{flex:none;display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 7px 0 6px;border:1px dashed color-mix(in oklab,var(--ink) 22%,transparent);border-radius:calc(999px * var(--round));background:none;color:var(--muted);font:inherit;cursor:pointer;transition:border-color .12s,background-color .12s}
 .dcr-adv-toggle[hidden]{display:none}
-.dcr-adv-toggle .dcr-face{filter:grayscale(1);opacity:.5;transition:filter .12s,opacity .12s}
+.dcr-adv-toggle .ui-avatar{filter:grayscale(1);opacity:.5;transition:filter .12s,opacity .12s}
 .dcr-adv-toggle:hover{border-color:color-mix(in oklab,var(--ink) 40%,transparent)}
-.dcr-adv-toggle:hover .dcr-face{opacity:.8}
+.dcr-adv-toggle:hover .ui-avatar{opacity:.8}
 .dcr-adv-toggle[aria-pressed="true"]{border-style:solid;border-color:var(--accent);background:color-mix(in oklab,var(--accent) 9%,transparent)}
 .dcr-adv-toggle[aria-pressed="true"] .dcr-adv-plus{color:var(--accent)}
-.dcr-adv-toggle[aria-pressed="true"] .dcr-face{filter:none;opacity:1}
+.dcr-adv-toggle[aria-pressed="true"] .ui-avatar{filter:none;opacity:1}
 .dcr-adv-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .dcr-compose .dcr-adv-toggle{height:30px;align-self:flex-end}
 .dcr-reply .dcr-actions .dcr-adv-toggle{margin-left:auto;align-self:center}
@@ -506,7 +485,7 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 /* In the code's composer it sits before Ask agent, and only when the comment is for your agent. */
 #inline-composer .dcr-adv-toggle{align-self:center;height:30px}
 #inline-composer:not([data-mode="agent"]) .dcr-adv-toggle{display:none}
-@media(prefers-reduced-motion:reduce){.dcr-adv-toggle,.dcr-adv-toggle .dcr-face{transition:none}}
+@media(prefers-reduced-motion:reduce){.dcr-adv-toggle,.dcr-adv-toggle .ui-avatar{transition:none}}
 
 /* The Adversaries section of the agent card. */
 .dcr-adv{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
@@ -538,7 +517,7 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 .dcr-adv-note{margin:4px 0 0 29px;color:var(--muted);font-size:12px;line-height:1.4}
 .dcr-adv-note.is-warn{color:var(--dcr-partly)}
 .dcr-adv-foot{margin:10px 0 0;color:var(--muted);font-size:12px;line-height:1.55}
-.dcr-adv-foot .dcr-stack{vertical-align:-3px;margin:0 1px}
+.dcr-adv-foot .ui-avatar-stack{vertical-align:-3px;margin:0 1px}
 .dcr-adv-missing{margin:6px 0 0;color:var(--muted);font-size:11.5px}
 
 /* The introduction to adversaries, shown until the reviewer chooses them or chooses none: who
@@ -546,8 +525,7 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 .dcr-intro{width:min(540px,calc(100vw - 24px));max-width:none;padding:24px 26px 0;font-size:14px}
 .dcr-intro h2:focus{outline:none}
 .dcr-intro-hero{display:flex;align-items:center;gap:10px;margin-bottom:14px}
-.dcr-intro-hero>.dcr-avatar{width:36px;height:36px}
-.dcr-intro-hero .dcr-faces .dcr-face{width:26px;height:26px}
+.dcr-intro-hero .ui-avatar-stack .ui-avatar{--avatar-size:26px}
 .dcr-intro-plus{color:var(--muted);font-size:16px;font-weight:600}
 .dcr-intro h2{margin:0 0 6px;font-size:19px;font-weight:650;letter-spacing:-.01em}
 .dcr-intro-lead{margin:0;color:var(--muted);line-height:1.55}

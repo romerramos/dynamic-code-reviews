@@ -18,6 +18,7 @@
   <link rel="icon" type="image/svg+xml" href="<%= favicon %>">
   <script>try{var s=JSON.parse(localStorage.getItem('dynamic-review:settings')||'{}'),d=document.documentElement;if(s.defaults!=='terminal-dark')s={};var t=<%= script_json(themes) %>,p=<%= script_json(theme_modes) %>,y=<%= script_json(theme_syntaxes) %>,n=t.indexOf(s.theme)<0?t[0]:s.theme,m=s.colorMode||p[n]||'system';m=m==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):m;d.dataset.mode=m;d.dataset.theme=n+'-'+m;d.dataset.syntax=s.syntaxTheme||y[n+'-'+m]||'classic'}catch(e){}</script>
   <style><%= styles %></style>
+  <script><%= component_head %></script>
 </head>
 <body>
   <a class="skip-link" href="#content">Skip to review</a>

@@ -1,43 +1,23 @@
 /* Pure helpers for the served review's conversation layer. Loaded only by `dcr serve`. */
 'use strict';
+// Under Node (the tests) the components load from their files; the page has them inline already.
+if (typeof module === 'object' && !globalThis.UI?.Avatar) {
+  const fs = require('node:fs'), path = require('node:path'), dir = path.join(__dirname, '../assets/components');
+  ['ui.js', 'agent-mark.js', 'avatar.js', ...fs.readdirSync(dir).filter(name => name.endsWith('.js')).sort()].filter((name, at, all) => all.indexOf(name) === at).forEach(name => require(path.join(dir, name)));
+}
 globalThis.LiveTools = (() => {
   const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[char]));
   const PERSONAL = /^mine-/;
 
   // --- who wrote it ------------------------------------------------------------------------------
-  // An agent is a slug (claude, codex, ...). Known ones show their company's mark; any other shows
-  // its first letter. Messages from before agents were named stay "Agent".
-  const AGENTS = {
-    claude: {name: 'Claude', company: 'Anthropic'},
-    codex: {name: 'Codex', company: 'OpenAI'},
-    gemini: {name: 'Gemini', company: 'Google'},
-    grok: {name: 'Grok', company: 'xAI'},
-    antigravity: {name: 'Antigravity', company: 'Google'},
-    cursor: {name: 'Cursor', company: 'Cursor'},
-    opencode: {name: 'opencode', company: 'opencode'}
-  };
-  const SPARK = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg>';
-  function agentInfo(slug) {
-    const known = slug && AGENTS[slug];
-    const name = known ? known.name : slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : 'Agent';
-    return {slug: slug || '', name, company: known?.company || '', mark: slug ? globalThis.ReviewBrands?.[slug] || '' : ''};
-  }
-  // The round mark beside a message: the company's logo, a letter, or the generic spark.
-  function avatarHTML(slug, extra = '') {
-    const agent = agentInfo(slug);
-    const face = agent.mark || (slug ? `<b>${escape(agent.name.charAt(0))}</b>` : SPARK);
-    return `<span class="dcr-avatar dcr-face${extra ? ` ${extra}` : ''}" data-agent="${escape(agent.slug)}" title="${escape(agent.company ? `${agent.name} · ${agent.company}` : agent.name)}" aria-hidden="true">${face}</span>`;
-  }
+  // Faces and names come from the page's components (Avatar, AgentMark); messages from before
+  // agents were named stay "Agent".
+  const UI = globalThis.UI;
+  const agentInfo = UI.agentInfo;
+  const face = (slug, size = 'md', className = '') => UI.Avatar({agent: slug, size, className});
   // The reader by their GitHub handle, else You when the server could not tell.
   const youName = me => me?.login || 'You';
-  // Someone else, who wrote on the pull request on GitHub: their GitHub avatar, else their initial.
-  const AVATAR = /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/;
   const personName = person => `@${person?.login || 'someone'}`;
-  const personHTML = (person, extra = '') => `<span class="dcr-avatar dcr-person${extra ? ` ${extra}` : ''}" title="${escape(`${personName(person)} on GitHub`)}" aria-hidden="true">${AVATAR.test(person?.avatar || '') ? `<img src="${person.avatar}" alt="">` : escape((person?.login || '?').charAt(0).toUpperCase())}</span>`;
-  // The reader's own face: their GitHub avatar when the server found it, else a Y.
-  const youHTML = me => /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(me?.avatar || '')
-    ? `<span class="dcr-avatar" title="${escape(me.login ? `@${me.login}` : youName(me))}" aria-hidden="true"><img src="${me.avatar}" alt=""></span>`
-    : '<span class="dcr-avatar" aria-hidden="true">Y</span>';
   // The model and effort behind an agent's words, tiny and muted; nothing when it did not say.
   const modelHTML = item => {
     const text = globalThis.ReviewTools?.modelText(item?.model, item?.effort);
@@ -145,16 +125,16 @@ globalThis.LiveTools = (() => {
     const isOpen = row => String(row.body || '').trim() && (against.includes(row) ? !toggled.has(row.agent) : toggled.has(row.agent));
     const chips = checks.map(row => {
       const tone = row.failed || !SIDES[row.word] ? 'none' : SIDES[row.word] === closing.side ? 'agree' : 'disagree';
-      const face = `${avatarHTML(row.agent, 'dcr-face-sm')}<strong>${escape(name(row))}</strong><span class="dcr-check-said dcr-v-${tone}">${said(row)}</span>`;
-      return String(row.body || '').trim() ? `<button type="button" class="dcr-check${isOpen(row) ? ' is-open' : ''}" data-dcr-opinion="${escape(row.agent)}" aria-expanded="${!!isOpen(row)}" title="${escape(modelText(row))}">${face}${chevron}</button>` : `<span class="dcr-check">${face}</span>`;
-    }).join('') + closing.waiting.map(agent => `<span class="dcr-check is-waiting">${avatarHTML(agent, 'dcr-face-sm')}<strong>${escape(agentInfo(agent).name)}</strong><span class="dcr-check-said dcr-v-none">is checking</span><span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span></span>`).join('');
-    const opened = checks.filter(isOpen).map(row => `<div class="dcr-check-body">${avatarHTML(row.agent, 'dcr-face-sm')}<div><p class="dcr-check-by"><strong>${escape(name(row))}</strong> ${said(row)}${modelHTML(row)}</p><div class="dcr-body">${markdown(row.body)}</div></div></div>`).join('');
+      const chip = `${face(row.agent, 'sm')}<strong>${escape(name(row))}</strong><span class="dcr-check-said dcr-v-${tone}">${said(row)}</span>`;
+      return String(row.body || '').trim() ? `<button type="button" class="dcr-check${isOpen(row) ? ' is-open' : ''}" data-dcr-opinion="${escape(row.agent)}" aria-expanded="${!!isOpen(row)}" title="${escape(modelText(row))}">${chip}${chevron}</button>` : `<span class="dcr-check">${chip}</span>`;
+    }).join('') + closing.waiting.map(agent => `<span class="dcr-check is-waiting">${face(agent, 'sm')}<strong>${escape(agentInfo(agent).name)}</strong><span class="dcr-check-said dcr-v-none">is checking</span><span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span></span>`).join('');
+    const opened = checks.filter(isOpen).map(row => `<div class="dcr-check-body">${face(row.agent, 'sm')}<div><p class="dcr-check-by"><strong>${escape(name(row))}</strong> ${said(row)}${modelHTML(row)}</p><div class="dcr-body">${markdown(row.body)}</div></div></div>`).join('');
     const id = resolve && escape(resolve);
     const buttons = !id ? '' : differ
       ? `<button type="button" class="btn btn-sm btn-primary" data-resolve="${id}" data-dcr-side="dealt">No longer a problem · Resolve</button>${still ? `<button type="button" class="btn btn-sm" data-dcr-still="${id}" data-dcr-side="applies">Still a problem · Fix this</button>` : ''}`
       : plain ? `<button type="button" class="btn btn-sm${closing.state === 'settled' ? ' btn-primary' : ''}" data-resolve="${id}" data-dcr-side="${closing.side}">Resolve</button>` : '';
     return `<section class="dcr-closure dcr-c-${closing.state}" aria-label="What became of this comment"><header class="dcr-closure-head"><strong>${head}</strong>${note ? `<span>${escape(note)}</span>` : ''}<span class="dcr-closure-rev">revision ${escape(closing.revision)}</span></header>`
-      + `<div class="dcr-closure-main">${avatarHTML(main.agent, 'dcr-face-sm')}<div class="dcr-closure-told"><p class="dcr-closure-by"><strong>${escape(name(main))}</strong>${did ? ` ${did}` : ''}${modelHTML(main)}</p>${String(main.body || '').trim() ? `<div class="dcr-body">${markdown(main.body)}</div>` : ''}`
+      + `<div class="dcr-closure-main">${face(main.agent, 'sm')}<div class="dcr-closure-told"><p class="dcr-closure-by"><strong>${escape(name(main))}</strong>${did ? ` ${did}` : ''}${modelHTML(main)}</p>${String(main.body || '').trim() ? `<div class="dcr-body">${markdown(main.body)}</div>` : ''}`
       + `${chips ? `<div class="dcr-checks" aria-label="Checked by">${chips}</div>` : ''}${opened}</div></div>${buttons ? `<div class="dcr-closure-actions">${buttons}</div>` : ''}</section>`;
   }
   const modelText = item => globalThis.ReviewTools?.modelText(item?.model, item?.effort) || '';
@@ -281,8 +261,10 @@ globalThis.LiveTools = (() => {
       const model = agent ? modelHTML(message) : '';
       const role = adversary ? `<span class="dcr-role">second reviewer${message.about === 'outcome' || message.about === 'earlier-outcome' ? ', on what became of it' : ''}</span>` : '';
       const outcome = OUTCOMES[message.outcome] ? `<span class="dcr-verdict dcr-o-${escape(message.outcome)}">${OUTCOMES[message.outcome]}</span>` : '';
-      const avatar = agent ? avatarHTML(slug) : person ? personHTML(person) : youHTML(me);
-      return `<article class="dcr-msg ${agent || person ? 'dcr-agent' : 'dcr-you'}${adversary ? ` dcr-adversary dcr-v-${escape(message.verdict || 'none')}` : ''}" data-msg="${escape(message.id)}">${avatar}<div class="dcr-msg-main"><header class="dcr-msg-head"><strong>${who}</strong>${model}${adversary || message.opinion ? verdictHTML(message.verdict) : outcome}${role}<time datetime="${escape(message.at || '')}" data-at="${escape(message.at || '')}">${escape(relativeTime(message.at, now))}</time>${fresh ? '<span class="dcr-new">New</span>' : ''}</header><div class="dcr-body">${markdown(message.body)}</div></div></article>`;
+      const avatar = agent ? UI.Avatar({agent: slug}) : person ? UI.Avatar({person}) : UI.Avatar({you: me || null});
+      return UI.ThreadMessage({id: message.id, from: agent ? 'agent' : person ? 'person' : 'you', face: avatar, who, body: markdown(message.body),
+        classes: adversary ? `dcr-adversary dcr-v-${escape(message.verdict || 'none')}` : '',
+        head: `${model}${adversary || message.opinion ? verdictHTML(message.verdict) : outcome}${role}<time datetime="${escape(message.at || '')}" data-at="${escape(message.at || '')}">${escape(relativeTime(message.at, now))}</time>${fresh ? '<span class="dcr-new">New</span>' : ''}`});
     }).join('');
   }
 
@@ -338,9 +320,9 @@ globalThis.LiveTools = (() => {
       const name = escape(agentInfo(agent).name);
       // Asked again, an agent shows as reading until its new answer replaces the old one.
       const asked = waiting.includes(agent);
-      if (asked && lostOpinion(thread, now)) return `<li class="dcr-op is-failed" title="Asked ${escape(relativeTime(thread.asked_at, now))}; the check may have been interrupted">${avatarHTML(agent, 'dcr-face-sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">did not answer</span></span></li>`;
-      if (asked || !opinion) return `<li class="dcr-op is-waiting">${avatarHTML(agent, 'dcr-face-sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">is reading the code</span><span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span></span></li>`;
-      if (opinion.error) return `<li class="dcr-op is-failed" title="${escape(opinion.error)}">${avatarHTML(agent, 'dcr-face-sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">did not answer</span></span></li>`;
+      if (asked && lostOpinion(thread, now)) return `<li class="dcr-op is-failed" title="Asked ${escape(relativeTime(thread.asked_at, now))}; the check may have been interrupted">${face(agent, 'sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">did not answer</span></span></li>`;
+      if (asked || !opinion) return `<li class="dcr-op is-waiting">${face(agent, 'sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">is reading the code</span><span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span></span></li>`;
+      if (opinion.error) return `<li class="dcr-op is-failed" title="${escape(opinion.error)}">${face(agent, 'sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">did not answer</span></span></li>`;
       return '';
     }).join('');
     // On a question a judge compared the answers with the review's agent's: where they part, in a sentence.
@@ -374,13 +356,6 @@ globalThis.LiveTools = (() => {
   // the reviewer named (the server keeps the same rule), and only an installed one is asked.
   const activeAdversaries = (adversaries, author, catalog = null) => (adversaries || []).filter(entry =>
     (entry.agent !== author || entry.model) && (!catalog || catalog.some(agent => agent.slug === entry.agent && agent.installed)));
-
-  // Overlapping marks, one per agent, however many; past `max` the rest is a count.
-  function facesHTML(slugs, max = 4) {
-    const shown = slugs.slice(0, slugs.length > max ? max - 1 : max);
-    const rest = slugs.length - shown.length;
-    return `<span class="dcr-stack">${shown.map(slug => avatarHTML(slug, 'dcr-face-xs')).join('')}${rest ? `<b class="dcr-stack-more">+${rest}</b>` : ''}</span>`;
-  }
 
   // How an agent on this computer stands, in a word, with the detail as a hint. A CLI with no status
   // command cannot say whether it is signed in; its last real answer can.
@@ -465,10 +440,10 @@ globalThis.LiveTools = (() => {
       const effort = entry ? effortOptionsHTML(agent, entry.model, entry.effort) : '';
       const note = self ? (entry && !entry.model ? '<p class="dcr-adv-note is-warn">Runs this review, so it is skipped until you pick a model.</p>' : '<p class="dcr-adv-note">Runs this review: it checks itself only on a model you pick.</p>') : '';
       const tune = entry ? `<div class="dcr-adv-tune"><select class="select select-xs" data-dcr-adv-model aria-label="${escape(agent.name)} model">${modelOptionsHTML(agent, entry.model)}</select>${effort ? `<select class="select select-xs" data-dcr-adv-effort aria-label="${escape(agent.name)} effort">${effort}</select>` : ''}</div>` : '';
-      return `<li class="dcr-adv-row${entry ? ' is-on' : ''}" data-agent="${escape(agent.slug)}"><label class="dcr-adv-line">${avatarHTML(agent.slug, 'dcr-face-sm')}<span class="dcr-adv-who"><strong>${escape(agent.name)}</strong><span class="dcr-adv-status is-${status.tone}" title="${escape(status.hint)}">${escape(status.text)}</span></span><input type="checkbox" class="toggle toggle-sm" data-dcr-adv-switch${entry ? ' checked' : ''} aria-label="Use ${escape(agent.name)} as an adversary"></label>${tune}${note}</li>`;
+      return `<li class="dcr-adv-row${entry ? ' is-on' : ''}" data-agent="${escape(agent.slug)}"><label class="dcr-adv-line">${face(agent.slug, 'sm')}<span class="dcr-adv-who"><strong>${escape(agent.name)}</strong><span class="dcr-adv-status is-${status.tone}" title="${escape(status.hint)}">${escape(status.text)}</span></span><input type="checkbox" class="toggle toggle-sm" data-dcr-adv-switch${entry ? ' checked' : ''} aria-label="Use ${escape(agent.name)} as an adversary"></label>${tune}${note}</li>`;
     }).join('');
     const who = author ? agentInfo(author).name : 'your agent';
-    const order = active.length ? `${agentInfo(active[0].agent).name} answers in each comment's conversation${active.length > 1 ? `; ${names(active.slice(1).map(entry => agentInfo(entry.agent).name))} weigh${active.length > 2 ? '' : 's'} in beside it` : ''}. On your own questions, tick ${facesHTML(active.map(entry => entry.agent), 3)} to ask them too.` : `Other agents on this computer can check ${escape(who)}'s comments. They spend your own accounts, so none is on until you choose.`;
+    const order = active.length ? `${agentInfo(active[0].agent).name} answers in each comment's conversation${active.length > 1 ? `; ${names(active.slice(1).map(entry => agentInfo(entry.agent).name))} weigh${active.length > 2 ? '' : 's'} in beside it` : ''}. On your own questions, tick ${UI.AvatarStack(active.map(entry => entry.agent), {max: 3})} to ask them too.` : `Other agents on this computer can check ${escape(who)}'s comments. They spend your own accounts, so none is on until you choose.`;
     return `${head}<ul class="dcr-adv-list">${rows}</ul>${intro ? '' : `<p class="dcr-adv-foot">${order}</p>`}${missing.length ? `<p class="dcr-adv-missing">Not found here: ${escape(names(missing))}.</p>` : ''}`;
   }
 
@@ -478,7 +453,7 @@ globalThis.LiveTools = (() => {
     const icon = name => (globalThis.ReviewIcons?.[name] || '').replace('<svg', '<svg aria-hidden="true" focusable="false"');
     const who = escape(author ? agentInfo(author).name : 'your agent');
     const others = (catalog || []).filter(agent => agent.installed && agent.slug !== author).map(agent => agent.slug);
-    const hero = `<div class="dcr-intro-hero" aria-hidden="true">${author ? avatarHTML(author, '') : ''}${others.length ? `${author ? '<span class="dcr-intro-plus">+</span>' : ''}${facesHTML(others, 5)}` : ''}</div>`;
+    const hero = `<div class="dcr-intro-hero" aria-hidden="true">${author ? face(author, 'xl') : ''}${others.length ? `${author ? '<span class="dcr-intro-plus">+</span>' : ''}${UI.AvatarStack(others, {max: 5})}` : ''}</div>`;
     const points = [
       ['message-square', 'On every comment', `When ${who} posts a comment, the first adversary answers in its conversation and the others say whether they agree.`],
       ['circle-help', 'On your questions, when you ask', `Tick the <b>+</b> beside a question. Each answers on its own, and you see how far it agrees with ${who}.`],
@@ -555,6 +530,6 @@ globalThis.LiveTools = (() => {
   }
 
   return {emojiToken, emojiMatches, escape, progressKey, allComments, sendText, drafts, statusText, statusModel, actionLabel, markdown, snippet, relativeTime, messagesHTML, unseen, agentModel, summary,
-    agentInfo, avatarHTML, youHTML, youName, personHTML, personName, opinionMessages, modelHTML, verdictHTML, verdicts, closure, closureHTML, confirmed, closesItself, outcomeWord, outcomeSide: word => SIDES[word], OUTCOMES, commentAction, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
-    activeAdversaries, facesHTML, agentStatus, modelOptionsHTML, effortLevels, effortOptionsHTML, chosenModel, chosenEffort, settle, adversaryPanelHTML, adversaryIntroHTML, jevBannerHTML};
+    agentInfo, youName, personName, opinionMessages, modelHTML, verdictHTML, verdicts, closure, closureHTML, confirmed, closesItself, outcomeWord, outcomeSide: word => SIDES[word], OUTCOMES, commentAction, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
+    activeAdversaries, agentStatus, modelOptionsHTML, effortLevels, effortOptionsHTML, chosenModel, chosenEffort, settle, adversaryPanelHTML, adversaryIntroHTML, jevBannerHTML};
 })();

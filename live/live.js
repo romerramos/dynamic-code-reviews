@@ -137,17 +137,17 @@
   const quoteHTML = comment => {
     if (!comment) return '';
     const text = (comment.personal ? [comment.subject, comment.discussion] : [comment.discussion]).filter(Boolean).join('\n\n').trim();
-    const avatar = comment.personal ? tools.youHTML(me) : comment.author ? tools.personHTML(comment.author) : tools.avatarHTML(comment.agent || null);
     const who = comment.personal ? `<span class="you-name">${tools.escape(tools.youName(me))}</span>` : tools.escape(byName(comment));
     // Asking your own agent needs no label: the conversation is with it.
     const kind = (comment.audience === 'agent' ? '' : [comment.label, comment.decoration].filter(Boolean).join(' · ')).replace(/^./, letter => letter.toUpperCase());
     const long = text.length > 320 || text.split(/\n\s*\n/).length > 2;
-    const body = text ? `<div class="dcr-body${long ? ' is-clamped' : ''}">${tools.markdown(text)}</div>${long ? '<button type="button" class="dcr-more">Show more</button>' : ''}` : '';
-    return `<article class="dcr-msg dcr-origin${comment.personal ? ' dcr-you' : ' dcr-agent'}">${avatar}<div class="dcr-msg-main"><header class="dcr-msg-head"><strong>${who}</strong>${comment.personal ? '' : tools.modelHTML(comment)}${kind ? `<span class="dcr-role">${tools.escape(kind)}</span>` : ''}</header>${body}</div></article>`;
+    return UI.ThreadMessage({origin: true, from: comment.personal ? 'you' : comment.author ? 'person' : 'agent', face: byFace(comment), who,
+      head: `${comment.personal ? '' : tools.modelHTML(comment)}${kind ? `<span class="dcr-role">${tools.escape(kind)}</span>` : ''}`, body: text ? tools.markdown(text) : '', clamped: long, more: long});
   };
   // Who wrote a review comment: a teammate on GitHub, the agent, or the review itself.
   const byName = comment => comment.author ? tools.personName(comment.author) : comment.agent ? tools.agentInfo(comment.agent).name : 'Review';
-  const byFace = (comment, extra) => comment.author ? tools.personHTML(comment.author, extra) : tools.avatarHTML(comment.agent || null, extra);
+  // Who wrote it, as a face (Avatar): the reader, a teammate on GitHub, or the agent.
+  const byFace = (comment, size = 'md') => comment.personal ? UI.Avatar({you: me || null, size}) : comment.author ? UI.Avatar({person: comment.author, size}) : UI.Avatar({agent: comment.agent || null, size});
   const advToggleHTML = '<button type="button" class="dcr-adv-toggle" data-dcr-adv hidden aria-pressed="false"></button>';
   const composeHTML = () => `<form class="dcr-reply dcr-compose" hidden><textarea rows="1" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea>${advToggleHTML}<button type="button" class="dcr-change dcr-gh" data-dcr-github hidden aria-label="Sum this conversation up for GitHub" title="Sum this conversation up as a comment for GitHub">${window.ReviewGitHub?.mark || ''}</button><button type="button" class="dcr-change" data-dcr-change hidden aria-label="Make this change">${ico('wrench')}</button><button type="submit" class="dcr-send" aria-label="Send reply" title="Send reply (⌘ Enter)">${ico('send')}</button></form>`;
   const cardBlock = (id, variant, comment) => {
@@ -166,7 +166,7 @@
     const asked = askable();
     const on = withAdversaries.has(id);
     const who = tools.names(asked.map(entry => tools.agentInfo(entry.agent).name));
-    const html = `<span class="dcr-adv-plus" aria-hidden="true">+</span>${tools.facesHTML(asked.map(entry => entry.agent), 3)}`;
+    const html = `<span class="dcr-adv-plus" aria-hidden="true">+</span>${UI.AvatarStack(asked.map(entry => entry.agent), {max: 3})}`;
     toggles.forEach(toggle => {
       set(toggle, 'hidden', !show || !online || !asked.length);
       if (toggle.dataset.html !== html) { toggle.innerHTML = html; toggle.dataset.html = html; }
@@ -177,7 +177,7 @@
     });
   };
   const stateHTML = (model, at) => model
-    ? `${model.agent ? tools.avatarHTML(model.agent, 'dcr-face-sm dcr-thinking') : `<span class="dcr-dot dcr-tone-${model.tone}" aria-hidden="true"></span>`}<span>${tools.escape(model.text)}</span>${model.typing ? '<span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span>' : ''}${at ? `<time data-at="${tools.escape(at)}">${tools.escape(tools.relativeTime(at))}</time>` : ''}`
+    ? `${model.agent ? UI.Avatar({agent: model.agent, size: 'sm', className: 'dcr-thinking'}) : `<span class="dcr-dot dcr-tone-${model.tone}" aria-hidden="true"></span>`}<span>${tools.escape(model.text)}</span>${model.typing ? '<span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span>' : ''}${at ? `<time data-at="${tools.escape(at)}">${tools.escape(tools.relativeTime(at))}</time>` : ''}`
     : '';
   // Long answers start clamped; the button appears only when something is actually hidden.
   const clampLong = root => root.closest('.dcr-ledger') || root.querySelectorAll('.dcr-body').forEach(body => {
@@ -372,7 +372,7 @@
   };
   const fixingId = () => Object.keys(threads).find(id => threads[id].fix?.state === 'requested' && Date.now() - Date.parse(threads[id].fix.at) < 3600000);
   // The listening agent's mark, on the control that sends to it.
-  const agentMark = () => listener ? tools.avatarHTML(listener, 'dcr-face-sm') : ico('sparkles');
+  const agentMark = () => listener ? UI.Avatar({agent: listener, size: 'sm'}) : ico('sparkles');
   // The control carries the agent's mark once, on its button; what is in its menu goes to the
   // same agent and does not repeat it.
   const paint = (button, text, marked = false) => {
@@ -841,8 +841,7 @@
     me = found;
     window.ReviewMe = me; // the page draws the reader's face with it too
     // What was drawn before it came takes the reader's face and name now.
-    if (me?.avatar) document.querySelectorAll('.dcr-you > .dcr-avatar').forEach(node => { node.outerHTML = tools.youHTML(me); });
-    if (me?.avatar) document.querySelectorAll('.comment-avatar').forEach(node => { node.innerHTML = `<img src="${me.avatar}" alt="">`; });
+    if (me?.avatar) document.querySelectorAll('.ui-avatar[data-kind="you"]').forEach(node => { node.outerHTML = UI.Avatar({you: me, size: node.dataset.size, className: node.className.replace(/^ui-avatar ?/, '')}); });
     document.querySelectorAll('.you-name').forEach(node => { node.textContent = tools.youName(me); });
   }).catch(() => {});
   if (window.ReviewGitHub && globalThis.ReviewTools.githubLink(snapshot, review, {general: true})) { window.ReviewGitHub.connect(ghProvider); loadGitHub(); }
@@ -1193,7 +1192,7 @@
     if (!replies.length) return `<span class="dcr-peek-who"><span class="dcr-peek-note">Open conversation</span><span class="dcr-peek-end">${chevron}</span></span>`;
     const people = new Map(replies.filter(reply => reply.author === 'person').map(reply => [`@${reply.person?.login}`, reply.person]));
     const voices = [...new Set(replies.map(reply => reply.author === 'agent' ? reply.agent || listener || 'agent' : reply.author === 'person' ? `@${reply.person?.login}` : 'you'))].slice(-3);
-    const faces = voices.map(voice => voice === 'you' ? tools.youHTML(me) : people.has(voice) ? tools.personHTML(people.get(voice), 'dcr-face-xs') : tools.avatarHTML(voice === 'agent' ? null : voice, 'dcr-face-xs')).join('');
+    const faces = voices.map(voice => voice === 'you' ? UI.Avatar({you: me || null, size: 'xs'}) : people.has(voice) ? UI.Avatar({person: people.get(voice), size: 'xs'}) : UI.Avatar({agent: voice === 'agent' ? null : voice, size: 'xs'})).join('');
     const last = replies.at(-1);
     return `<span class="dcr-peek-who"><span class="dcr-peek-faces">${faces}</span><b>${replies.length} ${replies.length === 1 ? 'reply' : 'replies'}</b><span class="dcr-peek-when">last <time data-at="${tools.escape(last.at || '')}">${tools.escape(tools.relativeTime(last.at))}</time></span><span class="dcr-peek-end">${chevron}</span></span>`;
   };
@@ -1587,7 +1586,7 @@
     const who = agent ? `<strong>${tools.escape(agent.name)}</strong>${agent.company || runs ? `<span>${tools.escape(agent.company)}${agent.company && runs ? ' · ' : ''}${runs}</span>` : ''}` : `<strong>${model.tone === 'off' ? 'No agent connected' : 'Your agent'}</strong>`;
     const connect = model.tone === 'off' && online ? `<p class="dcr-presence-help">Ask your agent to continue this review, or run this where it works:</p><div class="dcr-presence-cmd"><code>${tools.escape(connectCommand())}</code><button type="button" class="icon-button" data-dcr-copy-wait aria-label="Copy the command" title="Copy">${ico('copy')}</button></div>` : '';
     const word = {ok: 'online', work: 'answering', off: 'offline'}[model.tone] || '';
-    const html = `<header>${tools.avatarHTML(model.face, '')}<div class="dcr-presence-who">${who}</div><span class="dcr-presence-word dcr-presence-${model.tone}"><span class="dcr-presence-dot" aria-hidden="true"></span>${word}</span></header><p class="dcr-presence-line dcr-presence-${model.tone}"><span class="dcr-presence-dot" aria-hidden="true"></span>${tools.escape(model.hint)}</p>${connect}`;
+    const html = `<header>${UI.Avatar({agent: model.face, size: 'lg'})}<div class="dcr-presence-who">${who}</div><span class="dcr-presence-word dcr-presence-${model.tone}">${UI.PresenceDot(model.tone)}${word}</span></header><p class="dcr-presence-line dcr-presence-${model.tone}">${UI.PresenceDot(model.tone)}${tools.escape(model.hint)}</p>${connect}`;
     if (presenceMain.dataset.html !== html) { presenceMain.innerHTML = html; presenceMain.dataset.html = html; }
   };
   // The Adversaries section: every agent CLI here, a switch each, and the model and effort of those on.
@@ -1686,7 +1685,7 @@
     settingsDialog?.classList.toggle('has-agents', !!model);
     if (!model) { presenceCard.hidden = true; return; }
     presence.dataset.tone = model.tone;
-    const face = `${tools.avatarHTML(model.face, 'dcr-face-sm')}<span class="dcr-presence-dot" aria-hidden="true"></span>`;
+    const face = `<span class="ui-presence">${UI.Avatar({agent: model.face, size: 'sm'})}${UI.PresenceDot(model.tone)}</span>`;
     const faceSlot = presence.querySelector('.dcr-presence-face');
     if (faceSlot.dataset.html !== face) { faceSlot.innerHTML = face; faceSlot.dataset.html = face; }
     const text = presence.querySelector('.dcr-presence-text');
@@ -1694,7 +1693,7 @@
     // Who checks the review beside it, as small marks after a plus, like a row in Your review.
     const asked = askable();
     const advSlot = presence.querySelector('.dcr-presence-adv');
-    const advHTML = asked.length ? `<span class="dcr-adv-plus" aria-hidden="true">+</span>${tools.facesHTML(asked.map(entry => entry.agent), 3)}` : '';
+    const advHTML = asked.length ? `<span class="dcr-adv-plus" aria-hidden="true">+</span>${UI.AvatarStack(asked.map(entry => entry.agent), {max: 3})}` : '';
     set(advSlot, 'hidden', !asked.length);
     if (advSlot.dataset.html !== advHTML) { advSlot.innerHTML = advHTML; advSlot.dataset.html = advHTML; }
     const checkedBy = asked.length ? ` Checked by ${tools.names(asked.map(entry => tools.agentInfo(entry.agent).name))}.` : '';
@@ -1825,7 +1824,7 @@
     const headline = many ? `${tools.names(repliers)} replied on ${new Set(items.map(item => item.thread)).size} comments`
       : verdict ? `${name} ${verdict.label.toLowerCase()} with ${author ? `${author}'s comment` : 'a comment'}`
       : message?.role === 'adversary' ? `${name} checked ${author ? `${author}'s comment` : 'a comment'}` : `${name} replied`;
-    arrival.innerHTML = `${message?.author === 'person' ? tools.personHTML(message.person) : tools.avatarHTML(message?.agent || listener)}<div><strong>${tools.escape(headline)}</strong>${!many && first ? `<span>${tools.escape(first.subject)}</span>` : ''}</div>${first ? `<button type="button" class="btn btn-sm btn-primary" data-dcr-show-convo="${tools.escape(first.id)}">View</button>` : ''}<button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
+    arrival.innerHTML = `${message?.author === 'person' ? UI.Avatar({person: message.person}) : UI.Avatar({agent: message?.agent || listener})}<div><strong>${tools.escape(headline)}</strong>${!many && first ? `<span>${tools.escape(first.subject)}</span>` : ''}</div>${first ? `<button type="button" class="btn btn-sm btn-primary" data-dcr-show-convo="${tools.escape(first.id)}">View</button>` : ''}<button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
     arrival.hidden = false;
     clearTimeout(arrivalTimer);
     arrivalTimer = setTimeout(() => { arrival.hidden = true; }, 12000);
@@ -1880,7 +1879,7 @@
   };
   const announcePreview = path => {
     const name = path.slice(path.lastIndexOf('/') + 1);
-    arrival.innerHTML = `<span class="dcr-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span><div><strong>Preview ready</strong><span>${tools.escape(name)}</span></div><button type="button" class="btn btn-sm btn-primary" data-dcr-show-preview="${tools.escape(path)}">View</button><button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
+    arrival.innerHTML = `${UI.Avatar({agent: null})}<div><strong>Preview ready</strong><span>${tools.escape(name)}</span></div><button type="button" class="btn btn-sm btn-primary" data-dcr-show-preview="${tools.escape(path)}">View</button><button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
     arrival.hidden = false;
     clearTimeout(arrivalTimer);
     arrivalTimer = setTimeout(() => { arrival.hidden = true; }, 12000);
@@ -1932,7 +1931,7 @@
       const fresh = list.filter(shot => !had.has(`${shot.id}:${shot.posted_at}`));
       if (shotsKnown && fresh.length) {
         const name = fresh[0].agent ? tools.agentInfo(fresh[0].agent).name : 'Your agent';
-        arrival.innerHTML = `${tools.avatarHTML(fresh[0].agent || null)}<div><strong>${tools.escape(name)} added ${fresh.length === 1 ? 'a screenshot' : `${fresh.length} screenshots`}</strong><span>${tools.escape(fresh[0].title)}</span></div>${fresh[0].comment_id ? `<button type="button" class="btn btn-sm btn-primary" data-ledger-jump="${tools.escape(fresh[0].comment_id)}">View</button>` : '<button type="button" class="btn btn-sm btn-primary" data-view="overview">View</button>'}<button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
+        arrival.innerHTML = `${UI.Avatar({agent: fresh[0].agent || null})}<div><strong>${tools.escape(name)} added ${fresh.length === 1 ? 'a screenshot' : `${fresh.length} screenshots`}</strong><span>${tools.escape(fresh[0].title)}</span></div>${fresh[0].comment_id ? `<button type="button" class="btn btn-sm btn-primary" data-ledger-jump="${tools.escape(fresh[0].comment_id)}">View</button>` : '<button type="button" class="btn btn-sm btn-primary" data-view="overview">View</button>'}<button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
         arrival.hidden = false;
         clearTimeout(arrivalTimer);
         arrivalTimer = setTimeout(() => { arrival.hidden = true; }, 12000);
@@ -1976,7 +1975,7 @@
     if (finishedAnnounced) return;
     finishedAnnounced = true;
     clearTimeout(arrivalTimer);
-    arrival.innerHTML = `<span class="dcr-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><div><strong>${headline}</strong><span>Your progress is kept.</span></div><button type="button" class="btn btn-sm btn-primary" data-dcr-open-latest>Open it</button><button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
+    arrival.innerHTML = `${UI.Avatar({agent: null, mark: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'})}<div><strong>${headline}</strong><span>Your progress is kept.</span></div><button type="button" class="btn btn-sm btn-primary" data-dcr-open-latest>Open it</button><button type="button" class="dcr-dismiss" aria-label="Dismiss">✕</button>`;
     arrival.hidden = false;
   };
   arrival.addEventListener('click', event => { if (event.target.closest('[data-dcr-open-latest]')) openLatest(); });

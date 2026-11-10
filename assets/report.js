@@ -1137,7 +1137,7 @@
     form.noValidate = true;
     form.setAttribute('aria-label', 'Add a comment');
     form.innerHTML = `<header class="composer-head"><div class="composer-modes" role="radiogroup" aria-label="Who is this comment for?" hidden><label class="composer-mode"><input type="radio" name="composer-mode" value="agent"><span>${icon('sparkles')}Agent</span></label><label class="composer-mode"><input type="radio" name="composer-mode" value="pr"><span>${icon('message-square')}${prLabel}</span></label></div><span class="composer-where"></span><span class="composer-as" data-composer-as hidden></span><button type="button" class="act act-quiet act-icon" data-composer-close aria-label="Close; what you typed is kept" title="Close (Q). What you typed is kept.">${icon('x')}</button></header>
-      <div class="composer-types" role="radiogroup" aria-label="Type of comment">${composerTypes.map(type => `<label class="composer-type"><input type="radio" name="composer-label" value="${type}"><span>${icon(commentTypes[type][0])}${commentTypes[type][1]}</span></label>`).join('')}</div>
+      <div class="composer-types" role="radiogroup" aria-label="Type of comment">${composerTypes.map(type => `<label class="composer-type"><input type="radio" name="composer-label" value="${type}"><span>${icon(UI.COMMENT_TYPES[type][0])}${UI.COMMENT_TYPES[type][1]}</span></label>`).join('')}</div>
       <div class="composer-body"><span class="composer-face" data-composer-face aria-hidden="true"></span><textarea class="composer-text" rows="3" aria-label="Your comment"></textarea></div>
       <footer class="composer-foot"><label class="composer-blocking"><input type="checkbox" name="composer-blocking"><span>Blocks approval</span></label><div class="composer-actions"><button type="button" class="act act-quiet" data-composer-cancel>Cancel</button><button type="submit" class="act act-pr" data-composer-save title="Ctrl or Cmd with Enter">Save comment<kbd class="composer-key" aria-hidden="true">⌘↵</kbd></button><button type="submit" class="act act-secondary" data-gh-action="open" hidden>Copy &amp; open on GitHub ${icon('arrow-up-right')}</button><button type="submit" class="act act-secondary" data-gh-action="single" hidden title="Post it on the pull request now">Comment now</button><button type="submit" class="act act-gh" data-gh-action="review" hidden title="Ctrl or Cmd with Enter"></button><span class="composer-split" data-composer-agent hidden><button type="submit" class="act act-agent" data-composer-send title="Ask about these lines (Ctrl or Cmd with Enter)">${icon('send')}Ask agent<kbd class="composer-key" aria-hidden="true">⌘↵</kbd></button><details class="more-menu" data-menu-from="parent"><summary class="act act-quiet act-icon" aria-label="More for your agent" title="More for your agent">${icon('chevron-down')}</summary><div class="more-list"><button type="submit" class="more-item" data-composer-change>${icon('wrench')}Send change<small>it edits your checkout</small></button></div></details></span></div></footer><p class="composer-gh" data-composer-gh role="status" aria-live="polite" hidden></p>`;
     const text = form.querySelector('.composer-text');
@@ -1281,11 +1281,11 @@
     const as = form.querySelector('[data-composer-as]');
     // The reader's face beside the text, saying who and where for a theme that hides the header's words.
     const face = form.querySelector('[data-composer-face]');
-    const faceHTML = youAvatar().replace(/^<span[^>]*>|<\/span>$/g, '');
+    const faceHTML = youAvatar('sm');
     if (face.dataset.html !== faceHTML) { face.innerHTML = faceHTML; face.dataset.html = faceHTML; }
     const agentTab = form.querySelector('.composer-mode input[value="agent"] + span');
     const slug = mainAgent();
-    if (agentTab && agentTab.dataset.agent !== slug) { agentTab.dataset.agent = slug; agentTab.innerHTML = `<span class="composer-agent-mark" data-agent="${escape(slug)}" aria-hidden="true">${agentMark(slug)}</span>Agent`; }
+    if (agentTab && agentTab.dataset.agent !== slug) { agentTab.dataset.agent = slug; agentTab.innerHTML = `<span class="composer-agent-mark" data-agent="${escape(slug)}" aria-hidden="true">${UI.AgentMark(slug)}</span>Agent`; }
     const status = ghStatus();
     const who = gh === 'post' && status.phase === 'ready' && !unpushed ? `<b>@${escape(status.login)}</b> on #${escape(status.number)}${ghPending() ? ` · ${ghPending()} pending` : ''}` : '';
     if (as.dataset.html !== who) { as.innerHTML = who; as.dataset.html = who; as.title = who ? `Commenting as @${status.login} on ${status.repo} #${status.number}` : ''; }
@@ -1409,11 +1409,8 @@
     }
   }
 
-  // The reader's face: their GitHub avatar once the served review found it (window.ReviewMe), else a Y.
-  const youAvatar = () => {
-    const avatar = window.ReviewMe?.avatar;
-    return `<span class="comment-avatar" aria-hidden="true">${/^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(avatar || '') ? `<img src="${avatar}" alt="">` : 'Y'}</span>`;
-  };
+  // The reader's face (Avatar): their GitHub avatar once the served review found it (window.ReviewMe), else a Y.
+  const youAvatar = (size = 'md') => UI.Avatar({you: window.ReviewMe || null, size});
   // The reader by their GitHub handle once the served review knows it (window.ReviewMe), else You.
   const youName = () => escape(window.ReviewMe?.login || 'You');
   // In the diff's popover the lines go with the file, path:88, as in an editor; the reader's own comment
@@ -2042,20 +2039,6 @@
     return `<details class="file-card ${fileViewed(file) ? 'is-viewed' : ''}" data-file="${file.id}" ${fileOpen(file) ? 'open' : ''}><summary><span class="file-icon" aria-hidden="true">&lt;/&gt;</span><span class="filename">${pathFit(file.path)}</span><span class="badge success">+${added}</span><span class="badge blocking">−${removed}</span><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" aria-label="${escape(`Mark ${file.path} as reviewed`)}" ${fileViewed(file) ? 'checked' : ''}> Reviewed</label></summary>${summary || request || notVisualNote(file) ? `<div class="file-summary">${summary ? `<span>${summary}</span>` : ''}${request}${notVisualNote(file)}</div>` : ''}${hunks.length ? table : `<div class="file-summary"><pre>${escape(file.patch || 'No text diff available.')}</pre></div>`}</details>`;
   }
 
-  const commentTypes = {
-    note:['info', 'Note', 'Context worth knowing', 'blue'],
-    praise:['thumbs-up', 'Praise', 'What works well', 'green'],
-    question:['circle-help', 'Question', 'An answer would help', 'purple'],
-    thought:['lightbulb', 'Thought', 'An idea to consider', 'amber'],
-    issue:['circle-alert', 'Issue', 'A problem to address', 'red'],
-    suggestion:['message-circle', 'Suggestion', 'A proposed improvement', 'teal'],
-    todo:['list-todo', 'Todo', 'A follow-up task', 'amber'],
-    chore:['wrench', 'Chore', 'Routine maintenance', 'blue'],
-    nitpick:['scan-text', 'Nitpick', 'A small preference', 'slate'],
-    typo:['spell-check', 'Typo', 'A spelling correction', 'slate'],
-    polish:['sparkles', 'Polish', 'A finishing touch', 'teal'],
-    quibble:['message-circle', 'Quibble', 'A minor concern', 'slate']
-  };
   // Where a comment can go. Ask agent stays in this review; GitHub leaves it, so it says so (↗) and
   // copies the comment on the way, ready to paste on the lines it opens. Without a GitHub PR the slot
   // copies the comment for pasting anywhere. Everything else waits behind the ⋯ menu.
@@ -2148,25 +2131,21 @@
     return `${ghSlot(comment, size)}${moreMenu(items, size)}`;
   }
   // Who wrote a comment: its agent's mark and name. The served page credits replies the same way.
-  const AGENT_NAMES = {claude:'Claude', codex:'Codex', gemini:'Gemini', grok:'Grok', antigravity:'Antigravity', cursor:'Cursor', opencode:'opencode'};
   function agentBadge(slug, comment = {}) {
     if (!slug) return '';
-    const name = AGENT_NAMES[slug] || slug.charAt(0).toUpperCase() + slug.slice(1);
-    const mark = window.ReviewBrands?.[slug] || `<b>${escape(name.charAt(0))}</b>`;
+    const name = UI.agentInfo(slug).name;
     const model = ReviewTools.modelText(comment.model, comment.effort);
-    return `<span class="thread-by" title="Written by ${escape(model ? `${name}, ${model}` : name)}">by<span class="agent-face" data-agent="${escape(slug)}" aria-hidden="true">${mark}</span>${escape(name)}${model ? `<span class="thread-model">${escape(model)}</span>` : ''}</span>`;
+    return `<span class="thread-by" title="Written by ${escape(model ? `${name}, ${model}` : name)}">by${UI.Avatar({agent: slug, size: 'xs', title: ''})}${escape(name)}${model ? `<span class="thread-model">${escape(model)}</span>` : ''}</span>`;
   }
   // A teammate's comment, taken in from the pull request on GitHub: their avatar and login.
   function personBadge(person) {
     const login = person.login || 'someone';
-    const face = /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(person.avatar || '') ? `<img src="${person.avatar}" alt="">` : `<b>${escape(login.charAt(0).toUpperCase())}</b>`;
-    return `<span class="thread-by" title="Written on GitHub by @${escape(login)}">by<span class="agent-face person-face" aria-hidden="true">${face}</span>@${escape(login)}</span>`;
+    return `<span class="thread-by" title="Written on GitHub by @${escape(login)}">by${UI.Avatar({person, size: 'xs', title: ''})}@${escape(login)}</span>`;
   }
   // own: in a message already signed You, so it does not say Your comment.
   function threadBadges(comment, own = false) {
-    if (comment.audience === 'agent') return `<span class="thread-type type-purple" title="A question for your agent. It stays in this review until you send its conversation to GitHub."><span class="thread-type-icon">${icon('sparkles')}</span>For your agent</span>${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${ghBadgeSlot(comment)}`;
-    const [symbol, title, hint, tone] = commentTypes[comment.label] || commentTypes.note;
-    return `<span class="thread-type type-${tone}" title="${hint}"><span class="thread-type-icon">${icon(symbol)}</span>${title}</span><span class="thread-priority ${comment.decoration === 'blocking' ? 'is-blocking' : 'is-optional'}">${comment.decoration === 'blocking' ? `${icon('circle-alert')} Blocking` : 'Non-blocking'}</span>${comment.severity ? `<span class="thread-severity">${escape(comment.severity)}</span>` : ''}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${comment.personal ? own ? '' : '<span class="thread-author">Your comment</span>' : comment.author ? personBadge(comment.author) : agentBadge(comment.agent, comment)}${ghBadgeSlot(comment)}`;
+    if (comment.audience === 'agent') return `${UI.Tag(null, {agent: true})}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${ghBadgeSlot(comment)}`;
+    return `${UI.Tag(comment.label)}<span class="thread-priority ${comment.decoration === 'blocking' ? 'is-blocking' : 'is-optional'}">${comment.decoration === 'blocking' ? `${icon('circle-alert')} Blocking` : 'Non-blocking'}</span>${comment.severity ? `<span class="thread-severity">${escape(comment.severity)}</span>` : ''}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${comment.personal ? own ? '' : '<span class="thread-author">Your comment</span>' : comment.author ? personBadge(comment.author) : agentBadge(comment.agent, comment)}${ghBadgeSlot(comment)}`;
   }
   // closed: the card starts folded to its subject (a comment from an earlier revision).
   // A comment's place in a few characters (ws.rb:55), and its state in a word, for a closed comment shown as one line.
@@ -2184,7 +2163,7 @@
   const threadMeta = (comment, path, range) => {
     const kind = comment.personal ? (comment.audience === 'agent' ? 'Your question' : 'Your comment') : (comment.label ? comment.label.charAt(0).toUpperCase() + comment.label.slice(1) : 'Comment');
     const slug = comment.personal ? '' : comment.agent || '';
-    const by = slug ? escape(AGENT_NAMES[slug] || slug.charAt(0).toUpperCase() + slug.slice(1)) : '';
+    const by = slug ? escape(UI.agentInfo(slug).name) : '';
     // Who wrote it is the face beside the title, and where it is is at the right of it: only what kind of comment it is is said.
     return `<p class="thread-meta" title="${escape([by, path && range ? `${path}, ${range}` : ''].filter(Boolean).join(' · '))}">${[kind, comment.decoration && !comment.personal ? escape(comment.decoration) : ''].filter(Boolean).join('<i aria-hidden="true">·</i>')}</p>`;
   };
@@ -2196,19 +2175,8 @@
     (review.comments || []).forEach(comment => { if (comment.agent) count[comment.agent] = (count[comment.agent] || 0) + 1; });
     return Object.entries(count).sort((a, b) => b[1] - a[1])[0]?.[0] || 'claude';
   }
-  const agentMark = slug => window.ReviewBrands?.[slug] || `<b>${escape((AGENT_NAMES[slug] || slug).charAt(0))}</b>`;
-  // Who wrote a comment, as a small face: the reader, a teammate on GitHub, or an agent's mark.
-  function authorFace(comment) {
-    if (comment.personal) return youAvatar().replace('class="comment-avatar"', 'class="thread-face is-you" title="You"');
-    if (comment.author) {
-      const login = comment.author.login || 'someone';
-      const face = /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(comment.author.avatar || '') ? `<img src="${comment.author.avatar}" alt="">` : `<b>${escape(login.charAt(0).toUpperCase())}</b>`;
-      return `<span class="thread-face is-person" title="@${escape(login)} on GitHub" aria-hidden="true">${face}</span>`;
-    }
-    const slug = comment.agent || 'claude';
-    const name = AGENT_NAMES[slug] || slug;
-    return `<span class="thread-face" data-agent="${escape(slug)}" title="${escape(name)}" aria-hidden="true">${window.ReviewBrands?.[slug] || `<b>${escape(name.charAt(0))}</b>`}</span>`;
-  }
+  // Who wrote a comment, as a small face (Avatar): the reader, a teammate on GitHub, or an agent.
+  const authorFace = comment => comment.personal ? youAvatar() : comment.author ? UI.Avatar({person: comment.author}) : UI.Avatar({agent: comment.agent || 'claude'});
   function commentCard(comment, closed = false) {
     const found = ReviewTools.anchor(snapshot, comment);
     if (!found && !comment.general) return '';
@@ -4173,7 +4141,7 @@
     $('bar-agent').hidden = !chip;
     if (chip && $('bar-agent').dataset.tone !== chip.dataset.tone) $('bar-agent').dataset.tone = chip.dataset.tone || 'off';
     const slug = mainAgent();
-    if (chip && $('bar-agent').dataset.agent !== slug) { $('bar-agent').dataset.agent = slug; $('bar-agent').firstElementChild.innerHTML = agentMark(slug); }
+    if (chip && $('bar-agent').dataset.agent !== slug) { $('bar-agent').dataset.agent = slug; $('bar-agent').firstElementChild.innerHTML = UI.AgentMark(slug); }
     if (chip && $('bar-agent').title !== chip.title) { $('bar-agent').title = chip.title; $('bar-agent').setAttribute('aria-label', chip.getAttribute('aria-label') || chip.title); }
     // How many files need the reader, from the verdict strip, for a theme that shows it by the progress instead.
     const need = document.querySelector('#dcr-jev .dcr-jev-yours');

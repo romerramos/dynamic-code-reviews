@@ -3,6 +3,7 @@
 const assert = require('node:assert/strict');
 require('../assets/review-tools.js');
 require('../live/live-tools.js');
+const UI = globalThis.UI;
 const tools = globalThis.LiveTools;
 
 const file = {id:'f1', path:'app/a.rb', hunks:[{id:'h1', old_start:1, old_count:1, new_start:1, new_count:1, rows:{unified:[{kind:'add', new:1, text:'x = 2'}]}}]};
@@ -149,7 +150,7 @@ assert.equal(tools.messagesHTML(undefined), '');
 assert.ok(tools.messagesHTML({messages:[{id:'y', author:'user', body:'hi'}]}, {now, me:{login:'r', avatar:'data:image/png;base64,UE5H'}}).includes('<img src="data:image/png;base64,UE5H"'), 'your messages show your avatar');
 assert.match(tools.messagesHTML({messages:[{id:'y', author:'user', body:'hi'}]}, {me:{login:'ada'}}), /<strong><span class="you-name">ada<\/span><\/strong>/, 'your messages carry your GitHub handle');
 assert.deepEqual([tools.youName({login:'ada'}), tools.youName(null)], ['ada', 'You'], 'else You');
-assert.ok(tools.youHTML({avatar:'https://example.com/x.png'}).includes('>Y</span>') && tools.youHTML(null).includes('>Y</span>'), 'anything but a data image is a Y');
+assert.ok(UI.Avatar({you:{avatar:'https://example.com/x.png'}}).includes('<b>Y</b>') && UI.Avatar({you:null}).includes('<b>Y</b>'), 'anything but a data image is a Y');
 console.log('PASS the conversation renders as an escaped thread with New on unseen agent messages only');
 
 // --- who wrote it, and what the other agents think ---------------------------------------------------
@@ -158,8 +159,8 @@ assert.equal(tools.agentInfo('codex').name, 'Codex');
 assert.equal(tools.agentInfo('codex').company, 'OpenAI');
 assert.equal(tools.agentInfo('my-bot').name, 'My-bot', 'an unknown agent keeps its own name');
 assert.equal(tools.agentInfo(null).name, 'Agent', 'older messages stay "Agent"');
-assert.match(tools.avatarHTML('codex'), /data-mark="codex"/, 'a known agent shows its mark');
-assert.match(tools.avatarHTML('my-bot'), /<b>M<\/b>/, 'an agent with no bundled mark shows its letter');
+assert.match(UI.Avatar({agent:'codex'}), /data-mark="codex"/, 'a known agent shows its mark');
+assert.match(UI.Avatar({agent:'my-bot'}), /<b>M<\/b>/, 'an agent with no bundled mark shows its letter');
 assert.equal(tools.agentInfo('antigravity').company, 'Google');
 
 const debated = {delivery:'draft', live:false, adversary:'codex', waiting_on:['gemini'],
@@ -250,9 +251,9 @@ const chosen = [{agent:'codex', model:null, effort:null}, {agent:'claude', model
 assert.deepEqual(tools.activeAdversaries(chosen, 'claude').map(entry => entry.agent), ['codex', 'opencode'], 'the agent running the review is left out on its own settings');
 assert.deepEqual(tools.activeAdversaries([{agent:'claude', model:'opus'}], 'claude').map(entry => entry.agent), ['claude'], 'and kept on a model the reviewer named');
 assert.deepEqual(tools.activeAdversaries(chosen, 'claude', [{slug:'codex', installed:false}, {slug:'opencode', installed:true}]).map(entry => entry.agent), ['opencode'], 'only an installed agent is asked');
-const many = tools.facesHTML(['codex', 'grok', 'gemini', 'antigravity', 'opencode'], 3);
+const many = UI.AvatarStack(['codex', 'grok', 'gemini', 'antigravity', 'opencode'], {max: 3});
 assert.equal((many.match(/data-agent=/g) || []).length, 2, 'past the few that fit, the marks give way to a count');
-assert.match(many, /dcr-stack-more">\+3</, 'every adversary is counted, however many');
+assert.match(many, /ui-avatar-more">\+3</, 'every adversary is counted, however many');
 const noon = Date.parse('2026-10-09T12:00:00Z');
 assert.deepEqual([tools.agentStatus({ready:true}).text, tools.agentStatus({ready:false, bin:'agy'}).text, tools.agentStatus({ready:null}).text], ['Ready', 'Signed out', 'Installed']);
 assert.match(tools.agentStatus({ready:false, bin:'agy'}).hint, /Run `agy` once/);

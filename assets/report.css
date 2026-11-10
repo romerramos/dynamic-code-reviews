@@ -254,8 +254,6 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 .overview-status{margin:0 0 18px;font-size:14px;line-height:1.6;color:var(--ink-neutral-5)}.overview-status strong{font-weight:600;color:var(--ink-neutral-2)}.overview-status[hidden]{display:none}
 .overview-fold+.overview-status{margin-top:14px}
 .comment-own{display:grid;grid-template-columns:32px minmax(0,1fr);column-gap:10px;align-items:start}
-.comment-avatar{display:grid;place-items:center;width:32px;height:32px;overflow:hidden;border-radius:calc(50% * var(--round));background:var(--bg-neutral-3);color:var(--ink-neutral-2);font-size:12px;font-weight:600}
-.comment-avatar>img{width:100%;height:100%;object-fit:cover}
 .comment-own-head{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:0 0 2px;font-size:12px;line-height:1.35}
 .comment-own-head strong{font-size:13px;font-weight:600;color:var(--ink-neutral-2)}
 .comment-own-main h4{margin:0;font-size:14px;font-weight:500;line-height:1.55}
@@ -752,28 +750,12 @@ html[data-syntax="dracula"][data-mode="dark"]{--tok-comment:#6272a4;--tok-punct:
 
 /* Dark surfaces. The derived dark rules at the end of the stylesheet cover fixed colours. */
 /* Agent marks in their company colours. Variables, so the derived dark theme leaves them as set. */
-:root{--agent-claude:#d97757;--agent-claude-bg:#f8e7df;--agent-codex:#0d0d0d;--agent-codex-bg:#ececec;--agent-gemini:#7b61c0;--agent-gemini-bg:#ece9f7;--agent-grok:#ffffff;--agent-grok-bg:#111111;--agent-antigravity-bg:#eef1f6;--agent-opencode:#ffffff;--agent-opencode-bg:#131010;--agent-other:var(--accent);--agent-other-bg:var(--accent-soft)}
-:is(.agent-face,.dcr-face){display:inline-grid;place-items:center;flex:none;border-radius:calc(50% * var(--round));background:var(--agent-other-bg);color:var(--agent-other)}
-:is(.agent-face,.dcr-face) svg{width:58%;height:58%;fill:currentColor}
-:is(.agent-face,.dcr-face) b{font-weight:700;line-height:1}
-.agent-face>img{width:100%;height:100%;border-radius:inherit;object-fit:cover}
-:is(.agent-face,.dcr-face)[data-agent="claude"]{background:var(--agent-claude-bg);color:var(--agent-claude)}
-:is(.agent-face,.dcr-face)[data-agent="codex"]{background:var(--agent-codex-bg);color:var(--agent-codex)}
-:is(.agent-face,.dcr-face)[data-agent="gemini"]{background:var(--agent-gemini-bg);color:var(--agent-gemini)}
-:is(.agent-face,.dcr-face)[data-agent="grok"]{background:var(--agent-grok-bg);color:var(--agent-grok)}
-:is(.agent-face,.dcr-face)[data-agent="antigravity"]{background:var(--agent-antigravity-bg)}
-:is(.agent-face,.dcr-face)[data-agent="antigravity"] svg{width:66%;height:66%}
-:is(.agent-face,.dcr-face)[data-agent="opencode"]{background:var(--agent-opencode-bg);color:var(--agent-opencode)}
-:is(.agent-face,.dcr-face)[data-agent="opencode"] svg{width:50%;height:50%}
 /* Who wrote a comment, quietly at the end of its badge row: "by (mark) Claude". */
 .thread-by{display:inline-flex;align-items:center;gap:5px;margin-left:auto;color:var(--muted);font-size:12.5px;white-space:nowrap}
-.thread-by .agent-face{margin-left:1px}
+.thread-by>.ui-avatar{--avatar-size:18px;margin-left:1px}
 /* The model and effort behind it, when the agent said: tiny, for whoever wants to know. */
 .thread-model,.dcr-model{color:var(--muted);font:500 10.5px/1 var(--mono);letter-spacing:-.01em;opacity:.85;white-space:nowrap}
 .thread-model{margin-left:2px}
-.agent-face{width:18px;height:18px}
-.agent-face b{font-size:9.5px}
-html[data-mode="dark"]{--agent-claude:#ec9a7c;--agent-claude-bg:#3b2620;--agent-codex:#f2f2f2;--agent-codex-bg:#2d2f33;--agent-gemini:#b5a2ec;--agent-gemini-bg:#2c2742;--agent-grok:#ffffff;--agent-grok-bg:#000000;--agent-antigravity-bg:#262a33}
 
 html[data-mode="dark"] .view-select{color:inherit}
 .view-select{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;font-size:13px;color:var(--ink-neutral-3)}
@@ -802,7 +784,7 @@ body.ledger-open .ledger{display:flex}
 .ledger-place .path-name{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .ledger-place:hover{color:var(--accent)}.ledger-place:hover>svg,.ledger-place:focus-visible>svg{opacity:1}
 .ledger-msg{display:grid;grid-template-columns:24px minmax(0,1fr);column-gap:10px;row-gap:1px;padding:8px 16px 0;cursor:pointer}
-.ledger-msg>:is(.comment-avatar,.dcr-avatar){grid-row:span 2;width:24px;height:24px;font-size:11px}
+.ledger-msg>.ui-avatar{grid-row:span 2;--avatar-size:24px}
 .ledger-by{display:flex;align-items:baseline;gap:8px;min-width:0;align-self:center}
 .ledger-name{font-size:12.5px;font-weight:600;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ledger-when{flex:none;font-size:11.5px;color:var(--muted)}
@@ -1365,7 +1347,6 @@ button.risk-path:hover .path-name{text-decoration:underline}
 .review-thread.is-earlier>.thread-details[open]>.thread-summary{border-bottom:1px solid var(--line-neutral-2)}
 .review-thread.is-earlier>.thread-details>.thread-summary>.thread-badges,.overview-reading .review-thread.is-earlier>.thread-details>.thread-summary>.thread-badges{display:flex;flex:none;flex-wrap:nowrap;font-size:12px}
 .review-thread.is-earlier>.thread-details>.thread-summary>strong,.overview-reading .review-thread.is-earlier>.thread-details>.thread-summary>strong{display:block;flex:1 1 auto;min-width:0;font-size:13px;line-height:1.5;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.review-thread.is-earlier>.thread-details>.thread-summary>.comment-avatar{flex:none}
 .review-thread.is-earlier>.thread-details>.thread-summary :is(.thread-priority,.thread-severity,.thread-resolved){display:none}
 /* Go to definition: a name defined in the review is underlined under the pointer; the line it opens on glows once. */
 #content td.code .symbol-link{cursor:pointer;border-radius:2px}
@@ -1545,7 +1526,6 @@ details.thread-was:not([open])>summary{margin-bottom:0}
 .overview-intro .lead-rest p{margin:0 0 12px}
 .overview-intro .lead-rest p:last-child{margin-bottom:0}
 
-.thread-face{display:none}
 
 .composer-body{display:block}
 .composer-face{display:none}
@@ -1627,8 +1607,7 @@ main#content{padding-bottom:104px}
 .ledger-item::before{display:none}
 .ledger-item[data-ledger] .ledger-place,.ledger-item[data-ledger] .ledger-by{display:none}
 .ledger-item[data-ledger] .ledger-msg{grid-template-columns:18px minmax(0,1fr) auto;column-gap:12px;align-items:baseline;padding:14px 18px 0 22px}
-.ledger-item[data-ledger] .ledger-msg>:is(.comment-avatar,.dcr-avatar){grid-row:auto;align-self:start;width:18px;height:18px;margin-top:1px;box-shadow:none}
-.ledger-item[data-ledger] .ledger-msg>:is(.comment-avatar,.dcr-avatar) :is(svg,img){width:15px;height:15px}
+.ledger-item[data-ledger] .ledger-msg>.ui-avatar{grid-row:auto;align-self:start;--avatar-size:18px;margin-top:1px}
 .ledger-item[data-ledger] .ledger-subject{font-size:14px;line-height:1.45}
 .ledger-item[data-ledger] .ledger-at{display:block;padding:0;border:0;background:none;color:var(--muted);font:11.5px var(--mono);white-space:nowrap;cursor:pointer}
 .ledger-item[data-ledger] .ledger-at:hover{color:var(--ink);text-decoration:underline}
@@ -1638,8 +1617,7 @@ main#content{padding-bottom:104px}
 .ledger-item[data-ledger] .dcr-peek :is(b,.dcr-peek-when,.dcr-peek-end){display:none}
 .ledger-item[data-ledger] .dcr-peek-faces{gap:6px}
 /* Who answered: each agent's own small logo, in its colours, as the adversaries' toggle shows them. */
-.ledger-item[data-ledger] .dcr-peek-faces>:is(.dcr-avatar,.comment-avatar){width:18px;height:18px;margin:0;box-shadow:none;filter:none;opacity:1}
-.ledger-item[data-ledger] .dcr-peek-faces>.dcr-avatar svg{width:58%;height:58%}
+.ledger-item[data-ledger] .dcr-peek-faces>.ui-avatar{--avatar-size:18px;margin:0;box-shadow:none;filter:none;opacity:1}
 .ledger-item[data-ledger] .dcr-peek-faces>* img{width:100%;height:100%}
 .ledger-item[data-ledger] .ledger-meta{display:flex;align-items:center;gap:6px;margin:5px 0 0 8px;padding:0}
 /* Template previews have the Previews tab and ⌘K. */
@@ -1650,13 +1628,13 @@ main#content{padding-bottom:104px}
 #settings-dialog.has-agents[data-tab="agents"] .settings-body>:not(.settings-agents){display:none}
 #settings-dialog.has-agents[data-tab="agents"] .settings-agents{display:block}
 .settings-agents header{display:flex;align-items:center;gap:10px;margin:0 0 4px}
-.settings-agents header .dcr-avatar{width:20px;height:20px}
+.settings-agents header>.ui-avatar{--avatar-size:20px}
 .settings-agents .dcr-presence-who{display:flex;align-items:baseline;gap:8px;min-width:0}
 .settings-agents .dcr-presence-who strong{font-size:13px;font-weight:500}
 .settings-agents .dcr-presence-who span{color:var(--muted);font-size:11.5px}
 .settings-agents .dcr-presence-word{display:inline-flex;align-items:center;gap:6px;margin-left:auto;color:var(--muted);font-size:12px}
 .settings-agents .dcr-presence-line{margin:0 0 0 30px;color:var(--muted);font-size:12.5px}
-.settings-agents .dcr-presence-line .dcr-presence-dot{display:none}
+.settings-agents .dcr-presence-line .ui-presence-dot{display:none}
 .settings-agents :is(.dcr-presence-help,.dcr-presence-cmd){margin-left:30px}
 .settings-agents .dcr-adv{margin-top:18px;padding:16px 0 0;border-color:var(--line)}
 .settings-agents .dcr-adv-title{color:var(--muted);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
@@ -1664,13 +1642,10 @@ main#content{padding-bottom:104px}
 .settings-agents .dcr-adv-row,.settings-agents .dcr-adv-row.is-on{padding:0;background:none}
 .settings-agents .dcr-adv-who strong{font-weight:500}
 .settings-agents .dcr-adv-status::before{display:none}
-.settings-agents .dcr-face-sm{}
 .settings-agents .dcr-voice-link{display:block;margin-top:18px;padding:16px 0 0;border:0;border-top:1px solid var(--line);background:none;color:var(--ink);font:inherit;font-size:13px;text-align:left;cursor:pointer}
 .settings-agents .dcr-voice-link::after{content:" ›"}
 /* The presence dot: the same tiny dot as a chat app's, on the corner of the agent's mark. */
-.settings-agents .dcr-presence-word .dcr-presence-dot{width:6px;height:6px;box-sizing:border-box;border-radius:50%;background:var(--dcr-ok)}
-.settings-agents .dcr-presence-word.dcr-presence-work .dcr-presence-dot{background:var(--dcr-work)}
-.settings-agents .dcr-presence-word.dcr-presence-off .dcr-presence-dot{border:1.5px solid var(--muted);background:transparent}
+.settings-agents .dcr-presence-word{--presence-size:6px}
 .review-bar .bar-agent{position:relative}
 .review-bar .bar-agent span{opacity:1;filter:none}
 .review-bar .bar-agent::after{content:"";position:absolute;right:1px;bottom:5px;width:6px;height:6px;box-sizing:border-box;border:1.5px solid var(--muted);border-radius:50%;background:var(--surface);box-shadow:0 0 0 2px var(--surface)}
@@ -1683,8 +1658,7 @@ main#content{padding-bottom:104px}
 #ledger .dcr-detail-title{display:grid;grid-template-columns:18px minmax(0,1fr);gap:4px 12px;align-items:start;border:0}
 #ledger .dcr-detail-title .ledger-where{display:none}
 #ledger .dcr-detail-mark{display:grid;grid-column:1;grid-row:1;place-items:center;width:18px;height:18px;margin-top:1px}
-#ledger .dcr-detail-mark .dcr-avatar{width:16px;height:16px}
-#ledger .dcr-detail-mark .dcr-avatar svg{width:14px;height:14px}
+#ledger .dcr-detail-mark>.ui-avatar{--avatar-size:16px}
 #ledger .dcr-detail-title strong{grid-column:2;grid-row:1;font-size:15px;font-weight:600;line-height:1.4}
 #ledger .dcr-detail-code{grid-column:2;justify-self:start;min-height:0;height:auto;padding:0;border:0;background:none;color:var(--ink-neutral-3);font:12px var(--mono);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
 #ledger .dcr-detail-code:hover{color:var(--ink);text-decoration-color:currentColor}
@@ -1692,11 +1666,9 @@ main#content{padding-bottom:104px}
 #ledger .dcr-detail-code .dcr-detail-at:not(:empty){display:inline}
 #ledger .dcr-detail-code:has(.dcr-detail-at:empty){display:none}
 #ledger .dcr-detail .dcr-msg{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;padding:16px 0 0;border:0;background:none}
-#ledger .dcr-detail .dcr-msg>.dcr-avatar{display:inline-grid;place-items:center;width:18px;height:18px;margin-top:1px;overflow:hidden;border-radius:50%}
-#ledger .dcr-detail .dcr-msg>.dcr-avatar :is(svg,img){width:13px;height:13px}
-#ledger .dcr-detail .dcr-msg>.dcr-avatar img{width:100%;height:100%;object-fit:cover}
+#ledger .dcr-detail .dcr-msg>.ui-avatar{--avatar-size:18px;margin-top:1px}
 #ledger .dcr-detail .dcr-origin.dcr-agent{padding-top:10px}
-#ledger .dcr-detail .dcr-origin.dcr-agent>.dcr-avatar{visibility:hidden}
+#ledger .dcr-detail .dcr-origin.dcr-agent>.ui-avatar{visibility:hidden}
 #ledger .dcr-detail .dcr-msg-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;font-size:12px;color:var(--muted)}
 #ledger .dcr-detail .dcr-msg-head>strong,#ledger .dcr-detail .dcr-msg-head :is(.dcr-model,.thread-model){display:none}
 #ledger .dcr-detail .dcr-adversary .dcr-msg-head .dcr-role{display:none}
@@ -1708,8 +1680,7 @@ main#content{padding-bottom:104px}
 /* An adversary that did not answer: its mark, faint, and the words, in line with the answers. */
 #ledger .dcr-detail :is(.dcr-opinions,.dcr-ops,ul:has(>.dcr-op)){margin:16px 0 0;padding:0;border:0;list-style:none}
 #ledger .dcr-detail .dcr-op{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;align-items:center;padding:6px 0 0;border:0;background:none}
-#ledger .dcr-detail .dcr-op>.dcr-avatar{display:inline-grid;place-items:center;width:18px;height:18px;opacity:.4}
-#ledger .dcr-detail .dcr-op>.dcr-avatar svg{width:13px;height:13px}
+#ledger .dcr-detail .dcr-op>.ui-avatar{--avatar-size:18px;opacity:.4}
 #ledger .dcr-detail .dcr-op-line{color:var(--muted);font-size:12px}
 #ledger .dcr-detail .dcr-op-line strong{color:inherit;font-weight:400}
 
@@ -1725,7 +1696,6 @@ main#content{padding-bottom:104px}
 #ledger .ledger-item:nth-child(1 of [data-by="person"])::before{content:"From GitHub"}
 /* Your own row is drawn as the agent's: your face, the short title, the file and line, who answered. */
 #ledger .ledger-item[data-ledger]:not([data-conversation]) .ledger-meta :is([data-resolve],[data-copy]),#ledger .ledger-item .dcr-new{display:none}
-#ledger .ledger-item[data-ledger] .ledger-msg>.comment-avatar img{border-radius:50%}
 #ledger .ledger-item[data-ledger] .ledger-subject{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 #ledger .dcr-detail-code{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #ledger .ledger-item[data-ledger] .ledger-at{display:grid;place-items:center;align-self:start;width:24px;height:24px;margin-top:-2px;border-radius:6px;color:var(--muted)}
@@ -1733,7 +1703,7 @@ main#content{padding-bottom:104px}
 :is(#ledger .ledger-at,.thread-go) svg{width:14px;height:14px;stroke-width:1.8}
 #dcr-panel .dcr-foot-status{display:none}
 /* An adversary that did not answer keeps its mark beside the words, on the Overview too. */
-:is(.popover-comment,.review-thread,#ledger) .dcr-op>.dcr-avatar{display:inline-grid!important;width:18px;height:18px}
+:is(.popover-comment,.review-thread,#ledger) .dcr-op>.ui-avatar{--avatar-size:18px}
 :is(.popover-comment,.review-thread,#ledger) .dcr-op-line{display:flex;gap:6px;white-space:nowrap}
 #ledger-footer{display:none}
 .ledger-head h2{display:flex;align-items:center}

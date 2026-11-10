@@ -18,6 +18,10 @@ module DCR
 
     ASSETS = File.expand_path('../../assets', __dir__)
     LIVE = File.expand_path('../../live', __dir__)
+    # The page's components, one file each (see assets/components/ui.js). ui.js and variants.js run
+    # first, right after the styles, so a theme's variants are on <html> before anything is drawn.
+    COMPONENTS = File.join(ASSETS, 'components')
+    FIRST = %w[ui.js variants.js].freeze
     LANGUAGES = %w[
       core markup clike javascript css scss ruby sql json yaml bash typescript jsx tsx c cpp csharp java kotlin go
       rust python toml swift markup-templating php markdown docker elixir graphql lua makefile ini
@@ -49,7 +53,7 @@ module DCR
     # Identifies the report UI a page was rendered with, so an older saved page can be refreshed
     # before it is served. Covers the files that make up the page, not the vendored libraries.
     def ui_version
-      files = %w[report.html.erb report.css report.js review-tools.js icon.svg].map { |name| File.join(ASSETS, name) } + theme_files
+      files = %w[report.html.erb report.css report.js review-tools.js icon.svg].map { |name| File.join(ASSETS, name) } + theme_files + component_files
       Digest::SHA256.hexdigest(files.map { |path| File.read(path) }.join("\0"))[0, 16]
     end
 
@@ -67,6 +71,11 @@ module DCR
     def theme_hint(name, key) = File.read(File.join(ASSETS, 'themes', "#{name}.css"))[%r{\A/\*.*?@#{key} ([a-z]+).*?\*/}m, 1]
     def theme_syntax(name, mode = nil) = (mode && theme_hint(name, "syntax-#{mode}")) || theme_hint(name, 'syntax')
     def theme_mode(name) = theme_hint(name, 'mode')&.then { |mode| mode if %w[light dark].include?(mode) }
+    def component_files = Dir[File.join(COMPONENTS, '*.{js,css}')].sort
+    # The components' markup, in an order that has each one defined before another uses it.
+    def component_scripts = (FIRST + %w[agent-mark.js avatar.js] + Dir[File.join(COMPONENTS, '*.js')].map { |path| File.basename(path) }.sort).uniq.map { |name| File.read(File.join(COMPONENTS, name)) }
+    def component_head = FIRST.map { |name| File.read(File.join(COMPONENTS, name)) }.join("\n")
+    def component_styles = Dir[File.join(COMPONENTS, '*.css')].sort.map { |path| File.read(path) }.join("\n")
     def theme_files = (['base'] + themes).map { |name| File.join(ASSETS, 'themes', "#{name}.css") }
     # A theme's own fonts are embedded, so the saved page still needs nothing from the network.
     def theme_styles
@@ -79,7 +88,7 @@ module DCR
     def daisyui
       @daisyui ||= begin
         root = File.expand_path('..', ASSETS)
-        own = Dir[File.join(root, '{assets,assets/themes,live,recorder}', '*.{js,css,erb,html}'), File.join(root, 'lib/dcr/*.rb')]
+        own = Dir[File.join(root, '{assets,assets/themes,assets/components,live,recorder}', '*.{js,css,erb,html}'), File.join(root, 'lib/dcr/*.rb')]
         Stylesheet.prune(File.read(File.join(ASSETS, 'vendor/daisyui.css')), Stylesheet.words(own))
       end
     end
@@ -107,6 +116,7 @@ module DCR
       def icon = @icon ||= asset('icon.svg')
       def favicon = "data:image/svg+xml;base64,#{[icon].pack('m0')}"
       # Text placed inside an inline <script> must not close it early.
+      def component_head = inline_script(Page.component_head)
       def inline_script(text) = text.gsub(%r{</script}i, '<\\/script')
       def script_json(value) = JSON.generate(value, script_safe: true)
     end
@@ -131,7 +141,7 @@ module DCR
 
       def styles
         licenses = %w[DAISYUI-LICENSE PRISM-LICENSE lucide/LICENSE glightbox/LICENSE].map { |name| asset(File.join('vendor', name)) }.join("\n")
-        "/* Third-party licenses\n#{licenses}\n*/\n#{Page.daisyui}\n#{asset('vendor/glightbox/glightbox.min.css')}\n#{Page.theme_styles}\n#{asset('report.css')}"
+        "/* Third-party licenses\n#{licenses}\n*/\n#{Page.daisyui}\n#{asset('vendor/glightbox/glightbox.min.css')}\n#{Page.theme_styles}\n#{asset('report.css')}\n#{Page.component_styles}"
       end
 
       def scripts
@@ -142,7 +152,7 @@ module DCR
           mark = File.read(path).sub(/<title>.*?<\/title>/m, '').sub(/<svg[^>]*>/) { |tag| tag.gsub(/ (?:width|height|style|role)="[^"]*"/, '').sub('<svg', '<svg aria-hidden="true" focusable="false"') }
           [File.basename(path, '.svg'), mark]
         end
-        inline_script("window.Prism = {manual: true};\nwindow.ReviewIcons = #{JSON.generate(icons)};\nwindow.ReviewBrands = #{JSON.generate(brands)};\n#{prism}\n#{asset('vendor/glightbox/glightbox.min.js')}\n#{asset('review-tools.js')}\n#{asset('report.js')}")
+        inline_script("window.Prism = {manual: true};\nwindow.ReviewIcons = #{JSON.generate(icons)};\nwindow.ReviewBrands = #{JSON.generate(brands)};\n#{prism}\n#{asset('vendor/glightbox/glightbox.min.js')}\n#{Page.component_scripts.join("\n")}\n#{asset('review-tools.js')}\n#{asset('report.js')}")
       end
     end
 
@@ -155,7 +165,7 @@ module DCR
 
       private
 
-      def styles = Page.daisyui + Page.theme_styles + asset('report.css')
+      def styles = Page.daisyui + Page.theme_styles + asset('report.css') + Page.component_styles
       def name = @history['name']
       def revisions = @history['revisions']
       def latest?(entry) = entry == revisions.last

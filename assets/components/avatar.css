@@ -1,0 +1,29 @@
+/* Avatar (avatar.js). Structure only; colours from tokens. A context sizes it with --avatar-size.
+   An agent's face takes its company's colours (--agent-*), or under --avatar-style: mono its plain
+   mark in the text's ink with nothing behind it. A photo is round and alone: no box behind it. */
+:root{--agent-claude:#d97757;--agent-claude-bg:#f8e7df;--agent-codex:#0d0d0d;--agent-codex-bg:#ececec;--agent-gemini:#7b61c0;--agent-gemini-bg:#ece9f7;--agent-grok:#ffffff;--agent-grok-bg:#111111;--agent-antigravity-bg:#eef1f6;--agent-opencode:#ffffff;--agent-opencode-bg:#131010;--agent-other:var(--accent);--agent-other-bg:var(--accent-soft)}
+html[data-mode="dark"]{--agent-claude:#ec9a7c;--agent-claude-bg:#3b2620;--agent-codex:#f2f2f2;--agent-codex-bg:#2d2f33;--agent-gemini:#b5a2ec;--agent-gemini-bg:#2c2742;--agent-grok:#ffffff;--agent-grok-bg:#000000;--agent-antigravity-bg:#262a33}
+.ui-avatar{--avatar-size:28px;--face-ink:var(--agent-other);--face-bg:var(--agent-other-bg);position:relative;display:inline-grid;place-items:center;flex:none;box-sizing:border-box;width:var(--avatar-size);height:var(--avatar-size);border-radius:calc(50% * var(--round));background:var(--face-bg);color:var(--face-ink);font-size:calc(var(--avatar-size) * .43);font-weight:600;line-height:1}
+.ui-avatar[data-size="xs"]{--avatar-size:16px}
+.ui-avatar[data-size="sm"]{--avatar-size:20px}
+.ui-avatar[data-size="lg"]{--avatar-size:32px}
+.ui-avatar[data-size="xl"]{--avatar-size:36px}
+.ui-avatar>svg{width:var(--avatar-mark,58%);height:var(--avatar-mark,58%);fill:currentColor}
+.ui-avatar>b{font-weight:700;font-size:calc(var(--avatar-size) * .5)}
+.ui-avatar[data-agent="claude"]{--face-ink:var(--agent-claude);--face-bg:var(--agent-claude-bg)}
+.ui-avatar[data-agent="codex"]{--face-ink:var(--agent-codex);--face-bg:var(--agent-codex-bg)}
+.ui-avatar[data-agent="gemini"]{--face-ink:var(--agent-gemini);--face-bg:var(--agent-gemini-bg)}
+.ui-avatar[data-agent="grok"]{--face-ink:var(--agent-grok);--face-bg:var(--agent-grok-bg)}
+.ui-avatar[data-agent="antigravity"]{--face-bg:var(--agent-antigravity-bg);--avatar-mark:66%}
+.ui-avatar[data-agent="opencode"]{--face-ink:var(--agent-opencode);--face-bg:var(--agent-opencode-bg);--avatar-mark:50%}
+/* Plain marks: the logo in ink, as large as the face, nothing behind it. */
+html[data-avatar-style="mono"] .ui-avatar[data-kind="agent"]{--face-ink:var(--ink);--face-bg:transparent;--avatar-mark:var(--avatar-mono-mark,82%)}
+/* People: the photo, round, alone; else their initial on a quiet disc. */
+.ui-avatar:is([data-kind="you"],[data-kind="person"]){--face-ink:var(--ink-neutral-2);--face-bg:var(--bg-neutral-3)}
+.ui-avatar[data-photo]{background:none}
+.ui-avatar>img{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover}
+/* Several faces overlapping, as in a chat's "replied" line. */
+.ui-avatar-stack{display:inline-flex;align-items:center}
+.ui-avatar-stack>.ui-avatar{box-shadow:0 0 0 1.5px var(--surface)}
+.ui-avatar-stack>*+*{margin-left:-4px}
+.ui-avatar-more{display:inline-grid;place-items:center;min-width:16px;height:16px;padding:0 3px;border-radius:calc(999px * var(--round));background:var(--line);box-shadow:0 0 0 1.5px var(--surface);color:var(--ink);font-size:9.5px;font-weight:700}
