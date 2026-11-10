@@ -447,13 +447,13 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .overview-reading .review-thread:has(>.thread-details[open])>:is(.dcr-thread,.thread-footer){margin-left:30px}
 /* A reply is said by its face: who wrote it is the face; what they concluded and when, beside it. */
 [data-theme^="minimal-"] .review-thread .dcr-msg{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;padding:14px 0 0}
-[data-theme^="minimal-"] .review-thread .dcr-msg>.dcr-avatar{display:inline-grid!important;place-items:center;width:18px;height:18px;margin-top:1px;overflow:hidden;border-radius:50%;background:var(--minimal-soft)}
+[data-theme^="minimal-"] .review-thread .dcr-msg>.dcr-avatar{display:inline-grid!important;place-items:center;width:18px;height:18px;margin-top:1px;overflow:hidden;border-radius:50%;background:transparent}
 [data-theme^="minimal-"] .review-thread .dcr-msg>.dcr-avatar :is(svg,img){width:12px;height:12px}
 [data-theme^="minimal-"] .review-thread .dcr-msg>.dcr-avatar img{width:100%;height:100%;object-fit:cover}
 [data-theme^="minimal-"] .review-thread .dcr-msg-head>strong{display:none}
 [data-theme^="minimal-"] .review-thread .dcr-msg-head .dcr-verdict{color:var(--ink-neutral-3)}
 /* What became of it and who checked it, the same way. */
-[data-theme^="minimal-"] .review-thread .dcr-checks .dcr-avatar{display:inline-grid!important;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--minimal-soft)}
+[data-theme^="minimal-"] .review-thread .dcr-checks .dcr-avatar{display:inline-grid!important;place-items:center;width:16px;height:16px;border-radius:50%;background:transparent}
 [data-theme^="minimal-"] .review-thread .dcr-checks .dcr-avatar svg{width:11px;height:11px}
 [data-theme^="minimal-"] .review-thread .dcr-check{display:inline-flex;align-items:center;gap:6px}
 [data-theme^="minimal-"] .review-thread .dcr-check strong{display:none}
@@ -940,3 +940,15 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
 /* The bar's own × goes: the head has the one every modal has. */
 [data-theme^="minimal-"] .dcr-app .stage-tools [data-app-close]{display:none}
 [data-theme^="minimal-"] .dcr-app.is-agent-driving .dcr-app-head [data-app-close]{display:none}
+
+/* --- Every agent's mark is its plain logo in the ink colour, wherever it appears (rows, threads,
+   buttons, toasts, Settings): no company colours, no circles behind it. --- */
+html[data-theme^="minimal-"]{--agent-claude:var(--ink)!important;--agent-codex:var(--ink)!important;--agent-gemini:var(--ink)!important;--agent-grok:var(--ink)!important;--agent-opencode:var(--ink)!important;--agent-other:var(--ink)!important;--agent-claude-bg:transparent!important;--agent-codex-bg:transparent!important;--agent-gemini-bg:transparent!important;--agent-grok-bg:transparent!important;--agent-opencode-bg:transparent!important;--agent-antigravity-bg:transparent!important;--agent-other-bg:transparent!important}
+/* Your review's footer counts nothing the list does not already show. */
+[data-theme^="minimal-"] #dcr-panel .dcr-foot-status{display:none}
+/* An adversary that did not answer keeps its mark beside the words, on the Overview too. */
+[data-theme^="minimal-"] :is(.popover-comment,.review-thread,#ledger) .dcr-op>.dcr-avatar{display:inline-grid!important;width:18px;height:18px}
+[data-theme^="minimal-"] :is(.popover-comment,.review-thread,#ledger) .dcr-op-line{display:flex;gap:6px;white-space:nowrap}
+/* One line between two comments, not one under each and another over the next. */
+[data-theme^="minimal-"] .overview-reading .review-thread .thread-footer{border-bottom:0}
+[data-theme^="minimal-"] .overview-reading .review-thread{border-top:0}
