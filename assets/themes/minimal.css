@@ -250,7 +250,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] #my-review .section-heading{display:flex;align-items:baseline;justify-content:space-between;margin:0 0 6px}
 [data-theme^="minimal-"] #my-review .section-heading h2{margin:0}
 [data-theme^="minimal-"] #my-review .section-heading h2 .badge{display:none}
-[data-theme^="minimal-"] #my-review .section-heading .comment-actions{--button-height:auto;--button-min-height:0;--button-pad:0 0 0 16px;--button-ink:var(--minimal-faint);--button-size:12px;--button-weight:400;--button-hover-bg:none;--button-hover-ink:var(--ink)}
+[data-theme^="minimal-"] #my-review .section-heading .comment-actions{--button-height:auto;--button-min-height:0;--button-pad:0 0 0 16px;--button-ink:var(--minimal-faint);--button-size:12px;--button-weight:400;--button-hover-bg:transparent;--button-hover-ink:var(--ink)}
 /* What is settled: two quiet lines at the end. */
 [data-theme^="minimal-"] .overview-settled .overview-fold,[data-theme^="minimal-"] .overview-settled .overview-fold:last-child{margin:0;border:0}
 [data-theme^="minimal-"] .overview-clear p{font-size:14px}
@@ -279,7 +279,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .overview-settled{display:flex;flex-direction:column;gap:28px}
 [data-theme^="minimal-"] .overview-settled .overview-fold>summary{display:flex;align-items:baseline;gap:8px;min-height:0;padding:0 0 6px;margin:0;color:var(--minimal-faint);font-size:12px}
 [data-theme^="minimal-"] .overview-settled .overview-fold-title{display:inline;margin:0;color:var(--minimal-faint);font-size:12px;font-weight:400}
-[data-theme^="minimal-"] .overview-settled .overview-fold-note{color:var(--minimal-faint);font-size:12px;--button-height:auto;--button-min-height:0;--button-pad:0 0 0 10px;--button-border-width:0;--button-bg:none;--button-ink:var(--ink);--button-size:12px}
+[data-theme^="minimal-"] .overview-settled .overview-fold-note{color:var(--minimal-faint);font-size:12px;--button-height:auto;--button-min-height:0;--button-pad:0 0 0 10px;--button-border-width:0;--button-bg:transparent;--button-ink:var(--ink);--button-size:12px}
 [data-theme^="minimal-"] .overview-settled .overview-fold>summary>.review-icon{width:13px;height:13px;align-self:center}
 [data-theme^="minimal-"] .overview-settled .overview-fold[open]>summary{margin-bottom:0}
 /* A closed comment: what it says, and on the right its state and place. Nothing else. */

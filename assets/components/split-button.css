@@ -2,9 +2,9 @@
    may make the halves meet (--split-gap, --split-join-radius, --split-join-border, --split-join-pad);
    brackets, where a theme draws them, go round the pair, not round each half. On a narrow screen it
    is the agent's mark alone, which opens the menu. */
-.dcr-split{display:inline-flex;align-items:center;gap:var(--split-gap,revert-layer)}
-.dcr-split:not(.is-narrow):has(>.dcr-split-menu:not([hidden])) .dcr-split-main .btn{--button-close:none;border-top-right-radius:var(--split-join-radius,revert-layer);border-bottom-right-radius:var(--split-join-radius,revert-layer);padding-right:var(--split-join-pad,revert-layer)}
-.dcr-split:not(.is-narrow):has(>.dcr-split-menu:not([hidden]))>.dcr-split-menu>summary.btn{--button-open:none;border-left-width:var(--split-join-border,revert-layer);border-top-left-radius:var(--split-join-radius,revert-layer);border-bottom-left-radius:var(--split-join-radius,revert-layer);padding-left:var(--split-join-pad,revert-layer)}
+.dcr-split{display:inline-flex;align-items:center;gap:var(--split-gap,0)}
+.dcr-split:not(.is-narrow):has(>.dcr-split-menu:not([hidden])) .dcr-split-main .btn{--button-close:none;border-top-right-radius:var(--split-join-radius,var(--button-radius,var(--_button-radius,var(--radius-field))));border-bottom-right-radius:var(--split-join-radius,var(--button-radius,var(--_button-radius,var(--radius-field))));padding-right:var(--split-join-pad,var(--btn-p))}
+.dcr-split:not(.is-narrow):has(>.dcr-split-menu:not([hidden]))>.dcr-split-menu>summary.btn{--button-open:none;border-left-width:var(--split-join-border,var(--button-border-width,var(--_button-border-width,var(--border))));border-top-left-radius:var(--split-join-radius,var(--button-radius,var(--_button-radius,var(--radius-field))));border-bottom-left-radius:var(--split-join-radius,var(--button-radius,var(--_button-radius,var(--radius-field))));padding-left:var(--split-join-pad,var(--btn-p))}
 .dcr-split .more-list .btn{--button-open:none;--button-close:none}
-/* While its text box is open the box's own button sends; a theme may have the split step aside then. */
-.dcr-split.is-writing{display:var(--split-writing,revert-layer)}
+/* While its text box is open the box's own button sends, so the split steps aside. */
+.dcr-split.is-writing{display:var(--split-writing,none)}

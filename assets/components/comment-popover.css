@@ -4,7 +4,7 @@
    --popover-face-col, --popover-gap, --popover-title-*, --popover-place, --popover-text-*,
    --popover-footer-top; its buttons follow --comment-action-* where the theme sets them. */
 .ui-popover-comment{--popover-indent:calc(var(--popover-face-col,0px) + var(--popover-gap,0px));padding:var(--popover-pad,14px 16px);font:13px/1.65 var(--review-font-family)}
-.ui-popover-comment+.ui-popover-comment{margin-top:var(--popover-space,0px);padding-top:var(--popover-space,revert-layer);border-top:1px solid var(--popover-divider,var(--line-amber-1))}
+.ui-popover-comment+.ui-popover-comment{margin-top:var(--popover-space,0px);padding-top:var(--popover-space,0px);border-top:1px solid var(--popover-divider,var(--line-amber-1))}
 .ui-popover-comment>.comment-location{display:var(--popover-where,block);margin:0 0 12px;font:10px/1.65 var(--mono);color:var(--ink-amber-5);overflow-wrap:anywhere}
 .ui-popover-comment>.thread-badges{display:var(--popover-tags,flex);align-items:center;flex-wrap:wrap;gap:10px}
 .ui-popover-comment .popover-title{display:grid;grid-template-columns:var(--popover-face-col,0px) minmax(0,1fr) auto;column-gap:var(--popover-gap,0px);align-items:baseline;margin:0 0 9px;padding-right:var(--popover-title-room,0px)}
@@ -15,14 +15,14 @@
 .ui-popover-comment>:not(.popover-title,.comment-location,.thread-badges,.thread-footer){margin-left:var(--popover-indent)}
 .ui-popover-comment .thread-meta{display:var(--comment-meta);flex-wrap:wrap;gap:2px 8px;margin:2px 0 12px var(--popover-indent);color:var(--comment-quiet);font-size:12.5px}
 .ui-popover-comment .thread-meta i{font-style:normal;opacity:.6}
-.ui-popover-comment .comment-discussion{color:var(--popover-text-ink,revert-layer);font-size:var(--popover-text-size,revert-layer);line-height:var(--popover-text-line,revert-layer)}
+.ui-popover-comment .comment-discussion{color:var(--popover-text-ink,var(--ink-neutral-3));font-size:var(--popover-text-size,14px);line-height:var(--popover-text-line,1.75)}
 .ui-popover-comment p{margin:0 0 12px;color:var(--popover-text-ink,var(--ink-amber-3));font-size:var(--popover-text-size,13px);white-space:pre-wrap}
 .ui-popover-comment>.thread-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-top:var(--popover-footer-top,0px);padding:12px 0 0 var(--popover-indent);border:0;background:none}
 /* The card's actions stay in reach: its words scroll, its footer stays pinned to its bottom edge. */
 .ui-popover-comment>.thread-footer{position:sticky;bottom:0;z-index:1;padding-bottom:4px;background:var(--popover-surface,var(--surface))}
 .ui-popover-comment .comment-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0}
 /* The card's actions; a menu's rows keep the menu's own plain look. */
-.ui-popover-comment :is(.btn,summary.btn):not(.more-list .btn){height:var(--comment-action-height,26px);min-height:var(--comment-action-height,26px);padding:var(--comment-action-pad,3px 9px);border:var(--comment-action-border,1px solid var(--line-amber-1));border-radius:var(--comment-action-radius,revert-layer);background:var(--comment-action-bg,var(--bg-amber-4));box-shadow:var(--comment-action-shadow,revert-layer);color:var(--comment-action-ink,var(--ink-amber-3));font-size:var(--comment-action-size,11px);font-weight:var(--comment-action-weight,revert-layer)}
+.ui-popover-comment :is(.btn,summary.btn):not(.more-list .btn){height:var(--comment-action-height,26px);min-height:var(--comment-action-height,26px);padding:var(--comment-action-pad,3px 9px);border:var(--comment-action-border,1px solid var(--line-amber-1));border-radius:var(--comment-action-radius,var(--radius-field));background:var(--comment-action-bg,var(--bg-amber-4));box-shadow:var(--comment-action-shadow,var(--btn-inset) inset,var(--btn-shadow));color:var(--comment-action-ink,var(--ink-amber-3));font-size:var(--comment-action-size,11px);font-weight:var(--comment-action-weight,var(--_weight))}
 .ui-popover-comment .comment-actions .btn.btn-primary{color:var(--ink-neutral-9);background:var(--bg-accent-5);border-color:var(--line-accent-8)}
 .ui-popover-comment .comment-actions .btn.dcr-act-reply{color:var(--ink-accent-3);background:var(--bg-neutral-1);border-color:var(--line-accent-8)}
 .ui-popover-comment .comment-actions .btn.gh-act{color:var(--ink-neutral-2);background:var(--bg-neutral-1);border-color:var(--line-neutral-3)}

@@ -1,6 +1,6 @@
 /* IconButton (icon-button.js): an icon that acts. Tokens: --icon-button-pad, -ink, -bg, -border,
    -radius, -shadow, -hover-bg, -hover-ink, -disabled-opacity. */
-.icon-button{padding:var(--icon-button-pad,revert-layer);border:var(--icon-button-border,revert-layer);border-radius:var(--icon-button-radius,revert-layer);background:var(--icon-button-bg,revert-layer);box-shadow:var(--icon-button-shadow,revert-layer);color:var(--icon-button-ink,revert-layer)}
-.icon-button:hover:not(:disabled){background:var(--icon-button-hover-bg,revert-layer);color:var(--icon-button-hover-ink,revert-layer)}
-.icon-button:disabled{opacity:var(--icon-button-disabled-opacity,revert-layer)}
-.icon-button:focus-visible{outline:var(--button-focus-outline,revert-layer);outline-offset:var(--button-focus-offset,revert-layer)}
+.icon-button{padding:var(--icon-button-pad,var(--_icon-button-pad,0));border:var(--icon-button-border,var(--_icon-button-border,0));border-radius:var(--icon-button-radius,var(--_icon-button-radius,calc(8px * var(--round))));background:var(--icon-button-bg,var(--_icon-button-bg,transparent));box-shadow:var(--icon-button-shadow,var(--_icon-button-shadow,none));color:var(--icon-button-ink,var(--_icon-button-ink,var(--ink-neutral-5)))}
+.icon-button:hover:not(:disabled){background:var(--icon-button-hover-bg,var(--_icon-button-hover-bg,var(--bg-neutral-3)));color:var(--icon-button-hover-ink,var(--_icon-button-hover-ink,var(--ink)))}
+.icon-button:disabled{opacity:var(--icon-button-disabled-opacity,var(--_icon-button-disabled-opacity,.3))}
+.icon-button:focus-visible{outline:var(--button-focus-outline,var(--_button-focus-outline,auto));outline-offset:var(--button-focus-offset,var(--_button-focus-offset,0px))}
