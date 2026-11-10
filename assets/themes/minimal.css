@@ -495,3 +495,30 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .composer-actions :is(.act-agent,.act-gh,.act-pr) svg{display:none}
 [data-theme^="minimal-"] .composer-actions .composer-key{opacity:.6}
 [data-theme^="minimal-"] .composer-type input:checked+span{background:none!important;box-shadow:none!important}
+
+/* --- the open step, as a quiet drill-down --------------------------------------------------------------
+   A group's title is the one bold thing. The step being read is the same weight as the others, only in
+   ink; its files hang under it in the steps' grey, the one being read in ink. No counts, no rule in
+   black: the tree's thin grey rule and the ink say where you are. */
+[data-theme^="minimal-"] #navigation button[aria-expanded="true"] .step-body small{display:none}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body strong,[data-theme^="minimal-"] #navigation .nav-section button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]) .step-body strong{font-weight:400}
+[data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]))>button{box-shadow:inset 1px 0 var(--line-neutral-4)}
+[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view][aria-current="page"])>.nav-files{margin:2px 0 8px 16px;padding:0;border:0}
+[data-theme^="minimal-"] .sidebar nav button.nav-file{min-height:0;gap:8px;padding:3px 8px;border:0;background:transparent;color:var(--muted);font:12px/1.5 var(--mono)}
+[data-theme^="minimal-"] .sidebar nav button.nav-file .nav-file-name{font-weight:400;color:inherit}
+[data-theme^="minimal-"] .sidebar nav button.nav-file[aria-current="location"],[data-theme^="minimal-"] .sidebar nav button.nav-file[aria-current="location"] .nav-file-name{background:transparent;color:var(--ink);font-weight:400}
+[data-theme^="minimal-"] .sidebar nav button.nav-file:hover{color:var(--ink)}
+/* Reviewed or not: a small ring, filled with a check once done. */
+[data-theme^="minimal-"] .sidebar nav .file-status{flex:0 0 11px;width:11px;height:11px;margin-top:4px;border:1px solid var(--line-neutral-4);border-radius:50%;background:transparent}
+[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status{border-color:var(--muted);background:var(--muted);color:var(--surface)}
+[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status .review-icon{width:9px;height:9px;margin:0;vertical-align:top}
+[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed:not([aria-current="location"]){color:var(--minimal-faint)}
+/* Risk is a small grey word, not a badge. */
+[data-theme^="minimal-"] .sidebar nav .nav-file .need{padding:0;border:0;background:none;color:var(--minimal-faint);font:10.5px var(--mono);letter-spacing:.02em}
+[data-theme^="minimal-"] .sidebar nav .nav-file .need.need-high,[data-theme^="minimal-"] .sidebar nav .nav-file .need.need-critical{color:var(--ink-neutral-3)}
+/* Tests: a quiet label with room above it, no rule. */
+[data-theme^="minimal-"] .sidebar nav .nav-tests-label{margin:8px 0 2px;padding:0 8px;border:0;color:var(--minimal-faint);font-size:11px;font-weight:400;letter-spacing:.02em;text-transform:none}
+[data-theme^="minimal-"] .sidebar nav .nav-tests-label::after{content:none;display:none}
+[data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"])){margin-left:0;padding-left:0;border-left:0}
+[data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]))>button{margin-left:-5px;padding-left:13px;box-shadow:inset 1px 0 var(--line-neutral-4)}
+[data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{margin:8px 0 2px;padding:0 8px;color:var(--minimal-faint);font-size:11px;font-weight:400;letter-spacing:0;text-transform:none}
