@@ -544,7 +544,6 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .sidebar nav .nav-tests-count{display:inline}
 [data-theme^="minimal-"] .sidebar nav .nav-tests-toggle::after{content:"›";display:inline-block;transition:transform .12s}
 [data-theme^="minimal-"] .sidebar nav .nav-tests-toggle[aria-expanded="true"]::after{transform:rotate(90deg)}
-[data-theme^="minimal-"] .sidebar nav .nav-tests-label:has(>.nav-tests-toggle[aria-expanded="false"]) ~ li{display:none}
 [data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{margin:6px 0 0;padding:0 8px 0 28px}
 [data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]))>button{margin-left:-5px;padding-left:13px;width:calc(100% + 5px)}
 [data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{padding:0 8px}
@@ -570,3 +569,64 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status:hover{border-color:var(--ink);background:var(--ink);color:var(--surface)}
 [data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{padding:0 8px 0 0}
 [data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{padding:0 8px 0 8px}
+
+/* --- Round 6, built from the canvas's Proposed boards ---------------------------------------------------
+   Tests are files like the others: no fold, no count; the word test sits where the risk does. */
+[data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{display:none}
+[data-theme^="minimal-"] .sidebar nav .nav-tests-label ~ li>.nav-file::after{content:"test";flex:none;margin-left:auto;color:var(--minimal-faint);font:10.5px var(--mono);letter-spacing:.02em}
+/* A finished step's check is on its line of text, at its end. */
+[data-theme^="minimal-"] #navigation .nav-section button[data-view]{display:block!important}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body{display:inline}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body strong{display:inline}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number:has(svg){display:none!important}
+[data-theme^="minimal-"] #navigation .nav-section .step-done{display:inline}
+[data-theme^="minimal-"] #navigation .nav-section .step-done .review-icon{display:inline-block;width:13px;height:13px;margin-left:6px;vertical-align:-2px;stroke-width:2.25}
+
+/* A comment opened in the code: the Overview's thread, on a card. No header band, path or badges. */
+[data-theme^="minimal-"] .comment-popover[popover]{width:600px;max-height:min(560px,calc(100dvh - 24px));padding:16px 18px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 16px 44px color-mix(in srgb,var(--shade) 12%,transparent)}
+[data-theme^="minimal-"] .comment-popover .popover-heading{position:absolute;top:12px;right:12px;padding:0;border:0;background:transparent}
+[data-theme^="minimal-"] .comment-popover .popover-heading strong{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+[data-theme^="minimal-"] .comment-popover .popover-heading .btn{width:28px;height:28px;min-height:0;padding:0;border:0;background:transparent;box-shadow:none;color:var(--muted)}
+[data-theme^="minimal-"] .popover-comment{padding:0;font-family:var(--review-font-family)}
+[data-theme^="minimal-"] .popover-comment+.popover-comment{margin-top:16px;padding-top:16px;border-color:var(--line)}
+[data-theme^="minimal-"] .popover-comment>:is(.comment-location,.thread-badges){display:none}
+[data-theme^="minimal-"] .popover-comment .popover-title{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:0 12px;align-items:baseline;padding-right:30px}
+[data-theme^="minimal-"] .popover-comment .popover-title>.thread-face{display:inline-grid!important;place-items:center;align-self:center;width:18px;height:18px;overflow:hidden;border-radius:50%;color:var(--ink)}
+[data-theme^="minimal-"] .popover-comment .popover-title>.thread-face :is(svg,img){width:13px;height:13px;object-fit:cover}
+[data-theme^="minimal-"] .popover-comment .popover-title>.thread-face img{width:100%;height:100%}
+[data-theme^="minimal-"] .popover-comment .popover-title h4{margin:0;color:var(--ink);font-size:15px;font-weight:600;line-height:1.4}
+[data-theme^="minimal-"] .popover-comment .popover-title h4 code{font:.9em var(--mono)}
+[data-theme^="minimal-"] .popover-comment .popover-title .thread-at{display:block;color:var(--minimal-faint);font:12px var(--mono)}
+[data-theme^="minimal-"] .popover-comment>:not(.popover-title,.comment-location,.thread-badges,.thread-footer){margin-left:30px}
+[data-theme^="minimal-"] .popover-comment>.thread-footer{padding:0 0 0 30px}
+[data-theme^="minimal-"] .popover-comment .thread-meta{margin:2px 0 12px 30px}
+[data-theme^="minimal-"] .popover-comment .comment-discussion{color:var(--ink-neutral-3);font-size:14px;line-height:1.65}
+[data-theme^="minimal-"] .popover-comment p{color:inherit;font-size:inherit}
+/* Its replies, indented one step more with their faces, and its actions as small outlined buttons. */
+[data-theme^="minimal-"] .popover-comment .dcr-thread{margin-top:18px;padding:0 0 0 30px;border:0;background:transparent}
+[data-theme^="minimal-"] .popover-comment :is(.dcr-closure,.dcr-stage){padding:0;border:0;background:transparent}
+[data-theme^="minimal-"] .popover-comment .dcr-msg{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;padding:12px 0 0}
+[data-theme^="minimal-"] .popover-comment .dcr-msg>.dcr-avatar{display:inline-grid;place-items:center;width:18px;height:18px;margin-top:1px;overflow:hidden;border-radius:50%;background:transparent;color:var(--ink)}
+[data-theme^="minimal-"] .popover-comment .dcr-msg>.dcr-avatar :is(svg,img){width:13px;height:13px}
+[data-theme^="minimal-"] .popover-comment .dcr-msg-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;font-size:12.5px;color:var(--minimal-faint)}
+[data-theme^="minimal-"] .popover-comment .dcr-msg-head>strong,[data-theme^="minimal-"] .popover-comment .dcr-msg-head :is(.dcr-model,.thread-model,.dcr-role){display:none}
+[data-theme^="minimal-"] .popover-comment .dcr-msg-head .dcr-verdict{padding:0;border:0;background:none;color:var(--ink-neutral-3);font-size:12.5px;font-weight:400}
+[data-theme^="minimal-"] .popover-comment .dcr-msg-head .dcr-verdict svg{display:none}
+[data-theme^="minimal-"] .popover-comment .dcr-body{color:var(--ink-neutral-3);font-size:13.5px;line-height:1.6}
+[data-theme^="minimal-"] .popover-comment .thread-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px}
+[data-theme^="minimal-"] .popover-comment .comment-actions{display:flex;align-items:center;gap:8px;margin:0}
+[data-theme^="minimal-"] .popover-comment .thread-footer :is(.dcr-split-more,.more-toggle){padding:0 7px}
+[data-theme^="minimal-"] .popover-comment .thread-footer :is(.dcr-split-more,.more-toggle) .review-icon{display:inline-block!important;width:14px;height:14px}
+[data-theme^="minimal-"] .popover-comment .dcr-split{display:inline-flex;gap:0}
+[data-theme^="minimal-"] .popover-comment .dcr-split-main .btn{border-top-right-radius:0;border-bottom-right-radius:0}
+[data-theme^="minimal-"] .popover-comment .dcr-split-menu>summary{margin-left:-1px;border-top-left-radius:0;border-bottom-left-radius:0}
+[data-theme^="minimal-"] .popover-comment .thread-footer :is(.btn,summary.btn){height:28px;min-height:28px;padding:0 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface)!important;box-shadow:none;color:var(--ink-neutral-3)!important;font-size:13px;font-weight:500}
+[data-theme^="minimal-"] .popover-comment .thread-footer .btn-primary{color:var(--ink)!important;font-weight:600}
+[data-theme^="minimal-"] .popover-comment .thread-footer .btn>:is(svg,.agent-face):not(:only-child){display:none}
+
+/* Everything settled: one All clear line, Resolved closed right under it. */
+[data-theme^="minimal-"] .overview-comments:has(.overview-clear)>h2{display:none}
+[data-theme^="minimal-"] .overview-reading .overview-comments:has(.overview-clear){margin-top:44px}
+[data-theme^="minimal-"] .overview-reading .overview-comments:has(.overview-clear)~.overview-settled{margin-top:24px}
+[data-theme^="minimal-"] .overview-clear>div{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+[data-theme^="minimal-"] .overview-clear p{margin:0}

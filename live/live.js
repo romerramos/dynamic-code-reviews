@@ -1480,9 +1480,9 @@
       const block = cardBlock(section.dataset.commentId, 'popover');
       section.append(block);
       // One row of actions, after the conversation, led by Ask agent as on the cards.
-      const actions = section.querySelector(':scope > .comment-actions');
+      const actions = section.querySelector(':scope > .thread-footer > .comment-actions, :scope > .comment-actions');
       const act = block.querySelector(':scope > .dcr-actions');
-      if (actions && act) { act.remove(); addSplit(actions, section.dataset.commentId, 'xs'); section.append(actions); }
+      if (actions && act) { act.remove(); addSplit(actions, section.dataset.commentId, 'xs'); section.append(actions.closest('.thread-footer') || actions); }
       added = true;
     });
     if (!added) return;

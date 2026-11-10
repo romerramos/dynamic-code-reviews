@@ -945,7 +945,7 @@
         const testsOpen = (state.testsOpen || []).includes(layer.id) || ordered.tests.includes(state.navFile);
         const tests = testLinks ? `<li class="nav-tests-label" role="presentation"><button type="button" class="nav-tests-toggle" data-tests-toggle="${layer.id}" aria-expanded="${testsOpen}">Tests <span class="nav-tests-count">${ordered.tests.length}</span></button></li>${testLinks}` : '';
         const expanded = state.view === layer.id;
-        html += `<li><button data-view="${layer.id}" aria-current="${state.view === layer.id ? 'page' : 'false'}" aria-expanded="${expanded}" aria-controls="nav-files-${layer.id}"><span class="step-number">${completed.total && completed.viewed === completed.total ? icon('check') : layers.indexOf(layer) + 1}</span><span class="step-body"><strong>${escape(titleWithoutNumber(group.layers.length === 1 ? group.title : layer.title))}</strong><small>${progressText(completed)}${count ? ` · ${count} comments` : ''}</small></span></button>${expanded ? `<ul id="nav-files-${layer.id}" class="nav-files">${links}${tests}</ul>` : `<ul id="nav-files-${layer.id}" hidden></ul>`}</li>`;
+        html += `<li><button data-view="${layer.id}" aria-current="${state.view === layer.id ? 'page' : 'false'}" aria-expanded="${expanded}" aria-controls="nav-files-${layer.id}"><span class="step-number">${completed.total && completed.viewed === completed.total ? icon('check') : layers.indexOf(layer) + 1}</span><span class="step-body"><strong>${stepTitle(titleWithoutNumber(group.layers.length === 1 ? group.title : layer.title), completed.total && completed.viewed === completed.total)}</strong><small>${progressText(completed)}${count ? ` · ${count} comments` : ''}</small></span></button>${expanded ? `<ul id="nav-files-${layer.id}" class="nav-files">${links}${tests}</ul>` : `<ul id="nav-files-${layer.id}" hidden></ul>`}</li>`;
       });
       html += '</ul></section>';
     });
@@ -1408,7 +1408,8 @@
       const tags = comment.audience === 'agent' ? (comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : '') : threadBadges(comment, true);
       return `<section class="popover-comment is-own" data-comment-id="${escape(comment.id)}">${where}<div class="comment-own">${youAvatar()}<div class="comment-own-main"><p class="comment-own-head"><strong class="you-name">${youName()}</strong>${tags}</p><h4>${escape(comment.subject)}</h4>${body}</div></div>${evidence}${actions}</section>`;
     }
-    return `<section class="popover-comment" data-comment-id="${escape(comment.id)}">${where}<div class="thread-badges">${threadBadges(comment)}</div><h4>${escape(comment.subject)}</h4>${body}${evidence}${actions}</section>`;
+    const found = ReviewTools.anchor(snapshot, comment);
+    return `<section class="popover-comment" data-comment-id="${escape(comment.id)}">${where}<div class="thread-badges">${threadBadges(comment)}</div><div class="popover-title">${authorFace(comment)}<h4>${prose(comment.subject)}</h4><span class="thread-at">${escape(lines)}</span></div>${threadMeta(comment, found?.file.path, lines.slice(1))}${body}${evidence}<div class="thread-footer">${actions}<button class="btn btn-xs ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${escape(comment.id)}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></section>`;
   }
 
   // A comment that asks nothing more of the reader (resolved, or praise) keeps its icon, faintly, and marks no lines.
@@ -2174,6 +2175,7 @@
   function toggleResolved(id) {
     const comment = comments.find(comment => comment.id === id);
     if (!comment) return;
+    if (!comment.resolved) threadsOpen.delete(id);
     const thread = [...document.querySelectorAll('[data-thread-id]')].find(card => card.dataset.threadId === id);
     const top = thread?.getBoundingClientRect().top;
     state.resolvedComments = state.resolvedComments.filter(value => value !== id);
@@ -2687,7 +2689,7 @@
     const followed = new Set(generated.map(comment => comment.follows).filter(Boolean));
     const earlier = generated.filter(comment => comment.outdated && !followed.has(comment.id));
     const earlierCards = earlier.map(comment => commentCard(comment, true)).join('');
-    const earlierSection = earlierCards ? fold('earlier', 'From earlier revisions', earlier.length, earlierCards, '<span class="overview-fold-note"><span data-earlier-outcomes></span></span>', !generated.some(comment => !comment.outdated && !comment.resolved)) : '';
+    const earlierSection = earlierCards ? fold('earlier', 'From earlier revisions', earlier.length, earlierCards, '<span class="overview-fold-note"><span data-earlier-outcomes></span></span>') : '';
     // A finding whose code changed is its comment under From earlier revisions, which says what
     // became of it. Only one with no comment is still said, in a line there and never a banner.
     // Its comment is the one it names, or for an older review the one with its title.
@@ -2707,12 +2709,12 @@
     const settled = current.filter(comment => comment.resolved);
     // The reader's own resolved comments are settled too: they fold here with the agent's, not among the open ones.
     const settledAll = [...settled, ...comments.filter(comment => comment.personal && comment.resolved)];
-    const resolvedSection = settledAll.length ? fold('resolved', 'Resolved', settledAll.length, settledAll.map(comment => commentCard(comment)).join(''), '', !current.some(comment => !comment.resolved)) : '';
+    const resolvedSection = settledAll.length ? fold('resolved', 'Resolved', settledAll.length, settledAll.map(comment => commentCard(comment)).join('')) : '';
     // With nothing left to do, one message says so, whether there never was anything or the
     // reader settled it all. What is settled stays folded below it.
     const folded = settled.length + earlier.length;
     const clear = !inProgress && !feedback.findings.length && !failed.length && !pending && !current.some(comment => !comment.resolved)
-      ? `<div class="overview-clear" data-overview-status>${icon('check-check')}<div><strong>All clear</strong><p>Nothing in this review is waiting on you. Nice work.${folded ? ` ${folded === 1 ? 'The comment below is' : `The ${folded} comments below are`} settled.` : ''}</p></div></div>` : '';
+      ? `<div class="overview-clear" data-overview-status>${icon('check-check')}<div><strong>All clear</strong><p>Nothing waits on you.${folded ? ` ${folded === 1 ? 'The comment is' : `The ${folded} comments are`} settled.` : ''}</p></div></div>` : '';
     const qa = review.qa;
     const empty = inProgress && !generated.length && !feedback.findings.length && !pending && !failed.length ? '<p class="review-empty">No comments yet. They appear here as your agent writes them.</p>' : '';
     const progressBox = inProgress ? `<div class="review-progress" role="status"><span class="review-progress-dot" aria-hidden="true"></span><div><h3>Your review is in progress</h3><p>Start reading now. Your agent's comments appear here and beside the code as it writes them, with a notice when one arrives, even on a file you already read. Explanations, test results and the finished walkthrough follow. Template previews and QA open once it is done.</p><p class="review-progress-count">${generated.length ? `${generated.length} comment${generated.length === 1 ? '' : 's'} so far` : 'No comments yet'}</p></div><button type="button" class="btn btn-sm btn-primary" data-start-reading>Start reading ${icon('arrow-right')}</button></div>` : '';
@@ -3593,6 +3595,8 @@
     const back = event.target.closest('[data-gh-remove]');
     if (back) await github.provider?.remove(back.dataset.ghRemove);
     const resolution = event.target.closest('[data-resolve]');
+    // The popover is drawn once, so settling a comment from it closes it.
+    if (resolution?.closest('#comment-popover')) closeComments();
     if (resolution) toggleResolved(resolution.dataset.resolve);
   });
   document.addEventListener('keydown', event => {
@@ -4025,6 +4029,12 @@
     }
     return -1;
   };
+  // A finished step's check stays on the line with the title's last word.
+  function stepTitle(title, done) {
+    if (!done) return escape(title);
+    const cut = title.lastIndexOf(' ') + 1;
+    return `${escape(title.slice(0, cut))}<span class="step-end">${escape(title.slice(cut))}<span class="step-done">${icon('check')}</span></span>`;
+  }
   function barNext() {
     const reading = fileReadingActive() ? readingFile() : null;
     if (reading) {
@@ -4037,7 +4047,7 @@
     const next = otherUnviewed(-1);
     if (next >= 0) return {meta: '', label: state.viewedFiles.length ? 'Continue reading' : 'Start reading', run: () => (focusMode ? focusFile(next) : select(focusOrder[next].layer.id))};
     const todo = document.querySelector('.dcr-todo-link');
-    if (todo) return {meta: '', label: todo.textContent.trim(), run: () => todo.click()};
+    if (todo && !todo.hidden && !/^0\b/.test(todo.textContent.trim())) return {meta: '', label: todo.textContent.trim(), run: () => todo.click()};
     // Everything read and settled: what the served review would do next (publish it, or see it published).
     const publish = document.getElementById('dcr-publish');
     if (publish && !publish.hidden) return {meta: '', label: publish.textContent.trim(), run: () => publish.click()};
