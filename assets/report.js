@@ -3814,6 +3814,9 @@
   $('close-previews').onclick = () => $('previews-dialog').close();
   // Toolbar icons come from the bundled Lucide set; the static glyphs are only fallbacks.
   $('nav-toggle').innerHTML = icon('panel-left');
+  $('sidebar-hide').innerHTML = icon('panel-left-close');
+  $('sidebar-show').innerHTML = icon('panel-left-open');
+  ['sidebar-hide', 'sidebar-show'].forEach(id => $(id).addEventListener('click', () => $('nav-toggle').click()));
   $('prev').innerHTML = icon('chevron-left');
   $('next').innerHTML = icon('chevron-right');
   $('view-icon').innerHTML = icon('sliders-horizontal');

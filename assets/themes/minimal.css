@@ -636,3 +636,14 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .sidebar nav button.nav-file .nav-file-name{display:flex;min-width:0;white-space:nowrap;overflow-wrap:normal}
 [data-theme^="minimal-"] .sidebar nav button.nav-file .name-head{min-width:0;overflow:hidden;text-overflow:ellipsis}
 [data-theme^="minimal-"] .sidebar nav button.nav-file .name-tail{flex:none}
+
+/* The list's own close beside the finder, and the same icon, opened, where it was once the list is hidden. */
+[data-theme^="minimal-"] .sidebar .sidebar-top{display:flex;align-items:center;gap:6px;margin-bottom:18px}
+[data-theme^="minimal-"] .sidebar .sidebar-top #search{flex:1;min-width:0;height:36px;min-height:36px;margin:0}
+[data-theme^="minimal-"] :is(.sidebar-hide,.sidebar-show){place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--minimal-faint)}
+[data-theme^="minimal-"] :is(.sidebar-hide,.sidebar-show):hover{background:var(--minimal-soft);color:var(--ink)}
+[data-theme^="minimal-"] :is(.sidebar-hide,.sidebar-show) .review-icon{width:17px;height:17px;stroke-width:1.8}
+@media(min-width:1200px){
+  html[data-theme^="minimal-"] .sidebar-hide{display:grid;flex:none}
+  html[data-theme^="minimal-"] body.sidebar-collapsed .sidebar-show{display:grid;position:fixed;top:16px;left:18px;z-index:30}
+}
