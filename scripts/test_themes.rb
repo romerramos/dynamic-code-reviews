@@ -11,7 +11,7 @@ def assert(condition, message)
 end
 
 ROOT = File.expand_path('..', __dir__)
-SHEETS = %w[assets/report.css live/live.css live/app-view.css].to_h { |path| [path, File.read(File.join(ROOT, path))] }
+SHEETS = (%w[assets/report.css live/live.css live/app-view.css] + Dir[File.join(ROOT, 'assets/components/*.css')].map { |path| path.delete_prefix("#{ROOT}/") }).to_h { |path| [path, File.read(File.join(ROOT, path))] }
 base = File.read(File.join(ROOT, 'assets/themes/base.css'))
 defined = base.scan(/(--[\w-]+):/).flatten.uniq
 DAISY = %w[--color-base-100 --color-base-200 --color-base-300 --color-base-content --color-primary --color-primary-content --color-secondary --color-secondary-content
@@ -52,6 +52,30 @@ themes.each do |name|
   end
 end
 puts 'PASS each theme is a light and a dark daisyUI theme that sets only tokens the app knows'
+
+# A theme sets tokens; it never forces a value or reaches into a component. The components' classes
+# are the ones their markup writes (assets/components/*.js); a theme may set tokens on what is
+# around them, never select them.
+OWNED = Dir[File.join(ROOT, 'assets/components/*.js')].flat_map do |path|
+  js = File.read(path)
+  attributes = js.scan(/class="([^"]*)"/).flatten.flat_map { |value| value.split(/\$\{.*?\}/) }
+  lists = js.scan(/const (?:classes|cls) = \[(.*?)\]/).flatten.flat_map { |list| list.scan(/'([\w-]+)'/).flatten }
+  # (is-* says a state; a context may ask after it as it may after [open].)
+  (attributes.flat_map(&:split) + lists).select { |name| name.match?(/\A[a-z][\w-]*[a-z]\z/) && !name.start_with?("is-") && name != "md" }
+end.uniq
+# The ⋯ menu's panel: SplitButton's arrow opens one, and so does every other overflow menu in the
+# app (report.js moreMenu), so a theme draws it as the app's panel, not as a part of SplitButton.
+THEME_MAY_DRAW = %w[more-menu more-list].freeze
+assert(OWNED.include?('ui-avatar') && OWNED.include?('review-thread') && OWNED.include?('btn'), "The components' classes come from their markup: #{OWNED.first(8)}")
+themes.each do |name|
+  css = File.read(File.join(ROOT, 'assets/themes', "#{name}.css")).gsub(%r{/\*.*?\*/}m, '')
+  assert(!css.include?('!important'), "#{name} uses !important: a theme's rules already win over the app's (they are in no layer)")
+  css.scan(/([^{}]+)\{/).flatten.each do |selector|
+    named = (OWNED - THEME_MAY_DRAW).select { |owned| selector.match?(/\.#{Regexp.escape(owned)}(?![\w-])/) }
+    assert(named.empty?, "#{name} selects a component's own class (#{named.join(', ')}) in #{selector.strip[0, 120]}: set its tokens instead")
+  end
+end
+puts 'PASS no theme uses !important or selects a component; themes set tokens'
 
 themes.each do |name|
   File.read(File.join(ROOT, 'assets/themes', "#{name}.css")).scan(%r{url\(([^)]*)\)}).flatten.each do |source|

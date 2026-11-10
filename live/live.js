@@ -1708,13 +1708,15 @@
   const placePresenceCard = () => {
     const box = presence.getBoundingClientRect();
     const width = Math.min(360, window.innerWidth - 24);
-    presenceCard.style.width = `${width}px`;
+    // Where it goes is said as variables (live.css places it with them), so a layout that puts the
+    // card elsewhere, as a phone's does, or a theme's, needs nothing stronger than its own rule.
+    presenceCard.style.setProperty('--card-width', `${width}px`);
     // Under the chip, or over it when the chip is at the bottom of the screen, as on a phone.
-    presenceCard.style.maxHeight = `${window.innerHeight - 24}px`;
+    presenceCard.style.setProperty('--card-max-height', `${window.innerHeight - 24}px`);
     const height = presenceCard.offsetHeight;
     const below = box.bottom + 8 + height <= window.innerHeight - 8;
-    presenceCard.style.top = `${Math.round(below ? box.bottom + 8 : Math.max(8, box.top - 8 - height))}px`;
-    presenceCard.style.left = `${Math.round(Math.max(12, Math.min(box.left, window.innerWidth - width - 12)))}px`;
+    presenceCard.style.setProperty('--card-top', `${Math.round(below ? box.bottom + 8 : Math.max(8, box.top - 8 - height))}px`);
+    presenceCard.style.setProperty('--card-left', `${Math.round(Math.max(12, Math.min(box.left, window.innerWidth - width - 12)))}px`);
   };
   // A theme can show the agent and its adversaries in Settings, under Agents, instead of on this
   // card: they go wherever they are shown, and are listed afresh when that tab opens.
@@ -2428,7 +2430,7 @@
     publishDialog.innerHTML = `<form method="dialog" class="modal-box dcr-gh-box dcr-publish-box">
       <header><div><h2 id="dcr-publish-title">Publish your review</h2><p class="muted">${where}</p></div><button type="button" class="act act-quiet act-icon" data-publish-close aria-label="Close" title="Close (Esc)">${ico('x')}</button></header>
       <ol class="dcr-publish-steps">${publishStepsHTML()}</ol>
-      ${preview ? `<section class="dcr-publish-preview" aria-label="What the pull request shows"><h3>On the pull request</h3><div class="dcr-body">${preview}</div></section>` : ''}
+      ${preview ? `<section class="dcr-publish-preview" aria-label="What the pull request shows"><h3>On the pull request</h3><div class="dcr-body dcr-publish-body">${preview}</div></section>` : ''}
       <p class="gh-finish-state" role="status" aria-live="polite" hidden></p>
       <footer class="dcr-gh-actions">${published?.url ? `<a class="act act-quiet" href="${tools.escape(published.url)}" target="_blank" rel="noopener noreferrer">Last published ${ico('arrow-up-right')}</a>` : ''}<button type="button" class="act act-quiet" data-publish-close>Cancel</button><button type="button" class="act act-gh" data-publish-go ${ready ? '' : 'disabled'} title="${ready ? 'Post the report and mark the commit as reviewed' : 'Finish the steps above first'}">${window.ReviewGitHub?.mark || ''}<span>${published ? 'Publish again' : 'Publish to GitHub'}</span></button></footer></form>`;
   };

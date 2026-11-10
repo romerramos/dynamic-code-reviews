@@ -7,7 +7,7 @@
 .ui-comment-line::-webkit-details-marker{display:none}
 .ui-comment-line::after{content:none}
 .ui-comment-line:focus-visible{outline:2px solid var(--line-accent-6);outline-offset:-3px}
-.ui-comment-face{display:grid;place-items:center;--avatar-size:var(--comment-face-size,24px)}
+.ui-comment-face{display:grid;place-items:center;height:var(--comment-face-col,28px);--avatar-size:var(--comment-face-size,24px)}
 .ui-comment-title{display:block;min-width:0;margin:0;font-size:var(--comment-title-size,15px);font-weight:var(--comment-title-weight,550);line-height:var(--comment-title-line,1.4);color:var(--comment-title-ink,var(--ink-neutral-2))}
 .ui-comment-title code{font:.9em var(--mono)}
 details[open]>.ui-comment-line .ui-comment-title{font-weight:var(--comment-open-title-weight,600)}
@@ -26,3 +26,4 @@ details[open]>.ui-comment-line .ui-comment-chevron{transform:rotate(180deg)}
 details[open]>.ui-comment-line .thread-go{visibility:hidden}
 .ui-comment-line:hover .ui-comment-title{text-decoration:var(--comment-hover-underline,none);text-decoration-color:var(--line-neutral-4);text-underline-offset:4px}
 details[open]>.ui-comment-line:hover .ui-comment-title{text-decoration:none}
+.ui-comment-tail{white-space:nowrap}

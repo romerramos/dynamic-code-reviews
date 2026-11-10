@@ -1,0 +1,21 @@
+/* Button (button.js), on daisyUI's .btn. A theme gives buttons its look with tokens; one it leaves
+   unset keeps the page's own (revert-layer: the app's rules, then daisyUI's). A context may set
+   the same tokens around the buttons it holds.
+   Tokens: --button-bg, -ink, -border-color, -border-width, -radius, -shadow, -height, -min-height,
+   -pad, -gap, -size, -weight; on hover --button-hover-bg, -hover-ink; --button-open and
+   --button-close: what stands before and after the label (a terminal's brackets), and
+   --button-bracket their ink; --button-primary-*: the one action that matters; --button-disabled-ink. */
+.btn{border-width:var(--button-border-width,revert-layer);border-color:var(--button-border-color,revert-layer);border-radius:var(--button-radius,revert-layer);background:var(--button-bg,revert-layer);box-shadow:var(--button-shadow,revert-layer);color:var(--button-ink,revert-layer);font-size:var(--button-size,revert-layer)}
+.btn:not(.btn-square,.btn-circle){gap:var(--button-gap,revert-layer);height:var(--button-height,revert-layer);min-height:var(--button-min-height,revert-layer);padding:var(--button-pad,revert-layer);font-weight:var(--button-weight,revert-layer)}
+.btn:is(.btn-square,.btn-circle){width:var(--button-square,revert-layer);height:var(--button-square,revert-layer);min-height:var(--button-square,revert-layer)}
+.btn:hover:not(:disabled){background:var(--button-hover-bg,revert-layer);color:var(--button-hover-ink,revert-layer);border-color:var(--button-hover-border,revert-layer)}
+.btn:not(.btn-square,.btn-circle)::before{content:var(--button-open,revert-layer);color:var(--button-bracket,revert-layer);font-weight:400}
+.btn:not(.btn-square,.btn-circle)::after{content:var(--button-close,revert-layer);color:var(--button-bracket,revert-layer);font-weight:400}
+.btn:not(.btn-square,.btn-circle):hover:not(:disabled)::before,.btn:not(.btn-square,.btn-circle):hover:not(:disabled)::after{color:var(--button-bracket-hover,revert-layer)}
+.btn.btn-primary{--button-open:var(--button-primary-open,none);--button-close:var(--button-primary-close,none);border-color:var(--button-primary-border,revert-layer);background:var(--button-primary-bg,revert-layer);box-shadow:var(--button-primary-shadow,var(--button-shadow,revert-layer));color:var(--button-primary-ink,revert-layer);font-weight:var(--button-primary-weight,revert-layer)}
+.btn.btn-primary:not(:disabled){padding:var(--button-primary-pad,revert-layer)}
+.btn.btn-primary:hover:not(:disabled){background:var(--button-primary-hover-bg,revert-layer);color:var(--button-primary-ink,revert-layer)}
+.btn.btn-circle.btn-ghost{border-color:var(--button-close-border,revert-layer);background:var(--button-close-bg,revert-layer);box-shadow:var(--button-shadow,revert-layer);color:var(--button-close-ink,revert-layer)}
+.btn.btn-circle.btn-ghost:hover{color:var(--button-close-hover-ink,revert-layer)}
+.btn:disabled{color:var(--button-disabled-ink,revert-layer);background:var(--button-disabled-bg,revert-layer);opacity:var(--button-disabled-opacity,revert-layer)}
+.btn:focus-visible{outline:var(--button-focus-outline,revert-layer);outline-offset:var(--button-focus-offset,revert-layer)}

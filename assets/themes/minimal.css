@@ -33,12 +33,14 @@
 /* --- quiet everywhere: no rings, thin scrollbars, nothing lifts ---------------------------------- */
 [data-theme^="minimal-"]{--pane-ring:transparent;--cursor-line:color-mix(in srgb,var(--ink) 6%,transparent);scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 /* --- components: plain ink marks, and a comment that opens as a row between two rules, not a card --- */
-[data-theme^="minimal-"]{--section-rule:transparent;--avatar-style:mono;--avatar-mono-mark:72%;
+[data-theme^="minimal-"]{--section-rule:transparent;
+  --button-border-color:transparent;--button-bg:transparent;--button-shadow:none;--button-ink:var(--ink-neutral-3);--button-hover-bg:var(--minimal-soft);--button-hover-ink:var(--ink);--button-focus-outline:1px solid var(--muted);--button-focus-offset:1px;--button-primary-border:transparent;--button-primary-shadow:none;--button-primary-bg:initial;--button-close-border:transparent;--button-close-bg:transparent;--button-close-ink:var(--muted);--button-close-hover-ink:var(--ink);--split-gap:0;--split-join-radius:0;--split-join-border:0;--split-writing:none;--comment-action-face:14px;
+  --avatar-style:mono;--avatar-mono-mark:72%;
   --comment-inset:0px;--comment-row-rule:transparent;--comment-card-edge:var(--line);--comment-card-sides:0px;--comment-card-radius:0;--comment-card-bg:transparent;--comment-card-gap:14px;
   --comment-face-col:18px;--comment-face-size:18px;--comment-message-face:18px;--comment-gap:12px;--comment-line-top:8px;--comment-line-bottom:8px;
   --comment-title-size:14px;--comment-title-weight:400;--comment-title-ink:var(--ink);--comment-earlier-ink:var(--ink);
   --comment-tags:none;--comment-place:block;--comment-chevron:none;--comment-quiet:var(--minimal-faint);--comment-hover-underline:underline;
-  --comment-meta:flex;--comment-own-meta:none;--comment-body-bottom:0px;--comment-text-size:14.5px;--comment-text-line:1.7;--comment-text-width:640px;--comment-source:none;--comment-thread-top:22px;
+  --comment-meta:flex;--comment-own-meta:none;--comment-body-bottom:0px;--comment-text-size:14.5px;--comment-text-line:1.7;--comment-text-width:640px;--comment-source:none;--comment-thread-top:22px;--comment-thread-pad-top:0px;--comment-open-line-bottom:0px;
   --comment-footer-top:20px;--comment-footer-pad-top:0px;--comment-footer-pad-bottom:20px;--comment-footer-indent:calc(var(--comment-face-col) + var(--comment-gap));--comment-footer-rule:0 solid transparent;
   --comment-action-height:28px;--comment-action-pad:0 11px;--comment-action-border:1px solid var(--line);--comment-action-radius:8px;--comment-action-bg:var(--surface);--comment-action-ink:var(--ink-neutral-3);--comment-action-size:13px;--comment-action-weight:500;--comment-action-shadow:none;
   --message-name:none;--message-you-name:none;--message-extras:none;--message-head-size:12.5px;--message-head-ink:var(--minimal-faint);
@@ -78,6 +80,7 @@
 [data-theme^="minimal-"] .sidebar-footer progress{height:2px}
 
 /* --- the page: one column, no boxes ----------------------------------------------------------------- */
+[data-theme^="minimal-"] .overview-reading :is(.dcr-try,.risk-rank,.evidence-strip){border:0;background:transparent;box-shadow:none}
 [data-theme^="minimal-"] :is(.app-header,.review-toolbar){background:var(--surface);border-color:transparent}
 
 /* --- code: a thin rule says added or removed; the line itself stays clean -------------------------- */
@@ -114,17 +117,13 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .modal-box{border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 64px color-mix(in srgb,var(--shade) 12%,transparent)}
 [data-theme^="minimal-"] .modal-box>:is(header,footer),[data-theme^="minimal-"] .modal-box form>:is(header,footer){border-color:transparent;background:transparent}
 [data-theme^="minimal-"] .modal-box>header{padding-bottom:8px}
+[data-theme^="minimal-"] :is(.settings-box,.view-menu,.keys-box) section:not(#settings-view:not(:empty)+section){border-color:transparent}
 [data-theme^="minimal-"] .modal-box header h2{font-size:15px;font-weight:600;letter-spacing:0}
 /* A section is named in a quiet line, and space separates it from the next. */
 [data-theme^="minimal-"] :is(.settings-box,.view-menu) section>h2,[data-theme^="minimal-"] .keys-box h3{color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
 /* Closing is a small cross, never a ringed button. */
-[data-theme^="minimal-"] .btn-circle.btn-ghost{border-color:transparent;background:transparent;box-shadow:none;color:var(--muted)}
-[data-theme^="minimal-"] .btn-circle.btn-ghost:hover{color:var(--ink)}
-[data-theme^="minimal-"] :is(.btn,.icon-button,.header-button):focus-visible{outline:1px solid var(--muted);outline-offset:1px}
+[data-theme^="minimal-"] .header-button:focus-visible{outline:1px solid var(--muted);outline-offset:1px}
 /* Buttons: one solid one for what comes next, words for the rest. */
-[data-theme^="minimal-"] .btn:not(.btn-primary,.btn-circle){border-color:transparent;background:transparent;box-shadow:none;color:var(--ink-neutral-3)}
-[data-theme^="minimal-"] .btn:not(.btn-primary,.btn-circle):hover{background:var(--minimal-soft);color:var(--ink)}
-[data-theme^="minimal-"] .btn-primary{border-color:transparent;box-shadow:none}
 
 /* --- writing on a line: the box under the line is the one place to type, so the bar steps aside --- */
 [data-theme^="minimal-"] body:has(#inline-composer) .review-bar{display:none}
@@ -134,8 +133,8 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 /* --- Your review: a plain column --------------------------------------------------------------------- */
 [data-theme^="minimal-"] .ledger{border-color:var(--line);box-shadow:none}
 [data-theme^="minimal-"] :is(.ledger-head,.ledger-footer){border-color:transparent;background:transparent}
-[data-theme^="minimal-"] .diff-table td.user-range-selected{background:var(--minimal-soft)!important;box-shadow:none!important}
-[data-theme^="minimal-"] .diff-table td.gutter.user-range-selected:first-child{box-shadow:inset 2px 0 var(--ink)!important}
+[data-theme^="minimal-"] .diff-table td.user-range-selected{background:var(--minimal-soft);box-shadow:none}
+[data-theme^="minimal-"] .diff-table td.gutter.user-range-selected:first-child{box-shadow:inset 2px 0 var(--ink)}
 
 /* --- All changes and the walkthrough: a file is its name and its code, not a card ------------------- */
 [data-theme^="minimal-"] .file-card{border:0;border-radius:0;background:transparent}
@@ -146,7 +145,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .badge{border-color:transparent}
 
 /* The agent's card opens over its dot in the bar, since its chip went with the toolbar. */
-[data-theme^="minimal-"] #dcr-presence-card{left:var(--bar-agent-left,12px)!important;top:auto!important;bottom:84px!important;max-height:calc(100dvh - 108px)!important;overflow-y:auto;border-color:var(--line);box-shadow:0 16px 40px color-mix(in srgb,var(--shade) 10%,transparent)}
+[data-theme^="minimal-"] #dcr-presence-card{left:var(--bar-agent-left,12px);top:auto;bottom:84px;max-height:calc(100dvh - 108px);overflow-y:auto;border-color:var(--line);box-shadow:0 16px 40px color-mix(in srgb,var(--shade) 10%,transparent)}
 
 /* --- the app: it fills the window, and its controls are one bar at the bottom, where the review's
    bar is. During a QA review that bar says what the agent is doing, and its notes sit just above. --- */
@@ -158,7 +157,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .dcr-app-record{border-color:transparent;background:transparent;font-weight:500}
 [data-theme^="minimal-"] .dcr-app :is(button,a,input,textarea,select):focus-visible{outline:1px solid var(--muted);outline-offset:1px}
 /* The bar has its own strip under the app, so it never covers the app or shows in a recording. */
-[data-theme^="minimal-"] .dcr-app .dcr-app-canvas{padding-bottom:76px!important;background:var(--surface);background-image:none}
+[data-theme^="minimal-"] .dcr-app .dcr-app-canvas{padding-bottom:76px;background:var(--surface);background-image:none}
 [data-theme^="minimal-"] .dcr-app-foot{position:absolute;z-index:5;left:14px;bottom:28px;min-height:0;padding:4px 10px;border:0;border-radius:999px;background:var(--surface)}
 [data-theme^="minimal-"] .dcr-app-foot:not(:has(.dcr-app-sharing:not([hidden]))),[data-theme^="minimal-"] .dcr-app-foot .dcr-app-status{display:none}
 [data-theme^="minimal-"] .dcr-app-rail{border-color:var(--line);padding-bottom:84px}
@@ -206,7 +205,6 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 /* The verdict strip is one fact by the progress: how many files need you. The rest is its tooltip. */
 [data-theme^="minimal-"] .dcr-jev{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);padding:0;border:0}
 [data-theme^="minimal-"] .progress-need{display:inline;padding:0;border:0;background:none;color:var(--ink);font:inherit;font-weight:600;text-align:left;cursor:pointer}
-[data-theme^="minimal-"] #dcr-jev-list{left:22px!important;top:auto!important;bottom:118px!important}
 [data-theme^="minimal-"] .overview-reading #my-review.review-section{border-top:0;padding-top:0;margin-top:26px}
 [data-theme^="minimal-"] .sidebar nav .nav-group-title{margin:0 0 4px;padding:0 8px;font-size:13.5px}
 [data-theme^="minimal-"] .sidebar nav .nav-section button[data-view]{min-height:0;height:auto}
@@ -283,8 +281,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] #my-review .section-heading{display:flex;align-items:baseline;justify-content:space-between;margin:0 0 6px}
 [data-theme^="minimal-"] #my-review .section-heading h2{margin:0}
 [data-theme^="minimal-"] #my-review .section-heading h2 .badge{display:none}
-[data-theme^="minimal-"] #my-review .section-heading .comment-actions .btn{height:auto;min-height:0;padding:0 0 0 16px;color:var(--minimal-faint);font-size:12px;font-weight:400}
-[data-theme^="minimal-"] #my-review .section-heading .comment-actions .btn:hover{background:none;color:var(--ink)}
+[data-theme^="minimal-"] #my-review .section-heading .comment-actions{--button-height:auto;--button-min-height:0;--button-pad:0 0 0 16px;--button-ink:var(--minimal-faint);--button-size:12px;--button-weight:400;--button-hover-bg:none;--button-hover-ink:var(--ink)}
 /* What is settled: two quiet lines at the end. */
 [data-theme^="minimal-"] .overview-settled .overview-fold,[data-theme^="minimal-"] .overview-settled .overview-fold:last-child{margin:0;border:0}
 [data-theme^="minimal-"] .overview-settled .overview-fold>summary{min-height:0;padding:7px 0}
@@ -321,7 +318,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .overview-settled .overview-fold-title{display:inline;margin:0;color:var(--minimal-faint);font-size:12px;font-weight:400}
 [data-theme^="minimal-"] .overview-settled .overview-fold-title .badge{padding:0;margin-left:2px;border:0;background:none;color:inherit;font:inherit}
 [data-theme^="minimal-"] .overview-settled .overview-fold-note{color:var(--minimal-faint);font-size:12px}
-[data-theme^="minimal-"] .overview-settled .overview-fold-note .btn{height:auto;min-height:0;padding:0 0 0 10px;border:0;background:none;color:var(--ink);font-size:12px}
+[data-theme^="minimal-"] .overview-settled .overview-fold-note{--button-height:auto;--button-min-height:0;--button-pad:0 0 0 10px;--button-border-width:0;--button-bg:none;--button-ink:var(--ink);--button-size:12px}
 [data-theme^="minimal-"] .overview-settled .overview-fold>summary>.review-icon{width:13px;height:13px;align-self:center}
 [data-theme^="minimal-"] .overview-settled .overview-fold[open]>summary{margin-bottom:0}
 /* A closed comment: what it says, and on the right its state and place. Nothing else. */
@@ -335,7 +332,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .dcr-card .dcr-closure-head strong{color:var(--ink);font-size:13px;font-weight:600}
 [data-theme^="minimal-"] .dcr-card .dcr-closure-main{display:block;padding:0}
 [data-theme^="minimal-"] .dcr-card .dcr-closure-by{display:none}
-[data-theme^="minimal-"] .dcr-card .dcr-body{color:var(--ink-neutral-3);font-size:14px;line-height:1.65}
+[data-theme^="minimal-"] .dcr-card{--message-text-size:14px;--message-text-line:1.65;--message-text-ink:var(--ink-neutral-3)}
 [data-theme^="minimal-"] .dcr-card .dcr-checks{display:flex;gap:14px;margin-top:6px}
 [data-theme^="minimal-"] .dcr-card .dcr-check{padding:0;border:0;background:none;color:var(--minimal-faint);font-size:12.5px}
 [data-theme^="minimal-"] .dcr-card .dcr-check strong{color:var(--ink-neutral-3);font-weight:500}
@@ -384,7 +381,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 /* --- Round five: the Overview's comments read as threads --------------------------------------------
    What to read first left the Overview: the walkthrough's order already says it, and the files that
    stand out keep their risk mark in the list. */
-[data-theme^="minimal-"] .overview-reading .risk-brief{display:none!important}
+[data-theme^="minimal-"] .overview-reading .risk-brief{display:none}
 /* A fold's count sits on the label's baseline. */
 [data-theme^="minimal-"] .overview-settled .overview-fold-title .badge{display:inline;vertical-align:baseline;line-height:inherit;height:auto;min-height:0}
 /* A comment's body, its replies and its actions hang under its title, in from the face. */
@@ -397,7 +394,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 /* --- the composer, as in a chat: your face beside what you type ------------------------------------- */
 [data-theme^="minimal-"] .composer{padding:12px 14px 12px 12px}
 [data-theme^="minimal-"] .composer-head{min-height:0;margin-bottom:8px;padding:0}
-[data-theme^="minimal-"] .composer-head :is(.composer-where,.composer-as){display:none!important}
+[data-theme^="minimal-"] .composer-head :is(.composer-where,.composer-as){display:none}
 [data-theme^="minimal-"] .composer-mode span{padding:3px 9px;font-size:12.5px}
 [data-theme^="minimal-"] .composer-modes{background:var(--minimal-soft);border:0}
 [data-theme^="minimal-"] .composer-modes svg{width:13px;height:13px}
@@ -415,11 +412,11 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .composer-foot{margin:10px 0 0 32px;padding:0;border:0}
 [data-theme^="minimal-"] .composer-blocking{color:var(--minimal-faint);font-size:12.5px}
 [data-theme^="minimal-"] .composer-blocking input{width:13px;height:13px}
-[data-theme^="minimal-"] .composer [data-composer-cancel]{display:none!important}
+[data-theme^="minimal-"] .composer [data-composer-cancel]{display:none}
 [data-theme^="minimal-"] .composer-actions .act{height:30px;border-radius:8px;font-size:13px;box-shadow:none}
 [data-theme^="minimal-"] .composer-actions :is(.act-agent,.act-gh,.act-pr) svg{display:none}
 [data-theme^="minimal-"] .composer-actions .composer-key{opacity:.6}
-[data-theme^="minimal-"] .composer-type input:checked+span{background:none!important;box-shadow:none!important}
+[data-theme^="minimal-"] .composer-type input:checked+span{background:none;box-shadow:none}
 
 /* --- the open step, as a quiet drill-down --------------------------------------------------------------
    A group's title is the one bold thing. The step being read is the same weight as the others, only in
@@ -472,16 +469,16 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{margin:6px 0 0;padding:0 8px 0 28px}
 [data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]))>button{margin-left:-5px;padding-left:13px;width:calc(100% + 5px)}
 [data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{padding:0 8px}
-[data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]){margin-left:-5px!important;padding-left:13px!important;width:calc(100% + 5px)!important}
+[data-theme^="minimal-"] #navigation .nav-section:has(>.nav-group-title) li>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]){margin-left:-5px;padding-left:13px;width:calc(100% + 5px)}
 
 /* --- one mark that is clicked, one that is read ----------------------------------------------------------
    A file's box is a real checkbox: square, always drawn, filled in ink with a white check once reviewed;
    it is the only thing in the list you tick. A step is not ticked: once all its files are read its name
    goes grey and a small check follows it on its own line of text. */
-[data-theme^="minimal-"] #navigation .nav-section button[data-view]{display:flex!important;align-items:baseline;gap:0;padding-right:8px}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view]{display:flex;align-items:baseline;gap:0;padding-right:8px}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body{order:1;flex:0 1 auto;min-width:0}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number{order:2;flex:none;position:static;width:auto;margin:0 0 0 6px;visibility:visible}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number:not(:has(svg)){display:none!important}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number:not(:has(svg)){display:none}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number .review-icon{width:12px;height:12px;vertical-align:-1px;color:var(--minimal-faint)}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view]:has(.step-number svg) .step-body strong{color:var(--minimal-faint)}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view]:not(:has(.step-number svg)) .step-body strong{color:var(--ink-neutral-3)}
@@ -500,10 +497,10 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{display:none}
 [data-theme^="minimal-"] .sidebar nav .nav-tests-label ~ li>.nav-file::after{content:"test";flex:none;margin-left:auto;color:var(--minimal-faint);font:10.5px var(--mono);letter-spacing:.02em}
 /* A finished step's check is on its line of text, at its end. */
-[data-theme^="minimal-"] #navigation .nav-section button[data-view]{display:block!important}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view]{display:block}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body{display:inline}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body strong{display:inline}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number:has(svg){display:none!important}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number:has(svg){display:none}
 [data-theme^="minimal-"] #navigation .nav-section .step-done{display:inline}
 [data-theme^="minimal-"] #navigation .nav-section .step-done .review-icon{display:inline-block;width:13px;height:13px;margin-left:6px;vertical-align:-2px;stroke-width:2.25}
 
@@ -511,11 +508,11 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .comment-popover[popover]{width:600px;max-height:min(560px,calc(100dvh - 24px));padding:16px 18px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 16px 44px color-mix(in srgb,var(--shade) 12%,transparent)}
 [data-theme^="minimal-"] .comment-popover .popover-heading{position:absolute;top:12px;right:12px;padding:0;border:0;background:transparent}
 [data-theme^="minimal-"] .comment-popover .popover-heading strong{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
-[data-theme^="minimal-"] .comment-popover .popover-heading .btn{width:28px;height:28px;min-height:0;padding:0;border:0;background:transparent;box-shadow:none;color:var(--muted)}
+[data-theme^="minimal-"] .comment-popover .popover-heading{--button-square:28px;--button-close-border:transparent;--button-close-bg:transparent;--button-close-ink:var(--muted)}
 /* Its replies, indented one step more with their faces, and its actions as small outlined buttons. */
 [data-theme^="minimal-"] .dcr-popover{margin-top:18px;padding:0;border:0;background:transparent}
 [data-theme^="minimal-"] .dcr-popover :is(.dcr-closure,.dcr-stage){padding:0;border:0;background:transparent}
-[data-theme^="minimal-"] .dcr-popover .dcr-body{color:var(--ink-neutral-3);font-size:13.5px;line-height:1.6}
+[data-theme^="minimal-"] .dcr-popover{--message-text-size:13.5px;--message-text-line:1.6;--message-text-ink:var(--ink-neutral-3)}
 
 /* Everything settled: one All clear line, Resolved closed right under it. */
 [data-theme^="minimal-"] .overview-comments:has(.overview-clear)>h2{display:none}
@@ -635,8 +632,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] #ledger .dcr-detail-code>:not(.dcr-detail-at){display:none}
 [data-theme^="minimal-"] #ledger .dcr-detail-code .dcr-detail-at:not(:empty){display:inline}
 [data-theme^="minimal-"] #ledger .dcr-detail-code:has(.dcr-detail-at:empty){display:none}
-[data-theme^="minimal-"] #ledger .dcr-detail .dcr-origin.dcr-agent{padding-top:10px}
-[data-theme^="minimal-"] #ledger .dcr-detail .dcr-body{margin-top:3px;font-size:13.5px;line-height:1.6}
+[data-theme^="minimal-"] #ledger .dcr-detail{--message-text-size:13.5px;--message-text-line:1.6;--message-text-top:3px}
 /* An adversary that did not answer: its mark, faint, and the words, in line with the answers. */
 [data-theme^="minimal-"] #ledger .dcr-detail :is(.dcr-opinions,.dcr-ops,ul:has(>.dcr-op)){margin:16px 0 0;padding:0;border:0;list-style:none}
 [data-theme^="minimal-"] #ledger .dcr-detail .dcr-op{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;align-items:center;padding:6px 0 0;border:0;background:none}
@@ -674,8 +670,8 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
 [data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-more button{color:var(--ink);font-size:13px;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:4px}
 [data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-more button:hover{text-decoration-color:currentColor}
 [data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-templates{display:none}
-[data-theme^="minimal-"] .overview-reading .dcr-try-risk .risk-brief{display:none!important}
-[data-theme^="minimal-"] .overview-reading .dcr-try-risk.is-open .risk-brief{display:block!important;grid-column:2 / -1;margin:4px 0 4px}
+[data-theme^="minimal-"] .overview-reading .dcr-try-risk .risk-brief{display:none}
+[data-theme^="minimal-"] .overview-reading .dcr-try-risk.is-open .risk-brief{display:block;grid-column:2 / -1;margin:4px 0 4px}
 [data-theme^="minimal-"] .overview-reading .dcr-try-risk .risk-brief h2{display:none}
 [data-theme^="minimal-"] .overview-reading .dcr-try-risk .risk-brief button{padding:5px 0;font-size:13.5px}
 
@@ -718,8 +714,7 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
 /* In the popover its × already closes it, so the note needs no Cancel; Esc still does the same. */
 [data-theme^="minimal-"] .dcr-popover .dcr-reply [data-dcr-cancel]{display:none}
 [data-theme^="minimal-"] :is(.dcr-card,.dcr-popover) .dcr-reply{border-top:0;padding-top:0}
-[data-theme^="minimal-"] :is(.dcr-card,.dcr-popover) .dcr-actions .btn-primary{height:28px;min-height:28px;padding:0 12px;border:0;border-radius:8px;background:var(--ink)!important;color:var(--surface)!important;font-weight:600}
-[data-theme^="minimal-"] :is(.dcr-card,.dcr-popover) .dcr-actions .btn-primary:hover{opacity:.86}
+[data-theme^="minimal-"] :is(.dcr-card,.dcr-popover) .dcr-actions{--button-height:28px;--button-min-height:28px;--button-radius:8px;--button-primary-pad:0 12px;--button-primary-border:transparent;--button-primary-bg:var(--ink);--button-primary-hover-bg:color-mix(in srgb,var(--ink) 86%,var(--surface));--button-primary-ink:var(--surface);--button-primary-weight:600}
 /* An adversary that did not answer, in the popover and on the Overview as in Your review: a faint line. */
 [data-theme^="minimal-"] :is(.dcr-popover,.dcr-card) :is(.dcr-opinions,.dcr-ops,ul:has(>.dcr-op)){margin:14px 0 0;padding:0;border:0;list-style:none}
 [data-theme^="minimal-"] :is(.dcr-popover,.dcr-card) .dcr-op{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;align-items:center;padding:4px 0 0;border:0;background:none}
@@ -729,7 +724,7 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
 /* --- A QA review says one thing at a time. While the agent gets the app ready, the app blurs and one
    card in its middle says what it is doing, for how long, and how to stop; nothing is recorded then.
    While it records there is no blur, and the bar says so on two lines. The sharing pill steps aside. --- */
-[data-theme^="minimal-"] #dcr-app.is-agent-driving .dcr-app-foot{display:none!important}
+[data-theme^="minimal-"] #dcr-app.is-agent-driving .dcr-app-foot{display:none}
 [data-theme^="minimal-"] #dcr-app .dcr-app-prep{align-items:center;justify-content:center;padding:24px;background:color-mix(in srgb,var(--surface) 45%,transparent);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 [data-theme^="minimal-"] #dcr-app .dcr-app-prep-card{width:min(440px,100%);box-sizing:border-box;padding:18px 20px 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 16px 40px color-mix(in srgb,var(--shade) 10%,transparent);pointer-events:auto}
 [data-theme^="minimal-"] #dcr-app .dcr-app-prep-spin{display:none}
@@ -784,7 +779,7 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
 /* One line between two comments, not one under each and another over the next. */
 
 /* The result's check is the plain mark, no circle behind it. */
-[data-theme^="minimal-"] .dcr-qa-done .dcr-qa-check{display:inline-grid;place-items:center;width:18px;height:18px;margin-top:1px;border:0;border-radius:0;background:none!important;box-shadow:none;color:var(--ink)}
+[data-theme^="minimal-"] .dcr-qa-done .dcr-qa-check{display:inline-grid;place-items:center;width:18px;height:18px;margin-top:1px;border:0;border-radius:0;background:none;box-shadow:none;color:var(--ink)}
 [data-theme^="minimal-"] .dcr-qa-done .dcr-qa-check svg{width:16px;height:16px}
 
 /* --- What QA recorded, drawn as the rest of the Overview: no grey cards. In a comment, Actual and
@@ -794,7 +789,7 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
 [data-theme^="minimal-"] .overview-reading .qa-journey .qa-route:empty{display:none}
 [data-theme^="minimal-"] .overview-reading .qa-journey :is(.qa-result,.qa-expected){margin:0 0 6px;padding:0;border:0;background:none;color:var(--ink);font-size:inherit;line-height:1.6}
 [data-theme^="minimal-"] .overview-reading .qa-journey :is(.qa-result,.qa-expected) strong{margin-right:4px;color:var(--minimal-faint);font-weight:400}
-[data-theme^="minimal-"] .overview-reading .qa-preview{display:flex;align-items:center;gap:14px;width:auto;max-width:100%;margin:8px 0 0;padding:0;border:0;border-radius:0;background:none!important;box-shadow:none;color:var(--ink);text-align:left;cursor:pointer}
+[data-theme^="minimal-"] .overview-reading .qa-preview{display:flex;align-items:center;gap:14px;width:auto;max-width:100%;margin:8px 0 0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;color:var(--ink);text-align:left;cursor:pointer}
 [data-theme^="minimal-"] .overview-reading .qa-preview-image{position:relative;flex:none;width:112px;height:70px;overflow:hidden;border:1px solid var(--line);border-radius:8px;background:var(--minimal-soft)}
 [data-theme^="minimal-"] .overview-reading .qa-preview-image :is(img,video){width:100%;height:100%;object-fit:cover;object-position:top}
 [data-theme^="minimal-"] .overview-reading .qa-preview-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:color-mix(in srgb,var(--ink) 75%,transparent);color:var(--surface);font-size:10px}
@@ -834,7 +829,6 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
 [data-theme^="minimal-"] #settings-dialog.has-agents[data-tab="agents"] .settings-round:not([hidden]){display:block;margin:18px 0 0;padding:16px 0 0;border-top:1px solid var(--line)}
 [data-theme^="minimal-"] .settings-round h2{margin:0 0 8px;color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
 [data-theme^="minimal-"] .settings-round p{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;color:var(--muted);font-size:12.5px}
-[data-theme^="minimal-"] .settings-round .btn{flex:none;height:30px;min-height:30px;padding:0 11px;border:1px solid var(--line)!important;border-radius:8px;color:var(--ink)!important;font-weight:500}
 [data-theme^="minimal-"] #settings-dialog.has-agents[data-tab="agents"] .settings-round:not([hidden]){margin-inline:10px}
 [data-theme^="minimal-"] .settings-agents .dcr-presence-help{margin-top:8px;color:var(--muted);font-size:12.5px;line-height:1.45}
 [data-theme^="minimal-"] .settings-agents .dcr-presence-cmd code{font-size:11.5px}
@@ -845,22 +839,22 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
 [data-theme^="minimal-"] .dcr-publish-box header h2{font-size:15px;font-weight:600}
 [data-theme^="minimal-"] .dcr-publish-steps{gap:14px;margin-top:18px}
 [data-theme^="minimal-"] .dcr-publish-steps li{grid-template-columns:18px minmax(0,1fr) auto;align-items:start;gap:0 12px}
-[data-theme^="minimal-"] .dcr-publish-steps .dcr-step-mark,[data-theme^="minimal-"] .dcr-publish-steps li.is-done .dcr-step-mark{width:18px;height:auto;border:0;border-radius:0;background:none!important;color:var(--ink-neutral-3);font-size:13px;font-weight:500}
+[data-theme^="minimal-"] .dcr-publish-steps .dcr-step-mark,[data-theme^="minimal-"] .dcr-publish-steps li.is-done .dcr-step-mark{width:18px;height:auto;border:0;border-radius:0;background:none;color:var(--ink-neutral-3);font-size:13px;font-weight:500}
 [data-theme^="minimal-"] .dcr-publish-steps .dcr-step-mark svg{width:14px;height:14px;margin-top:2px}
 [data-theme^="minimal-"] .dcr-publish-steps li b,[data-theme^="minimal-"] .dcr-publish-steps li.is-done b{color:var(--ink);font-weight:500}
 [data-theme^="minimal-"] .dcr-publish-steps small{display:block;color:var(--minimal-faint);font-size:12.5px}
 [data-theme^="minimal-"] .dcr-publish-preview{margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
 [data-theme^="minimal-"] .dcr-publish-preview h3{margin:0 0 8px;color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
-[data-theme^="minimal-"] .dcr-publish-preview .dcr-body{padding-left:14px;border-left:2px solid var(--line);font-size:13px;line-height:1.65;color:var(--ink-neutral-3)}
-[data-theme^="minimal-"] .dcr-publish-preview .dcr-body>:first-child{margin:0 0 4px;color:var(--ink);font-size:13px;font-weight:600}
-[data-theme^="minimal-"] .dcr-publish-preview .dcr-body .dcr-emoji{display:none}
-[data-theme^="minimal-"] .dcr-publish-preview .dcr-body :is(ul,ol){margin:0;padding:0;list-style:none}
-[data-theme^="minimal-"] .dcr-publish-preview .dcr-body li{margin:0}
-[data-theme^="minimal-"] .dcr-publish-preview .dcr-body li::marker{content:none}
-[data-theme^="minimal-"] .dcr-publish-preview .dcr-body strong{color:var(--ink);font-weight:500}
-[data-theme^="minimal-"] .dcr-publish-preview .dcr-body code{padding:0;background:none;font-size:12px;color:var(--ink-neutral-3)}
+[data-theme^="minimal-"] .dcr-publish-preview .dcr-publish-body{padding-left:14px;border-left:2px solid var(--line);font-size:13px;line-height:1.65;color:var(--ink-neutral-3)}
+[data-theme^="minimal-"] .dcr-publish-preview .dcr-publish-body>:first-child{margin:0 0 4px;color:var(--ink);font-size:13px;font-weight:600}
+[data-theme^="minimal-"] .dcr-publish-preview .dcr-publish-body .dcr-emoji{display:none}
+[data-theme^="minimal-"] .dcr-publish-preview .dcr-publish-body :is(ul,ol){margin:0;padding:0;list-style:none}
+[data-theme^="minimal-"] .dcr-publish-preview .dcr-publish-body li{margin:0}
+[data-theme^="minimal-"] .dcr-publish-preview .dcr-publish-body li::marker{content:none}
+[data-theme^="minimal-"] .dcr-publish-preview .dcr-publish-body strong{color:var(--ink);font-weight:500}
+[data-theme^="minimal-"] .dcr-publish-preview .dcr-publish-body code{padding:0;background:none;font-size:12px;color:var(--ink-neutral-3)}
 [data-theme^="minimal-"] .dcr-publish-box .dcr-gh-actions{margin-top:22px;padding:0;border:0;background:none}
-[data-theme^="minimal-"] .dcr-publish-box .dcr-gh-actions :is(.act-primary,.act-gh){background:var(--ink)!important;border-color:var(--ink)!important;color:var(--surface)!important}
+[data-theme^="minimal-"] .dcr-publish-box .dcr-gh-actions :is(.act-primary,.act-gh){background:var(--ink);border-color:var(--ink);color:var(--surface)}
 
 /* The way to a comment's code follows its title's last word. */
 /* One line between two comments, open or closed: only the line under each. */

@@ -426,7 +426,7 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 #dcr-presence .dcr-typing{margin-left:4px;color:var(--dcr-work)}
 @media(max-width:1180px){#dcr-presence .dcr-presence-text{display:none}#dcr-presence{padding:0 5px;border-color:transparent;background:none}}
 /* The card it opens: who, what, and how to connect one when nothing is listening. */
-#dcr-presence-card{position:fixed;z-index:30;box-sizing:border-box;overflow-y:auto;padding:14px 16px;border:1px solid var(--line);border-radius:calc(12px * var(--round));background:var(--surface);color:var(--ink);font-size:13px;box-shadow:0 12px 32px color-mix(in srgb,var(--shade) 18%,transparent)}
+#dcr-presence-card{position:fixed;z-index:30;top:var(--card-top);left:var(--card-left);width:var(--card-width);max-height:var(--card-max-height);box-sizing:border-box;overflow-y:auto;padding:14px 16px;border:1px solid var(--line);border-radius:calc(12px * var(--round));background:var(--surface);color:var(--ink);font-size:13px;box-shadow:0 12px 32px color-mix(in srgb,var(--shade) 18%,transparent)}
 #dcr-presence-card[hidden]{display:none}
 .dcr-presence-bar{display:none}
 #dcr-presence-card header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
@@ -571,9 +571,9 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
   .review-area:has(.focus-reader) .dcr-jev{display:none}
   #dcr-presence .dcr-presence-text,#dcr-presence .dcr-presence-adv{display:none}
   /* The agent's card is a screen of its own above the bar, as the menu is: edge to edge, with a
-     heading and a close, not a card floating with a margin it has no room for. The script places
-     the card beside its chip on a wide screen, which is what the !important answers. */
-  #dcr-presence-card{inset:0 0 calc(var(--toolbar-h) + env(safe-area-inset-bottom)) 0!important;width:auto!important;max-height:none!important;padding:0 16px 16px;border:0!important;border-radius:0;box-shadow:none;animation:none}
+     heading and a close, not a card floating with a margin it has no room for. The script's place for
+     it (--card-top, --card-left) is for a wide screen, so this layout does not use it. */
+  #dcr-presence-card{inset:0 0 calc(var(--toolbar-h) + env(safe-area-inset-bottom)) 0;width:auto;max-height:none;padding:0 16px 16px;border:0;border-radius:0;box-shadow:none;animation:none}
   .dcr-presence-bar{display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:1;margin:0 -16px 6px;padding:14px 16px 8px;background:var(--surface)}
   .dcr-presence-bar h2{margin:0;font-size:15px}
 }
@@ -644,9 +644,9 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 .dcr-publish-steps .act{white-space:nowrap}
 .dcr-publish-preview{padding-top:12px;border-top:1px solid var(--line)}
 .dcr-publish-preview h3{margin:0 0 6px;font-size:11.5px;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
-.dcr-publish-preview .dcr-body{font-size:13.5px;line-height:1.55}
-.dcr-publish-preview .dcr-body ul{margin:6px 0 0;padding-left:18px}
-.dcr-publish-preview .dcr-body p{margin:0}
+.dcr-publish-preview .dcr-publish-body{font-size:13.5px;line-height:1.55}
+.dcr-publish-preview .dcr-publish-body ul{margin:6px 0 0;padding-left:18px}
+.dcr-publish-preview .dcr-publish-body p{margin:0}
 @media(max-width:520px){.dcr-publish-steps li{grid-template-columns:24px minmax(0,1fr)}.dcr-publish-steps li>.act{grid-column:2;justify-self:start}}
 .dcr-publish-box [data-publish-go]:disabled{opacity:.45;cursor:not-allowed}
 /* What is left once the files are read: the comments still open, under the file count and atop Review comments. */

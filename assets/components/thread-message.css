@@ -34,3 +34,4 @@
 .dcr-msg-head :is(.dcr-model,.thread-model,.dcr-role){display:var(--message-extras,revert-layer)}
 .dcr-msg-head :is(.dcr-verdict,.dcr-badge){padding:var(--verdict-pad,revert-layer);border:var(--verdict-border,revert-layer);background:var(--verdict-bg,revert-layer);color:var(--verdict-ink,revert-layer);font-size:var(--verdict-size,revert-layer);font-weight:var(--verdict-weight,revert-layer)}
 .dcr-msg-head :is(.dcr-verdict,.dcr-badge) svg{display:var(--verdict-icon,revert-layer)}
+.dcr-msg .dcr-body{margin-top:var(--message-text-top,revert-layer);color:var(--message-text-ink,revert-layer);font-size:var(--message-text-size,revert-layer);line-height:var(--message-text-line,revert-layer)}

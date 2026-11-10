@@ -75,8 +75,8 @@
   --section-rule:var(--line-neutral-2);--avatar-style:brand;--tag-radius:calc(999px * var(--round));--tag-pad:1px 8px;
   --comment-inset:25px;--comment-row-rule:var(--line-neutral-2);--comment-card-edge:var(--line-neutral-2);--comment-card-sides:1px;--comment-card-radius:calc(12px * var(--round));--comment-card-bg:var(--bg-neutral-1);--comment-card-gap:16px;
   --comment-face-col:28px;--comment-face-size:24px;--comment-message-face:32px;--comment-gap:10px;--comment-line-top:11px;--comment-line-bottom:2px;
-  --comment-title-size:15px;--comment-title-weight:550;--comment-title-line:1.4;--comment-title-ink:var(--ink-neutral-2);--comment-open-title-weight:600;--comment-earlier-ink:var(--ink-neutral-2);
+  --comment-title-size:15px;--comment-title-weight:550;--comment-title-line:1.4;--comment-title-ink:var(--ink-neutral-2);--comment-open-title-weight:600;--comment-earlier-ink:var(--ink-neutral-4);
   --comment-tags:flex;--comment-place:none;--comment-chevron:inline-flex;--comment-quiet:var(--muted);--comment-hover-underline:none;
-  --comment-meta:none;--comment-body-top:0px;--comment-body-bottom:18px;--comment-text-size:16px;--comment-text-line:1.65;--comment-text-width:none;--comment-source:inline-flex;--comment-thread-top:0px;
+  --comment-meta:none;--comment-body-top:0px;--comment-body-bottom:18px;--comment-text-size:16px;--comment-text-line:1.65;--comment-text-width:none;--comment-source:inline-flex;--comment-thread-top:0px;--comment-thread-pad-top:2px;--comment-open-line-bottom:var(--comment-line-bottom);
   --comment-footer-top:0px;--comment-footer-pad-top:14px;--comment-footer-pad-bottom:14px;--comment-footer-indent:0px;--comment-footer-rule:1px solid var(--line-neutral-2);
 }

@@ -69,19 +69,26 @@
 [data-theme^="terminal-"]{
   --review-font-family:"JetBrains Mono Variable","JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
   --mono:"JetBrains Mono Variable","JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
-  --round:0;--shade:transparent;--tag-pad:0 6px;--tag-icon-bg:transparent;--ledger-group-prefix:"## ";--status-h:26px;--pane-ring:var(--terminal-fill);--cursor-line:color-mix(in srgb,var(--terminal-fill) 20%,transparent);
+  --round:0;--shade:transparent;--tag-pad:0 6px;--comment-source-border:0;--tag-icon-bg:transparent;
+  /* Buttons: a label between brackets, no box; the one that matters a solid block; icons bare. */
+  --button-border-width:0;--button-radius:0;--button-shadow:none;--button-bg:transparent;--button-ink:var(--ink);--button-gap:.6ch;--button-weight:500;--button-height:auto;--button-min-height:26px;--button-pad:2px .5ch;
+  --button-open:"[";--button-close:"]";--button-bracket:var(--terminal-overlay0);--button-bracket-hover:var(--terminal-fill);--button-hover-bg:var(--terminal-hover);--button-hover-ink:var(--ink);
+  --button-primary-open:"[";--button-primary-close:"]";--button-primary-bg:transparent;--button-primary-ink:var(--ink);--button-primary-weight:500;--button-primary-pad:2px .5ch;--button-primary-hover-bg:var(--terminal-hover);
+  --button-disabled-ink:var(--terminal-overlay0);--button-disabled-bg:transparent;--button-disabled-opacity:1;--split-join-pad:.4ch;
+  --icon-button-pad:0;--icon-button-ink:var(--muted);--icon-button-border:0;--icon-button-radius:0;--icon-button-shadow:none;--icon-button-bg:transparent;--icon-button-hover-bg:var(--terminal-hover);--icon-button-hover-ink:var(--ink);--icon-button-disabled-opacity:.35;
+  --comment-action-height:26px;--comment-action-pad:2px .5ch;--comment-action-border:0;--comment-action-radius:0;--comment-action-bg:transparent;--comment-action-ink:var(--ink);--comment-action-weight:500;--comment-action-shadow:none;--ledger-group-prefix:"## ";--status-h:26px;--pane-ring:var(--terminal-fill);--cursor-line:color-mix(in srgb,var(--terminal-fill) 20%,transparent);
   font-variant-ligatures:none;scrollbar-color:var(--terminal-surface1) transparent;scrollbar-width:thin;
 }
 /* In the light, rose is also what a removed line is tinted with, so the line the keyboard is on is iris. */
 [data-theme="terminal-light"]{--cursor-line:color-mix(in srgb,var(--terminal-hot) 24%,transparent)}
 [data-theme="terminal-light"] body[data-pane="main"] .code-row.is-cursor>td:first-child{box-shadow:inset 3px 0 var(--terminal-hot)}
-[data-theme^="terminal-"] *{letter-spacing:0!important;scrollbar-color:var(--terminal-surface1) transparent;scrollbar-width:thin}
+[data-theme^="terminal-"] *{letter-spacing:0;scrollbar-color:var(--terminal-surface1) transparent;scrollbar-width:thin}
 /* Everything is the size of the code, so the Code size control zooms the whole terminal. */
-[data-theme^="terminal-"] body *:not(svg,svg *,.dcr-app *){font-size:var(--code-font-size,12px)!important}
+[data-theme^="terminal-"] body *:not(svg,svg *,.dcr-app *){font-size:var(--code-font-size,12px)}
 [data-theme^="terminal-"] ::selection{background:var(--terminal-fill);color:var(--terminal-on-fill)}
 /* Where the keyboard is: a bar down the left edge, like a cursor in the margin, never a box around the thing. */
-[data-theme^="terminal-"] :focus-visible:not([tabindex="-1"]){outline:0!important;box-shadow:inset 3px 0 0 var(--terminal-hot)!important}
-@media(prefers-reduced-motion:no-preference){[data-theme^="terminal-"] *{transition-duration:0s!important}}
+[data-theme^="terminal-"] :focus-visible:not([tabindex="-1"]){outline:0;box-shadow:inset 3px 0 0 var(--terminal-hot)}
+@media(prefers-reduced-motion:no-preference){[data-theme^="terminal-"] *{transition-duration:0s}}
 [data-theme^="terminal-"] a{text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
 
 /* --- the status line, as in a modal editor: the mode you are in, where you are and how far, then
@@ -133,32 +140,25 @@
 /* --- controls: brackets instead of boxes --------------------------------------------------------
    A control is its label between brackets; nothing in a toolbar or inside a box has a border of
    its own. Under the pointer it gets the palette's surface colour and its brackets light up. */
-[data-theme^="terminal-"] :is(.btn,.act,.header-button,.icon-button,.view-toggle,.ledger-toggle,#dcr-presence,.file-viewed){border:0;border-radius:0;box-shadow:none;background:transparent}
-[data-theme^="terminal-"] :is(.btn:not(.btn-square,.btn-circle,.focus-file-actions .btn),.act:not(.act-icon),.header-button,.view-toggle,.ledger-toggle,#dcr-presence,.file-viewed){gap:.6ch;font-weight:500;height:auto;min-height:26px;padding:2px .5ch;color:var(--ink)}
-[data-theme^="terminal-"] :is(.btn:not(.btn-square,.btn-circle,.focus-file-actions .btn),.act:not(.act-icon),.header-button,.view-toggle,.ledger-toggle,#dcr-presence,.file-viewed)::before{content:"[";color:var(--terminal-overlay0);font-weight:400}
-[data-theme^="terminal-"] :is(.btn:not(.btn-square,.btn-circle,.focus-file-actions .btn),.act:not(.act-icon),.header-button,.view-toggle,.ledger-toggle,#dcr-presence,.file-viewed)::after{content:"]";position:static;width:auto;height:auto;background:none;box-shadow:none;color:var(--terminal-overlay0);font-weight:400}
-[data-theme^="terminal-"] :is(.btn,.act,.header-button,.icon-button,.view-toggle,.ledger-toggle,#dcr-presence,.file-viewed):hover:not(:disabled){background:var(--terminal-hover);color:var(--ink);border-color:transparent}
-[data-theme^="terminal-"] :is(.btn,.act,.header-button,.view-toggle,.ledger-toggle,#dcr-presence,.file-viewed):hover:not(:disabled)::before,[data-theme^="terminal-"] :is(.btn,.act,.header-button,.view-toggle,.ledger-toggle,#dcr-presence,.file-viewed):hover:not(:disabled)::after{color:var(--terminal-fill)}
-[data-theme^="terminal-"] .view-toggle[aria-expanded="true"],[data-theme^="terminal-"] #dcr-presence[aria-expanded="true"],[data-theme^="terminal-"] .ledger-toggle[aria-expanded="true"]{background:var(--terminal-hover)}
-[data-theme^="terminal-"] .icon-button{padding:0;color:var(--muted)}
+[data-theme^="terminal-"] :is(.act,.header-button,.view-toggle,.ledger-toggle,[id="dcr-presence"],.file-viewed){border:0;border-radius:0;box-shadow:none;background:transparent}
+[data-theme^="terminal-"] :is(.act:not(.act-icon),.header-button,.view-toggle,.ledger-toggle,[id="dcr-presence"],.file-viewed){gap:.6ch;font-weight:500;height:auto;min-height:26px;padding:2px .5ch;color:var(--ink)}
+[data-theme^="terminal-"] :is(.act:not(.act-icon),.header-button,.view-toggle,.ledger-toggle,[id="dcr-presence"],.file-viewed)::before{content:"[";color:var(--terminal-overlay0);font-weight:400}
+[data-theme^="terminal-"] :is(.act:not(.act-icon),.header-button,.view-toggle,.ledger-toggle,[id="dcr-presence"],.file-viewed)::after{content:"]";position:static;width:auto;height:auto;background:none;box-shadow:none;color:var(--terminal-overlay0);font-weight:400}
+[data-theme^="terminal-"] :is(.act,.header-button,.view-toggle,.ledger-toggle,[id="dcr-presence"],.file-viewed):hover:not(:disabled){background:var(--terminal-hover);color:var(--ink);border-color:transparent}
+[data-theme^="terminal-"] :is(.act,.header-button,.view-toggle,.ledger-toggle,[id="dcr-presence"],.file-viewed):hover:not(:disabled)::before,[data-theme^="terminal-"] :is(.act,.header-button,.view-toggle,.ledger-toggle,[id="dcr-presence"],.file-viewed):hover:not(:disabled)::after{color:var(--terminal-fill)}
+[data-theme^="terminal-"] #dcr-presence[aria-expanded="true"]{background:var(--terminal-hover)}
 /* Where Your review has no room for its words (a tablet held upright) it is an icon, as the sidebar's toggle at the other end is: no brackets. */
 @media(min-width:651px) and (max-width:900px){[data-theme^="terminal-"] #ledger-toggle{padding:0 .5ch;color:var(--muted)}[data-theme^="terminal-"] #ledger-toggle::before,[data-theme^="terminal-"] #ledger-toggle::after{content:none}[data-theme^="terminal-"] #ledger-toggle.has-unread::after{content:"";position:absolute;top:3px;right:0;width:8px;height:8px;background:var(--accent)}}
 [data-theme^="terminal-"] .file-viewed{display:inline-flex;align-items:center;cursor:pointer}
+[data-theme^="terminal-"] :is(.pager,.focus-file-actions){--button-open:none;--button-close:none;--button-pad:initial;--button-min-height:initial;--button-height:initial;--button-gap:initial;--button-weight:initial}
 /* The one action that matters is a solid block, as a focused button is in a terminal. */
-[data-theme^="terminal-"] :is(.btn-primary,.act-primary,.act-gh,.dcr-send:not(:disabled)){background:var(--terminal-fill);color:var(--terminal-on-fill);font-weight:700}
-[data-theme^="terminal-"] :is(.btn-primary,.act-primary,.act-gh)::before,[data-theme^="terminal-"] :is(.btn-primary,.act-primary,.act-gh)::after{content:none}
-[data-theme^="terminal-"] :is(.btn-primary,.act-primary,.act-gh):not(:disabled){padding:2px 1.5ch}
-[data-theme^="terminal-"] :is(.btn-primary,.act-primary,.act-gh,.dcr-send):hover:not(:disabled){background:color-mix(in srgb,var(--terminal-fill) 82%,var(--ink));color:var(--terminal-on-fill)}
 /* The text box's send button is the one filled button on a comment: it has to read as "this sends". */
 [data-theme^="terminal-"] :is(#content,#comment-popover) .dcr-reply .dcr-actions>[type="submit"]:not(:disabled){background:var(--terminal-fill);color:var(--terminal-on-fill);font-weight:700;padding:2px 1.5ch}
 [data-theme^="terminal-"] :is(#content,#comment-popover) .dcr-reply .dcr-actions>[type="submit"]::before,[data-theme^="terminal-"] :is(#content,#comment-popover) .dcr-reply .dcr-actions>[type="submit"]::after{content:none}
 [data-theme^="terminal-"] :is(#content,#comment-popover) .dcr-reply .dcr-actions>[type="submit"]:hover:not(:disabled){background:color-mix(in srgb,var(--terminal-fill) 82%,var(--ink));color:var(--terminal-on-fill)}
-[data-theme^="terminal-"] :is(.btn,.act):disabled{color:var(--terminal-overlay0);background:transparent;opacity:1}
+[data-theme^="terminal-"] .act:disabled{color:var(--terminal-overlay0);background:transparent;opacity:1}
 [data-theme^="terminal-"] .ledger-count{background:var(--terminal-hot);color:var(--terminal-on-fill);font-weight:700}
-[data-theme^="terminal-"] .pager,[data-theme^="terminal-"] .focus-file-actions{border:0!important;background:transparent;box-shadow:none;padding:0}
-[data-theme^="terminal-"] .pager .icon-button,[data-theme^="terminal-"] .focus-file-actions :is(.icon-button,.btn){background:transparent}
-[data-theme^="terminal-"] :is(.pager,.focus-file-actions) :is(.icon-button,.btn):hover:not(:disabled){background:var(--terminal-hover)}
-[data-theme^="terminal-"] .icon-button:disabled{opacity:.35}
+[data-theme^="terminal-"] .pager{border:0;background:transparent;box-shadow:none;padding:0}
 
 /* Tabs and either/or switches: a filled track, the choice a solid block. */
 [data-theme^="terminal-"] :is(.segmented,.dcr-views){padding:0;gap:0;border:0;background:var(--terminal-hover)}
@@ -167,16 +167,15 @@
 [data-theme^="terminal-"] :is(.segmented,.dcr-views) button[aria-pressed="true"]{background:var(--terminal-fill);color:var(--terminal-on-fill);box-shadow:none;font-weight:700}
 [data-theme^="terminal-"] .dcr-views b{background:transparent;color:inherit}
 /* Fields are filled, not outlined, so a field inside a box never draws a second box. */
-[data-theme^="terminal-"] :is(.select,.input,.textarea,textarea,#search){border:0;background:var(--terminal-hover);box-shadow:none;outline-offset:0;color:var(--ink);caret-color:var(--terminal-hot)}
-[data-theme^="terminal-"] :is(.select,.input,.textarea,textarea,#search)::placeholder{color:var(--terminal-overlay1)}
+[data-theme^="terminal-"] :is(.select,.input,.textarea,textarea,[id="search"]){border:0;background:var(--terminal-hover);box-shadow:none;outline-offset:0;color:var(--ink);caret-color:var(--terminal-hot)}
+[data-theme^="terminal-"] :is(.select,.input,.textarea,textarea,[id="search"])::placeholder{color:var(--terminal-overlay1)}
 /* The app's address bar is one field: the ring is the bar's own line, with no glow and no second box around the text in it. */
 [data-theme^="terminal-"] .dcr-app-address:focus-within{border-color:var(--terminal-hot);box-shadow:none}
-[data-theme^="terminal-"] .dcr-app-address input:focus-visible{outline:0!important;box-shadow:none!important}
+[data-theme^="terminal-"] .dcr-app-address input:focus-visible{outline:0;box-shadow:none}
 /* The reply box is one box: its frame shows the focus, so the text in it has no fill or mark of its own. */
 [data-theme^="terminal-"] :is(.dcr-compose,.gh-preview-field):focus-within{border-color:var(--terminal-hot);box-shadow:none}
-/* (:not(#search) only lifts this over the rule for every field above, which names #search.) */
-[data-theme^="terminal-"] :is(.dcr-compose,.gh-preview-field) :is(textarea,input):not(#search){background:transparent}
-[data-theme^="terminal-"] :is(.dcr-compose,.gh-preview-field) :is(textarea,input):focus-visible{box-shadow:none!important}
+[data-theme^="terminal-"] :is(.dcr-compose,.gh-preview-field) :is(textarea,input){background:transparent}
+[data-theme^="terminal-"] :is(.dcr-compose,.gh-preview-field) :is(textarea,input):focus-visible{box-shadow:none}
 /* A spinner is the terminal's own: a bar turning in steps, | / - \. A ring with square corners is a box with one odd side. */
 [data-theme^="terminal-"] :is(.gh-spinner,.dcr-app-prep-spin){border:0;border-radius:0;background:linear-gradient(currentColor,currentColor) center/2px 100% no-repeat;animation-timing-function:steps(8)}
 [data-theme^="terminal-"] .dcr-app-prep-spin{color:var(--accent)}
@@ -184,7 +183,8 @@
 [data-theme^="terminal-"] .toggle{border-color:var(--terminal-overlay0);color:var(--terminal-overlay1)}
 [data-theme^="terminal-"] .toggle:checked{background:var(--terminal-fill);border-color:var(--terminal-fill);color:var(--terminal-on-fill)}
 [data-theme^="terminal-"] .checkbox{border-color:var(--terminal-overlay0)}
-[data-theme^="terminal-"] kbd:not(#bar-keys){background:var(--terminal-hover);color:var(--ink);border:0;box-shadow:none}
+[data-theme^="terminal-"] kbd{background:var(--terminal-hover);border:0;box-shadow:none}
+[data-theme^="terminal-"] kbd:not(#bar-keys){color:var(--ink)}
 
 /* --- the walkthrough: a list with a solid cursor bar ------------------------------------------- */
 [data-theme^="terminal-"] .sidebar{background:var(--canvas)}
@@ -198,16 +198,17 @@
   [data-theme^="terminal-"] body.ledger-open:not(.zen) .ledger{border:0;outline:1px solid var(--line);outline-offset:-1px}
   [data-theme^="terminal-"] body.ledger-open:not(.zen)[data-pane="ledger"] .ledger{outline-color:var(--pane-ring)}
 }
-[data-theme^="terminal-"] .sidebar nav button{margin:0;padding:6px 1ch;border:0}
+[data-theme^="terminal-"] .sidebar nav button{margin:0;border:0}
+[data-theme^="terminal-"] .sidebar nav button:not(.nav-file){padding:6px 1ch}
 [data-theme^="terminal-"] .step-number{border:0;background:transparent;color:var(--muted);width:3ch;flex-basis:3ch;justify-content:start}
 [data-theme^="terminal-"] .sidebar nav button:hover{background:var(--terminal-hover);color:var(--ink)}
 [data-theme^="terminal-"] .sidebar nav .menu>li>button[data-view][aria-current="page"],[data-theme^="terminal-"] .sidebar nav .menu>li>button[data-view][aria-current="page"]:hover{background:var(--terminal-fill);color:var(--terminal-on-fill)}
-[data-theme^="terminal-"] .sidebar nav .menu>li>button[data-view][aria-current="page"] *{color:inherit!important}
+[data-theme^="terminal-"] .sidebar nav .menu>li>button[data-view][aria-current="page"] *{color:inherit}
 [data-theme^="terminal-"] .sidebar nav .menu>li>button[data-view][aria-current="page"] .step-number{background:transparent;box-shadow:none;border:0;font-weight:700}
 /* The file being read is the list's cursor line, as in a terminal's picker: a pointer in the margin
    and a bar the width of the row. The pointer says the keyboard is here, so no focus bar joins it. */
 [data-theme^="terminal-"] .sidebar nav button.nav-file{position:relative;overflow:visible}
-[data-theme^="terminal-"] .sidebar nav button.nav-file[aria-current="location"],[data-theme^="terminal-"] .sidebar nav button.nav-file[aria-current="location"]:hover{background:var(--terminal-hover);box-shadow:none!important}
+[data-theme^="terminal-"] .sidebar nav button.nav-file[aria-current="location"],[data-theme^="terminal-"] .sidebar nav button.nav-file[aria-current="location"]:hover{background:var(--terminal-hover);box-shadow:none}
 [data-theme^="terminal-"] .sidebar nav button.nav-file[aria-current="location"]::before{content:">";position:absolute;left:-2ch;top:6px;color:var(--terminal-hot);font:700 12px/1.55 var(--mono)}
 [data-theme^="terminal-"] .sidebar nav button.nav-file[aria-current="location"] .nav-file-name{color:var(--ink);font-weight:700}
 /* A component is a heading with its files under it, a line each, and no card around them: its Ruby
@@ -218,7 +219,7 @@
 [data-theme^="terminal-"] .sidebar nav .nav-component-files{display:block;padding:0 0 4px}
 [data-theme^="terminal-"] .sidebar nav .nav-component-files button{position:relative;overflow:visible;display:flex;justify-content:flex-start;width:100%;min-height:0;padding:3px 6px 3px 2ch;gap:7px;border:0;background:transparent;color:var(--ink);font:500 12px/1.55 var(--mono)}
 [data-theme^="terminal-"] .sidebar nav .nav-component-files button:hover{background:var(--terminal-hover)}
-[data-theme^="terminal-"] .sidebar nav .nav-component-files button[aria-current="location"]{background:var(--terminal-hover);color:var(--ink);font-weight:700;box-shadow:none!important}
+[data-theme^="terminal-"] .sidebar nav .nav-component-files button[aria-current="location"]{background:var(--terminal-hover);color:var(--ink);font-weight:700;box-shadow:none}
 [data-theme^="terminal-"] .sidebar nav .nav-component-files button[aria-current="location"]::before{content:">";position:absolute;left:-2ch;top:3px;color:var(--terminal-hot);font:700 12px/1.55 var(--mono)}
 [data-theme^="terminal-"] .sidebar nav button.nav-match:is(:hover,[aria-current="true"]){background:var(--terminal-hover)}
 [data-theme^="terminal-"] .nav-match mark{background:var(--terminal-hot);color:var(--terminal-on-fill)}
@@ -260,10 +261,11 @@
 [data-theme^="terminal-"] .view-keys kbd{text-transform:none}
 [data-theme^="terminal-"] .review-note-popover[popover]{border-color:var(--accent)}
 [data-theme^="terminal-"] .comment-popover:not(.review-note-popover)[popover]{border-color:var(--yours)}
-[data-theme^="terminal-"] .popover-heading{text-transform:uppercase;font-weight:700;background:transparent}
+[data-theme^="terminal-"] .popover-heading{text-transform:uppercase;background:transparent}
 [data-theme^="terminal-"] :is(.risk-rank,.file-card,.comment-popover,.view-menu,.modal-box,#dcr-presence-card) :is(.risk-tag,.badge,.dcr-intro-ico,.dcr-adv-row){border:0}
 [data-theme^="terminal-"] .risk-tag{background:var(--terminal-hover);color:var(--ink-neutral-4);padding:0 1ch}
-[data-theme^="terminal-"] .badge:not(#scope *){text-transform:uppercase;padding:0 1ch;font-weight:500;border:0}
+[data-theme^="terminal-"] .badge{text-transform:uppercase;font-weight:500;border:0}
+[data-theme^="terminal-"] .badge:not(#scope *){padding:0 1ch}
 [data-theme^="terminal-"] .diff-table,[data-theme^="terminal-"] .diff-table td.gutter{background:var(--surface)}
 [data-theme^="terminal-"] .diff-table td.gutter.add{background:var(--added)}[data-theme^="terminal-"] .diff-table td.gutter.del{background:var(--removed)}
 [data-theme^="terminal-"] .file-card>summary{background:var(--canvas)}
@@ -288,21 +290,15 @@
 [data-theme^="terminal-"] .related-tests[open]::after{content:"╰─ end of related tests";display:block;margin-left:1ch;color:var(--terminal-overlay0);line-height:1.6em;white-space:pre}
 [data-theme^="terminal-"] :is(.file-icon,.thread-priority,.comment-trigger,.preview-toggle){border:0}
 [data-theme^="terminal-"] .file-icon{color:var(--terminal-overlay1);padding:0}
-[data-theme^="terminal-"] .thread-priority{background:var(--terminal-hover);padding:0 1ch}
 [data-theme^="terminal-"] .preview-toggle{background:transparent;gap:.6ch;padding:2px .5ch}
 [data-theme^="terminal-"] .preview-toggle::before{content:"[";color:var(--terminal-overlay0)}[data-theme^="terminal-"] .preview-toggle::after{content:"]";color:var(--terminal-overlay0)}
 [data-theme^="terminal-"] .preview-toggle:hover{background:var(--terminal-hover)}[data-theme^="terminal-"] .preview-toggle:hover::before,[data-theme^="terminal-"] .preview-toggle:hover::after{color:var(--terminal-fill)}
 [data-theme^="terminal-"] .more-list{border:3px double var(--terminal-overlay0);background:var(--surface);box-shadow:none}
 /* The agent's split control is one bracketed thing, [ mark Apply this v ], not two; its menu rows have no brackets. */
-[data-theme^="terminal-"] .dcr-split:not(.is-narrow):has(.dcr-split-menu:not([hidden])) .dcr-split-main .btn::after{content:none!important}
-[data-theme^="terminal-"] .dcr-split:not(.is-narrow):has(.dcr-split-menu:not([hidden])) .dcr-split-main .btn{padding-right:0}
-[data-theme^="terminal-"] .dcr-split:not(.is-narrow) .dcr-split-more::before{content:none!important}
-[data-theme^="terminal-"] .dcr-split:not(.is-narrow) .dcr-split-more{padding-left:.4ch}
-[data-theme^="terminal-"] .dcr-split .more-list .btn::before,[data-theme^="terminal-"] .dcr-split .more-list .btn::after{content:none!important}
 /* Update and its menu are one control too: one pair of brackets. */
-[data-theme^="terminal-"] #dcr-update:has(+.dcr-update-more:not([hidden]))::after{content:none!important}
+[data-theme^="terminal-"] #dcr-update:has(+.dcr-update-more:not([hidden]))::after{content:none}
 [data-theme^="terminal-"] #dcr-update:has(+.dcr-update-more:not([hidden])){padding-right:0}
-[data-theme^="terminal-"] .dcr-update-more>summary::before{content:none!important}
+[data-theme^="terminal-"] .dcr-update-more>summary::before{content:none}
 [data-theme^="terminal-"] .dcr-update-more>summary{padding-left:.4ch}
 [data-theme^="terminal-"] .dcr-update-more{margin-left:0}
 [data-theme^="terminal-"] .leader-menu button:hover{background:var(--terminal-hover)}
@@ -322,7 +318,7 @@
 [data-theme^="terminal-"] .dcr-jev-verdict.is-llm{background:var(--terminal-peach)}
 [data-theme^="terminal-"] .dcr-jev-verdict.is-none{background:var(--terminal-green)}
 [data-theme^="terminal-"] .dcr-jev p{padding:6px 0}
-[data-theme^="terminal-"] .dcr-jev:has(.btn-primary){padding-top:4px;padding-bottom:4px}
+[data-theme^="terminal-"] .dcr-jev:has([data-dcr-jev="on"]){padding-top:4px;padding-bottom:4px}
 [data-theme^="terminal-"] .dcr-jev-list{border-color:var(--terminal-hot);box-shadow:none}
 [data-theme^="terminal-"] .dcr-jev-list li button:hover{background:var(--terminal-hover)}
 /* the recorder card (a review served without --app) has its own stylesheet: its buttons follow the theme too */
@@ -364,8 +360,10 @@
 [data-theme^="terminal-"] .overview-reading .risk-fold>.risk-rank{padding:6px 0 0 2ch}
 /* The bar, as a terminal's prompt line: square, no shadow, the field bare, its button in brackets,
    and Your review's groups headed like the rest of the page. */
-[data-theme^="terminal-"] .review-bar{border-radius:0;box-shadow:none;background:var(--surface)}
-[data-theme^="terminal-"] .review-bar textarea{background:transparent!important;border:0!important}
+[data-theme^="terminal-"] .review-bar{border-radius:0}
+/* In the dark the bar is lifted as everywhere else (report.css); in the light it is the page's own surface. */
+[data-theme="terminal-light"] .review-bar{box-shadow:none;background:var(--surface)}
+[data-theme^="terminal-"] .review-bar textarea{background:transparent;border:0}
 [data-theme^="terminal-"] .review-bar .bar-primary{border-radius:0;background:transparent;color:var(--accent)}
 [data-theme^="terminal-"] .review-bar .bar-primary::before{content:"[ ";color:var(--terminal-overlay0)}
 [data-theme^="terminal-"] .review-bar .bar-primary::after{content:" ]";color:var(--terminal-overlay0)}

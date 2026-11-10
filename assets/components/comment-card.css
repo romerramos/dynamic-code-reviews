@@ -12,7 +12,7 @@
 /* Open: the inset becomes the card's edge and its parts' padding. */
 .ui-comment:has(>.thread-details[open]){--comment-pad:calc(var(--comment-inset) - var(--comment-card-sides));margin:0 0 var(--comment-card-gap);border-width:1px var(--comment-card-sides);border-color:var(--comment-card-edge);border-radius:var(--comment-card-radius);background:var(--comment-card-bg)}
 .ui-comment>.thread-details>.ui-comment-line{padding-inline:var(--comment-pad)}
-.ui-comment>.thread-details[open]>.ui-comment-line{padding-top:calc(var(--comment-line-top) - 1px)}
+.ui-comment>.thread-details[open]>.ui-comment-line{padding-top:calc(var(--comment-line-top) - 1px);padding-bottom:var(--comment-open-line-bottom)}
 /* The row above an open card gives it its rule, so there is one line between them, not two. */
 .ui-comment:has(+ .ui-comment>.thread-details[open]){border-bottom-color:transparent}
 /* Under the line: a quiet line about it, its words, the way to its code, its conversation and its
@@ -22,7 +22,7 @@
 .ui-comment-body .thread-meta i{font-style:normal;opacity:.6}
 .ui-comment-body .comment-discussion{max-width:var(--comment-text-width);margin:0;color:var(--ink-neutral-3);font-size:var(--comment-text-size);line-height:var(--comment-text-line)}
 .ui-comment>.thread-details>.thread-source{display:var(--comment-source);width:auto;margin:0 0 18px calc(var(--comment-pad) + var(--comment-indent))}
-.ui-comment>.dcr-thread{margin:var(--comment-thread-top) 0 0;padding:2px var(--comment-pad) 0;border:0;background:transparent}
+.ui-comment>.dcr-thread{max-width:calc(var(--comment-text-width) + var(--comment-indent) + 2 * var(--comment-pad));margin:var(--comment-thread-top) 0 0;padding:var(--comment-thread-pad-top) var(--comment-pad) 0;border:0;background:transparent}
 .ui-comment>.thread-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin:var(--comment-footer-top) 0 0;padding:var(--comment-footer-pad-top) var(--comment-pad) var(--comment-footer-pad-bottom) calc(var(--comment-pad) + var(--comment-footer-indent));border-top:var(--comment-footer-rule);background:transparent}
 .ui-comment>.thread-footer .comment-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0}
 /* Resolved and earlier comments are the same card; closed, an earlier one's title is quieter. */
@@ -31,11 +31,12 @@
 .overview-reading{display:grid;grid-template-columns:var(--comment-inset) minmax(0,1fr) var(--comment-inset);max-width:calc(840px + 2 * var(--comment-inset))}
 .overview-reading>*{grid-column:2;min-width:0}
 .overview-reading>:is(.overview-comments,#my-review,.overview-settled){grid-column:1 / -1}
-.overview-reading>:is(.overview-comments,#my-review,.overview-settled)>:not(.ui-comment,.overview-fold),.overview-reading .overview-fold>summary{margin-inline:var(--comment-inset)}
+.overview-reading>:is(.overview-comments,#my-review,.overview-settled)>:not(.ui-comment,.overview-fold),.overview-reading>.overview-settled>.overview-fold>summary{margin-inline:var(--comment-inset)}
 main#content:has(>.overview-reading){padding-inline:max(0px,calc(28px - var(--comment-inset)))}
-.ui-comment>.thread-details>.thread-source{border:1px solid var(--line-neutral-2);border-radius:calc(7px * var(--round));overflow:hidden}
+.ui-comment>.thread-details>.thread-source{border:var(--comment-source-border,1px solid var(--line-neutral-2));border-radius:calc(7px * var(--round));overflow:hidden}
 /* The conversation's messages keep the comment's columns: faces on its face column, words on its title's. */
 .ui-comment{--message-face-col:var(--comment-face-col);--message-gap:var(--comment-gap);--message-face:var(--comment-message-face)}
 /* Its actions, drawn by the theme's --comment-action-* where it sets them, else as the page draws buttons. */
 .ui-comment>.thread-footer :is(.btn,summary.btn){height:var(--comment-action-height,revert-layer);min-height:var(--comment-action-height,revert-layer);padding:var(--comment-action-pad,revert-layer);border:var(--comment-action-border,revert-layer);border-radius:var(--comment-action-radius,revert-layer);background:var(--comment-action-bg,revert-layer);box-shadow:var(--comment-action-shadow,revert-layer);color:var(--comment-action-ink,revert-layer);font-size:var(--comment-action-size,revert-layer);font-weight:var(--comment-action-weight,revert-layer)}
 .ui-comment.is-own .thread-meta{display:var(--comment-own-meta,var(--comment-meta))}
+.ui-comment>.thread-footer .btn{--avatar-size:var(--comment-action-face)}
