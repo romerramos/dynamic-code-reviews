@@ -1391,8 +1391,29 @@ button.risk-path:hover .path-name{text-decoration:underline}
 .review-bar{display:none;position:absolute;z-index:30;left:50%;bottom:calc(var(--status-h) + 22px);transform:translateX(-50%);width:min(640px,calc(100% - 28px));min-height:46px;align-items:center;gap:8px;padding:7px 8px 7px 14px;border:1px solid var(--line);border-radius:calc(14px * var(--round));background:var(--surface);color:var(--ink);box-shadow:0 8px 28px color-mix(in srgb,var(--shade) 9%,transparent);font:13px/1.4 var(--review-font-family)}
 .review-bar [hidden]{display:none}
 .review-bar form{flex:1;min-width:0;display:flex}
-.review-bar input{flex:1;min-width:0;height:30px;padding:0;border:0;outline:0;background:transparent;color:var(--ink);font:14px/1.4 var(--review-font-family)}
-.review-bar input::placeholder{color:var(--muted);opacity:1}
+/* The field is a prompt box: one line in the bar, and as the text wraps it grows upward to about nine
+   lines, then scrolls. Grown, the words take the whole width and the rest drops to a row under them. */
+.review-bar textarea{flex:1;min-width:0;height:30px;max-height:202px;padding:4px 0;border:0;outline:0;background:transparent;color:var(--ink);font:14px/22px var(--review-font-family);resize:none;overflow-y:hidden;box-sizing:border-box}
+.review-bar textarea.is-full{overflow-y:auto}
+.review-bar textarea::placeholder{color:var(--muted);opacity:1}
+#bar-hint{display:none}
+.review-bar.is-tall{flex-wrap:wrap;padding-top:8px;row-gap:4px}
+.review-bar.is-tall #bar-form{flex:1 0 100%;order:-1;padding-right:6px}
+.review-bar.is-tall #bar-hint{display:block;flex:1;min-width:0;color:var(--muted);font-size:12px;white-space:nowrap}
+.review-bar.is-tall :is(#bar-meta,#bar-update,.bar-keys){display:none}
+/* What became of the question just sent: a speech bubble over the agent's mark, its tail pointing at it. */
+#bar-bubble{position:absolute;left:4px;bottom:calc(100% + 12px);display:inline-flex;align-items:center;gap:8px;height:32px;max-width:calc(100% - 8px);padding:0 12px;border:1px solid var(--line);border-radius:calc(12px * var(--round));background:var(--surface);color:var(--ink);font-size:12.5px;font-weight:400;box-shadow:0 6px 18px color-mix(in srgb,var(--shade) 7%,transparent);cursor:pointer}
+#bar-bubble:hover{color:var(--ink)}
+#bar-bubble[hidden]{display:none}
+#bar-bubble::after{content:"";position:absolute;left:14px;bottom:-6px;width:10px;height:10px;box-sizing:border-box;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--surface);transform:rotate(45deg)}
+#bar-bubble span{overflow:hidden;text-overflow:ellipsis}
+#bar-bubble b{font-weight:600}
+.bar-bubble-dots{display:inline-flex;gap:3px}
+.bar-bubble-dots i{width:4px;height:4px;border-radius:50%;background:var(--muted);animation:bar-bubble-dot 1.2s ease-in-out infinite}
+.bar-bubble-dots i:nth-child(2){animation-delay:.2s}
+.bar-bubble-dots i:nth-child(3){animation-delay:.4s}
+@keyframes bar-bubble-dot{0%,60%,100%{opacity:.25}30%{opacity:1}}
+@media(prefers-reduced-motion:reduce){.bar-bubble-dots i{animation:none;opacity:.6}}
 .review-bar button{flex:none;height:30px;padding:0 11px;border:0;border-radius:calc(9px * var(--round));background:transparent;color:var(--muted);font:inherit;white-space:nowrap}
 .review-bar button:hover{color:var(--ink)}
 .review-bar .bar-soft{max-width:46%;overflow:hidden;text-overflow:ellipsis;background:var(--bg-neutral-3);color:var(--ink);font-weight:550}

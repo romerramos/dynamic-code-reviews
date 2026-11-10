@@ -674,23 +674,21 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 /* Each comment one quiet row, as on the Overview: the agent's mark, the title, the file and line;
    under it, the marks of the agents who answered, and new when it is. */
 [data-theme^="minimal-"] .ledger-item::before{display:none}
-[data-theme^="minimal-"] .ledger-item[data-conversation] .ledger-place,[data-theme^="minimal-"] .ledger-item[data-conversation] .ledger-by{display:none}
-[data-theme^="minimal-"] .ledger-item[data-conversation] .ledger-msg{grid-template-columns:18px minmax(0,1fr) auto;column-gap:12px;align-items:baseline;padding:14px 18px 0 22px}
-[data-theme^="minimal-"] .ledger-item[data-conversation] .ledger-msg>:is(.comment-avatar,.dcr-avatar){grid-row:auto;align-self:start;width:18px;height:18px;margin-top:1px;background:transparent;box-shadow:none;color:var(--ink)}
-[data-theme^="minimal-"] .ledger-item[data-conversation] .ledger-msg>:is(.comment-avatar,.dcr-avatar) :is(svg,img){width:15px;height:15px}
-[data-theme^="minimal-"] .ledger-item[data-conversation] .ledger-subject{font-size:14px;line-height:1.45}
-[data-theme^="minimal-"] .ledger-item[data-conversation] .ledger-at{display:block;padding:0;border:0;background:none;color:var(--minimal-faint);font:11.5px var(--mono);white-space:nowrap;cursor:pointer}
-[data-theme^="minimal-"] .ledger-item[data-conversation] .ledger-at:hover{color:var(--ink);text-decoration:underline}
-[data-theme^="minimal-"] .ledger-item[data-conversation]{display:flex;flex-wrap:wrap;align-items:center;padding-bottom:12px}
-[data-theme^="minimal-"] .ledger-item[data-conversation]>.ledger-msg{flex:1 0 100%}
-[data-theme^="minimal-"] .ledger-item[data-conversation] .dcr-peek{width:auto;padding:5px 0 0 52px}
-[data-theme^="minimal-"] .ledger-item[data-conversation] .dcr-peek :is(b,.dcr-peek-when,.dcr-peek-end){display:none}
-[data-theme^="minimal-"] .ledger-item[data-conversation] .dcr-peek-faces{gap:6px}
-[data-theme^="minimal-"] .ledger-item[data-conversation] .dcr-peek-faces>:is(.dcr-avatar,.comment-avatar){width:14px;height:14px;margin:0;background:transparent;box-shadow:none;color:var(--minimal-faint)}
-[data-theme^="minimal-"] .ledger-item[data-conversation] .dcr-peek-faces>* :is(svg,img){width:13px;height:13px}
-[data-theme^="minimal-"] .ledger-item[data-conversation] .ledger-meta{display:flex;align-items:center;gap:6px;margin:5px 0 0 8px;padding:0}
-[data-theme^="minimal-"] .ledger-item[data-conversation] .dcr-new{padding:0;border:0;background:none;color:var(--ink-neutral-3);font-size:11.5px;font-weight:400}
-[data-theme^="minimal-"] .ledger-item[data-conversation] .dcr-new::before{content:"· "}
+[data-theme^="minimal-"] .ledger-item[data-ledger] .ledger-place,[data-theme^="minimal-"] .ledger-item[data-ledger] .ledger-by{display:none}
+[data-theme^="minimal-"] .ledger-item[data-ledger] .ledger-msg{grid-template-columns:18px minmax(0,1fr) auto;column-gap:12px;align-items:baseline;padding:14px 18px 0 22px}
+[data-theme^="minimal-"] .ledger-item[data-ledger] .ledger-msg>:is(.comment-avatar,.dcr-avatar){grid-row:auto;align-self:start;width:18px;height:18px;margin-top:1px;background:transparent;box-shadow:none;color:var(--ink)}
+[data-theme^="minimal-"] .ledger-item[data-ledger] .ledger-msg>:is(.comment-avatar,.dcr-avatar) :is(svg,img){width:15px;height:15px}
+[data-theme^="minimal-"] .ledger-item[data-ledger] .ledger-subject{font-size:14px;line-height:1.45}
+[data-theme^="minimal-"] .ledger-item[data-ledger] .ledger-at{display:block;padding:0;border:0;background:none;color:var(--minimal-faint);font:11.5px var(--mono);white-space:nowrap;cursor:pointer}
+[data-theme^="minimal-"] .ledger-item[data-ledger] .ledger-at:hover{color:var(--ink);text-decoration:underline}
+[data-theme^="minimal-"] .ledger-item[data-ledger]{display:flex;flex-wrap:wrap;align-items:center;padding-bottom:12px}
+[data-theme^="minimal-"] .ledger-item[data-ledger]>.ledger-msg{flex:1 0 100%}
+[data-theme^="minimal-"] .ledger-item[data-ledger] .dcr-peek{width:auto;padding:5px 0 0 52px}
+[data-theme^="minimal-"] .ledger-item[data-ledger] .dcr-peek :is(b,.dcr-peek-when,.dcr-peek-end){display:none}
+[data-theme^="minimal-"] .ledger-item[data-ledger] .dcr-peek-faces{gap:6px}
+[data-theme^="minimal-"] .ledger-item[data-ledger] .dcr-peek-faces>:is(.dcr-avatar,.comment-avatar){width:14px;height:14px;margin:0;background:transparent;box-shadow:none;color:var(--minimal-faint)}
+[data-theme^="minimal-"] .ledger-item[data-ledger] .dcr-peek-faces>* :is(svg,img){width:13px;height:13px}
+[data-theme^="minimal-"] .ledger-item[data-ledger] .ledger-meta{display:flex;align-items:center;gap:6px;margin:5px 0 0 8px;padding:0}
 /* Template previews have the Previews tab and ⌘K. */
 [data-theme^="minimal-"] .ledger-previews{display:none}
 
@@ -789,3 +787,30 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] #ledger .dcr-detail .dcr-op>.dcr-avatar svg{width:13px;height:13px}
 [data-theme^="minimal-"] #ledger .dcr-detail .dcr-op-line{color:var(--minimal-faint);font-size:12px}
 [data-theme^="minimal-"] #ledger .dcr-detail .dcr-op-line strong{color:inherit;font-weight:400}
+
+/* --- Your review in two groups, as on the Overview: the agent's comments, then yours. A comment the
+   agent adds in a new revision joins its own group, so nothing lands in the middle of yours. --- */
+[data-theme^="minimal-"] #ledger .ledger-list{display:flex;flex-direction:column}
+[data-theme^="minimal-"] #ledger .ledger-item[data-by="agent"]{order:0}
+[data-theme^="minimal-"] #ledger .ledger-item[data-ledger]:not([data-conversation]){order:1}
+[data-theme^="minimal-"] #ledger .ledger-item[data-by="person"]{order:2}
+[data-theme^="minimal-"] #ledger .ledger-item:is(:nth-child(1 of [data-by="agent"]),:nth-child(1 of [data-ledger]:not([data-conversation])),:nth-child(1 of [data-by="person"]))::before{position:static;display:block;flex:1 0 100%;width:auto;height:auto;padding:16px 22px 2px;background:none;color:var(--minimal-faint);font-size:12px}
+[data-theme^="minimal-"] #ledger .ledger-item:nth-child(1 of [data-by="agent"])::before{content:"Agent comments"}
+[data-theme^="minimal-"] #ledger .ledger-item:nth-child(1 of [data-ledger]:not([data-conversation]))::before{content:"Your comments"}
+[data-theme^="minimal-"] #ledger .ledger-item:nth-child(1 of [data-by="person"])::before{content:"From GitHub"}
+/* Your own row is drawn as the agent's: your face, the short title, the file and line, who answered. */
+[data-theme^="minimal-"] #ledger .ledger-item[data-ledger]:not([data-conversation]) .ledger-meta,[data-theme^="minimal-"] #ledger .ledger-item .dcr-new{display:none}
+[data-theme^="minimal-"] #ledger .ledger-item[data-ledger] .ledger-msg>.comment-avatar img{border-radius:50%}
+[data-theme^="minimal-"] #ledger .ledger-item[data-ledger] .ledger-subject{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+[data-theme^="minimal-"] #ledger .ledger-item[data-ledger] .ledger-at:has(.name-head){display:flex;max-width:150px}
+[data-theme^="minimal-"] #ledger .ledger-at .name-head{min-width:0;overflow:hidden;text-overflow:ellipsis}
+[data-theme^="minimal-"] #ledger .ledger-at .name-tail{flex:none}
+/* On the Overview the comments are headed the same way: Agent comments, then Your comments. */
+[data-theme^="minimal-"] .overview-reading .overview-comments:not(:has(.overview-clear))>h2{display:block;font-size:0}
+[data-theme^="minimal-"] .overview-reading .overview-comments:not(:has(.overview-clear))>h2::before{content:"Agent comments";font-size:12px}
+[data-theme^="minimal-"] .overview-reading .overview-todo{display:none}
+/* Your review is a column of its own here, so the bar centres on what is left without taking it off twice. */
+@media(min-width:741px) and (max-width:1499px){
+  html[data-theme^="minimal-"] body.ledger-open:not(.zen) .review-bar{left:50%;width:min(640px,calc(100% - 28px))}
+}
+[data-theme^="minimal-"] #ledger .dcr-detail-code{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

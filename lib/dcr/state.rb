@@ -258,14 +258,20 @@ module DCR
     # outcome: the agent's finding on a comment after the code changed; it stays on the thread
     # with the revision it was said of, and ends a fix the reviewer asked for. It resolves
     # nothing: the reviewer does.
-    def agent_reply(id, body, key: nil, agent: nil, model: nil, effort: nil, outcome: nil)
+    TITLE_LIMIT = 80
+
+    # title: a short name for the reviewer's own question, which the page lists it by.
+    def agent_reply(id, body, key: nil, agent: nil, model: nil, effort: nil, outcome: nil, title: nil)
       raise ArgumentError, "An outcome is one of: #{OUTCOMES.join(', ')}" unless outcome.nil? || OUTCOMES.include?(outcome)
+      title = title.to_s.gsub(/\s+/, ' ').strip
+      raise ArgumentError, "A title is limited to #{TITLE_LIMIT} characters" if title.length > TITLE_LIMIT
       update do |state|
         # A thread carried across revisions exists under several keys; the reviewer reads the newest.
         key ||= state['threads'].select { |_, threads| threads.key?(id) }.keys.max_by { |name| name.split(':').last.to_i }
         raise ArgumentError, "No thread #{id}. Reply to an id printed by `dcr wait`." unless key
         message = add_message(state, key, id, 'agent', body, agent: agent, model: model, effort: effort, outcome: outcome)
         thread = thread(state, key, id)
+        thread['title'] = title unless title.empty?
         if outcome
           thread['outcome'] = {'verdict' => outcome, 'revision' => key.split(':').last.to_i, 'at' => message['at'], 'agent' => message['agent']}.compact
           thread['fix']['state'] = 'done' if thread['fix']

@@ -3033,7 +3033,15 @@
     // One list, in the order things were said: your comments here, and on the served page the
     // conversations you joined and the comments on GitHub, each row drawn the same way (ledgerRow).
     const ordered = entries.map((entry, index) => [entry, index]).sort(([a, i], [b, j]) => (Date.parse(a.at) || 0) - (Date.parse(b.at) || 0) || i - j).map(([entry]) => entry);
-    const row = entry => `<li class="ledger-item" data-ledger="${escape(entry.id)}" data-at="${escape(entry.at)}" data-state="${entry.resolved ? 'resolved' : 'draft'}">${ReviewTools.ledgerPlace(entry.id, entry.path === 'General' ? '' : entry.path, entry.where)}<div class="ledger-msg">${youAvatar()}${ReviewTools.ledgerBy(youName(), entry.at, 'you-name')}<span class="ledger-subject">${escape(entry.subject)}</span></div><div class="ledger-meta">${ghBadgeSlot(comments.find(comment => comment.id === entry.id) || {})}<button type="button" data-resolve="${escape(entry.id)}">${entry.resolved ? 'Reopen' : 'Resolve'}</button><button type="button" data-copy="${escape(entry.id)}">Copy for LLMs</button></div></li>`;
+    // The same place in a few characters (store_configuration.rb:12), for a theme that shows it beside the title.
+    const ledgerAt = entry => {
+      const comment = comments.find(item => item.id === entry.id);
+      if (entry.path === 'General' || !entry.path || !comment?.start) return '';
+      // A long name is cut in its middle, so its end and the line stay.
+      const label = `${entry.path.split('/').pop()}:${comment.start}`;
+      return `<button type="button" class="ledger-at" data-ledger-jump="${escape(entry.id)}" title="${escape(`${entry.path} · ${entry.where}`)}"><span class="name-head">${escape(label.slice(0, -16))}</span><span class="name-tail">${escape(label.slice(-16))}</span></button>`;
+    };
+    const row = entry => `<li class="ledger-item" data-ledger="${escape(entry.id)}" data-at="${escape(entry.at)}" data-state="${entry.resolved ? 'resolved' : 'draft'}">${ReviewTools.ledgerPlace(entry.id, entry.path === 'General' ? '' : entry.path, entry.where)}<div class="ledger-msg">${youAvatar()}${ReviewTools.ledgerBy(youName(), entry.at, 'you-name')}<span class="ledger-subject" title="${escape(entry.subject)}">${escape(shortTitle(entry.subject))}</span>${ledgerAt(entry)}</div><div class="ledger-meta">${ghBadgeSlot(comments.find(comment => comment.id === entry.id) || {})}<button type="button" data-resolve="${escape(entry.id)}">${entry.resolved ? 'Reopen' : 'Resolve'}</button><button type="button" data-copy="${escape(entry.id)}">Copy for LLMs</button></div></li>`;
     const byFile = ordered.length ? `<section class="ledger-group ledger-thread"><ul class="ledger-list" data-ledger-list>${ordered.map(row).join('')}</ul></section>` : '';
     const stepNotes = notes.length ? `<section class="ledger-group"><h3>Step notes</h3><ul class="ledger-list">${notes.map(note => `<li class="ledger-item" data-state="draft"><button type="button" class="ledger-jump" data-ledger-step="${escape(note.id)}"><span class="ledger-where">${escape(note.title)}</span><span class="ledger-subject">${escape(note.text)}</span></button></li>`).join('')}</ul></section>` : '';
     const empty = !entries.length && !notes.length ? '<p class="ledger-note">Select lines in a diff and write a comment. What you say, and what your agent answers, collects here.</p>' : '';
@@ -4155,7 +4163,9 @@
     const stale = !!update && !update.hidden && !update.disabled && update.classList.contains('is-stale');
     $('bar-update').hidden = !stale;
     if (stale) $('bar-update').textContent = update.textContent.trim();
-    const next = barNext();
+    // With words in the field, the button says what Enter does with them.
+    const typed = $('bar-input').value.trim() ? {label: `${composerMode() === 'agent' ? 'Ask' : 'Comment'} ↵`, run: () => $('bar-form').requestSubmit()} : null;
+    const next = typed || barNext();
     barRun = next.run;
     // What is left to settle, when the button says something else: a note that takes you there.
     const todo = document.querySelector('.dcr-todo-link');
@@ -4188,6 +4198,22 @@
   $('bar-nav').addEventListener('click', () => $('nav-toggle').click());
   $('progress-need').addEventListener('click', () => setTimeout(() => document.querySelector('#dcr-jev .dcr-jev-yours')?.click()));
   $('bar-commands').addEventListener('click', () => openPalette());
+  // The field grows with what is written, and the bar takes its tall shape once the text wraps.
+  const fitBarInput = () => {
+    const field = $('bar-input');
+    field.style.height = 'auto';
+    const tall = field.scrollHeight > 32;
+    $('review-bar').classList.toggle('is-tall', tall);
+    field.style.height = `${Math.min(field.scrollHeight, 202)}px`;
+    field.classList.toggle('is-full', field.scrollHeight > 202);
+  };
+  $('bar-input').addEventListener('input', () => { fitBarInput(); queueBar(); });
+  // Enter sends, as in a chat; Shift Enter starts a new line.
+  $('bar-input').addEventListener('keydown', event => {
+    if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
+    event.preventDefault();
+    $('bar-form').requestSubmit();
+  });
   $('bar-form').addEventListener('submit', event => {
     event.preventDefault();
     const entered = splitComment($('bar-input').value);
@@ -4196,6 +4222,8 @@
     const comment = {...(line ? {hunk: line.hunk, side: line.side, start: line.start, end: line.end} : {general: true}), id: `mine-${crypto.randomUUID()}`, at: new Date().toISOString(),
       label: ask ? 'question' : 'thought', decoration: 'non-blocking', audience: ask ? 'agent' : 'pr', subject: entered.subject, discussion: entered.discussion};
     $('bar-input').value = '';
+    fitBarInput();
+    queueBar();
     commitComment(comment, ask ? false : undefined);
     if (ask) composer.sender(comment.id, 'ask');
   });

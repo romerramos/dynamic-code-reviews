@@ -39,6 +39,7 @@ module DCR
       - use a bulleted or numbered list for options and steps, and **bold** for the one thing to remember;
       - label evidence apart from opinion ("**Observed:** ..." then "**Inference:** ...").
       Do not send one long paragraph.
+      The reviewer's own questions (ids that start with mine-) arrive as they typed them. With your first reply to one, add `--title '<a few words>'`: what it asks, under 60 characters, written like your comments' titles. The page lists it by that title.
     TEXT
     # Printed when the reviewer asks for a preview: a task that produces HTML, not a conversation.
     PREVIEW_RULE = <<~TEXT.strip
@@ -670,7 +671,7 @@ module DCR
         known = ReviewSeries.with_posted(series, history, ReviewSeries.latest(series, history)['review']) + Array(state.read.dig('blobs', key, 'personalComments'))
         raise ArgumentError, "No comment #{id} in this review. Give the id of the comment the outcome is about." unless known.any? { |comment| comment['id'] == id }
       end
-      message = state.agent_reply(id, words.join(' '), key: key, agent: author, model: model, effort: effort, outcome: options[:outcome])
+      message = state.agent_reply(id, words.join(' '), key: key, agent: author, model: model, effort: effort, outcome: options[:outcome], title: options[:title])
       return puts(JSON.generate(message)) if options[:json]
       puts "Replied to #{id}#{" (#{options[:outcome]})" if options[:outcome]}."
       check_outcome(series, id, author) if series && options[:second_opinion] != false

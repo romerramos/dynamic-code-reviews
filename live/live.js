@@ -1173,7 +1173,7 @@
   const rowFor = (comment, earlier = false) => {
     const path = earlier ? globalThis.ReviewTools.outdatedWhere(comment)?.path : (globalThis.ReviewTools.anchor(snapshot, comment)?.file.path || globalThis.ReviewTools.outdatedWhere(comment)?.path);
     const at = startedAt(comment, threads[comment.id]);
-    return `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-conversation="1" data-at="${tools.escape(at)}"${earlier ? ' data-earlier="1"' : ''}>${globalThis.ReviewTools.ledgerPlace(comment.id, comment.general && !comment.outdated ? '' : path, placeLines(comment, earlier))}<div class="ledger-msg">${byFace(comment)}${globalThis.ReviewTools.ledgerBy(tools.escape(byName(comment)), at)}<span class="ledger-subject">${titleHTML(comment.subject)}</span>${shortPlace(comment, path, earlier)}</div><div class="ledger-meta"></div></li>`;
+    return `<li class="ledger-item" data-ledger="${tools.escape(comment.id)}" data-conversation="1" data-by="${comment.author ? 'person' : 'agent'}" data-at="${tools.escape(at)}"${earlier ? ' data-earlier="1"' : ''}>${globalThis.ReviewTools.ledgerPlace(comment.id, comment.general && !comment.outdated ? '' : path, placeLines(comment, earlier))}<div class="ledger-msg">${byFace(comment)}${globalThis.ReviewTools.ledgerBy(tools.escape(byName(comment)), at)}<span class="ledger-subject">${titleHTML(comment.subject)}</span>${shortPlace(comment, path, earlier)}</div><div class="ledger-meta"></div></li>`;
   };
   const chevron = '<svg class="dcr-peek-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
   // Under the row, the replies in a line (who, how many, when last).
@@ -1210,6 +1210,9 @@
     }
     const html = peekHTML(thread, item.dataset.ledger, !!item.dataset.earlier);
     if (peek.dataset.html !== html) { peek.innerHTML = html; peek.dataset.html = html; }
+    // Your own question goes by the short title your agent gave it, once it has one.
+    const subject = item.querySelector(':scope > .ledger-msg > .ledger-subject');
+    if (thread?.title && subject && subject.dataset.title !== thread.title) { subject.innerHTML = titleHTML(thread.title); subject.dataset.title = thread.title; }
   };
 
   // The open conversation: it takes the panel's place until Back (or Escape).
@@ -1228,8 +1231,10 @@
     if (!document.body.classList.contains('ledger-open')) document.getElementById('ledger-toggle')?.click();
     current = id;
     view.querySelector('.dcr-detail-title .ledger-where').innerHTML = whereOf(comment);
-    view.querySelector('.dcr-detail-title strong').innerHTML = titleHTML(comment.subject);
-    view.querySelector('.dcr-detail-title strong').hidden = !!comment.personal; // it is the first message below
+    // Your own question is the first message below; it gets a title here once your agent gave it one.
+    const named = comment.personal ? threads[id]?.title : comment.subject;
+    view.querySelector('.dcr-detail-title strong').innerHTML = named ? titleHTML(named) : '';
+    view.querySelector('.dcr-detail-title strong').hidden = !named;
     view.querySelector('[data-ledger-jump]').dataset.ledgerJump = id;
     // For a theme that leads with the title: the author's mark beside it, and the file and line as the link.
     const path = globalThis.ReviewTools.anchor(snapshot, comment)?.file.path || globalThis.ReviewTools.outdatedWhere(comment)?.path;
@@ -1411,8 +1416,14 @@
     }
     if (withAdversaries.delete(COMPOSER)) withAdversaries.add(id);
     syncComposerAdv();
-    try { const asked = await sendComment(id); flash(sentWith(tools.statusModel(threads[id], listening)?.text || 'Saved and sent to your agent.', asked)); }
-    catch (error) { flash(`Saved, but not sent: ${error.message}`); }
+    try {
+      bubbleFor = {id, at: Date.now()};
+      const asked = await sendComment(id);
+      // A theme with the bubble says it there; the others in the toast.
+      if (bubble.isConnected && getComputedStyle(bubble).display !== 'none') renderBubble();
+      else flash(sentWith(tools.statusModel(threads[id], listening)?.text || 'Saved and sent to your agent.', asked));
+    }
+    catch (error) { bubbleFor = null; renderBubble(); flash(`Saved, but not sent: ${error.message}`); }
   });
   const composerSend = composerForm?.querySelector?.('[data-composer-send]');
   const composerSplit = composerSend?.closest('[data-composer-agent]');
@@ -1725,6 +1736,35 @@
     if (event.target.closest('[data-dcr-copy-wait]')) copyWait();
   });
 
+  // What became of the question you just sent: a bubble over the agent's mark in the bar, saying it
+  // is thinking, then that it answered, until you open the conversation it points to.
+  let bubbleFor = null; // {id, at}
+  const bubble = Object.assign(document.createElement('button'), {type: 'button', id: 'bar-bubble', hidden: true});
+  document.getElementById('review-bar')?.append(bubble);
+  const answeredSince = (thread, at) => (thread?.messages || []).some(message => message.author === 'agent' && message.role !== 'adversary' && (Date.parse(message.at) || 0) >= at - 2000);
+  const renderBubble = () => {
+    const thread = bubbleFor && threads[bubbleFor.id];
+    const answered = !!bubbleFor && answeredSince(thread, bubbleFor.at);
+    // Read where it already is: the conversation open in Your review.
+    if (!bubbleFor || (answered && current === bubbleFor.id && document.body.classList.contains('ledger-open'))) { bubbleFor = null; set(bubble, 'hidden', true); return; }
+    const name = tools.escape(listener ? tools.agentInfo(listener).name : 'Your agent');
+    const dots = '<span class="bar-bubble-dots" aria-hidden="true"><i></i><i></i><i></i></span>';
+    const html = answered ? `<span>${name} answered</span><b>Read ›</b>`
+      : !online ? '<span>Saved. The review server stopped, so it waits</span>'
+      : listening === false ? '<span>Sent. It waits until your agent picks it up</span>'
+      : `<span>${name} is thinking</span>${dots}`;
+    bubble.dataset.state = answered ? 'answered' : 'thinking';
+    bubble.setAttribute('aria-label', answered ? `${tools.agentInfo(listener || 'agent').name || 'Your agent'} answered. Open the conversation` : 'Your agent is working on your question');
+    if (bubble.dataset.html !== html) { bubble.innerHTML = html; bubble.dataset.html = html; }
+    set(bubble, 'hidden', false);
+  };
+  bubble.addEventListener('click', () => {
+    const id = bubbleFor?.id;
+    bubbleFor = null;
+    renderBubble();
+    if (id) openConversation(id);
+  });
+
   // Unread answers: a count in the tab title and a dot on Your review, until they have been seen.
   const refreshUnread = () => {
     const count = tools.unseen(threads, seen).length;
@@ -1745,6 +1785,8 @@
   const announce = items => {
     // An answer in the conversation open in Your review is already in front of you.
     items = items.filter(item => !(item.thread === current && document.body.classList.contains('ledger-open')));
+    // The answer to the question in the bubble is said there.
+    if (bubbleFor && !bubble.hidden) items = items.filter(item => item.thread !== bubbleFor.id);
     if (!items.length) return;
     // An answer on one comment opens its conversation in Your review, with the keyboard left where it
     // is. Not while you are writing, in a dialog, or reading another conversation: then it is announced.
@@ -2427,7 +2469,7 @@
     });
     const arrived = tools.unseen(threads, seen).filter(item => !announced.has(item.id));
     arrived.forEach(item => announced.add(item.id));
-    decorate(); autoResolve(); decorateLedger(); window.ReviewGitHub?.refresh(); renderPanel(); renderUnsent(); renderAgent(); refreshUnread();
+    decorate(); autoResolve(); decorateLedger(); window.ReviewGitHub?.refresh(); renderPanel(); renderUnsent(); renderAgent(); refreshUnread(); renderBubble();
     announce(arrived);
     announceFinished();
     renderUpdate();

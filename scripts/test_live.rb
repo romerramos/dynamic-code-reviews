@@ -33,6 +33,15 @@ Dir.mktmpdir('dcr-live-test') do |directory|
   assert(Time.parse(state.read.dig('threads', KEY, 'c1', 'delivered_at')) > Time.now - 30, 'Delivery time was not recorded')
   reply = state.agent_reply('c1', 'Fixed in app/a.rb')
   assert(reply['author'] == 'agent' && state.read.dig('threads', KEY, 'c1', 'delivery') == 'answered', 'Agent reply was not recorded on the thread')
+  # The reviewer's own question is listed by the short title the agent gives it with its answer.
+  state.agent_reply('c1', 'And the second part', title: '  Why the   migration changes store_configurations ')
+  assert(state.read.dig('threads', KEY, 'c1', 'title') == 'Why the migration changes store_configurations', 'A reply title was not kept on the thread')
+  begin
+    state.agent_reply('c1', 'x', title: 'w' * 81)
+    assert(false, 'A title over 80 characters was accepted')
+  rescue ArgumentError => error
+    assert(error.message.include?('80 characters'), 'Unhelpful long title error')
+  end
   begin
     state.agent_reply('missing', 'x')
     assert(false, 'Reply to an unknown thread was accepted')
