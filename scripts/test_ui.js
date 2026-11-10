@@ -50,6 +50,16 @@ console.log('PASS component pairs respect directory and layer boundaries without
   assert.equal(tools.landing('g0l1', 'g0l1', views, 'overview'), 'overview', 'the page can reload onto the Overview');
   console.log('PASS a review opens where the reader stopped, unless the address names another place');
 }
+{
+  // Where a review is working: the issue its branch names, its pull request, and checkout or pushed.
+  const pushed = tools.where({mode:'pr',base:'a',head:'b'}, {comparison:{base:'a',head:'b',pr_number:123,head_label:'sam/cor-1653-consent-check',base_label:'main'}});
+  assert.deepEqual(pushed, {issue:'COR-1653', pr:123, place:'The pull request', head:'sam/cor-1653-consent-check', base:'main'});
+  assert.equal(tools.where({mode:'series',working_tree:true,base:'a',head:'b',branch:'feat/COR-9/x'}, {history:{origin_mode:'pr'}}).place, 'Your checkout');
+  assert.equal(tools.where({mode:'pr',base:'a',head:'b'}, {history:{local:true}}).place, 'Your checkout');
+  assert.deepEqual(tools.where({mode:'uncommitted'}, {}), {issue:null, pr:null, place:'Your uncommitted changes', head:null, base:null});
+  assert.equal(tools.where({mode:'pr',branch:'main'}, {}).issue, null, 'a branch that names no issue');
+  console.log('PASS a review says where it is working: the issue, the pull request, and the checkout or what was pushed');
+}
 assert.equal(tools.category('app/views/rentals/show.html.erb'), 'Design / UI');
 assert.equal(tools.category('app/assets/stylesheets/rentals.scss'), 'Design / UI');
 assert.equal(tools.category('app/javascript/controllers/rental_controller.js'), 'Frontend');

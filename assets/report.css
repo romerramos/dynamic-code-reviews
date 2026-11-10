@@ -1466,3 +1466,19 @@ body.zen.ledger-open .review-bar{left:calc(50% - min(var(--ledger-w,420px),92vw)
 .overview-comments>h2{margin-bottom:6px}
 .review-thread:has(>.thread-details[open]) .thread-summary>strong{font-size:17px}
 .review-thread:has(>.thread-details:not([open])) .thread-summary>:first-child:not(.thread-badges){order:0}
+
+/* Above the title: where the review is working, in one small line. A long branch name is cut, not wrapped. */
+.overview-where{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;margin:0 0 10px;color:var(--muted);font-size:12.5px}
+.overview-where b{color:var(--ink-neutral-3);font-weight:600}
+.overview-where i{font-style:normal;opacity:.6}
+.where-branches{display:inline-flex;align-items:baseline;gap:6px;min-width:0;font:11.5px var(--mono)}
+.where-branch{max-width:24ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* What was seen in the app is said in the app's row when the review has one; alone, it is a row itself. */
+body.dcr-has-app .ui-changes{display:none}
+.ui-changes{margin:0}
+.ui-changes .shot-stack{display:grid;grid-template-columns:150px minmax(0,1fr) auto;align-items:baseline;gap:4px 18px;padding:11px 0;border:0;border-top:1px solid var(--line);border-radius:0;background:transparent;box-shadow:none;font-size:14px}
+.ui-changes .shot-pile{display:none}
+.ui-changes .shot-stack-text{display:contents}
+.ui-changes .shot-stack-text strong{color:var(--ink);font-size:14px;font-weight:600}
+.ui-changes .shot-stack-text span{color:var(--muted)}
+.progress-need{display:none}

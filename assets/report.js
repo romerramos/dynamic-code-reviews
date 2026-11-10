@@ -2585,8 +2585,17 @@
   const fold = (name, title, count, cards, note = '') => `<details class="overview-fold overview-${name}" data-fold="${name}" ${foldsOpen.has(name) ? 'open' : ''}><summary><h3 class="overview-fold-title">${title} <span class="badge neutral">${count}</span></h3>${note}${icon('chevron-down')}</summary>${cards}</details>`;
   // The summary reads in two steps: what the change does, in the reader's ink, then the rest of
   // it, quieter. One block of equal text is the part people skip.
+  // Above the title, one small line: the issue, the pull request, whether this is the checkout or
+  // what was pushed, and the branch going into its base. The exact comparison is its tooltip.
+  function whereLine() {
+    const at = ReviewTools.where(snapshot, review);
+    const parts = [at.issue && `<b>${escape(at.issue)}</b>`, at.pr && `PR #${escape(at.pr)}`, escape(at.place),
+      at.head && at.base && `<span class="where-branches"><span class="where-branch">${escape(at.head)}</span><span aria-label="into">→</span><span class="where-branch">${escape(at.base)}</span></span>`].filter(Boolean);
+    return `<p class="overview-where" title="${escape(ReviewTools.comparisonText(snapshot, review))}">${parts.join('<i aria-hidden="true">·</i>')}</p>`;
+  }
   function summaryLead(summary) {
-    const text = String(summary || '').trim();
+    // The pull request and its branches are said above the title, so a summary that opens with them starts after.
+    const text = String(summary || '').trim().replace(/^(?:On\s+)?PR\s+#\d+\s*(?:\([^)]*\))?[,:]?\s+(\S)/i, (all, letter) => letter.toUpperCase());
     const [, first, rest] = text.match(/^(.+?[.!?])\s+(?=[A-Z0-9])([\s\S]+)$/) || [null, text, ''];
     return `<p class="lead">${escape(first)}</p>${rest ? `<p class="lead-rest">${escape(rest)}</p>` : ''}`;
   }
@@ -2625,7 +2634,7 @@
     const historyLinks = revision ? `<nav class="overview-history" aria-label="Review history"><a href="${revision.preview ? '' : '../'}current.html">Latest review</a><a href="${revision.preview ? '' : '../'}index.html">All revisions</a></nav>` : '';
     const empty = inProgress && !generated.length && !feedback.findings.length && !pending && !failed.length ? '<p class="review-empty">No comments yet. They appear here as your agent writes them.</p>' : '';
     const progressBox = inProgress ? `<div class="review-progress" role="status"><span class="review-progress-dot" aria-hidden="true"></span><div><h3>Your review is in progress</h3><p>Start reading now. Your agent's comments appear here and beside the code as it writes them, with a notice when one arrives, even on a file you already read. Explanations, test results and the finished walkthrough follow. Template previews and QA open once it is done.</p><p class="review-progress-count">${generated.length ? `${generated.length} comment${generated.length === 1 ? '' : 's'} so far` : 'No comments yet'}</p></div><button type="button" class="btn btn-sm btn-primary" data-start-reading>Start reading ${icon('arrow-right')}</button></div>` : '';
-    return `<div class="overview-reading"><header class="overview-intro"><h1>${escape(review.title)}</h1>${summaryLead(review.summary)}<div class="overview-facts"><p class="overview-scope">${escape(ReviewTools.comparisonText(snapshot, review))}</p>${revisionLine}${historyLinks}</div>${renderUIChanges()}${progressBox}</header>${inProgress ? '' : renderVisualOptions()}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}${renderRiskRanking()}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${clear}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${current.filter(comment => !comment.resolved).map(comment => commentCard(comment)).join('')}${failed.map(({flow,index}) => qaFlow(flow,index)).join('')}${pending ? `<p class="overview-status">${plural(pending, 'earlier finding')} ${pending === 1 ? 'was' : 'were'} not checked again after the code changed. Review details has ${pending === 1 ? 'it' : 'them'}.</p>` : ''}</section>${renderOtherChecks()}${renderMyReview()}${resolvedSection || earlierSection ? `<section class="overview-settled" aria-label="Settled comments">${resolvedSection}${earlierSection}</section>` : ''}</div>`;
+    return `<div class="overview-reading"><header class="overview-intro">${whereLine()}<h1>${escape(review.title)}</h1>${summaryLead(review.summary)}<div class="overview-facts">${revisionLine}${historyLinks}</div>${renderUIChanges()}${progressBox}</header>${inProgress ? '' : renderVisualOptions()}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}${renderRiskRanking()}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${clear}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${current.filter(comment => !comment.resolved).map(comment => commentCard(comment)).join('')}${failed.map(({flow,index}) => qaFlow(flow,index)).join('')}${pending ? `<p class="overview-status">${plural(pending, 'earlier finding')} ${pending === 1 ? 'was' : 'were'} not checked again after the code changed. Review details has ${pending === 1 ? 'it' : 'them'}.</p>` : ''}</section>${renderOtherChecks()}${renderMyReview()}${resolvedSection || earlierSection ? `<section class="overview-settled" aria-label="Settled comments">${resolvedSection}${earlierSection}</section>` : ''}</div>`;
   }
 
   // On a phone the bar at the bottom has no pager, so a step ends with the way to the next one.
@@ -3937,7 +3946,11 @@
     const next = otherUnviewed(-1);
     if (next >= 0) return {meta: '', label: state.viewedFiles.length ? 'Continue reading' : 'Start reading', run: () => (focusMode ? focusFile(next) : select(focusOrder[next].layer.id))};
     const todo = document.querySelector('.dcr-todo-link');
-    return todo ? {meta: '', label: todo.textContent.trim(), run: () => todo.click()} : {meta: '', label: 'Your review', run: () => setLedger(true)};
+    if (todo) return {meta: '', label: todo.textContent.trim(), run: () => todo.click()};
+    // Everything read and settled: what the served review would do next (publish it, or see it published).
+    const publish = document.getElementById('dcr-publish');
+    if (publish && !publish.hidden) return {meta: '', label: publish.textContent.trim(), run: () => publish.click()};
+    return {meta: '', label: 'Your review', run: () => setLedger(true)};
   }
   // What the field would be about: the selected lines, else the line the keyboard is on, else the
   // top of the file being read, else the review as a whole.
@@ -3958,6 +3971,16 @@
     $('bar-agent').hidden = !chip;
     if (chip && $('bar-agent').dataset.tone !== chip.dataset.tone) $('bar-agent').dataset.tone = chip.dataset.tone || 'off';
     if (chip && $('bar-agent').title !== chip.title) { $('bar-agent').title = chip.title; $('bar-agent').setAttribute('aria-label', chip.getAttribute('aria-label') || chip.title); }
+    // How many files need the reader, from the verdict strip, for a theme that shows it by the progress instead.
+    const need = document.querySelector('#dcr-jev .dcr-jev-yours');
+    $('progress-need').hidden = !need;
+    if (need) {
+      const said = need.textContent.trim().replace(/\s+you$/, ' you');
+      if ($('progress-need').textContent !== said) $('progress-need').textContent = said;
+      const strip = document.getElementById('dcr-jev').textContent.replace(/\s+/g, ' ').trim();
+      if ($('progress-need').title !== strip) $('progress-need').title = strip;
+      if (!queueBar.watching) { queueBar.watching = true; new MutationObserver(queueBar).observe(document.getElementById('dcr-jev'), {subtree: true, childList: true, characterData: true}); }
+    }
     const last = definitionTrail.at(-1);
     $('bar-back').hidden = !last;
     if (last) $('bar-back').textContent = `← Back to ${last.label}`;
@@ -3988,6 +4011,7 @@
   });
   $('bar-update').addEventListener('click', () => document.getElementById('dcr-update')?.click());
   $('bar-nav').addEventListener('click', () => $('nav-toggle').click());
+  $('progress-need').addEventListener('click', () => setTimeout(() => document.querySelector('#dcr-jev .dcr-jev-yours')?.click()));
   $('bar-commands').addEventListener('click', () => openPalette());
   $('bar-form').addEventListener('submit', event => {
     event.preventDefault();

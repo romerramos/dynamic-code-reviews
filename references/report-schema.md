@@ -40,6 +40,8 @@ The HTML embeds `{snapshot, review}` as inert JSON in `<script id="data" type="a
 
 For a new series, optionally supply top-level `context_paths` listing repository-relative callers, tests or instructions actually inspected. The series helper records their fingerprints. Group/layer IDs and finding IDs are assigned on first save when missing; future updates use those stable IDs. `review.history` and `review.context` are helper-owned metadata. Use [incremental-reviews.md](incremental-reviews.md) for follow-up update JSON; do not author these metadata fields by hand.
 
+Group and layer titles are the review's table of contents, read in a narrow list: keep each to about 34 characters, a few plain words that fit one line ("The send re-runs the check"), and let the summary carry the detail. The top-level `summary` says what the change does and never opens with the pull request or its branches, which the page shows above the title.
+
 ## All changes categories
 
 All changes displays full diffs in responsibility groups, independently from the

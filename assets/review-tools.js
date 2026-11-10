@@ -440,6 +440,17 @@ globalThis.ReviewTools = (() => {
     if (snapshot.mode === 'commit') return `Commit review · ${short(snapshot.head)} compared with ${before}`;
     return `Cumulative review · ${after} compared with ${before}`;
   }
+  // Where a review is working, in the reader's words: the issue its branch names (cor-1653 in
+  // sscott/cor-1653-consent is COR-1653), its pull request, whether it shows the checkout or what
+  // was pushed, and the two branches. comparisonText is the whole account, for a tooltip.
+  function where(snapshot, review = {}) {
+    const labels = comparisonLabels(snapshot, review) || {};
+    const head = labels.head_label || snapshot.branch || '';
+    const issue = (String(head).match(/(?:^|[\/_-])([A-Za-z]{2,10}-\d{1,6})(?=$|[\/_-])/) || [])[1]?.toUpperCase() || null;
+    const local = snapshot.mode === 'uncommitted' || !!snapshot.working_tree || !!review.history?.local;
+    const place = snapshot.paths ? 'Critical code' : snapshot.mode === 'uncommitted' ? 'Your uncommitted changes' : local ? 'Your checkout' : prReview(snapshot, review) ? 'The pull request' : snapshot.mode === 'commit' ? 'One commit' : 'Your branch';
+    return {issue, pr: labels.pr_number || null, place, head: head || null, base: labels.base_label || null};
+  }
   function flowOwner(flow) { return flow.comment_id || (flow.assets || []).find(asset => asset.comment_id)?.comment_id; }
   function evidenceFlows(qa, comment) {
     if (comment.personal) return [];
@@ -597,5 +608,5 @@ globalThis.ReviewTools = (() => {
     return views.includes(savedView) ? savedView : 'overview';
   };
 
-  return {whenText, ledgerPlace, ledgerBy, pathParts, pathFit, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, scopeLabel, sha256, githubLink, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  return {whenText, ledgerPlace, ledgerBy, pathParts, pathFit, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, where, scopeLabel, sha256, githubLink, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();

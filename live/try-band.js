@@ -36,9 +36,9 @@
   // Each thing a reader can do with the change is one row: what it is, a few words on it, the ways in.
   const appHTML = app ? `
     <li class="dcr-try-row dcr-try-app">
-      <button type="button" class="dcr-try-do" data-try="qa">Start QA review</button>
-      <span class="dcr-try-about">Your agent records the flows behind the comments, in this tab.</span>
-      <span class="dcr-try-more"><button type="button" data-try="browse" title="${esc(app.upstream)}">Open the app <kbd>A</kbd></button><button type="button" data-try="comment">Comment on it</button></span>
+      <strong class="dcr-try-do">In the app</strong>
+      <span class="dcr-try-about" data-try-seen>Nothing recorded yet.</span>
+      <span class="dcr-try-more"><button type="button" data-try-shots hidden>View</button><button type="button" data-try="qa" title="Your agent records the flows behind the comments, in this tab">Start QA review</button><button type="button" data-try="browse" title="${esc(app.upstream)}">Open it <kbd>A</kbd></button><button type="button" data-try="comment">Comment on it</button></span>
     </li>` : noApp ? `
     <li class="dcr-try-row dcr-try-none">
       <strong class="dcr-try-do">No running app</strong>
@@ -71,6 +71,7 @@
   renderTemplates();
 
   band.addEventListener('click', event => {
+    if (event.target.closest('[data-try-shots]')) { document.querySelector('.ui-changes [data-open-shots]')?.click(); return; }
     const trigger = event.target.closest('[data-try]');
     if (trigger) { window.DCRApp?.open(trigger.dataset.try); return; }
     const preview = event.target.closest('[data-try-preview]');
@@ -90,6 +91,11 @@
     const anchor = intro?.nextElementSibling?.id === 'qa-panel' ? intro.nextElementSibling : intro;
     if (anchor) { if (anchor.nextElementSibling !== band) anchor.after(band); document.body.classList.add('dcr-has-try'); }
     else if (band.parentNode !== holderOff) { holderOff.append(band); document.body.classList.remove('dcr-has-try'); }
+    // What the review already shows of the app (screenshots, QA recordings) is said in the app's row.
+    const seen = content?.querySelector('.ui-changes .shot-stack-text span')?.textContent.split('.')[0].trim() || '';
+    const about = band.querySelector('[data-try-seen]'), view = band.querySelector('[data-try-shots]');
+    if (about && about.textContent !== (seen || 'Nothing recorded yet.')) about.textContent = seen || 'Nothing recorded yet.';
+    if (view && view.hidden !== !seen) view.hidden = !seen;
   };
   if (content) new MutationObserver(mount).observe(content, {childList: true, subtree: true});
   mount();
