@@ -1,7 +1,7 @@
 @layer app{
 /* An answer, a closing block or a preview, as Markdown: paragraphs, lists, code and tables in its column.
    Its size and ink are tokens a context (or a theme) may set: --message-text-size, -line, -ink. */
-.dcr-body{margin:0;max-width:68ch;color:var(--message-text-ink,var(--ink));font-size:var(--message-text-size,14px);line-height:var(--message-text-line,1.55);overflow-wrap:anywhere}
+.dcr-body{margin:0;color:var(--message-text-ink,var(--ink));font-size:var(--message-text-size,14px);line-height:var(--message-text-line,1.55);overflow-wrap:anywhere}
 .dcr-body.is-clamped:not(.is-open){max-height:calc(7 * 1.55em);overflow:hidden;-webkit-mask-image:linear-gradient(#000 72%,transparent);mask-image:linear-gradient(#000 72%,transparent)}
 .dcr-body p{margin:0 0 .5em}
 .dcr-body>:last-child{margin-bottom:0}
@@ -28,7 +28,6 @@
 #dcr-panel .act[hidden]{display:none}
 #dcr-panel .dcr-note{margin:0;font-size:12.5px;color:var(--muted)}
 #dcr-panel .dcr-note:empty{display:none}
-.ledger-status{font-size:12px}
 .ledger-status:empty{display:none}
 /* The conversation under a comment: a plain thread on the card's own surface, no boxes. */
 .dcr-thread{display:none}
@@ -134,12 +133,11 @@ body.qa-live .evidence-strip:not(:has(button:not(.visual-qa-option))){display:no
 @media(prefers-reduced-motion:no-preference){#dcr-unsent{animation:dcr-unsent-in .18s ease-out}}
 @keyframes dcr-unsent-in{from{transform:translateY(8px);opacity:0}}
 .ledger-meta{flex-wrap:wrap;gap:4px 12px}
-.ledger-status{white-space:nowrap}
 
 /* Your review is a list; a row with a conversation has a quiet peek at the latest answer. Opening
    it swaps the list for that one conversation, as a chat: a back bar, the title, messages that
    scroll (who and when on one line, then the text, no avatars) and one reply field pinned below. */
-.ledger-status{display:inline-flex;align-items:center;gap:6px}
+.ledger-status{font-size:12px;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
 .ledger-status .dcr-dot{width:7px;height:7px}
 /* With conversations listed, the how-to-start hint is no longer needed. */
 .ledger-thread~.ledger-note{display:none}
@@ -190,7 +188,6 @@ body.qa-live .evidence-strip:not(:has(button:not(.visual-qa-option))){display:no
 .dcr-ledger .dcr-scroll{flex:1;min-height:0;overflow-y:auto;padding:14px 16px 8px;overscroll-behavior:contain}
 .dcr-ledger .dcr-convo{grid-template-columns:minmax(0,1fr);gap:14px}
 .dcr-ledger .dcr-convo::before{display:none}
-.dcr-ledger{--message-head-size:12px;--message-name-size:12.5px;--message-time-size:12px;--message-text-size:13.5px}
 .dcr-ledger .dcr-agent{--message-name-ink:var(--accent)}
 /* The panel is as wide as the reader drags it, so its messages take that width. */
 .dcr-ledger .dcr-body,.dcr-detail .dcr-body{max-width:none}
@@ -418,7 +415,7 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 .dcr-faces .ui-avatar{--avatar-size:18px;box-shadow:0 0 0 1.5px var(--surface)}
 
 /* In Your review the chat is narrow: small faces beside each message, the opinions full width. */
-.dcr-ledger{--message-face-col:24px}
+.dcr-ledger{--message-head-size:12px;--message-name-size:12.5px;--message-time-size:12px;--message-text-size:13.5px;--message-face-col:24px}
 
 .dcr-ledger .dcr-opinions{margin:18px 0 4px}
 
@@ -432,10 +429,8 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 #dcr-presence[hidden]{display:none}
 #dcr-presence:hover,#dcr-presence[aria-expanded="true"]{border-color:color-mix(in oklab,var(--ink) 22%,var(--line))}
 #dcr-presence:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.dcr-presence-face{position:relative;display:inline-flex}
-#dcr-presence[data-tone="off"]{--presence-dot:none}
-.dcr-presence-face{--presence-size:9px}
-#dcr-presence[data-tone="off"]{color:var(--muted)}
+.dcr-presence-face{position:relative;display:inline-flex;--presence-size:9px}
+#dcr-presence[data-tone="off"]{--presence-dot:none;color:var(--muted)}
 #dcr-presence[data-tone="off"] .ui-avatar{filter:grayscale(1);opacity:.55}
 .dcr-presence-state{color:var(--dcr-ok)}
 #dcr-presence .dcr-typing{margin-left:4px;color:var(--dcr-work)}

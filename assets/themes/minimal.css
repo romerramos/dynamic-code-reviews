@@ -46,9 +46,6 @@
   --message-name:none;--message-you-name:none;--message-model:none;--message-role:none;--message-head-size:12.5px;--message-head-ink:var(--minimal-faint);
   --verdict-pad:0;--verdict-border:0;--verdict-bg:none;--verdict-ink:var(--ink-neutral-3);--verdict-size:12.5px;--verdict-weight:400;--verdict-icon:none;--op-face-opacity:.4;--peek-face:14px;
   --popover-pad:0;--popover-divider:var(--line);--popover-space:16px;--popover-where:none;--popover-tags:none;--popover-face:grid;--popover-face-col:18px;--popover-gap:12px;--popover-title-room:30px;--popover-title-size:15px;--popover-title-line:1.4;--popover-title-ink:var(--ink);--popover-place:block;--popover-text-ink:var(--ink-neutral-3);--popover-text-size:14px;--popover-footer-top:18px;--popover-message-face:18px;--popover-message-gap:12px}
-[data-theme^="minimal-"] .dcr-card{--message-space:14px}
-[data-theme^="minimal-"] .dcr-popover{--message-space:12px}
-[data-theme^="minimal-"] #ledger .dcr-detail{--message-you-name:inline}
 [data-theme^="minimal-"] *{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 
 /* --- the list: step names, and nothing around them ------------------------------------------------ */
@@ -57,10 +54,6 @@
 [data-theme^="minimal-"] #navigation button{gap:8px;padding:5px 8px;background:transparent;border:0;box-shadow:none;color:var(--muted)}
 [data-theme^="minimal-"] .sidebar nav button{min-height:0;margin:0;align-items:baseline}
 [data-theme^="minimal-"] .sidebar nav :is(li,.menu){margin:0;padding:0;gap:0}
-[data-theme^="minimal-"] .sidebar nav .nav-section{margin:18px 0 0}
-[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view])>.nav-files{margin:0 0 8px 12px}
-[data-theme^="minimal-"] .sidebar nav button.nav-file[aria-current="location"]{background:transparent;color:var(--ink)}
-[data-theme^="minimal-"] .sidebar nav button.nav-file[aria-current="location"] .nav-file-name{color:var(--ink);font-weight:600}
 [data-theme^="minimal-"] .sidebar nav .nav-file-directory{display:none}
 [data-theme^="minimal-"] #navigation button:hover{color:var(--ink)}
 [data-theme^="minimal-"] #navigation button:is([aria-current="page"],[aria-current="true"],[aria-current="location"],[aria-expanded="true"]){background:transparent;color:var(--ink)}
@@ -68,11 +61,10 @@
 [data-theme^="minimal-"] #navigation .step-body strong{font-size:13px;font-weight:400;color:inherit}
 /* How far a step is shows once you are in it; the list itself stays names. */
 [data-theme^="minimal-"] #navigation .step-body small{display:none}
-[data-theme^="minimal-"] #navigation button[aria-expanded="true"] .step-body small{display:block;color:var(--minimal-faint)}
+[data-theme^="minimal-"] #navigation button[aria-expanded="true"] .step-body small{color:var(--minimal-faint)}
 [data-theme^="minimal-"] #navigation .step-number{order:2;margin-left:auto;width:auto;min-width:16px;height:auto;border:0;background:transparent;box-shadow:none;color:var(--minimal-faint);font-size:11px;font-weight:400}
 [data-theme^="minimal-"] #navigation .step-number .review-icon{width:13px;height:13px}
 [data-theme^="minimal-"] #navigation .step-body{order:1}
-[data-theme^="minimal-"] .nav-group-title{color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
 [data-theme^="minimal-"] .sidebar-settings{padding:5px 8px;color:var(--muted);font-size:12px;font-weight:400}
 [data-theme^="minimal-"] .sidebar-settings:hover{background:transparent;color:var(--ink)}
 [data-theme^="minimal-"] .sidebar-footer{border-top:0;padding:10px 8px 0;color:var(--minimal-faint)}
@@ -149,8 +141,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 
 /* --- the app: it fills the window, and its controls are one bar at the bottom, where the review's
    bar is. During a QA review that bar says what the agent is doing, and its notes sit just above. --- */
-[data-theme^="minimal-"] dialog.stage.dcr-app[open]{grid-template-rows:minmax(0,1fr)}
-[data-theme^="minimal-"] dialog.stage.dcr-app{inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;border:0;border-radius:0;box-shadow:none;grid-template-rows:minmax(0,1fr)}
+[data-theme^="minimal-"] dialog.stage.dcr-app{height:100dvh;max-width:none;max-height:none;box-shadow:none;grid-template-rows:minmax(0,1fr)}
 [data-theme^="minimal-"] .dcr-app .stage-bar{position:absolute;z-index:5;left:50%;bottom:22px;transform:translateX(-50%);width:min(940px,calc(100% - 28px));box-sizing:border-box;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 8px 28px color-mix(in srgb,var(--shade) 9%,transparent)}
 [data-theme^="minimal-"] .dcr-app-address{height:32px;border-color:transparent;background:var(--minimal-soft)}
 [data-theme^="minimal-"] .dcr-app-address:focus-within{border-color:transparent;box-shadow:none}
@@ -169,18 +160,16 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .dcr-app.is-agent-driving .stage-bar{flex-wrap:nowrap}
 [data-theme^="minimal-"] .dcr-qa-banner{flex:1 1 auto;min-width:0;gap:10px;padding:2px 0 2px 10px;border-radius:0;background:transparent;color:var(--ink)}
 [data-theme^="minimal-"] .dcr-qa-banner .dcr-qa-pulse{background:var(--ink)}
-[data-theme^="minimal-"] .dcr-qa-banner .dcr-qa-text{flex:1 1 auto}
 [data-theme^="minimal-"] .dcr-qa-banner :is(.dcr-qa-progress,button){flex:none;white-space:nowrap}
 [data-theme^="minimal-"] .dcr-qa-banner .dcr-qa-progress{color:var(--minimal-faint);font-size:12px;font-weight:400}
-[data-theme^="minimal-"] .dcr-qa-banner .dcr-qa-text{display:flex;align-items:baseline;gap:10px;min-width:0}
+[data-theme^="minimal-"] .dcr-qa-banner .dcr-qa-text{flex:1 1 auto;display:flex;align-items:baseline;gap:10px;min-width:0}
 [data-theme^="minimal-"] .dcr-qa-banner .dcr-qa-text strong{font-size:14px;font-weight:500;white-space:nowrap}
 [data-theme^="minimal-"] .dcr-qa-banner .dcr-qa-text span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--minimal-faint);font-size:12px}
 [data-theme^="minimal-"] .dcr-qa-banner .act-quiet{border-color:transparent;color:var(--muted)}
 [data-theme^="minimal-"] .dcr-qa-banner .act-quiet:hover{background:var(--minimal-soft);color:var(--ink)}
-[data-theme^="minimal-"] .dcr-app-prep{align-items:flex-end;padding-bottom:16px}
 [data-theme^="minimal-"] .dcr-app-prep-card{border-color:var(--line);box-shadow:0 8px 28px color-mix(in srgb,var(--shade) 9%,transparent)}
 [data-theme^="minimal-"] .dcr-app-prep-spin{width:16px;height:16px;margin-top:3px;border-width:2px}
-[data-theme^="minimal-"] .dcr-app-prep{background:color-mix(in srgb,var(--surface) 45%,transparent);-webkit-backdrop-filter:none;backdrop-filter:none}
+[data-theme^="minimal-"] .dcr-app-prep{align-items:flex-end;padding-bottom:16px;background:color-mix(in srgb,var(--surface) 45%,transparent);-webkit-backdrop-filter:none;backdrop-filter:none}
 [data-theme^="minimal-"] .file-card.is-viewed>summary{background:transparent;color:var(--minimal-faint)}
 [data-theme^="minimal-"] .context-details{border-color:transparent;background:transparent;padding-left:0;padding-right:0}
 [data-theme^="minimal-"] :is(dialog,.modal-box):focus-visible{outline:0}
@@ -191,48 +180,30 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 /* A section with nothing in it is not shown, and one rule separates what is. */
 [data-theme^="minimal-"] #my-review:has(>.review-empty){display:none}
 [data-theme^="minimal-"] .review-section{border-top:0;padding-top:0;margin-top:26px}
-[data-theme^="minimal-"] .overview-reading{max-width:920px}
-[data-theme^="minimal-"] .overview-intro .lead{max-width:none}
-[data-theme^="minimal-"] .overview-intro .lead-rest{max-width:none;font-size:16px}
 /* All changes is one command away; the list is the walkthrough. */
 [data-theme^="minimal-"] #navigation li:has(>button[data-view="files"]){display:none}
 /* A group is a title and its steps are its items: the title is the stronger of the two. */
-[data-theme^="minimal-"] .nav-group-title{margin:0 0 4px;padding:0 8px;color:var(--ink);font-size:13px;font-weight:600}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body strong{font-size:12.5px}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view]{padding-top:4px;padding-bottom:4px}
+[data-theme^="minimal-"] .nav-group-title{letter-spacing:0;text-transform:none;margin:0 0 4px;padding:0 8px;color:var(--ink);font-size:13px;font-weight:600}
 /* A step's number says nothing its place in the list does not; only the check for a finished one stays. */
 [data-theme^="minimal-"] #navigation .step-number:not(:has(svg)){display:none}
 /* The verdict strip is one fact by the progress: how many files need you. The rest is its tooltip. */
 [data-theme^="minimal-"] .dcr-jev{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);padding:0;border:0}
 [data-theme^="minimal-"] .progress-need{display:inline;padding:0;border:0;background:none;color:var(--ink);font:inherit;font-weight:600;text-align:left;cursor:pointer}
 [data-theme^="minimal-"] .overview-reading #my-review.review-section{border-top:0;padding-top:0;margin-top:26px}
-[data-theme^="minimal-"] .sidebar nav .nav-group-title{margin:0 0 4px;padding:0 8px;font-size:13.5px}
 [data-theme^="minimal-"] .sidebar nav .nav-section button[data-view]{min-height:0;height:auto}
 
 /* --- Minimal's page, as one system ----------------------------------------------------------------
    Sizes: 12.5 for facts, 13 for labels and the list, 14.5 for rows, 16 for prose, 20 for the lead,
    30 for the title. Space: 6 inside a group, 14 between a label and its rows, 44 between sections.
    A label is grey and medium; what it labels is ink. Nothing else carries weight. */
-[data-theme^="minimal-"] main#content:has(>.overview-reading){padding-top:72px}
-[data-theme^="minimal-"] .overview-reading{max-width:800px}
-[data-theme^="minimal-"] .overview-where{margin-bottom:14px}
-[data-theme^="minimal-"] .overview-intro h1{margin:0 0 18px;font-size:30px;line-height:1.2;letter-spacing:-.022em}
-[data-theme^="minimal-"] .overview-intro .lead{margin:0 0 12px;font-size:20px;line-height:1.45}
-[data-theme^="minimal-"] .overview-intro .lead-rest{margin:0;font-size:16px;line-height:1.7}
 [data-theme^="minimal-"] .overview-reading .overview-intro .overview-row{margin-top:36px}
 /* A section starts with its label, the same grey as a row's, and 44px of air above it. */
 [data-theme^="minimal-"] .overview-reading :is(.overview-comments,#my-review.review-section,.overview-settled){margin-top:44px}
 [data-theme^="minimal-"] .overview-reading :is(.overview-comments>h2,#my-review h2){margin:0 0 14px;color:var(--muted);font-size:13px;font-weight:500;letter-spacing:0}
-[data-theme^="minimal-"] .overview-reading .overview-todo{margin:0 0 6px;font-size:14.5px}
 /* Nothing waiting is a sentence, not a banner. */
-[data-theme^="minimal-"] .overview-clear{gap:10px;padding:0;border:0;border-radius:0;background:transparent;color:var(--ink)}
 [data-theme^="minimal-"] .overview-clear .review-icon{width:16px;height:16px;margin-top:3px;color:var(--dcr-ok)}
-[data-theme^="minimal-"] .overview-clear strong{font-size:14.5px;font-weight:600}
-[data-theme^="minimal-"] .overview-clear p{margin:2px 0 0;color:var(--muted);font-size:14.5px}
+[data-theme^="minimal-"] .overview-clear strong{font-weight:600}
 /* What is settled: rows with the page's rule, their names in the label's grey. */
-[data-theme^="minimal-"] .overview-settled .overview-fold{margin:0;border-top:1px solid var(--line)}
-[data-theme^="minimal-"] .overview-settled .overview-fold:last-child{border-bottom:1px solid var(--line)}
-[data-theme^="minimal-"] .overview-settled .overview-fold>summary{min-height:46px;padding:13px 0;align-items:center}
 [data-theme^="minimal-"] .overview-fold-title{color:var(--muted);font-size:13px;font-weight:500}
 [data-theme^="minimal-"] .overview-fold-title .badge{background:transparent;color:var(--minimal-faint);font-weight:400}
 
@@ -256,11 +227,9 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
    what it says on the left, where it is on the right, in the code's face and the label's grey.
    The app, QA, previews, the ranking and the revisions are commands (⌘K), not rows on the page. */
 [data-theme^="minimal-"] main#content:has(>.overview-reading){padding-top:84px}
-[data-theme^="minimal-"] .overview-reading{max-width:640px}
 [data-theme^="minimal-"] .overview-where{margin-bottom:14px;color:var(--minimal-faint)}
-[data-theme^="minimal-"] .overview-intro h1{margin:0 0 20px;font-size:26px;font-weight:600;line-height:1.25;letter-spacing:-.022em}
+[data-theme^="minimal-"] .overview-intro h1{margin:0 0 20px;font-weight:600;line-height:1.25;letter-spacing:-.022em}
 [data-theme^="minimal-"] .overview-intro :is(.lead,.lead-rest){display:inline;margin:0;color:var(--ink-neutral-3);font-size:15px;line-height:1.75;letter-spacing:0}
-[data-theme^="minimal-"] .overview-intro .lead{color:var(--ink)}
 [data-theme^="minimal-"] .overview-reading :is(.dcr-try,.overview-revision,.risk-fold,.risk-rank.risk-none,.ui-changes){display:none}
 /* A list's label: small, grey, with the page's 48px of air above it. */
 [data-theme^="minimal-"] .overview-reading :where(.overview-comments,.risk-brief,#my-review.review-section,.overview-settled){display:block;margin:48px 0 0;padding:0;border:0}
@@ -284,21 +253,16 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] #my-review .section-heading .comment-actions{--button-height:auto;--button-min-height:0;--button-pad:0 0 0 16px;--button-ink:var(--minimal-faint);--button-size:12px;--button-weight:400;--button-hover-bg:none;--button-hover-ink:var(--ink)}
 /* What is settled: two quiet lines at the end. */
 [data-theme^="minimal-"] .overview-settled .overview-fold,[data-theme^="minimal-"] .overview-settled .overview-fold:last-child{margin:0;border:0}
-[data-theme^="minimal-"] .overview-settled .overview-fold>summary{min-height:0;padding:7px 0}
-[data-theme^="minimal-"] .overview-settled .overview-fold-title{margin:0;font-size:14px;color:var(--muted)}
 [data-theme^="minimal-"] .overview-clear p{font-size:14px}
 [data-theme^="minimal-"] .overview-clear strong{font-size:14px}
-[data-theme^="minimal-"] .overview-intro .lead::after{content:" "}
 [data-theme^="minimal-"] .overview-reading #my-review.review-section:has(>.review-empty){display:none}
 [data-theme^="minimal-"] .overview-reading .overview-todo strong{white-space:nowrap}
 /* What waits on the reader comes before what to read first, as designed. */
-[data-theme^="minimal-"] .overview-reading{display:flex;flex-direction:column}
 [data-theme^="minimal-"] .overview-reading>.risk-brief{order:1}
 [data-theme^="minimal-"] .overview-reading>#my-review{order:2}
 [data-theme^="minimal-"] .overview-reading>.overview-settled{order:3}
 
 /* --- Round four, from the real review: one column of 760px, one way to show a comment --------------- */
-[data-theme^="minimal-"] .overview-reading{max-width:760px}
 [data-theme^="minimal-"] .overview-intro h1{font-size:28px}
 [data-theme^="minimal-"] .overview-intro :is(.lead,.lead-rest){font-size:15.5px}
 /* The list: its checks stand in one column at the right, whatever the indent. */
@@ -309,16 +273,13 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .sidebar nav li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"])){margin-left:0;padding-left:0;border-left:0}
 [data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]))>button{box-shadow:inset 1px 0 var(--ink);margin-left:-5px;padding-left:13px;width:calc(100% + 5px)}
 /* Nothing waiting is one sentence. */
-[data-theme^="minimal-"] .overview-clear{display:flex;align-items:baseline}
-[data-theme^="minimal-"] .overview-clear>div{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
-[data-theme^="minimal-"] .overview-clear p{margin:0;color:var(--minimal-faint)}
+[data-theme^="minimal-"] .overview-clear{gap:10px;padding:0;border:0;border-radius:0;background:transparent;color:var(--ink);display:flex;align-items:baseline}
+[data-theme^="minimal-"] .overview-clear p{color:var(--minimal-faint)}
 /* A fold's head is a list's label: one size, one grey, one baseline; its arrow is small and at the right. */
 [data-theme^="minimal-"] .overview-settled{display:flex;flex-direction:column;gap:28px}
 [data-theme^="minimal-"] .overview-settled .overview-fold>summary{display:flex;align-items:baseline;gap:8px;min-height:0;padding:0 0 6px;margin:0;color:var(--minimal-faint);font-size:12px}
 [data-theme^="minimal-"] .overview-settled .overview-fold-title{display:inline;margin:0;color:var(--minimal-faint);font-size:12px;font-weight:400}
-[data-theme^="minimal-"] .overview-settled .overview-fold-title .badge{padding:0;margin-left:2px;border:0;background:none;color:inherit;font:inherit}
-[data-theme^="minimal-"] .overview-settled .overview-fold-note{color:var(--minimal-faint);font-size:12px}
-[data-theme^="minimal-"] .overview-settled .overview-fold-note{--button-height:auto;--button-min-height:0;--button-pad:0 0 0 10px;--button-border-width:0;--button-bg:none;--button-ink:var(--ink);--button-size:12px}
+[data-theme^="minimal-"] .overview-settled .overview-fold-note{color:var(--minimal-faint);font-size:12px;--button-height:auto;--button-min-height:0;--button-pad:0 0 0 10px;--button-border-width:0;--button-bg:none;--button-ink:var(--ink);--button-size:12px}
 [data-theme^="minimal-"] .overview-settled .overview-fold>summary>.review-icon{width:13px;height:13px;align-self:center}
 [data-theme^="minimal-"] .overview-settled .overview-fold[open]>summary{margin-bottom:0}
 /* A closed comment: what it says, and on the right its state and place. Nothing else. */
@@ -328,26 +289,23 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .overview-reading .thread-was pre{border:0;background:var(--minimal-soft)}
 /* The conversation: names and words, no faces, no cards. */
 [data-theme^="minimal-"] .dcr-card .dcr-closure{padding:0;border:0;background:transparent}
-[data-theme^="minimal-"] .dcr-card .dcr-closure-head{display:flex;gap:8px;align-items:baseline;margin:0 0 4px;font-size:12.5px;color:var(--minimal-faint)}
 [data-theme^="minimal-"] .dcr-card .dcr-closure-head strong{color:var(--ink);font-size:13px;font-weight:600}
 [data-theme^="minimal-"] .dcr-card .dcr-closure-main{display:block;padding:0}
 [data-theme^="minimal-"] .dcr-card .dcr-closure-by{display:none}
-[data-theme^="minimal-"] .dcr-card{--message-text-size:14px;--message-text-line:1.65;--message-text-ink:var(--ink-neutral-3)}
+[data-theme^="minimal-"] .dcr-card{--message-space:14px;--message-text-size:14px;--message-text-line:1.65;--message-text-ink:var(--ink-neutral-3)}
 [data-theme^="minimal-"] .dcr-card .dcr-checks{display:flex;gap:14px;margin-top:6px}
-[data-theme^="minimal-"] .dcr-card .dcr-check{padding:0;border:0;background:none;color:var(--minimal-faint);font-size:12.5px}
 [data-theme^="minimal-"] .dcr-card .dcr-check strong{color:var(--ink-neutral-3);font-weight:500}
 [data-theme^="minimal-"] .dcr-card .dcr-stage{margin-top:18px;border:0;background:transparent}
 [data-theme^="minimal-"] .dcr-card .dcr-stage-head{padding:0;color:var(--muted);font-size:13px}
 [data-theme^="minimal-"] .dcr-card .dcr-reply{margin-top:16px;border-color:var(--line);background:transparent}
 [data-theme^="minimal-"] .overview-reading .overview-settled{display:flex;flex-direction:column;gap:30px}
-[data-theme^="minimal-"] .dcr-card .dcr-closure-head{justify-content:flex-start}
+[data-theme^="minimal-"] .dcr-card .dcr-closure-head{display:flex;gap:8px;align-items:baseline;margin:0 0 4px;font-size:12.5px;color:var(--minimal-faint);justify-content:flex-start}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view],[data-theme^="minimal-"] #navigation>ul button[data-view]{padding-right:30px}
 /* A reply: who, then what they concluded, on one line; then what they said. */
 
 /* --- the summary: the lead on its own line, then short paragraphs with air between them ------------- */
-[data-theme^="minimal-"] .overview-intro .lead{display:block;margin:0 0 14px;color:var(--ink);font-size:17px;line-height:1.55}
+[data-theme^="minimal-"] .overview-intro .lead{max-width:none;display:block;margin:0 0 14px;color:var(--ink);font-size:17px;line-height:1.55}
 [data-theme^="minimal-"] .overview-intro .lead::after{content:none}
-[data-theme^="minimal-"] .overview-intro .lead-rest{display:block;max-width:640px;color:var(--ink-neutral-3);font-size:15px;line-height:1.7}
 [data-theme^="minimal-"] .overview-intro :is(.lead,.lead-rest) code{background:var(--minimal-soft)}
 
 /* --- the foot of the list: one line, how far and how many need you, beside a small gear ------------ */
@@ -360,19 +318,19 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .risk-brief button{padding-left:30px}
 
 /* --- room: a wider list, so step names fit on a line, and a wider page for the lines ------------- */
-[data-theme^="minimal-"] .overview-reading{max-width:880px}
-[data-theme^="minimal-"] .overview-intro .lead-rest{max-width:680px}
+[data-theme^="minimal-"] .overview-reading{display:flex;flex-direction:column;max-width:880px}
+[data-theme^="minimal-"] .overview-intro .lead-rest{margin:0;display:block;color:var(--ink-neutral-3);font-size:15px;line-height:1.7;max-width:680px}
 
 /* --- Round five: the Overview's comments read as threads --------------------------------------------
    What to read first left the Overview: the walkthrough's order already says it, and the files that
    stand out keep their risk mark in the list. */
 [data-theme^="minimal-"] .overview-reading .risk-brief{display:none}
 /* A fold's count sits on the label's baseline. */
-[data-theme^="minimal-"] .overview-settled .overview-fold-title .badge{display:inline;vertical-align:baseline;line-height:inherit;height:auto;min-height:0}
+[data-theme^="minimal-"] .overview-settled .overview-fold-title .badge{padding:0;margin-left:2px;border:0;background:none;color:inherit;font:inherit;display:inline;vertical-align:baseline;line-height:inherit;height:auto;min-height:0}
 /* A comment's body, its replies and its actions hang under its title, in from the face. */
 /* A reply is said by its face: who wrote it is the face; what they concluded and when, beside it. */
 /* What became of it and who checked it, the same way. */
-[data-theme^="minimal-"] .dcr-card .dcr-check{display:inline-flex;align-items:center;gap:6px}
+[data-theme^="minimal-"] .dcr-card .dcr-check{padding:0;border:0;background:none;color:var(--minimal-faint);font-size:12.5px;display:inline-flex;align-items:center;gap:6px}
 [data-theme^="minimal-"] .dcr-card .dcr-check strong{display:none}
 /* Actions are real buttons, small and quiet; the one that settles it stands apart at the right. */
 
@@ -410,15 +368,12 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] #navigation button[aria-expanded="true"] .step-body small{display:none}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body strong,[data-theme^="minimal-"] #navigation .nav-section button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]) .step-body strong{font-weight:400}
 [data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]))>button{box-shadow:inset 1px 0 var(--line-neutral-4)}
-[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view])>.nav-files{margin:2px 0 8px 16px;padding:0;border:0}
 [data-theme^="minimal-"] .sidebar nav button.nav-file{min-height:0;gap:8px;padding:3px 8px;border:0;background:transparent;color:var(--muted);font:12px/1.5 var(--mono)}
 [data-theme^="minimal-"] .sidebar nav button.nav-file .nav-file-name{font-weight:400;color:inherit}
 [data-theme^="minimal-"] .sidebar nav button.nav-file[aria-current="location"],[data-theme^="minimal-"] .sidebar nav button.nav-file[aria-current="location"] .nav-file-name{background:transparent;color:var(--ink);font-weight:400}
 [data-theme^="minimal-"] .sidebar nav button.nav-file:hover{color:var(--ink)}
 /* Reviewed or not: a small ring, filled with a check once done. */
-[data-theme^="minimal-"] .sidebar nav .file-status{flex:0 0 11px;width:11px;height:11px;margin-top:4px;border:1px solid var(--line-neutral-4);border-radius:50%;background:transparent}
-[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status{border-color:var(--muted);background:var(--muted);color:var(--surface)}
-[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status .review-icon{width:9px;height:9px;margin:0;vertical-align:top}
+[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status .review-icon{margin:0;vertical-align:top}
 [data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed:not([aria-current="location"]){color:var(--minimal-faint)}
 /* Risk is a small grey word, not a badge. */
 [data-theme^="minimal-"] .sidebar nav .nav-file .need{padding:0;border:0;background:none;color:var(--minimal-faint);font:10.5px var(--mono);letter-spacing:.02em}
@@ -428,62 +383,46 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .sidebar nav .nav-tests-label::after{content:none;display:none}
 [data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"])){margin-left:0;padding-left:0;border-left:0}
 [data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]))>button{margin-left:-5px;padding-left:13px;box-shadow:inset 1px 0 var(--line-neutral-4)}
-[data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{margin:8px 0 2px;padding:0 8px;color:var(--minimal-faint);font-size:11px;font-weight:400;letter-spacing:0;text-transform:none}
 
 /* --- marks on the left, where they belong to their line ------------------------------------------------
    A finished step's check sits before its name; a file's review mark is a small square before its name,
    empty until it is reviewed, then a check: it looks like what it is, something to click. */
-[data-theme^="minimal-"] #navigation .nav-section button[data-view]{display:grid;grid-template-columns:14px minmax(0,1fr);column-gap:6px;align-items:baseline;padding-right:8px}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number{position:static;order:0;grid-column:1;width:14px;min-width:0;color:var(--minimal-faint)}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number:not(:has(svg)){display:block;visibility:hidden}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number .review-icon{width:12px;height:12px;vertical-align:-1px}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body{grid-column:2;order:0}
-[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view])>.nav-files{margin-left:28px}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view]{grid-template-columns:14px minmax(0,1fr)}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number:not(:has(svg)){visibility:hidden}
 [data-theme^="minimal-"] .sidebar nav button.nav-file{align-items:center}
-[data-theme^="minimal-"] .sidebar nav .file-status{flex:0 0 12px;width:12px;height:12px;margin:0;border:1px solid var(--line-neutral-5);border-radius:3px;background:var(--surface);cursor:pointer}
-[data-theme^="minimal-"] .sidebar nav .file-status:hover{border-color:var(--ink)}
-[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status{display:grid;place-items:center;border-color:transparent;background:transparent;color:var(--muted)}
-[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status .review-icon{width:12px;height:12px}
-[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status:hover{color:var(--ink)}
 /* Tests fold away until asked for: the word and how many, nothing more. */
 [data-theme^="minimal-"] .sidebar nav .nav-tests-toggle{display:inline-flex;align-items:baseline;gap:5px;padding:2px 0;color:var(--minimal-faint);cursor:pointer}
 [data-theme^="minimal-"] .sidebar nav .nav-tests-toggle:hover{color:var(--ink)}
 [data-theme^="minimal-"] .sidebar nav .nav-tests-count{display:inline}
 [data-theme^="minimal-"] .sidebar nav .nav-tests-toggle::after{content:"›";display:inline-block;transition:transform .12s}
 [data-theme^="minimal-"] .sidebar nav .nav-tests-toggle[aria-expanded="true"]::after{transform:rotate(90deg)}
-[data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{margin:6px 0 0;padding:0 8px 0 28px}
 [data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]))>button{margin-left:-5px;padding-left:13px;width:calc(100% + 5px)}
-[data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{padding:0 8px}
 [data-theme^="minimal-"] #navigation .nav-section:has(>.nav-group-title) li>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]){margin-left:-5px;padding-left:13px;width:calc(100% + 5px)}
 
 /* --- one mark that is clicked, one that is read ----------------------------------------------------------
    A file's box is a real checkbox: square, always drawn, filled in ink with a white check once reviewed;
    it is the only thing in the list you tick. A step is not ticked: once all its files are read its name
    goes grey and a small check follows it on its own line of text. */
-[data-theme^="minimal-"] #navigation .nav-section button[data-view]{display:flex;align-items:baseline;gap:0;padding-right:8px}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body{order:1;flex:0 1 auto;min-width:0}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number{order:2;flex:none;position:static;width:auto;margin:0 0 0 6px;visibility:visible}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view]{align-items:baseline;gap:0;padding-right:8px}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number{grid-column:1;min-width:0;color:var(--minimal-faint);order:2;flex:none;position:static;width:auto;margin:0 0 0 6px;visibility:visible}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number:not(:has(svg)){display:none}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number .review-icon{width:12px;height:12px;vertical-align:-1px;color:var(--minimal-faint)}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view]:has(.step-number svg) .step-body strong{color:var(--minimal-faint)}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view]:not(:has(.step-number svg)) .step-body strong{color:var(--ink-neutral-3)}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view]:is([aria-current="page"],[aria-expanded="true"]) .step-body strong{color:var(--ink)}
-[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view])>.nav-files{margin-left:16px}
 [data-theme^="minimal-"] .sidebar nav .file-status{flex:0 0 14px;width:14px;height:14px;margin:0;border:1.5px solid var(--line-neutral-5);border-radius:4px;background:var(--surface);cursor:pointer}
 [data-theme^="minimal-"] .sidebar nav .file-status:hover{border-color:var(--ink)}
 [data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status{display:grid;place-items:center;border-color:var(--ink-neutral-3);background:var(--ink-neutral-3);color:var(--surface)}
 [data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status .review-icon{width:10px;height:10px;stroke-width:3}
 [data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status:hover{border-color:var(--ink);background:var(--ink);color:var(--surface)}
-[data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{padding:0 8px 0 0}
-[data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{padding:0 8px 0 8px}
 
 /* --- Round 6, built from the canvas's Proposed boards ---------------------------------------------------
    Tests are files like the others: no fold, no count; the word test sits where the risk does. */
-[data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{display:none}
+[data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{color:var(--minimal-faint);font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;margin:6px 0 0;padding:0 8px 0 8px;display:none}
 [data-theme^="minimal-"] .sidebar nav .nav-tests-label ~ li>.nav-file::after{content:"test";flex:none;margin-left:auto;color:var(--minimal-faint);font:10.5px var(--mono);letter-spacing:.02em}
 /* A finished step's check is on its line of text, at its end. */
 [data-theme^="minimal-"] #navigation .nav-section button[data-view]{display:block}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body{display:inline}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body{grid-column:2;order:1;flex:0 1 auto;min-width:0;display:inline}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body strong{display:inline}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number:has(svg){display:none}
 [data-theme^="minimal-"] #navigation .nav-section .step-done{display:inline}
@@ -491,13 +430,12 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 
 /* A comment opened in the code: the Overview's thread, on a card. No header band, path or badges. */
 [data-theme^="minimal-"] .comment-popover[popover]{max-height:min(560px,calc(100dvh - 24px));padding:16px 18px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 16px 44px color-mix(in srgb,var(--shade) 12%,transparent)}
-[data-theme^="minimal-"] .comment-popover .popover-heading{position:absolute;top:12px;right:12px;padding:0;border:0;background:transparent}
 [data-theme^="minimal-"] .comment-popover .popover-heading strong{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
-[data-theme^="minimal-"] .comment-popover .popover-heading{--button-square:28px;--button-close-border:transparent;--button-close-bg:transparent;--button-close-ink:var(--muted)}
+[data-theme^="minimal-"] .comment-popover .popover-heading{position:absolute;top:12px;right:12px;padding:0;border:0;background:transparent;--button-square:28px;--button-close-border:transparent;--button-close-bg:transparent;--button-close-ink:var(--muted)}
 /* Its replies, indented one step more with their faces, and its actions as small outlined buttons. */
 [data-theme^="minimal-"] .dcr-popover{margin-top:18px;padding:0;border:0;background:transparent}
 [data-theme^="minimal-"] .dcr-popover :is(.dcr-closure,.dcr-stage){padding:0;border:0;background:transparent}
-[data-theme^="minimal-"] .dcr-popover{--message-text-size:13.5px;--message-text-line:1.6;--message-text-ink:var(--ink-neutral-3)}
+[data-theme^="minimal-"] .dcr-popover{--message-space:12px;--message-text-size:13.5px;--message-text-line:1.6;--message-text-ink:var(--ink-neutral-3)}
 
 /* Everything settled: one All clear line, Resolved closed right under it. */
 [data-theme^="minimal-"] .overview-comments:has(.overview-clear)>h2{display:none}
@@ -507,7 +445,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .overview-clear p{margin:0}
 
 /* A file name stays on one line, its box under the step's text; too long, it loses its middle, never its end. */
-[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view])>.nav-files{margin-left:0}
+[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view])>.nav-files{margin:2px 0 8px 16px;padding:0;border:0;margin-left:0}
 [data-theme^="minimal-"] .sidebar nav button.nav-file .nav-file-name{display:flex;min-width:0;white-space:nowrap;overflow-wrap:normal}
 [data-theme^="minimal-"] .sidebar nav button.nav-file .name-head{min-width:0;overflow:hidden;text-overflow:ellipsis}
 [data-theme^="minimal-"] .sidebar nav button.nav-file .name-tail{flex:none}
@@ -588,7 +526,7 @@ html[data-theme^="minimal-"]{--nav-groups:current}
 [data-theme^="minimal-"] #ledger .dcr-detail-code>:not(.dcr-detail-at){display:none}
 [data-theme^="minimal-"] #ledger .dcr-detail-code .dcr-detail-at:not(:empty){display:inline}
 [data-theme^="minimal-"] #ledger .dcr-detail-code:has(.dcr-detail-at:empty){display:none}
-[data-theme^="minimal-"] #ledger .dcr-detail{--message-text-size:13.5px;--message-text-line:1.6;--message-text-top:3px}
+[data-theme^="minimal-"] #ledger .dcr-detail{--message-you-name:inline;--message-text-size:13.5px;--message-text-line:1.6;--message-text-top:3px}
 /* An adversary that did not answer: its mark, faint, and the words, in line with the answers. */
 [data-theme^="minimal-"] #ledger .dcr-detail :is(.dcr-opinions,.dcr-ops,ul:has(>.dcr-op)){margin:16px 0 0;padding:0;border:0;list-style:none}
 [data-theme^="minimal-"] #ledger .dcr-detail .dcr-op{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;align-items:center;padding:6px 0 0;border:0;background:none}
@@ -751,15 +689,14 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
 [data-theme^="minimal-"] .overview-reading .other-checks>h2 .badge{display:none}
 [data-theme^="minimal-"] .overview-reading .qa-check-list{display:grid;gap:0}
 [data-theme^="minimal-"] .overview-reading .qa-preview-compact{display:grid;grid-template-columns:112px minmax(0,1fr);gap:0 16px;align-items:start;margin:0;padding:10px 0}
-[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-copy{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 16px}
 [data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-copy>strong{grid-column:1;font-size:14px;font-weight:400}
-[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status{grid-column:2;grid-row:1;padding:0;border:0;background:none;color:var(--minimal-faint);font-size:12px;font-weight:400;text-transform:none}
+[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status{grid-column:2;grid-row:1;padding:0;border:0;background:none;color:var(--minimal-faint);font-weight:400;text-transform:none}
 [data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status.failed{color:var(--ink)}
 [data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-action{display:none}
 [data-theme^="minimal-"] .overview-reading .qa-preview-compact small{grid-column:1 / -1;color:var(--minimal-faint);font-size:12.5px;line-height:1.5}
 
 /* A flow's result is a mark after its name: a check when it passed, an ✕ when it failed. */
-[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-copy{display:block}
+[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-copy{grid-template-columns:minmax(0,1fr) auto;gap:3px 16px;display:block}
 [data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-copy>strong{display:inline}
 [data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status{display:inline-block;margin-left:6px;font-size:0;vertical-align:baseline}
 [data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status::before{content:"✓";color:var(--ink-neutral-3);font-size:13px}
@@ -774,10 +711,9 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
 [data-theme^="minimal-"] .ledger-head .ledger-export:not([hidden]){display:grid;place-items:center;width:26px;height:26px;margin:0 auto 0 6px;padding:0;border:0;border-radius:6px;background:none;color:var(--minimal-faint);cursor:pointer}
 [data-theme^="minimal-"] .ledger-head .ledger-export:hover{background:var(--minimal-soft);color:var(--ink)}
 [data-theme^="minimal-"] .ledger-head .ledger-export svg{width:15px;height:15px;stroke-width:1.8}
-[data-theme^="minimal-"] #settings-dialog.has-agents[data-tab="agents"] .settings-round:not([hidden]){display:block;margin:18px 0 0;padding:16px 0 0;border-top:1px solid var(--line)}
 [data-theme^="minimal-"] .settings-round h2{margin:0 0 8px;color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
 [data-theme^="minimal-"] .settings-round p{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;color:var(--muted);font-size:12.5px}
-[data-theme^="minimal-"] #settings-dialog.has-agents[data-tab="agents"] .settings-round:not([hidden]){margin-inline:10px}
+[data-theme^="minimal-"] #settings-dialog.has-agents[data-tab="agents"] .settings-round:not([hidden]){display:block;margin:18px 0 0;padding:16px 0 0;border-top:1px solid var(--line);margin-inline:10px}
 [data-theme^="minimal-"] .settings-agents .dcr-presence-help{margin-top:8px;color:var(--muted);font-size:12.5px;line-height:1.45}
 [data-theme^="minimal-"] .settings-agents .dcr-presence-cmd code{font-size:11.5px}
 
