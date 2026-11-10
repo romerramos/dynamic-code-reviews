@@ -41,7 +41,7 @@
     <header class="stage-bar">
       <div class="dcr-qa-banner" role="status" aria-live="polite" hidden>
         <span class="dcr-qa-pulse" aria-hidden="true"></span>
-        <div class="dcr-qa-text"><strong data-qa-title>Your agent is running the QA review in this tab</strong><span data-qa-detail>Please don't click or type here until it finishes. The results will appear here.</span></div>
+        <div class="dcr-qa-text"><strong data-qa-title>Your agent is running the QA review in this tab</strong><span data-qa-detail>Please don't click or type here until it finishes. The results will appear here.</span><strong data-qa-prep data-qa-prep-title></strong><span data-qa-prep class="dcr-qa-clock" data-qa-prep-clock></span><span data-qa-prep data-qa-prep-detail></span></div>
         <span class="dcr-qa-progress" data-qa-progress></span>
         <button type="button" class="act act-secondary" data-qa-share hidden>Share this tab</button>
         <button type="button" class="act act-quiet" data-qa-stop>Stop QA review</button>
@@ -595,6 +595,8 @@
     const thread = qaEntry?.[1];
     const show = !!thread && thread.delivery !== 'sent' && !!state?.ready && !state.recording && !state.busy;
     prep.hidden = !show;
+    // A theme can say it in the QA bar instead, so the app shows one thing at a time.
+    dialog.classList.toggle('is-preparing', show);
     if (!show) return;
     const who = listener && tools ? tools.agentInfo(listener).name : 'Your agent';
     const clips = clipsSince(thread.messages[0]?.at || '');
@@ -605,6 +607,8 @@
     const fallback = clips ? `${clips} ${clips === 1 ? 'recording' : 'recordings'} so far. This part is not recorded.` : 'Signing in and setting up the data the flows need. This part is not recorded.';
     const detail = $('[data-prep-detail]');
     if (detail.textContent !== (lines[0]?.text || fallback)) detail.textContent = lines[0]?.text || fallback;
+    $('[data-qa-prep-title]').textContent = $('[data-prep-title]').textContent;
+    $('[data-qa-prep-detail]').textContent = detail.textContent;
     const log = $('[data-prep-log]');
     const older = lines.slice(1).map(line => line.text);
     if (JSON.stringify(older) !== log.dataset.lines) {
@@ -621,6 +625,7 @@
     if (prep.hidden) return;
     const since = at => at ? clock(Date.now() - Date.parse(at)) : '';
     $('[data-prep-clock]').textContent = since(prep.dataset.started);
+    $('[data-qa-prep-clock]').textContent = since(prep.dataset.started);
     $('[data-prep-since]').textContent = since(prep.dataset.since);
   };
   setInterval(tickPrep, 1000);
@@ -662,7 +667,10 @@
     const newer = latestRevision && currentRevision && (latestRevision > currentRevision || (latestRevision === currentRevision && latestSave > currentSave));
     done.querySelector('[data-done-summary]').textContent = newer
       ? `Your agent recorded ${clips || 'its'} ${clips === 1 ? 'recording' : 'recordings'} and saved them to this review, each on the comment it shows. They replace the previous QA review's recordings.`
-      : 'Your agent finished. Its report is below; nothing new was saved to the review.';
+      : 'Your agent stopped before saving anything to the review. What it said:';
+    // A check only when something came of it; otherwise the title says so.
+    done.classList.toggle('is-empty', !newer);
+    done.querySelector('#dcr-qa-done-title').textContent = newer ? 'QA review ready' : 'QA review: nothing recorded';
     done.querySelector('[data-done-report]').innerHTML = report && tools ? tools.markdown(report.body) : '';
     const openButtonDone = done.querySelector('[data-done-open]');
     openButtonDone.textContent = newer ? 'See the clips' : 'Back to the review';

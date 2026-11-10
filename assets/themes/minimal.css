@@ -900,3 +900,29 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
 [data-theme^="minimal-"] :is(.popover-comment,.review-thread) .dcr-op>.dcr-avatar svg{width:13px;height:13px}
 [data-theme^="minimal-"] :is(.popover-comment,.review-thread) .dcr-op-line{color:var(--minimal-faint);font-size:12px}
 [data-theme^="minimal-"] :is(.popover-comment,.review-thread) .dcr-op-line strong{color:inherit;font-weight:400}
+
+/* --- A QA review says one thing at a time. While the agent gets the app ready, the bar says it (with
+   its clock) and nothing covers the app; the sharing pill steps aside, since the bar implies it. --- */
+[data-theme^="minimal-"] #dcr-app.is-agent-driving .dcr-app-foot{display:none!important}
+[data-theme^="minimal-"] #dcr-app.is-preparing .dcr-app-prep{display:none}
+[data-theme^="minimal-"] #dcr-app.is-preparing .dcr-qa-text>:is([data-qa-title],[data-qa-detail]){display:none}
+[data-theme^="minimal-"] #dcr-app.is-preparing .dcr-qa-text>[data-qa-prep]{display:inline}
+[data-theme^="minimal-"] #dcr-app .dcr-qa-text>[data-qa-prep-title]{font-size:14px;font-weight:500;white-space:nowrap}
+[data-theme^="minimal-"] #dcr-app .dcr-qa-text>.dcr-qa-clock{color:var(--minimal-faint);font:12px var(--mono)}
+[data-theme^="minimal-"] #dcr-app .dcr-qa-text>[data-qa-prep-detail]{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--minimal-faint);font-size:12px}
+[data-theme^="minimal-"] #dcr-app.is-preparing .dcr-qa-pulse{width:12px;height:12px;box-sizing:border-box;border:2px solid var(--line);border-top-color:var(--ink);border-radius:50%;background:none;animation:dcr-qa-spin 1s linear infinite}
+@keyframes dcr-qa-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){[data-theme^="minimal-"] #dcr-app.is-preparing .dcr-qa-pulse{animation:none}}
+/* The result: what came of it, then the agent's words as plain text, not a box inside the box. */
+[data-theme^="minimal-"] .dcr-qa-done .modal-box{width:min(560px,calc(100vw - 32px));padding:22px 24px 18px;border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 64px color-mix(in srgb,var(--shade) 12%,transparent)}
+[data-theme^="minimal-"] .dcr-qa-done header{display:flex;gap:10px;align-items:flex-start;margin:0 0 14px}
+[data-theme^="minimal-"] .dcr-qa-done h2{margin:0;font-size:15px;font-weight:600}
+[data-theme^="minimal-"] .dcr-qa-done header p{margin:4px 0 0;color:var(--minimal-faint);font-size:12.5px}
+[data-theme^="minimal-"] .dcr-qa-done .dcr-qa-report{max-height:52vh;overflow:auto;margin:0;padding:0;border:0;background:none;font-size:13.5px;line-height:1.6;color:var(--ink)}
+[data-theme^="minimal-"] .dcr-qa-done .dcr-qa-report :is(p,ul,ol){margin:0 0 10px}
+[data-theme^="minimal-"] .dcr-qa-done .dcr-qa-report :is(ul,ol){padding-left:18px}
+[data-theme^="minimal-"] .dcr-qa-done .dcr-qa-report :is(ul,ol) :is(ul,ol){margin:4px 0 0;padding-left:16px}
+[data-theme^="minimal-"] .dcr-qa-done .dcr-qa-report code{padding:1px 4px;border-radius:4px;background:var(--minimal-soft);font-size:12px}
+[data-theme^="minimal-"] .dcr-qa-done .dcr-qa-free{margin:14px 0 0;color:var(--minimal-faint);font-size:12px}
+[data-theme^="minimal-"] .dcr-qa-done footer{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;padding:0;border:0;background:none}
+[data-theme^="minimal-"] .dcr-qa-done.is-empty [data-done-close]{display:none}

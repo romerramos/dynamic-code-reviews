@@ -702,3 +702,7 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 /* Review lens in Settings: a longer name than the appearance choices, and one line on what it looks for */
 #dcr-lens .view-select select{max-width:220px}
 .dcr-lens-summary{margin:8px 0 0;font-size:12px;line-height:1.45}
+
+/* The QA bar's own copy of what the agent is getting ready, for a theme that says it there instead of over the app. */
+#dcr-app [data-qa-prep]{display:none}
+.dcr-qa-done.is-empty .dcr-qa-check{display:none}
