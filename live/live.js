@@ -19,6 +19,9 @@
   const mark = () => `${latest || 0}.${latestSave}`;
   let listening; // is an agent waiting for messages? undefined: an older server that cannot say
   let listener = null; // which agent is listening (claude, codex, ...), when it said
+  // Whether a message reaches an agent: one is waiting, working, or answered a moment ago (between
+  // messages it is not waiting, yet it is there). undefined: an older server that cannot say.
+  const heard = () => listening === undefined ? undefined : tools.agentModel(threads, listening, Date.now(), previews, listener)?.tone !== 'off';
   let listenerModel = null; // {model, effort} it said it runs on
   const openOpinions = new Map(); // comment id -> the agents whose opinions are open
   const baseTitle = document.title;
@@ -144,10 +147,13 @@
     return UI.ThreadMessage({origin: true, from: comment.personal ? 'you' : comment.author ? 'person' : 'agent', face: byFace(comment), who,
       head: `${comment.personal ? '' : tools.modelHTML(comment)}${kind ? `<span class="dcr-role">${tools.escape(kind)}</span>` : ''}`, body: text ? tools.markdown(text) : '', clamped: long, more: long});
   };
-  // Who wrote a review comment: a teammate on GitHub, the agent, or the review itself.
-  const byName = comment => comment.author ? tools.personName(comment.author) : comment.agent ? tools.agentInfo(comment.agent).name : 'Review';
+  // Who wrote a review comment: a teammate on GitHub, or an agent.
+  // An agent comment that names no agent was written by the agent running the review: the one
+  // listening, or Claude, as the Overview's card says.
+  const writer = comment => comment.agent || listener || 'claude';
+  const byName = comment => comment.author ? tools.personName(comment.author) : tools.agentInfo(writer(comment)).name;
   // Who wrote it, as a face (Avatar): the reader, a teammate on GitHub, or the agent.
-  const byFace = (comment, size = 'md') => comment.personal ? UI.Avatar({you: me || null, size}) : comment.author ? UI.Avatar({person: comment.author, size}) : UI.Avatar({agent: comment.agent || null, size});
+  const byFace = (comment, size = 'md') => comment.personal ? UI.Avatar({you: me || null, size}) : comment.author ? UI.Avatar({person: comment.author, size}) : UI.Avatar({agent: writer(comment), size});
   const advToggleHTML = '<button type="button" class="dcr-adv-toggle" data-dcr-adv hidden aria-pressed="false"></button>';
   const composeHTML = () => `<form class="dcr-reply dcr-compose" hidden><textarea rows="1" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea>${advToggleHTML}<button type="button" class="dcr-change dcr-gh" data-dcr-github hidden aria-label="Sum this conversation up for GitHub" title="Sum this conversation up as a comment for GitHub">${window.ReviewGitHub?.mark || ''}</button><button type="button" class="dcr-change" data-dcr-change hidden aria-label="Make this change">${ico('wrench')}</button><button type="submit" class="dcr-send" aria-label="Send reply" title="Send reply (⌘ Enter)">${ico('send')}</button></form>`;
   const cardBlock = (id, variant, comment) => {
@@ -198,7 +204,7 @@
     // string that was set, not innerHTML, or the observer would re-trigger itself forever.
     const convo = block.querySelector('.dcr-convo');
     const opinions = tools.opinionsHTML(thread);
-    const model = online ? tools.statusModel(thread, listening, Date.now(), listener) : {tone: 'off', text: 'The review server stopped. Restart `dcr serve` to send or receive.'};
+    const model = online ? tools.statusModel(thread, heard(), Date.now(), listener) : {tone: 'off', text: 'The review server stopped. Restart `dcr serve` to send or receive.'};
     // Under a thread the status line only says what is still happening; an answer is shown, not announced.
     // What became of the comment once its code changed: each agent's word, and the reader's closing buttons.
     const comment = comments().find(entry => entry.id === id);
@@ -360,7 +366,7 @@
   const askFix = async (id, action, comment, note) => {
     refusals.delete(id);
     const result = await api('/api/fix', {key, id, ask: action.kind, ...(note === null ? {} : {note}), text: tools.sendText(snapshot, review, comment, note || '', threads[id])});
-    const unheard = listening === false ? ' No agent is listening yet; it starts when your agent picks it up.' : '';
+    const unheard = heard() === false ? ' No agent is listening yet; it starts when your agent picks it up.' : '';
     const said = result.outdated ? 'This comment\'s code had already changed in your checkout. The review is updated; nothing was sent.'
       : `Your agent is on it.${result.followed ? ' This review now shows your checkout.' : result.revision ? ' The review was updated to your checkout first.' : ''}${unheard}`;
     if (result.revision) {
@@ -600,7 +606,7 @@
     button.disabled = true;
     try {
       const asked = await sendComment(id);
-      flash(sentWith(tools.statusModel(threads[id], listening)?.text || 'Sent to your agent.', asked));
+      flash(sentWith(tools.statusModel(threads[id], heard())?.text || 'Sent to your agent.', asked));
     } catch (error) { flash(error.message); }
     finally { button.disabled = !online; }
   });
@@ -630,7 +636,7 @@
         document.querySelectorAll(`.dcr-thread[data-dcr="${CSS.escape(id)}"] textarea`).forEach(other => { other.value = ''; });
         form.hidden = true;
         delete form.dataset.mode;
-        if (mode === 'answer') { await refresh(); flash(`Sent to your agent.${listening === false ? ' No agent is listening yet; it starts when your agent picks it up.' : ''}`); }
+        if (mode === 'answer') { await refresh(); flash(`Sent to your agent.${heard() === false ? ' No agent is listening yet; it starts when your agent picks it up.' : ''}`); }
       } catch (error) { mode === 'act' ? refuse(id, error.message) : flash(error.message); }
       finally {
         if (change) { delete form.dataset.mode; delete form.dataset.change; }
@@ -647,7 +653,7 @@
       if (!ledger) form.hidden = true;
       await refresh();
       // In Your review the conversation itself shows the reply and what happens next.
-      if (!ledger) flash(sentWith(tools.statusModel(threads[id], listening)?.text || 'Reply sent to your agent.', asked));
+      if (!ledger) flash(sentWith(tools.statusModel(threads[id], heard())?.text || 'Reply sent to your agent.', asked));
       else if (field.isConnected) { field.focus(); const scroller = block.querySelector('.dcr-scroll'); scroller.scrollTop = scroller.scrollHeight; }
     } catch (error) { flash(error.message); }
     finally { form.querySelector('[type="submit"]').disabled = !online; }
@@ -665,7 +671,7 @@
     try {
       await api('/api/risk-ranking', {key});
       window.ReviewRisk?.set({requested: true});
-      flash(listening === false ? 'Asked for a new risk ranking. Your agent ranks the files when it continues the review.' : 'Asked your agent to rank the risky files again.');
+      flash(heard() === false ? 'Asked for a new risk ranking. Your agent ranks the files when it continues the review.' : 'Asked your agent to rank the risky files again.');
     } catch (error) { flash(error.message); button.disabled = false; }
   });
 
@@ -1363,7 +1369,7 @@
       let status = meta.querySelector('.ledger-status');
       if (!status) { status = document.createElement('span'); status.className = 'ledger-status'; meta.prepend(status); }
       // An unsent comment shows its Send button instead of saying it is unsent.
-      const model = online ? tools.statusModel(thread, listening) : null;
+      const model = online ? tools.statusModel(thread, heard()) : null;
       // An answer shows itself in the preview below, so the row does not also say "Replied".
       const text = state === 'resolved' || forPR || (state === 'draft' && online) || (model?.tone === 'done' && hasConversation(thread)) ? '' : model?.text || 'Not sent';
       const tone = model?.tone || 'off';
@@ -1434,7 +1440,7 @@
       const asked = await sendComment(id);
       // A theme with the bubble says it there; the others in the toast.
       if (bubble.isConnected && getComputedStyle(bubble).display !== 'none') renderBubble();
-      else flash(sentWith(tools.statusModel(threads[id], listening)?.text || 'Saved and sent to your agent.', asked));
+      else flash(sentWith(tools.statusModel(threads[id], heard())?.text || 'Saved and sent to your agent.', asked));
     }
     catch (error) { bubbleFor = null; renderBubble(); flash(`Saved, but not sent: ${error.message}`); }
   });
@@ -1772,7 +1778,7 @@
     const dots = '<span class="bar-bubble-dots" aria-hidden="true"><i></i><i></i><i></i></span>';
     const html = answered ? `<span>${name} answered</span><b>Read ›</b>`
       : !online ? '<span>Saved · the review server stopped</span>'
-      : listening === false ? '<span>Sent · your agent is offline</span>'
+      : heard() === false ? '<span>Sent · your agent is offline</span>'
       : `<span>${name} is thinking</span>${dots}`;
     bubble.dataset.state = answered ? 'answered' : 'thinking';
     bubble.setAttribute('aria-label', answered ? `${tools.agentInfo(listener || 'agent').name || 'Your agent'} answered. Open the conversation` : 'Your agent is working on your question');
@@ -1852,7 +1858,7 @@
       await api('/api/preview', {key, path});
       await refresh();
       const name = path.slice(path.lastIndexOf('/') + 1);
-      flash(listening === false ? `Asked your agent to preview ${name}. No agent is listening yet; it will start when your agent picks it up.` : `Asked your agent to preview ${name}. You can keep reviewing.`);
+      flash(heard() === false ? `Asked your agent to preview ${name}. No agent is listening yet; it will start when your agent picks it up.` : `Asked your agent to preview ${name}. You can keep reviewing.`);
     } catch (error) { flash(error.message); }
   });
   const syncPreviews = async () => {

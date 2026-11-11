@@ -199,6 +199,7 @@ globalThis.LiveTools = (() => {
 
   // What a thread is doing, in words and as a tone the page can style. `listening` is whether an
   // agent is waiting for messages right now; undefined means the server cannot say.
+  const BETWEEN_MS = 2 * 60 * 1000; // an agent that answered this recently is between messages, not gone
   const STALE_MS = 10 * 60 * 1000; // a handed-over message with no answer after this is probably dropped
   const stale = (thread, now) => thread?.delivery === 'delivered' && thread.delivered_at && now - Date.parse(thread.delivered_at) > STALE_MS;
   // Agents asked for a second opinion time out long before this, so a wait this old lost its asker.
@@ -346,7 +347,10 @@ globalThis.LiveTools = (() => {
     const building = Object.values(previews || {}).some(preview => preview.status === 'working');
     const working = building || Object.values(threads || {}).some(thread => thread.delivery === 'delivered' && !stale(thread, now));
     if (working) return {tone: 'work', text: `${name} working`, hint: `${listener ? name : 'Your agent'} received a message and is preparing an answer.`, agent: listener};
-    if (listening) return {tone: 'ok', text: `${name} listening`, hint: `${listener ? name : 'Your agent'} is waiting for your next message.`, agent: listener};
+    // Between answering and waiting again an agent is not listening, yet it is there: one that
+    // answered a moment ago counts as listening.
+    const answeredLately = Object.values(threads || {}).some(thread => (thread.messages || []).some(message => message.author === 'agent' && message.role !== 'adversary' && now - (Date.parse(message.at) || 0) < BETWEEN_MS));
+    if (listening || answeredLately) return {tone: 'ok', text: `${name} listening`, hint: `${listener ? name : 'Your agent'} is waiting for your next message.`, agent: listener};
     return {tone: 'off', text: 'No agent connected', hint: 'Nothing is listening yet. Ask your agent to continue this review so it can answer here.'};
   }
 

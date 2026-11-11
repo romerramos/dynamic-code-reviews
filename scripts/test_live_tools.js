@@ -133,6 +133,10 @@ assert.equal(tools.agentModel({}, undefined), null, 'an old server that cannot s
 assert.equal(tools.agentModel({}, true).tone, 'ok');
 assert.equal(tools.agentModel({}, false).tone, 'off');
 assert.equal(tools.agentModel({a:{delivery:'delivered'}}, false).tone, 'work', 'working wins over not listening');
+const justAnswered = {delivery:'answered', messages:[{author:'agent', agent:'claude', at:new Date(now - 30 * 1000).toISOString()}]};
+assert.equal(tools.agentModel({a:justAnswered}, false, now).tone, 'ok', 'an agent that answered a moment ago is between messages, not offline');
+assert.equal(tools.agentModel({a:{...justAnswered, messages:[{...justAnswered.messages[0], at:new Date(now - 10 * 60 * 1000).toISOString()}]}}, false, now).tone, 'off', 'one that answered long ago and stopped listening is offline');
+assert.equal(tools.agentModel({a:{messages:[{author:'agent', role:'adversary', at:new Date(now).toISOString()}]}}, false, now).tone, 'off', 'a second reviewer answering is not your agent');
 console.log('PASS thread and agent status say whether a message is waiting, being worked on, or answered');
 
 // Messages: plain thread, escaped, New until seen.
