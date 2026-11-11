@@ -10,7 +10,6 @@ require 'securerandom'
 
 module ReviewSeries
   module_function
-  PR_FIELDS = {'number' => 'pr_number', 'url' => 'pr_url', 'title' => 'pr_title'}.freeze # GitHub's names for a review's comparison fields
 
   def copy(value)
     Marshal.load(Marshal.dump(value))
@@ -990,12 +989,7 @@ module ReviewSeries
     # Labels are trusted only for the code they name (a carried-over one is not), so labels given
     # without it are this code's: the agent wrote them for this snapshot.
     comparison = review['comparison']
-    # GitHub names a pull request's fields number, url and title, as `dcr pr` prints them; the review
-    # names them pr_number, pr_url and pr_title. Either is read, so the page finds its pull request.
-    if comparison.is_a?(Hash)
-      comparison = comparison.to_h { |key, value| [PR_FIELDS.key?(key) && !comparison.key?(PR_FIELDS[key]) ? PR_FIELDS[key] : key, value] }
-      review['comparison'] = comparison
-    end
+    comparison = review['comparison'] = DCR::Page.pr_names(comparison) if comparison.is_a?(Hash)
     review['comparison'] = comparison.merge('base' => snapshot['base'], 'head' => snapshot['head']) if comparison.is_a?(Hash) && !comparison.key?('base') && !comparison.key?('head')
     review['history'] = increment.merge('series' => history['name'], 'revision' => entry['number'], 'save' => Array(entry['saves']).length, 'entries' => history['revisions'], 'origin_mode' => history['origin_mode'])
     html = DynamicReviews.review_html(snapshot, review)

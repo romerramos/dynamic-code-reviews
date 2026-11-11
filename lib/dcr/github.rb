@@ -4,6 +4,7 @@ require 'json'
 require 'net/http'
 require 'open3'
 require 'timeout'
+require_relative 'page'
 
 module DCR
   # Posts the reviewer's comments to the pull request with the GitHub CLI already signed in on
@@ -283,8 +284,9 @@ module DCR
 
     def saved_page(path)
       return unless File.file?(path)
-      json = File.read(path)[/<script\b(?=[^>]*\bid=["']data["'])[^>]*>(.*?)<\/script>/m, 1] or raise Error, 'This review has no data.'
-      JSON.parse(json).values_at('snapshot', 'review')
+      Page.payload(File.read(path, encoding: 'UTF-8')).values_at('snapshot', 'review')
+    rescue ArgumentError
+      raise Error, 'This review has no data.'
     end
 
     def clean(item, target)

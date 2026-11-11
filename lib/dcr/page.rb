@@ -103,7 +103,17 @@ module DCR
     def payload(html)
       json = html[/<script\b(?=[^>]*\bid=["']data["'])[^>]*>(.*?)<\/script>/m, 1]
       raise ArgumentError, 'Report has no embedded review data' unless json
-      JSON.parse(json)
+      data = JSON.parse(json)
+      comparison = data.dig('review', 'comparison')
+      data['review']['comparison'] = pr_names(comparison) if comparison.is_a?(Hash)
+      data
+    end
+
+    # GitHub names a pull request's fields number, url and title, as `dcr pr` prints them; a review
+    # names them pr_number, pr_url and pr_title. Either is read, so every reader finds the pull request.
+    PR_FIELDS = {'number' => 'pr_number', 'url' => 'pr_url', 'title' => 'pr_title'}.freeze
+    def pr_names(comparison)
+      comparison.to_h { |key, value| [PR_FIELDS.key?(key) && !comparison.key?(PR_FIELDS[key]) ? PR_FIELDS[key] : key, value] }
     end
 
     # Helpers the templates share. A template renders against its view's binding.
