@@ -1179,7 +1179,7 @@
     const path = earlier ? globalThis.ReviewTools.outdatedWhere(comment)?.path : (globalThis.ReviewTools.anchor(snapshot, comment)?.file.path || globalThis.ReviewTools.outdatedWhere(comment)?.path);
     const at = startedAt(comment, threads[comment.id]);
     const go = comment.general && !comment.outdated || !path ? null : {path, where: placeLines(comment, earlier)};
-    return UI.LedgerRow({id: comment.id, data: {conversation: '1', by: comment.author ? 'person' : 'agent', at, earlier: earlier ? '1' : null},
+    return UI.LedgerRow({id: comment.id, data: {conversation: '1', by: comment.author ? 'person' : 'agent', at, earlier: earlier ? '1' : null, state: resolved().includes(comment.id) ? 'resolved' : null},
       place: globalThis.ReviewTools.ledgerPlace(comment.id, comment.general && !comment.outdated ? '' : path, placeLines(comment, earlier)),
       face: byFace(comment), by: globalThis.ReviewTools.ledgerBy(tools.escape(byName(comment)), at), subject: titleHTML(comment.subject), go});
   };

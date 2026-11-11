@@ -256,9 +256,9 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .overview-clear strong{font-size:14px}
 [data-theme^="minimal-"] .overview-reading #my-review.review-section:has(>.review-empty){display:none}
 [data-theme^="minimal-"] .overview-reading .overview-todo strong{white-space:nowrap}
-/* What waits on the reader comes before what to read first, as designed. */
+/* What waits on the reader comes before what to read first, as designed; your comments, then GitHub's. */
 [data-theme^="minimal-"] .overview-reading>.risk-brief{order:1}
-[data-theme^="minimal-"] .overview-reading>#my-review{order:2}
+[data-theme^="minimal-"] .overview-reading>:is(#my-review,.overview-github){order:2}
 [data-theme^="minimal-"] .overview-reading>.overview-settled{order:3}
 
 /* --- Round four, from the real review: one column of 760px, one way to show a comment --------------- */
@@ -432,7 +432,8 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .dcr-popover{--message-space:12px;--message-text-size:13.5px;--message-text-line:1.6;--message-text-ink:var(--ink-neutral-3)}
 
 /* Everything settled: one All clear line, Resolved closed right under it. */
-[data-theme^="minimal-"] .overview-comments:has(.overview-clear)>h2{display:none}
+/* A section with nothing in it has no heading: no comment left open, or All clear in its place. */
+[data-theme^="minimal-"] .overview-comments:is(:has(.overview-clear),:not(:has(>article)))>h2{display:none}
 [data-theme^="minimal-"] .overview-reading .overview-comments:has(.overview-clear){margin-top:44px}
 [data-theme^="minimal-"] .overview-reading .overview-comments:has(.overview-clear)~.overview-settled{margin-top:24px}
 [data-theme^="minimal-"] .overview-clear>div{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
@@ -534,8 +535,8 @@ html[data-theme^="minimal-"]{--nav-groups:current}
 /* Your own row is drawn as the agent's: your face, the short title, the file and line, who answered. */
 
 /* On the Overview the comments are headed the same way: Agent comments, Your comments, From GitHub. */
-html[data-theme^="minimal-"] #content .overview-reading .overview-comments:not(.overview-github,:has(.overview-clear))>h2{display:block;font-size:0}
-[data-theme^="minimal-"] .overview-reading .overview-comments:not(.overview-github,:has(.overview-clear))>h2::before{content:"Agent comments";font-size:12px}
+html[data-theme^="minimal-"] #content .overview-reading .overview-comments:not(.overview-github,:has(.overview-clear)):has(>article)>h2{display:block;font-size:0}
+[data-theme^="minimal-"] .overview-reading .overview-comments:not(.overview-github,:has(.overview-clear)):has(>article)>h2::before{content:"Agent comments";font-size:12px}
 [data-theme^="minimal-"] .overview-reading .overview-todo{display:none}
 /* Your review is a column of its own here, so the bar centres on what is left without taking it off twice. */
 [data-theme^="minimal-"] #ledger .dcr-detail-code{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
