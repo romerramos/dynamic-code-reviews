@@ -9,7 +9,9 @@ html[data-mode="dark"]{--agent-claude:#ec9a7c;--agent-claude-bg:#3b2620;--agent-
 .ui-avatar[data-size="sm"]{--avatar-default:20px}
 .ui-avatar[data-size="lg"]{--avatar-default:32px}
 .ui-avatar[data-size="xl"]{--avatar-default:36px}
-.ui-avatar>svg{width:var(--avatar-mark,58%);height:var(--avatar-mark,58%);fill:currentColor}
+.ui-avatar>svg{width:var(--avatar-mark,58%);height:var(--avatar-mark,58%)}
+/* A logo is filled with the face's ink; a line icon (fill="none": the page's own notices) keeps its strokes. */
+.ui-avatar>svg:not([fill="none"]){fill:currentColor}
 .ui-avatar>b{font-weight:700;font-size:calc(var(--avatar-size,var(--avatar-default,28px)) * .5)}
 .ui-avatar[data-agent="claude"]{--face-ink:var(--agent-claude);--face-bg:var(--agent-claude-bg)}
 .ui-avatar[data-agent="codex"]{--face-ink:var(--agent-codex);--face-bg:var(--agent-codex-bg)}
