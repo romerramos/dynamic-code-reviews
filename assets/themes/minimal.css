@@ -533,9 +533,9 @@ html[data-theme^="minimal-"]{--nav-groups:current}
 :nth-child(1 of [data-ledger]:not([data-conversation])),:nth-child(1 of [data-by="person"]))::before{position:static;display:block;flex:1 0 100%;width:auto;height:auto;padding:16px 22px 2px;background:none;color:var(--minimal-faint);font-size:12px}
 /* Your own row is drawn as the agent's: your face, the short title, the file and line, who answered. */
 
-/* On the Overview the comments are headed the same way: Agent comments, then Your comments. */
-html[data-theme^="minimal-"] #content .overview-reading .overview-comments:not(:has(.overview-clear))>h2{display:block;font-size:0}
-[data-theme^="minimal-"] .overview-reading .overview-comments:not(:has(.overview-clear))>h2::before{content:"Agent comments";font-size:12px}
+/* On the Overview the comments are headed the same way: Agent comments, Your comments, From GitHub. */
+html[data-theme^="minimal-"] #content .overview-reading .overview-comments:not(.overview-github,:has(.overview-clear))>h2{display:block;font-size:0}
+[data-theme^="minimal-"] .overview-reading .overview-comments:not(.overview-github,:has(.overview-clear))>h2::before{content:"Agent comments";font-size:12px}
 [data-theme^="minimal-"] .overview-reading .overview-todo{display:none}
 /* Your review is a column of its own here, so the bar centres on what is left without taking it off twice. */
 [data-theme^="minimal-"] #ledger .dcr-detail-code{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
