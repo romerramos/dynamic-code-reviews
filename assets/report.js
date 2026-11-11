@@ -900,6 +900,8 @@
     $('search').focus({preventScroll:true});
     [...nav.querySelectorAll('.nav-file, .nav-match')].find(button => key(button) === stop)?.scrollIntoView({block:'nearest'});
   }
+  const navFolds = {}; // what the reader folded or unfolded in the list, by step id or `group:<first step id>`
+  let navFoldView = null;
   function renderNavigation() {
     const keyboardHere = $('navigation').contains?.(document.activeElement); // absent only outside a browser
     const keyboardRow = keyboardHere && document.activeElement.dataset.fileLink;
@@ -938,12 +940,26 @@
     // Where to read next: the first step with files left. A theme may point at it.
     const nextLayer = layers.find(layer => { const done = progress(layer.items); return done.total && done.viewed < done.total; });
     const stepNext = '<span class="step-next">start here</span>';
+    // A title in the list folds what is under it; only a file opens something. Where you are always
+    // starts open: arriving at another step forgets the folds set on it and on its group.
+    if (state.view !== navFoldView) {
+      const here = layers.find(layer => layer.id === state.view);
+      if (here) { delete navFolds[here.id]; delete navFolds[`group:${layers.find(layer => layer.group === here.group).id}`]; }
+      navFoldView = state.view;
+    }
+    // A theme says whether a group you are not in starts open or folded.
+    const groupsStart = getComputedStyle(document.documentElement).getPropertyValue?.('--nav-groups').trim() || 'open';
     if (!query) review.groups.forEach(group => {
       const matching = layers.filter(layer => layer.group === group);
       if (!matching.length) return;
       // A single-step group needs one heading, not the same title twice.
       const startsHere = matching.includes(nextLayer);
-      html += `<section class="nav-section">${group.layers.length > 1 ? `<h3 class="nav-group-title" data-view="${matching[0].id}">${escape(titleWithoutNumber(group.title))}${startsHere ? stepNext : ''}</h3>` : ''}<ul class="menu">`;
+      const groupKey = `group:${matching[0].id}`;
+      const titled = group.layers.length > 1;
+      const groupOpen = !titled || (navFolds[groupKey] ?? (groupsStart !== 'current' || matching.some(layer => layer.id === state.view)));
+      html += `<section class="nav-section">${titled ? `<h3 class="nav-group-title"><button type="button" class="nav-group-toggle" data-nav-fold="${groupKey}" aria-expanded="${groupOpen}" aria-controls="nav-steps-${matching[0].id}">${escape(titleWithoutNumber(group.title))}${startsHere ? stepNext : ''}</button></h3>` : ''}`;
+      if (!groupOpen) { html += `<ul id="nav-steps-${matching[0].id}" hidden></ul></section>`; return; }
+      html += `<ul id="nav-steps-${matching[0].id}" class="menu">`;
       matching.forEach(layer => {
         const count = layerComments(layer).length;
         const completed = progress(layer.items);
@@ -964,8 +980,10 @@
         // Tests are a label that a theme may make a fold: how many, and the reader opens them when they want them.
         const testsOpen = (state.testsOpen || []).includes(layer.id) || ordered.tests.includes(state.navFile);
         const tests = testLinks ? `<li class="nav-tests-label" role="presentation"><button type="button" class="nav-tests-toggle" data-tests-toggle="${layer.id}" aria-expanded="${testsOpen}">Tests <span class="nav-tests-count">${ordered.tests.length}</span></button></li>${testLinks}` : '';
-        const expanded = state.view === layer.id;
-        html += `<li><button data-view="${layer.id}" aria-current="${state.view === layer.id ? 'page' : 'false'}" aria-expanded="${expanded}" aria-controls="nav-files-${layer.id}"><span class="step-number">${completed.total && completed.viewed === completed.total ? icon('check') : layers.indexOf(layer) + 1}</span><span class="step-body"><strong>${stepTitle(titleWithoutNumber(group.layers.length === 1 ? group.title : layer.title), completed.total && completed.viewed === completed.total)}${layer === nextLayer ? stepNext : ''}</strong><small>${progressText(completed)}${count ? ` · ${count} comments` : ''}</small></span></button>${expanded ? `<ul id="nav-files-${layer.id}" class="nav-files">${links}${tests}</ul>` : `<ul id="nav-files-${layer.id}" hidden></ul>`}</li>`;
+        // Read file by file a step has no page of its own, so its title only folds its files. In the
+        // walkthrough the step is a page, and its title opens it.
+        const expanded = navFolds[layer.id] ?? state.view === layer.id;
+        html += `<li><button ${focusMode ? `data-nav-fold="${layer.id}" ` : ''}data-view="${layer.id}" aria-current="${state.view === layer.id ? 'page' : 'false'}" aria-expanded="${expanded}" aria-controls="nav-files-${layer.id}"><span class="step-number">${completed.total && completed.viewed === completed.total ? icon('check') : layers.indexOf(layer) + 1}</span><span class="step-body"><strong>${stepTitle(titleWithoutNumber(group.layers.length === 1 ? group.title : layer.title), completed.total && completed.viewed === completed.total)}${layer === nextLayer ? stepNext : ''}</strong><small>${progressText(completed)}${count ? ` · ${count} comments` : ''}</small></span></button>${expanded ? `<ul id="nav-files-${layer.id}" class="nav-files">${links}${tests}</ul>` : `<ul id="nav-files-${layer.id}" hidden></ul>`}</li>`;
       });
       html += '</ul></section>';
     });
@@ -1137,7 +1155,7 @@
     form.noValidate = true;
     form.setAttribute('aria-label', 'Add a comment');
     form.innerHTML = `<header class="composer-head"><div class="composer-modes" role="radiogroup" aria-label="Who is this comment for?" hidden><label class="composer-mode"><input type="radio" name="composer-mode" value="agent"><span>${icon('sparkles')}Agent</span></label><label class="composer-mode"><input type="radio" name="composer-mode" value="pr"><span>${icon('message-square')}${prLabel}</span></label></div><span class="composer-where"></span><span class="composer-as" data-composer-as hidden></span><button type="button" class="act act-quiet act-icon" data-composer-close aria-label="Close; what you typed is kept" title="Close (Q). What you typed is kept.">${icon('x')}</button></header>
-      <div class="composer-types" role="radiogroup" aria-label="Type of comment">${composerTypes.map(type => `<label class="composer-type"><input type="radio" name="composer-label" value="${type}"><span>${icon(commentTypes[type][0])}${commentTypes[type][1]}</span></label>`).join('')}</div>
+      <div class="composer-types" role="radiogroup" aria-label="Type of comment">${composerTypes.map(type => `<label class="composer-type"><input type="radio" name="composer-label" value="${type}"><span>${icon(UI.COMMENT_TYPES[type][0])}${UI.COMMENT_TYPES[type][1]}</span></label>`).join('')}</div>
       <div class="composer-body"><span class="composer-face" data-composer-face aria-hidden="true"></span><textarea class="composer-text" rows="3" aria-label="Your comment"></textarea></div>
       <footer class="composer-foot"><label class="composer-blocking"><input type="checkbox" name="composer-blocking"><span>Blocks approval</span></label><div class="composer-actions"><button type="button" class="act act-quiet" data-composer-cancel>Cancel</button><button type="submit" class="act act-pr" data-composer-save title="Ctrl or Cmd with Enter">Save comment<kbd class="composer-key" aria-hidden="true">⌘↵</kbd></button><button type="submit" class="act act-secondary" data-gh-action="open" hidden>Copy &amp; open on GitHub ${icon('arrow-up-right')}</button><button type="submit" class="act act-secondary" data-gh-action="single" hidden title="Post it on the pull request now">Comment now</button><button type="submit" class="act act-gh" data-gh-action="review" hidden title="Ctrl or Cmd with Enter"></button><span class="composer-split" data-composer-agent hidden><button type="submit" class="act act-agent" data-composer-send title="Ask about these lines (Ctrl or Cmd with Enter)">${icon('send')}Ask agent<kbd class="composer-key" aria-hidden="true">⌘↵</kbd></button><details class="more-menu" data-menu-from="parent"><summary class="act act-quiet act-icon" aria-label="More for your agent" title="More for your agent">${icon('chevron-down')}</summary><div class="more-list"><button type="submit" class="more-item" data-composer-change>${icon('wrench')}Send change<small>it edits your checkout</small></button></div></details></span></div></footer><p class="composer-gh" data-composer-gh role="status" aria-live="polite" hidden></p>`;
     const text = form.querySelector('.composer-text');
@@ -1281,11 +1299,11 @@
     const as = form.querySelector('[data-composer-as]');
     // The reader's face beside the text, saying who and where for a theme that hides the header's words.
     const face = form.querySelector('[data-composer-face]');
-    const faceHTML = youAvatar().replace(/^<span[^>]*>|<\/span>$/g, '');
+    const faceHTML = youAvatar('sm');
     if (face.dataset.html !== faceHTML) { face.innerHTML = faceHTML; face.dataset.html = faceHTML; }
     const agentTab = form.querySelector('.composer-mode input[value="agent"] + span');
     const slug = mainAgent();
-    if (agentTab && agentTab.dataset.agent !== slug) { agentTab.dataset.agent = slug; agentTab.innerHTML = `<span class="composer-agent-mark" data-agent="${escape(slug)}" aria-hidden="true">${agentMark(slug)}</span>Agent`; }
+    if (agentTab && agentTab.dataset.agent !== slug) { agentTab.dataset.agent = slug; agentTab.innerHTML = `<span class="composer-agent-mark" data-agent="${escape(slug)}" aria-hidden="true">${UI.AgentMark(slug)}</span>Agent`; }
     const status = ghStatus();
     const who = gh === 'post' && status.phase === 'ready' && !unpushed ? `<b>@${escape(status.login)}</b> on #${escape(status.number)}${ghPending() ? ` · ${ghPending()} pending` : ''}` : '';
     if (as.dataset.html !== who) { as.innerHTML = who; as.dataset.html = who; as.title = who ? `Commenting as @${status.login} on ${status.repo} #${status.number}` : ''; }
@@ -1409,27 +1427,23 @@
     }
   }
 
-  // The reader's face: their GitHub avatar once the served review found it (window.ReviewMe), else a Y.
-  const youAvatar = () => {
-    const avatar = window.ReviewMe?.avatar;
-    return `<span class="comment-avatar" aria-hidden="true">${/^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(avatar || '') ? `<img src="${avatar}" alt="">` : 'Y'}</span>`;
-  };
+  // The reader's face (Avatar): their GitHub avatar once the served review found it (window.ReviewMe), else a Y.
+  const youAvatar = (size = 'md') => UI.Avatar({you: window.ReviewMe || null, size});
   // The reader by their GitHub handle once the served review knows it (window.ReviewMe), else You.
   const youName = () => escape(window.ReviewMe?.login || 'You');
   // In the diff's popover the lines go with the file, path:88, as in an editor; the reader's own comment
   // reads as their message, in a chat: their face, You, then what they wrote.
   function commentHTML(comment) {
     const lines = `:${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}${comment.side === 'new' ? '' : ' (before)'}`;
-    const where = `<p class="comment-location">${pathFit(ReviewTools.anchor(snapshot, comment)?.file.path || '', lines, true)}</p>`;
     const body = ReviewTools.commentBody(comment, review.qa) ? `<div class="comment-discussion">${ReviewTools.markdown(ReviewTools.commentBody(comment, review.qa))}</div>` : '';
-    const evidence = ReviewTools.evidenceFlows(review.qa, comment).length ? `<button class="btn btn-xs btn-soft" data-evidence="${escape(comment.id)}">See visual evidence</button>` : '';
+    const evidence = ReviewTools.evidenceFlows(review.qa, comment).length ? UI.Button({label: 'See visual evidence', size: 'xs', attrs: {'data-evidence': comment.id}}) : '';
     const actions = `<div class="comment-actions">${commentActions(comment, 'xs')}</div>`;
-    if (comment.personal) {
-      const tags = comment.audience === 'agent' ? (comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : '') : threadBadges(comment, true);
-      return `<section class="popover-comment is-own" data-comment-id="${escape(comment.id)}">${where}<div class="comment-own">${youAvatar()}<div class="comment-own-main"><p class="comment-own-head"><strong class="you-name">${youName()}</strong>${tags}</p><h4>${escape(comment.subject)}</h4>${body}</div></div>${evidence}${actions}</section>`;
-    }
     const found = ReviewTools.anchor(snapshot, comment);
-    return `<section class="popover-comment" data-comment-id="${escape(comment.id)}">${where}<div class="thread-badges">${threadBadges(comment)}</div><div class="popover-title">${authorFace(comment)}<h4>${prose(comment.subject)}</h4><span class="thread-at">${escape(lines)}</span></div>${threadMeta(comment, found?.file.path, lines.slice(1))}${body}${evidence}<div class="thread-footer">${actions}<button class="btn btn-xs ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${escape(comment.id)}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></section>`;
+    const tags = comment.personal && comment.audience === 'agent' ? `${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${youBadge()}` : threadBadges(comment, comment.personal);
+    return UI.CommentPopover({id: comment.id, own: comment.personal, where: pathFit(found?.file.path || '', lines, true), tags, face: authorFace(comment),
+      title: comment.personal ? escape(comment.subject) : prose(comment.subject), place: escape(lines),
+      meta: threadMeta(comment, found?.file.path, lines.slice(1)), body: `${body}${evidence}`,
+      footer: `${actions}${comment.personal ? '' : UI.Button({html: comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`, variant: comment.resolved ? 'ghost' : 'soft', size: 'xs', attrs: {'data-resolve': comment.id}})}`});
   }
 
   // A comment that asks nothing more of the reader (resolved, or praise) keeps its icon, faintly, and marks no lines.
@@ -1491,7 +1505,10 @@
   // How far down a comment card may reach: above the bar, where the theme shows one.
   function commentFloor() {
     const bar = $('review-bar');
-    const top = bar && getComputedStyle(bar).display !== 'none' ? bar.getBoundingClientRect().top - 8 : innerHeight;
+    // The card ends above the bar, and above its Back to … pill when that shows.
+    const back = $('bar-back');
+    const above = back && !back.hidden && back.getBoundingClientRect().height ? back : bar;
+    const top = bar && getComputedStyle(bar).display !== 'none' ? above.getBoundingClientRect().top - 8 : innerHeight;
     return Math.min(innerHeight, top) - 12;
   }
   function positionComment() {
@@ -2042,27 +2059,13 @@
     return `<details class="file-card ${fileViewed(file) ? 'is-viewed' : ''}" data-file="${file.id}" ${fileOpen(file) ? 'open' : ''}><summary><span class="file-icon" aria-hidden="true">&lt;/&gt;</span><span class="filename">${pathFit(file.path)}</span><span class="badge success">+${added}</span><span class="badge blocking">−${removed}</span><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" aria-label="${escape(`Mark ${file.path} as reviewed`)}" ${fileViewed(file) ? 'checked' : ''}> Reviewed</label></summary>${summary || request || notVisualNote(file) ? `<div class="file-summary">${summary ? `<span>${summary}</span>` : ''}${request}${notVisualNote(file)}</div>` : ''}${hunks.length ? table : `<div class="file-summary"><pre>${escape(file.patch || 'No text diff available.')}</pre></div>`}</details>`;
   }
 
-  const commentTypes = {
-    note:['info', 'Note', 'Context worth knowing', 'blue'],
-    praise:['thumbs-up', 'Praise', 'What works well', 'green'],
-    question:['circle-help', 'Question', 'An answer would help', 'purple'],
-    thought:['lightbulb', 'Thought', 'An idea to consider', 'amber'],
-    issue:['circle-alert', 'Issue', 'A problem to address', 'red'],
-    suggestion:['message-circle', 'Suggestion', 'A proposed improvement', 'teal'],
-    todo:['list-todo', 'Todo', 'A follow-up task', 'amber'],
-    chore:['wrench', 'Chore', 'Routine maintenance', 'blue'],
-    nitpick:['scan-text', 'Nitpick', 'A small preference', 'slate'],
-    typo:['spell-check', 'Typo', 'A spelling correction', 'slate'],
-    polish:['sparkles', 'Polish', 'A finishing touch', 'teal'],
-    quibble:['message-circle', 'Quibble', 'A minor concern', 'slate']
-  };
   // Where a comment can go. Ask agent stays in this review; GitHub leaves it, so it says so (↗) and
   // copies the comment on the way, ready to paste on the lines it opens. Without a GitHub PR the slot
   // copies the comment for pasting anywhere. Everything else waits behind the ⋯ menu.
   function githubAction(comment, data, size = 'sm') {
     const link = ReviewTools.githubLink(snapshot, review, comment);
-    if (!link) return `<button class="btn btn-${size} btn-soft" ${data.copy}>${icon('copy')} Copy for comment</button>`;
-    return `<a class="btn btn-${size} gh-act" href="${escape(link)}" target="_blank" rel="noopener noreferrer" ${data.github} title="Copies the comment and opens ${comment.general ? 'the pull request' : 'these lines'} on GitHub, ready to paste">Comment on GitHub ${icon('arrow-up-right')}</a>`;
+    if (!link) return UI.Button({html: `${icon('copy')} Copy for comment`, size, attrs: data.copy});
+    return UI.Button({tag: 'a', html: `Comment on GitHub ${icon('arrow-up-right')}`, size, variant: null, className: 'gh-act', attrs: {href: link, target: '_blank', rel: 'noopener noreferrer', ...data.github, title: `Copies the comment and opens ${comment.general ? 'the pull request' : 'these lines'} on GitHub, ready to paste`}});
   }
   // --- GitHub -------------------------------------------------------------------------------------
   // A served review posts to the pull request itself: the live layer connects a provider that runs
@@ -2090,22 +2093,23 @@
   function githubControls(comment, size = 'sm') {
     const id = escape(comment.id);
     // Without a pull request to open there is nothing to do here but copy, and that is in the ⋯ menu.
-    if (!ghPostable(comment) || !ghLive()) return ghPostable(comment) ? githubAction(comment, {copy: `data-copy-comment="${id}"`, github: `data-github="${id}"`}, size) : '';
+    if (!ghPostable(comment) || !ghLive()) return ghPostable(comment) ? githubAction(comment, {copy: {'data-copy-comment': comment.id}, github: {'data-github': comment.id}}, size) : '';
     const status = ghStatus();
     const state = ghState(comment.id);
-    if (state.state === 'posted') return `<a class="btn btn-${size} gh-posted" href="${escape(state.url)}" target="_blank" rel="noopener noreferrer" title="${escape(ghWhere(state))}">${icon('check')}Posted · View on GitHub ${icon('arrow-up-right')}</a>`;
-    if (state.state === 'posting') return `<button type="button" class="btn btn-${size} gh-act gh-busy" disabled><span class="gh-spinner" aria-hidden="true"></span>Posting to GitHub…</button>`;
+    if (state.state === 'posted') return UI.Button({tag: 'a', html: `${icon('check')}Posted · View on GitHub ${icon('arrow-up-right')}`, size, variant: null, className: 'gh-posted', attrs: {href: state.url, target: '_blank', rel: 'noopener noreferrer', title: ghWhere(state)}});
+    if (state.state === 'posting') return UI.Button({html: '<span class="gh-spinner" aria-hidden="true"></span>Posting to GitHub…', size, variant: null, className: 'gh-act gh-busy', attrs: {disabled: true}});
     // Until GitHub answers, say so where the buttons will be, rather than showing dead buttons.
     if (status.phase === 'checking') return `<span class="gh-wait" role="status"><span class="gh-spinner" aria-hidden="true"></span>Connecting to GitHub…</span>`;
     const off = status.phase === 'ready' ? '' : `disabled title="${escape(status.text || '')}"`;
-    if (state.state === 'pending') return `<button type="button" class="btn btn-${size} btn-ghost" data-gh-unpend="${id}" ${off}>Remove from review</button>`;
+    const offAttrs = status.phase === 'ready' ? {} : {disabled: true, title: status.text || ''};
+    if (state.state === 'pending') return UI.Button({label: 'Remove from review', size, variant: 'ghost', attrs: {'data-gh-unpend': comment.id, ...offAttrs}});
     const error = state.state === 'failed' ? `<span class="gh-error" role="alert">${icon('circle-alert')}<span>${escape(state.error)}</span></span>` : '';
     const label = state.state === 'failed' ? 'Try again' : 'GitHub';
     // One way out to GitHub per comment. What the agent wrote goes in the reader's words, so its
     // button opens the box that shows them, and the box's two buttons choose. What the reader wrote
     // goes as written, so a menu with the same two choices is enough.
-    if (!comment.personal || comment.audience === 'agent') return `${error}<button type="button" class="btn btn-${size} gh-act" data-gh-open="${id}" ${off} title="${comment.personal ? 'The conversation, summed up in your words' : 'Read it in your words'}, then add it to your GitHub review or post it now">${ghMark}${label}</button>`;
-    return `${error}<details class="more-menu gh-menu"><summary class="btn btn-${size} gh-act" title="Add it to your GitHub review, or post it on the pull request now">${ghMark}${label}${icon('chevron-down')}</summary><div class="more-list">${menuItem(`data-gh-pend="${id}" ${off}`, 'Add to my GitHub review', 'plus')}${menuItem(`data-gh-post="${id}" ${off}`, 'Comment now', 'send')}</div></details>`;
+    if (!comment.personal || comment.audience === 'agent') return `${error}${UI.Button({html: `${ghMark}${label}`, size, variant: null, className: 'gh-act', attrs: {'data-gh-open': comment.id, ...offAttrs, title: `${comment.personal ? 'The conversation, summed up in your words' : 'Read it in your words'}, then add it to your GitHub review or post it now`}})}`;
+    return `${error}<details class="more-menu gh-menu">${UI.Button({tag: 'summary', html: `${ghMark}${label}${icon('chevron-down')}`, size, variant: null, className: 'gh-act', attrs: {title: 'Add it to your GitHub review, or post it on the pull request now'}})}<div class="more-list">${menuItem(`data-gh-pend="${id}" ${off}`, 'Add to my GitHub review', 'plus')}${menuItem(`data-gh-post="${id}" ${off}`, 'Comment now', 'send')}</div></details>`;
   }
   const ghSlot = (comment, size = 'sm') => `<span class="gh-slot" data-gh-slot="${escape(comment.id)}" data-size="${size}">${githubControls(comment, size)}</span>`;
   const ghBadgeSlot = comment => `<span class="gh-slot" data-gh-badge="${escape(comment.id)}">${ghBadge(comment)}</span>`;
@@ -2129,7 +2133,7 @@
   }
   window.ReviewGitHub = {connect(provider) { github.provider = provider; refreshGitHub(); }, refresh: refreshGitHub, mark: ghMark};
   const menuItem = (attrs, label, symbol = '') => `<button type="button" class="more-item" ${attrs}>${symbol ? icon(symbol) : ''}${label}</button>`;
-  const moreMenu = (items, size = 'sm') => `<details class="more-menu"><summary class="btn btn-${size} btn-ghost more-toggle" aria-label="More actions" title="More actions">${icon('ellipsis')}</summary><div class="more-list">${items.join('')}</div></details>`;
+  const moreMenu = (items, size = 'sm') => `<details class="more-menu">${UI.Button({tag: 'summary', html: icon('ellipsis'), size, variant: 'ghost', className: 'more-toggle', attrs: {'aria-label': 'More actions', title: 'More actions'}})}<div class="more-list">${items.join('')}</div></details>`;
   // A comment's actions: GitHub (when it is a comment for the PR) and the menu.
   function commentActions(comment, size = 'sm') {
     const id = escape(comment.id);
@@ -2148,25 +2152,23 @@
     return `${ghSlot(comment, size)}${moreMenu(items, size)}`;
   }
   // Who wrote a comment: its agent's mark and name. The served page credits replies the same way.
-  const AGENT_NAMES = {claude:'Claude', codex:'Codex', gemini:'Gemini', grok:'Grok', antigravity:'Antigravity', cursor:'Cursor', opencode:'opencode'};
   function agentBadge(slug, comment = {}) {
     if (!slug) return '';
-    const name = AGENT_NAMES[slug] || slug.charAt(0).toUpperCase() + slug.slice(1);
-    const mark = window.ReviewBrands?.[slug] || `<b>${escape(name.charAt(0))}</b>`;
+    const name = UI.agentInfo(slug).name;
     const model = ReviewTools.modelText(comment.model, comment.effort);
-    return `<span class="thread-by" title="Written by ${escape(model ? `${name}, ${model}` : name)}">by<span class="agent-face" data-agent="${escape(slug)}" aria-hidden="true">${mark}</span>${escape(name)}${model ? `<span class="thread-model">${escape(model)}</span>` : ''}</span>`;
+    return `<span class="thread-by" title="Written by ${escape(model ? `${name}, ${model}` : name)}">by${UI.Avatar({agent: slug, size: 'xs', title: ''})}${escape(name)}${model ? `<span class="thread-model">${escape(model)}</span>` : ''}</span>`;
   }
+  // The reader's own comment, said as the agent's is: by (face) and their name.
+  const youBadge = () => `<span class="thread-by" title="Your comment">by${youAvatar('xs')}<span class="you-name">${youName()}</span></span>`;
   // A teammate's comment, taken in from the pull request on GitHub: their avatar and login.
   function personBadge(person) {
     const login = person.login || 'someone';
-    const face = /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(person.avatar || '') ? `<img src="${person.avatar}" alt="">` : `<b>${escape(login.charAt(0).toUpperCase())}</b>`;
-    return `<span class="thread-by" title="Written on GitHub by @${escape(login)}">by<span class="agent-face person-face" aria-hidden="true">${face}</span>@${escape(login)}</span>`;
+    return `<span class="thread-by" title="Written on GitHub by @${escape(login)}">by${UI.Avatar({person, size: 'xs', title: ''})}@${escape(login)}</span>`;
   }
   // own: in a message already signed You, so it does not say Your comment.
   function threadBadges(comment, own = false) {
-    if (comment.audience === 'agent') return `<span class="thread-type type-purple" title="A question for your agent. It stays in this review until you send its conversation to GitHub."><span class="thread-type-icon">${icon('sparkles')}</span>For your agent</span>${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${ghBadgeSlot(comment)}`;
-    const [symbol, title, hint, tone] = commentTypes[comment.label] || commentTypes.note;
-    return `<span class="thread-type type-${tone}" title="${hint}"><span class="thread-type-icon">${icon(symbol)}</span>${title}</span><span class="thread-priority ${comment.decoration === 'blocking' ? 'is-blocking' : 'is-optional'}">${comment.decoration === 'blocking' ? `${icon('circle-alert')} Blocking` : 'Non-blocking'}</span>${comment.severity ? `<span class="thread-severity">${escape(comment.severity)}</span>` : ''}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${comment.personal ? own ? '' : '<span class="thread-author">Your comment</span>' : comment.author ? personBadge(comment.author) : agentBadge(comment.agent, comment)}${ghBadgeSlot(comment)}`;
+    if (comment.audience === 'agent') return `${UI.Tag(null, {agent: true})}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${ghBadgeSlot(comment)}`;
+    return `${UI.Tag(comment.label)}<span class="thread-priority ${comment.decoration === 'blocking' ? 'is-blocking' : 'is-optional'}">${comment.decoration === 'blocking' ? `${icon('circle-alert')} Blocking` : 'Non-blocking'}</span>${comment.severity ? `<span class="thread-severity">${escape(comment.severity)}</span>` : ''}${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${comment.personal ? own ? youBadge() : '<span class="thread-author">Your comment</span>' : comment.author ? personBadge(comment.author) : agentBadge(comment.agent, comment)}${ghBadgeSlot(comment)}`;
   }
   // closed: the card starts folded to its subject (a comment from an earlier revision).
   // A comment's place in a few characters (ws.rb:55), and its state in a word, for a closed comment shown as one line.
@@ -2176,15 +2178,12 @@
     const label = `${path.split('/').pop()}${line ? `:${line}` : ''}`;
     return label.length > 28 ? `<span class="name-head">${escape(label.slice(0, -16))}</span><span class="name-tail">${escape(label.slice(-16))}</span>` : escape(label);
   };
-  const stateWord = (comment, closed) => {
-    const word = comment.personal && !comment.resolved ? 'yours' : comment.resolved ? 'resolved' : closed && comment.outdated?.revision ? `revision ${comment.outdated.revision}` : '';
-    return word ? `data-state="${escape(word)}"` : '';
-  };
+  const stateWord = (comment, closed) => comment.personal && !comment.resolved ? 'yours' : comment.resolved ? 'resolved' : closed && comment.outdated?.revision ? `revision ${comment.outdated.revision}` : '';
   // Who wrote it, what kind it is and how much it matters, where it is: one line under the title.
   const threadMeta = (comment, path, range) => {
     const kind = comment.personal ? (comment.audience === 'agent' ? 'Your question' : 'Your comment') : (comment.label ? comment.label.charAt(0).toUpperCase() + comment.label.slice(1) : 'Comment');
     const slug = comment.personal ? '' : comment.agent || '';
-    const by = slug ? escape(AGENT_NAMES[slug] || slug.charAt(0).toUpperCase() + slug.slice(1)) : '';
+    const by = slug ? escape(UI.agentInfo(slug).name) : '';
     // Who wrote it is the face beside the title, and where it is is at the right of it: only what kind of comment it is is said.
     return `<p class="thread-meta" title="${escape([by, path && range ? `${path}, ${range}` : ''].filter(Boolean).join(' · '))}">${[kind, comment.decoration && !comment.personal ? escape(comment.decoration) : ''].filter(Boolean).join('<i aria-hidden="true">·</i>')}</p>`;
   };
@@ -2196,19 +2195,8 @@
     (review.comments || []).forEach(comment => { if (comment.agent) count[comment.agent] = (count[comment.agent] || 0) + 1; });
     return Object.entries(count).sort((a, b) => b[1] - a[1])[0]?.[0] || 'claude';
   }
-  const agentMark = slug => window.ReviewBrands?.[slug] || `<b>${escape((AGENT_NAMES[slug] || slug).charAt(0))}</b>`;
-  // Who wrote a comment, as a small face: the reader, a teammate on GitHub, or an agent's mark.
-  function authorFace(comment) {
-    if (comment.personal) return youAvatar().replace('class="comment-avatar"', 'class="thread-face is-you" title="You"');
-    if (comment.author) {
-      const login = comment.author.login || 'someone';
-      const face = /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(comment.author.avatar || '') ? `<img src="${comment.author.avatar}" alt="">` : `<b>${escape(login.charAt(0).toUpperCase())}</b>`;
-      return `<span class="thread-face is-person" title="@${escape(login)} on GitHub" aria-hidden="true">${face}</span>`;
-    }
-    const slug = comment.agent || 'claude';
-    const name = AGENT_NAMES[slug] || slug;
-    return `<span class="thread-face" data-agent="${escape(slug)}" title="${escape(name)}" aria-hidden="true">${window.ReviewBrands?.[slug] || `<b>${escape(name.charAt(0))}</b>`}</span>`;
-  }
+  // Who wrote a comment, as a small face (Avatar): the reader, a teammate on GitHub, or an agent.
+  const authorFace = comment => comment.personal ? youAvatar() : comment.author ? UI.Avatar({person: comment.author}) : UI.Avatar({agent: comment.agent || 'claude'});
   function commentCard(comment, closed = false) {
     const found = ReviewTools.anchor(snapshot, comment);
     if (!found && !comment.general) return '';
@@ -2223,7 +2211,19 @@
     // Your own comment is titled by a summary, so its body is the whole of what you wrote.
     const told = comment.personal ? [comment.subject, comment.discussion].filter(Boolean).join('\n\n') : comment.discussion;
     const follows = earlier ? `<details class="thread-follows"><summary>Follows up on “${escape(earlier.subject)}”${earlierWas?.revision ? `, from revision ${escape(earlierWas.revision)}` : ''}</summary>${earlier.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(earlier.discussion)}</div>` : ''}${earlierWas?.code ? `<details class="thread-was"><summary>The code it was written on</summary><pre><code>${escape(earlierWas.code)}</code></pre></details>` : ''}</details>` : '';
-    return `<article class="review-thread ${comment.resolved ? 'is-resolved' : ''} ${closed ? 'is-earlier' : ''}${comment.personal ? ' is-own' : ''}" data-thread-id="${id}"><div class="thread-file"><span class="thread-file-path">${pathFit(found?.file.path || was?.path || 'General comment', '', true)}</span><span class="thread-range">${found ? range : was ? `<span class="thread-outdated" title="These lines changed after the comment was written">Outdated</span>${escape(was.lines)}${closed && was.revision ? ` in revision ${escape(was.revision)}` : ''}` : ''}</span></div><details class="thread-details" data-thread-fold="${id}" ${threadsOpen.has(comment.id) ? 'open' : ''}><summary class="thread-summary" aria-label="Comment: ${escape(comment.subject)}">${comment.personal ? youAvatar() : ''}<span class="thread-badges">${comment.personal ? `<b class="thread-you you-name">${youName()}</b>${comment.audience === 'agent' ? (comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : '') + ghBadgeSlot(comment) : threadBadges(comment, true)}` : threadBadges(comment)}</span>${authorFace(comment)}<strong title="${escape(comment.subject)}">${prose(comment.personal ? comment.title || shortTitle(comment.subject, 64) : comment.author ? shortTitle(comment.subject, 90) : comment.subject)}${found && comment.hunk ? ` <button type="button" class="thread-go" data-comment="${id}" title="${escape(`${found.file.path} · ${range}`)}" aria-label="${escape(`Show in the code: ${found.file.path}, ${range}`)}">${icon('arrow-up-right')}</button>` : ''}</strong><span class="thread-at" ${stateWord(comment, closed)}>${place(found ? found.file.path : was?.path, found ? comment.start : comment.outdated?.start)}</span><span class="thread-chevron">${icon('chevron-down')}</span></summary><div class="thread-body">${threadMeta(comment, found?.file.path || was?.path, found ? range : was?.lines)}${told ? `<div class="comment-discussion">${ReviewTools.markdown(told)}</div>` : ''}${wasCode}${follows}${commentShots(comment)}${commentEvidence(comment)}</div>${found ? found.fullFile ? `<button class="thread-source btn btn-sm btn-ghost" type="button" data-comment="${id}">View in file · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : `<button class="thread-source btn btn-sm btn-ghost" type="button" data-open-code="${id}" aria-haspopup="dialog" aria-label="${escape(`View code for ${found.file.path}, ${range}: ${comment.subject}`)}">View code · ${found.lines.length} line${found.lines.length === 1 ? '' : 's'} ${icon('arrow-right')}</button>` : ''}</details><div class="thread-footer"><div class="comment-actions">${commentActions(comment)}</div><button class="btn btn-sm ${comment.resolved ? 'btn-ghost' : 'btn-soft'}" data-resolve="${id}">${comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`}</button></div></article>`;
+    const title = prose(comment.personal ? comment.title || shortTitle(comment.subject, 64) : comment.author ? shortTitle(comment.subject, 90) : comment.subject);
+    const lines = found ? `${found.lines.length} line${found.lines.length === 1 ? '' : 's'}` : '';
+    const source = !found ? '' : found.fullFile
+      ? UI.Button({html: `View in file · ${lines} ${icon('arrow-right')}`, variant: 'ghost', className: 'thread-source', attrs: {'data-comment': comment.id}})
+      : UI.Button({html: `View code · ${lines} ${icon('arrow-right')}`, variant: 'ghost', className: 'thread-source', attrs: {'data-open-code': comment.id, 'aria-haspopup': 'dialog', 'aria-label': `View code for ${found.file.path}, ${range}: ${comment.subject}`}});
+    return UI.CommentCard({id: comment.id, open: threadsOpen.has(comment.id), resolved: comment.resolved, earlier: closed, own: comment.personal,
+      row: {subject: comment.subject, title, face: authorFace(comment), go: found && comment.hunk ? {path: found.file.path, range} : null,
+        tags: comment.personal && comment.audience === 'agent' ? '' : UI.Tag(comment.label),
+        place: place(found ? found.file.path : was?.path, found ? comment.start : comment.outdated?.start), state: stateWord(comment, closed)},
+      meta: threadMeta(comment, found?.file.path || was?.path, found ? range : was?.lines),
+      body: `${told ? `<div class="comment-discussion">${ReviewTools.markdown(told)}</div>` : ''}${wasCode}${follows}${commentShots(comment)}${commentEvidence(comment)}`,
+      source,
+      footer: `<div class="comment-actions">${commentActions(comment)}</div>${UI.Button({html: comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`, variant: comment.resolved ? 'ghost' : 'soft', attrs: {'data-resolve': comment.id}})}`});
   }
   function toggleResolved(id) {
     const comment = comments.find(comment => comment.id === id);
@@ -2248,7 +2248,7 @@
   function renderMyReview() {
     const personal = comments.filter(comment => comment.personal && !comment.resolved);
     const notes = personalNotes();
-    return `<section class="review-section" id="my-review"><div class="section-heading"><div><h2>Your comments <span class="badge neutral">${personal.length + notes.length}</span></h2></div><div class="comment-actions"><button class="btn btn-sm btn-soft" data-add-general>Add comment</button><button class="btn btn-sm btn-soft" data-copy-all ${personal.length + notes.length ? '' : 'disabled'}>Copy all for LLMs</button></div></div>${personal.length + notes.length ? personal.map(commentCard).join('') + notes.map(note => `<article class="review-comment personal-comment"><span class="badge neutral">Your step note</span><h3>${escape(note.title)}</h3><p class="comment-discussion">${escape(note.text)}</p><button class="btn btn-sm btn-soft" data-copy-note="${note.id}">Copy for LLMs</button><button class="btn btn-sm btn-ghost" data-view="${note.id}">Open step →</button></article>`).join('') : '<p class="review-empty">None yet. Select lines in the code to comment on them, or add a general one here.</p>'}</section>`;
+    return `<section class="review-section" id="my-review"><div class="section-heading"><div><h2>Your comments <span class="badge neutral">${personal.length + notes.length}</span></h2></div><div class="comment-actions">${UI.Button({label: 'Add comment', attrs: {'data-add-general': true}})}${UI.Button({label: 'Copy all for LLMs', attrs: {'data-copy-all': true, disabled: !(personal.length + notes.length)}})}</div></div>${personal.length + notes.length ? personal.map(commentCard).join('') + notes.map(note => `<article class="review-comment personal-comment"><span class="badge neutral">Your step note</span><h3>${escape(note.title)}</h3><p class="comment-discussion">${escape(note.text)}</p><button class="btn btn-sm btn-soft" data-copy-note="${note.id}">Copy for LLMs</button><button class="btn btn-sm btn-ghost" data-view="${note.id}">Open step →</button></article>`).join('') : '<p class="review-empty">None yet. Select lines in the code to comment on them, or add a general one here.</p>'}</section>`;
   }
   function findingComment(finding) {
     const file = hunkFiles.get(finding.hunk);
@@ -3034,7 +3034,12 @@
     persist(); schedulePosition();
   }
   // --- Your review: what you have said so far, and focus mode -------------------------------
-  const ledgerWide = () => matchMedia('(min-width: 1500px)').matches;
+  // Your review is a column beside the page from 1400px; narrower, it slides over the page.
+  const ledgerWide = () => matchMedia('(min-width: 1400px)').matches;
+  // Where it slides over the page, it opens for this visit only: a choice made on a wide screen
+  // (and kept with your progress) must not cover the page on a tablet.
+  let ledgerOverOpen = false;
+  matchMedia('(min-width: 1400px)').addEventListener?.('change', () => renderLedger());
   function ledgerEntries() {
     return comments.filter(comment => comment.personal).map(comment => {
       const found = comment.general ? null : ReviewTools.anchor(snapshot, comment);
@@ -3044,7 +3049,10 @@
     });
   }
   // Open by choice; until you choose, open on a wide screen once there is something to show.
-  const ledgerOpen = () => typeof state.ledgerOpen === 'boolean' ? state.ledgerOpen : ledgerWide() && (ledgerEntries().length > 0 || personalNotes().length > 0);
+  const ledgerOpen = () => {
+    if (!ledgerWide() && !document.body.classList.contains?.('zen')) return ledgerOverOpen;
+    return typeof state.ledgerOpen === 'boolean' ? state.ledgerOpen : ledgerWide() && (ledgerEntries().length > 0 || personalNotes().length > 0);
+  };
   function renderLedger() {
     const entries = ledgerEntries();
     const notes = personalNotes();
@@ -3060,14 +3068,14 @@
     // One list, in the order things were said: your comments here, and on the served page the
     // conversations you joined and the comments on GitHub, each row drawn the same way (ledgerRow).
     const ordered = entries.map((entry, index) => [entry, index]).sort(([a, i], [b, j]) => (Date.parse(a.at) || 0) - (Date.parse(b.at) || 0) || i - j).map(([entry]) => entry);
-    // The way to a comment's place in the code, for a theme that shows it beside the title.
-    const ledgerAt = entry => {
+
+    const row = entry => {
       const comment = comments.find(item => item.id === entry.id);
-      if (entry.path === 'General' || !entry.path || !comment?.start) return '';
-      // An icon, not the name: it takes you there, and the name is in its tooltip.
-      return `<button type="button" class="ledger-at" data-ledger-jump="${escape(entry.id)}" title="${escape(`${entry.path} · ${entry.where}`)}" aria-label="${escape(`Show in the code: ${entry.path}, ${entry.where}`)}">${icon('arrow-up-right')}</button>`;
+      const go = entry.path === 'General' || !entry.path || !comment?.start ? null : {path: entry.path, where: entry.where};
+      return UI.LedgerRow({id: entry.id, data: {at: entry.at, state: entry.resolved ? 'resolved' : 'draft'}, place: ReviewTools.ledgerPlace(entry.id, entry.path === 'General' ? '' : entry.path, entry.where),
+        face: youAvatar(), by: ReviewTools.ledgerBy(youName(), entry.at, 'you-name'), subject: escape(entry.title || shortTitle(entry.subject)), subjectTitle: entry.subject, go,
+        meta: `${ghBadgeSlot(comment || {})}<button type="button" data-resolve="${escape(entry.id)}">${entry.resolved ? 'Reopen' : 'Resolve'}</button><button type="button" data-copy="${escape(entry.id)}">Copy for LLMs</button>`});
     };
-    const row = entry => `<li class="ledger-item" data-ledger="${escape(entry.id)}" data-at="${escape(entry.at)}" data-state="${entry.resolved ? 'resolved' : 'draft'}">${ReviewTools.ledgerPlace(entry.id, entry.path === 'General' ? '' : entry.path, entry.where)}<div class="ledger-msg">${youAvatar()}${ReviewTools.ledgerBy(youName(), entry.at, 'you-name')}<span class="ledger-subject" title="${escape(entry.subject)}">${escape(entry.title || shortTitle(entry.subject))}</span>${ledgerAt(entry)}</div><div class="ledger-meta">${ghBadgeSlot(comments.find(comment => comment.id === entry.id) || {})}<button type="button" data-resolve="${escape(entry.id)}">${entry.resolved ? 'Reopen' : 'Resolve'}</button><button type="button" data-copy="${escape(entry.id)}">Copy for LLMs</button></div></li>`;
     const byFile = ordered.length ? `<section class="ledger-group ledger-thread"><ul class="ledger-list" data-ledger-list>${ordered.map(row).join('')}</ul></section>` : '';
     const stepNotes = notes.length ? `<section class="ledger-group"><h3>Step notes</h3><ul class="ledger-list">${notes.map(note => `<li class="ledger-item" data-state="draft"><button type="button" class="ledger-jump" data-ledger-step="${escape(note.id)}"><span class="ledger-where">${escape(note.title)}</span><span class="ledger-subject">${escape(note.text)}</span></button></li>`).join('')}</ul></section>` : '';
     const empty = !entries.length && !notes.length ? '<p class="ledger-note">Select lines in a diff and write a comment. What you say, and what your agent answers, collects here.</p>' : '';
@@ -3107,7 +3115,10 @@
     await copyText(ReviewTools.reviewText(snapshot, chosen, [], review.qa));
   };
 
-  function setLedger(open) { state.ledgerOpen = open; persist(); renderLedger(); }
+  function setLedger(open) {
+    if (!ledgerWide() && !document.body.classList.contains?.('zen')) { ledgerOverOpen = open; renderLedger(); return; }
+    state.ledgerOpen = open; persist(); renderLedger();
+  }
   // Your review is as wide as you drag it: its left edge is a handle (arrow keys work too, and a
   // double click goes back to the default). The width is this browser's, for every review.
   const LEDGER_WIDTH = 'dynamic-review:ledger-width';
@@ -3544,6 +3555,14 @@
       return;
     }
     if (sinceLink) { sinceFile(Number(sinceLink.dataset.sinceFile)); return; }
+    const fold = event.target.closest('#navigation [data-nav-fold]');
+    if (fold) {
+      const keyboard = fold.matches?.(':focus-visible');
+      navFolds[fold.dataset.navFold] = fold.getAttribute('aria-expanded') !== 'true';
+      renderNavigation();
+      if (keyboard) $('navigation').querySelector(`[data-nav-fold="${fold.dataset.navFold}"]`)?.focus({preventScroll:true});
+      return;
+    }
     const testsToggle = event.target.closest('[data-tests-toggle]');
     if (testsToggle) {
       const id = testsToggle.dataset.testsToggle;
@@ -3872,13 +3891,18 @@
   $('ledger-show').addEventListener('click', () => setLedger(!document.body.classList.contains('ledger-open')));
   $('sidebar-show').innerHTML = `<span class="when-closed">${icon('panel-left-open')}</span><span class="when-open">${icon('panel-left-close')}</span>`;
   const labelPanelIcons = () => {
+    // The list is open as a column (wide screens) or as a drawer (narrower): one class says which,
+    // so the icon shows the same state in both.
+    const listOpen = wideScreen() ? !document.body.classList.contains('sidebar-collapsed') : document.body.classList.contains('navigation-open');
+    if (document.body.classList.contains('list-open') !== listOpen) document.body.classList.toggle('list-open', listOpen);
     const ledger = document.body.classList.contains('ledger-open') ? 'Hide your review' : 'Show your review';
-    const list = document.body.classList.contains('sidebar-collapsed') ? 'Show the list' : 'Hide the list';
+    const list = listOpen ? 'Hide the list' : 'Show the list';
     [['ledger-show', ledger], ['sidebar-show', list]].forEach(([id, label]) => { if ($(id).title !== label) { $(id).title = label; $(id).setAttribute('aria-label', label); } });
   };
   if (typeof MutationObserver !== 'undefined') {
     new MutationObserver(labelPanelIcons).observe(document.body, {attributes: true, attributeFilter: ['class']});
     requestAnimationFrame(labelPanelIcons);
+    window.addEventListener('resize', labelPanelIcons);
   }
   ['sidebar-hide', 'sidebar-show'].forEach(id => $(id).addEventListener('click', () => $('nav-toggle').click()));
   $('prev').innerHTML = icon('chevron-left');
@@ -4171,9 +4195,10 @@
     // The agent running the review is a dot: its colour says whether one is listening or working.
     const chip = document.getElementById('dcr-presence');
     $('bar-agent').hidden = !chip;
-    if (chip && $('bar-agent').dataset.tone !== chip.dataset.tone) $('bar-agent').dataset.tone = chip.dataset.tone || 'off';
+    // The agent's mark with its PresenceDot on its corner, drawn again when either changes.
+    const tone = chip?.dataset.tone || 'off';
     const slug = mainAgent();
-    if (chip && $('bar-agent').dataset.agent !== slug) { $('bar-agent').dataset.agent = slug; $('bar-agent').firstElementChild.innerHTML = agentMark(slug); }
+    if (chip && ($('bar-agent').dataset.tone !== tone || $('bar-agent').dataset.agent !== slug)) { $('bar-agent').dataset.tone = tone; $('bar-agent').dataset.agent = slug; $('bar-agent').innerHTML = `<span class="ui-presence">${UI.Avatar({agent: slug, size: 'xs', className: 'bar-agent-mark'})}${UI.PresenceDot(tone)}</span>`; }
     if (chip && $('bar-agent').title !== chip.title) { $('bar-agent').title = chip.title; $('bar-agent').setAttribute('aria-label', chip.getAttribute('aria-label') || chip.title); }
     // How many files need the reader, from the verdict strip, for a theme that shows it by the progress instead.
     const need = document.querySelector('#dcr-jev .dcr-jev-yours');

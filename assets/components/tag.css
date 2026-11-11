@@ -1,0 +1,8 @@
+/* Tag (tag.js). In full (a popover, a badge row): the kind's icon on its tint, then its name in its
+   ink. In a comment's line (CommentRow): a soft tag, the name on the tint, shaped by --tag-radius. */
+.type-blue{--thread-ink:var(--type-blue-ink);--thread-tint:var(--type-blue-tint)}.type-green{--thread-ink:var(--type-green-ink);--thread-tint:var(--type-green-tint)}.type-purple{--thread-ink:var(--type-purple-ink);--thread-tint:var(--type-purple-tint)}.type-amber{--thread-ink:var(--type-amber-ink);--thread-tint:var(--type-amber-tint)}.type-red{--thread-ink:var(--type-red-ink);--thread-tint:var(--type-red-tint)}.type-teal{--thread-ink:var(--type-teal-ink);--thread-tint:var(--type-teal-tint)}.type-slate{--thread-ink:var(--type-slate-ink);--thread-tint:var(--type-slate-tint)}
+.ui-tag{display:inline-flex;align-items:center;flex:none;gap:7px;font-size:13px;font-weight:700;color:var(--thread-ink);white-space:nowrap}
+.ui-tag-icon{display:var(--tag-icon-display,inline-grid);place-items:center;width:26px;height:26px;border-radius:calc(7px * var(--round));background:var(--tag-icon-bg,var(--thread-tint));font:700 15px/1 var(--review-font-family)}
+.ui-tag-icon .review-icon{width:17px;height:17px}
+.ui-comment-tags .ui-tag{padding:var(--tag-pad,1px 8px);border-radius:var(--tag-radius,999px);background:var(--thread-tint);font-size:11.5px;font-weight:600;line-height:1.5}
+.ui-comment-tags .ui-tag-icon{display:none}

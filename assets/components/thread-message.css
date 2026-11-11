@@ -1,0 +1,19 @@
+/* ThreadMessage (thread-message.js): the face in its column, then who and when, then the words.
+   Where it sits sets its columns (--message-face-col, --message-gap, --message-face) and may set its
+   line: --message-space above it, --message-head-size, -ink and -margin, --message-name (display, or
+   none; --message-you-name for the reader's own), --message-name-size, -ink, --message-time-size,
+   --message-model and --message-role (display), and the verdict's look (--verdict-*). The words are
+   a Markdown block (.dcr-body, live.css), sized by --message-text-*. */
+.dcr-msg{--avatar-size:var(--message-face,var(--message-face-col,32px));display:grid;grid-template-columns:var(--message-face-col,32px) minmax(0,1fr);column-gap:var(--message-gap,10px);align-items:start;padding-top:var(--message-space,0px)}
+.dcr-msg-main{min-width:0}
+.dcr-msg-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;margin:var(--message-head-margin,0 0 2px);font-size:var(--message-head-size,13px);line-height:1.35;color:var(--message-head-ink,inherit)}
+.dcr-msg-head>strong{display:var(--message-name,inline);font-size:var(--message-name-size,inherit);font-weight:600;color:var(--message-name-ink,var(--ink))}
+.dcr-you>.dcr-msg-main>.dcr-msg-head>strong{display:var(--message-you-name,var(--message-name,inline))}
+.dcr-msg-head time{color:var(--muted);font-size:var(--message-time-size,12.5px)}
+.dcr-msg-head :is(.dcr-model,.thread-model){display:var(--message-model,inline)}
+.dcr-msg-head .dcr-role{display:var(--message-role,inline)}
+/* A verdict is a pill in its kind's colours (--_verdict-bg and -ink, set by its kind); a badge is plain text. */
+.dcr-msg-head .dcr-verdict{padding:var(--verdict-pad,1px 8px 1px 6px);border:var(--verdict-border,0 solid);background:var(--verdict-bg,var(--_verdict-bg,none));color:var(--verdict-ink,var(--_verdict-ink,inherit));font-size:var(--verdict-size,11.5px);font-weight:var(--verdict-weight,600)}
+.dcr-msg-head .dcr-badge{padding:var(--verdict-pad,0);border:var(--verdict-border,0 solid);background:var(--verdict-bg,none);color:var(--verdict-ink,inherit);font-size:var(--verdict-size,inherit);font-weight:var(--verdict-weight,inherit)}
+.dcr-msg-head :is(.dcr-verdict,.dcr-badge) svg{display:var(--verdict-icon,inline)}
+.dcr-msg>.dcr-msg-main>.dcr-body{margin-top:var(--message-text-top,0px)}

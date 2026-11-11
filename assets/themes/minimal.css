@@ -32,6 +32,20 @@
 
 /* --- quiet everywhere: no rings, thin scrollbars, nothing lifts ---------------------------------- */
 [data-theme^="minimal-"]{--pane-ring:transparent;--cursor-line:color-mix(in srgb,var(--ink) 6%,transparent);scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+/* --- components: plain ink marks, and a comment that opens as a row between two rules, not a card --- */
+[data-theme^="minimal-"]{--section-rule:transparent;
+  --button-border-color:transparent;--button-bg:transparent;--button-shadow:none;--button-ink:var(--ink-neutral-3);--button-hover-bg:var(--minimal-soft);--button-hover-ink:var(--ink);--button-focus-outline:1px solid var(--muted);--button-focus-offset:1px;--button-primary-border:transparent;--button-primary-shadow:none;--button-primary-bg:initial;--button-close-border:transparent;--button-close-bg:transparent;--button-close-ink:var(--muted);--button-close-hover-ink:var(--ink);--split-gap:0;--split-join-radius:0;--split-join-border:0;--split-writing:none;--presence-off-ink:var(--minimal-faint);--comment-action-face:14px;
+  --avatar-style:mono;--avatar-mono-mark:72%;
+  --comment-inset:0px;--comment-row-rule:transparent;--comment-row-rule-width:0px;--comment-card-edge:var(--line);--comment-card-sides:0px;--comment-card-radius:0;--comment-card-bg:transparent;--comment-card-gap:14px;
+  --comment-face-col:18px;--comment-face-size:18px;--comment-message-face:18px;--comment-gap:12px;--comment-line-top:8px;--comment-line-bottom:8px;
+  --comment-title-size:14px;--comment-title-weight:400;--comment-title-ink:var(--ink);--comment-earlier-ink:var(--ink);
+  --comment-tags:none;--comment-place:block;--comment-chevron:none;--comment-quiet:var(--minimal-faint);--comment-hover-underline:underline;
+  --comment-meta:flex;--comment-own-meta:none;--comment-body-bottom:0px;--comment-text-size:14.5px;--comment-text-line:1.7;--comment-text-width:640px;--comment-source:none;--comment-thread-top:22px;--comment-thread-pad-top:0px;--comment-open-line-bottom:0px;
+  --comment-footer-top:20px;--comment-footer-pad-top:0px;--comment-footer-pad-bottom:20px;--comment-footer-indent:calc(var(--comment-face-col) + var(--comment-gap));--comment-footer-rule:0 solid transparent;
+  --comment-action-height:28px;--comment-action-pad:0 11px;--comment-action-border:1px solid var(--line);--comment-action-radius:8px;--comment-action-bg:var(--surface);--comment-action-ink:var(--ink-neutral-3);--comment-action-size:13px;--comment-action-weight:500;--comment-action-shadow:none;
+  --message-name:none;--message-you-name:none;--message-model:none;--message-role:none;--message-head-size:12.5px;--message-head-ink:var(--minimal-faint);
+  --verdict-pad:0;--verdict-border:0;--verdict-bg:none;--verdict-ink:var(--ink-neutral-3);--verdict-size:12.5px;--verdict-weight:400;--verdict-icon:none;--op-face-opacity:.4;--peek-face:14px;
+  --popover-pad:0;--popover-divider:var(--line);--popover-space:16px;--popover-where:none;--popover-tags:none;--popover-face:grid;--popover-face-col:18px;--popover-gap:12px;--popover-title-room:30px;--popover-title-size:15px;--popover-title-line:1.4;--popover-title-ink:var(--ink);--popover-place:block;--popover-text-ink:var(--ink-neutral-3);--popover-text-size:14px;--popover-footer-top:18px;--popover-message-face:18px;--popover-message-gap:12px}
 [data-theme^="minimal-"] *{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 
 /* --- the list: step names, and nothing around them ------------------------------------------------ */
@@ -40,10 +54,6 @@
 [data-theme^="minimal-"] #navigation button{gap:8px;padding:5px 8px;background:transparent;border:0;box-shadow:none;color:var(--muted)}
 [data-theme^="minimal-"] .sidebar nav button{min-height:0;margin:0;align-items:baseline}
 [data-theme^="minimal-"] .sidebar nav :is(li,.menu){margin:0;padding:0;gap:0}
-[data-theme^="minimal-"] .sidebar nav .nav-section{margin:18px 0 0}
-[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view][aria-current="page"])>.nav-files{margin:0 0 8px 12px}
-[data-theme^="minimal-"] .sidebar nav button.nav-file[aria-current="location"]{background:transparent;color:var(--ink)}
-[data-theme^="minimal-"] .sidebar nav button.nav-file[aria-current="location"] .nav-file-name{color:var(--ink);font-weight:600}
 [data-theme^="minimal-"] .sidebar nav .nav-file-directory{display:none}
 [data-theme^="minimal-"] #navigation button:hover{color:var(--ink)}
 [data-theme^="minimal-"] #navigation button:is([aria-current="page"],[aria-current="true"],[aria-current="location"],[aria-expanded="true"]){background:transparent;color:var(--ink)}
@@ -51,20 +61,18 @@
 [data-theme^="minimal-"] #navigation .step-body strong{font-size:13px;font-weight:400;color:inherit}
 /* How far a step is shows once you are in it; the list itself stays names. */
 [data-theme^="minimal-"] #navigation .step-body small{display:none}
-[data-theme^="minimal-"] #navigation button[aria-expanded="true"] .step-body small{display:block;color:var(--minimal-faint)}
+[data-theme^="minimal-"] #navigation button[aria-expanded="true"] .step-body small{color:var(--minimal-faint)}
 [data-theme^="minimal-"] #navigation .step-number{order:2;margin-left:auto;width:auto;min-width:16px;height:auto;border:0;background:transparent;box-shadow:none;color:var(--minimal-faint);font-size:11px;font-weight:400}
 [data-theme^="minimal-"] #navigation .step-number .review-icon{width:13px;height:13px}
 [data-theme^="minimal-"] #navigation .step-body{order:1}
-[data-theme^="minimal-"] .nav-group-title{color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
 [data-theme^="minimal-"] .sidebar-settings{padding:5px 8px;color:var(--muted);font-size:12px;font-weight:400}
 [data-theme^="minimal-"] .sidebar-settings:hover{background:transparent;color:var(--ink)}
-[data-theme^="minimal-"] .sidebar-settings #settings-icon{display:none}
-[data-theme^="minimal-"] .sidebar-footer{border-top:0;margin-top:4px;padding:6px 8px 0;color:var(--minimal-faint)}
+[data-theme^="minimal-"] .sidebar-footer{border-top:0;padding:10px 8px 0;color:var(--minimal-faint)}
 [data-theme^="minimal-"] .sidebar-footer progress{height:2px}
 
 /* --- the page: one column, no boxes ----------------------------------------------------------------- */
+[data-theme^="minimal-"] .overview-reading :is(.dcr-try,.risk-rank,.evidence-strip){border:0;background:transparent;box-shadow:none}
 [data-theme^="minimal-"] :is(.app-header,.review-toolbar){background:var(--surface);border-color:transparent}
-[data-theme^="minimal-"] .overview-reading :is(.dcr-try,.risk-rank,.evidence-strip,.review-thread){border:0;background:transparent;box-shadow:none}
 
 /* --- code: a thin rule says added or removed; the line itself stays clean -------------------------- */
 [data-theme^="minimal-"] .diff-table tr.code-row>td.gutter.add:first-child{box-shadow:inset 2px 0 var(--minimal-added)}
@@ -77,23 +85,19 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .focus-file-header :is(.focus-group,.focus-progress-actions){display:none}
 [data-theme^="minimal-"] .focus-file-header{border:0;background:var(--surface)}
 [data-theme^="minimal-"] .focus-file-actions{margin-left:auto;border:0;background:transparent;color:var(--minimal-faint)}
-[data-theme^="minimal-"] main#content{padding-top:22px}
+[data-theme^="minimal-"]{--reader-top:22px}
+[data-theme^="minimal-"] body:not(.reading-focus) main#content{padding-top:22px}
 [data-theme^="minimal-"] :is(.app-header,.review-toolbar,.definition-back){display:none}
 [data-theme^="minimal-"] .review-bar{display:flex}
 [data-theme^="minimal-"] main#content{padding-bottom:104px}
 [data-theme^="minimal-"] :is(#toast,.range-actions,.leader-menu){bottom:84px}
 
 /* --- the Overview: prose and plain rows -------------------------------------------------------------- */
-[data-theme^="minimal-"] .overview-reading :is(.risk-rank,.dcr-try-app){padding:0;border:0;background:transparent;box-shadow:none}
+[data-theme^="minimal-"] .overview-reading :is(.risk-rank,.dcr-try-app){border:0;background:transparent;box-shadow:none}
 [data-theme^="minimal-"] .overview-reading h2{font-size:15px;font-weight:600;letter-spacing:0}
 [data-theme^="minimal-"] .overview-reading .eyebrow{color:var(--minimal-faint);font-weight:400;letter-spacing:.04em}
-[data-theme^="minimal-"] .overview-reading :is(.thread-file,.thread-footer){padding-left:0;padding-right:0;border-color:transparent;background:transparent}
-[data-theme^="minimal-"] .overview-reading :is(.thread-summary,.thread-body,.dcr-thread){padding-left:0;padding-right:0;background:transparent}
-[data-theme^="minimal-"] .overview-reading .review-thread{border-radius:0;border-bottom:1px solid var(--line)}
-[data-theme^="minimal-"] .overview-reading .review-thread:has(>.thread-details[open]){padding:6px 0 10px}
 /* Overview and All changes are places, not steps: no mark beside them. */
 [data-theme^="minimal-"] #navigation>ul .step-number{display:none}
-[data-theme^="minimal-"] .overview-reading .review-thread .thread-details>summary.thread-summary{padding-left:0;padding-right:0}
 
 /* --- what floats over the page: one plain surface, a hairline, no tint ---------------------------- */
 [data-theme^="minimal-"] :is(.comment-popover,.review-note-popover){border-color:var(--line)}
@@ -105,19 +109,13 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .modal-box{border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 64px color-mix(in srgb,var(--shade) 12%,transparent)}
 [data-theme^="minimal-"] .modal-box>:is(header,footer),[data-theme^="minimal-"] .modal-box form>:is(header,footer){border-color:transparent;background:transparent}
 [data-theme^="minimal-"] .modal-box>header{padding-bottom:8px}
+[data-theme^="minimal-"] :is(.settings-box,.view-menu,.keys-box) section:not(:where(#settings-view:not(:empty)+section)){border-color:transparent}
 [data-theme^="minimal-"] .modal-box header h2{font-size:15px;font-weight:600;letter-spacing:0}
 /* A section is named in a quiet line, and space separates it from the next. */
-[data-theme^="minimal-"] :is(.settings-box,.view-menu,.keys-box) section{border-color:transparent}
 [data-theme^="minimal-"] :is(.settings-box,.view-menu) section>h2,[data-theme^="minimal-"] .keys-box h3{color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
-[data-theme^="minimal-"] .view-menu{border-color:var(--line);box-shadow:0 16px 40px color-mix(in srgb,var(--shade) 10%,transparent)}
 /* Closing is a small cross, never a ringed button. */
-[data-theme^="minimal-"] .btn-circle.btn-ghost{border-color:transparent;background:transparent;box-shadow:none;color:var(--muted)}
-[data-theme^="minimal-"] .btn-circle.btn-ghost:hover{color:var(--ink)}
-[data-theme^="minimal-"] :is(.btn,.icon-button,.header-button):focus-visible{outline:1px solid var(--muted);outline-offset:1px}
+[data-theme^="minimal-"] .header-button:focus-visible{outline:1px solid var(--muted);outline-offset:1px}
 /* Buttons: one solid one for what comes next, words for the rest. */
-[data-theme^="minimal-"] .btn:not(.btn-primary,.btn-circle){border-color:transparent;background:transparent;box-shadow:none;color:var(--ink-neutral-3)}
-[data-theme^="minimal-"] .btn:not(.btn-primary,.btn-circle):hover{background:var(--minimal-soft);color:var(--ink)}
-[data-theme^="minimal-"] .btn-primary{border-color:transparent;box-shadow:none}
 
 /* --- writing on a line: the box under the line is the one place to type, so the bar steps aside --- */
 [data-theme^="minimal-"] body:has(#inline-composer) .review-bar{display:none}
@@ -127,8 +125,8 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 /* --- Your review: a plain column --------------------------------------------------------------------- */
 [data-theme^="minimal-"] .ledger{border-color:var(--line);box-shadow:none}
 [data-theme^="minimal-"] :is(.ledger-head,.ledger-footer){border-color:transparent;background:transparent}
-[data-theme^="minimal-"] .diff-table td.user-range-selected{background:var(--minimal-soft)!important;box-shadow:none!important}
-[data-theme^="minimal-"] .diff-table td.gutter.user-range-selected:first-child{box-shadow:inset 2px 0 var(--ink)!important}
+[data-theme^="minimal-"] .diff-table td.user-range-selected{background:var(--minimal-soft);box-shadow:none}
+[data-theme^="minimal-"] .diff-table td.gutter.user-range-selected:first-child{box-shadow:inset 2px 0 var(--ink)}
 
 /* --- All changes and the walkthrough: a file is its name and its code, not a card ------------------- */
 [data-theme^="minimal-"] .file-card{border:0;border-radius:0;background:transparent}
@@ -139,19 +137,18 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .badge{border-color:transparent}
 
 /* The agent's card opens over its dot in the bar, since its chip went with the toolbar. */
-[data-theme^="minimal-"] #dcr-presence-card{left:var(--bar-agent-left,12px)!important;top:auto!important;bottom:84px!important;max-height:calc(100dvh - 108px)!important;overflow-y:auto;border-color:var(--line);box-shadow:0 16px 40px color-mix(in srgb,var(--shade) 10%,transparent)}
+[data-theme^="minimal-"] #dcr-presence-card{left:var(--bar-agent-left,12px);top:auto;bottom:84px;max-height:calc(100dvh - 108px);overflow-y:auto;border-color:var(--line);box-shadow:0 16px 40px color-mix(in srgb,var(--shade) 10%,transparent)}
 
 /* --- the app: it fills the window, and its controls are one bar at the bottom, where the review's
    bar is. During a QA review that bar says what the agent is doing, and its notes sit just above. --- */
-[data-theme^="minimal-"] dialog.stage.dcr-app[open]{grid-template-rows:minmax(0,1fr)}
-[data-theme^="minimal-"] dialog.stage.dcr-app{inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;border:0;border-radius:0;box-shadow:none;grid-template-rows:minmax(0,1fr)}
+[data-theme^="minimal-"] dialog.stage.dcr-app{height:100dvh;max-width:none;max-height:none;box-shadow:none;grid-template-rows:minmax(0,1fr)}
 [data-theme^="minimal-"] .dcr-app .stage-bar{position:absolute;z-index:5;left:50%;bottom:22px;transform:translateX(-50%);width:min(940px,calc(100% - 28px));box-sizing:border-box;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 8px 28px color-mix(in srgb,var(--shade) 9%,transparent)}
 [data-theme^="minimal-"] .dcr-app-address{height:32px;border-color:transparent;background:var(--minimal-soft)}
 [data-theme^="minimal-"] .dcr-app-address:focus-within{border-color:transparent;box-shadow:none}
 [data-theme^="minimal-"] .dcr-app-record{border-color:transparent;background:transparent;font-weight:500}
 [data-theme^="minimal-"] .dcr-app :is(button,a,input,textarea,select):focus-visible{outline:1px solid var(--muted);outline-offset:1px}
 /* The bar has its own strip under the app, so it never covers the app or shows in a recording. */
-[data-theme^="minimal-"] .dcr-app .dcr-app-canvas{padding-bottom:76px!important;background:var(--surface);background-image:none}
+[data-theme^="minimal-"] .dcr-app .dcr-app-canvas{padding-bottom:76px;background:var(--surface);background-image:none}
 [data-theme^="minimal-"] .dcr-app-foot{position:absolute;z-index:5;left:14px;bottom:28px;min-height:0;padding:4px 10px;border:0;border-radius:999px;background:var(--surface)}
 [data-theme^="minimal-"] .dcr-app-foot:not(:has(.dcr-app-sharing:not([hidden]))),[data-theme^="minimal-"] .dcr-app-foot .dcr-app-status{display:none}
 [data-theme^="minimal-"] .dcr-app-rail{border-color:var(--line);padding-bottom:84px}
@@ -163,18 +160,16 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .dcr-app.is-agent-driving .stage-bar{flex-wrap:nowrap}
 [data-theme^="minimal-"] .dcr-qa-banner{flex:1 1 auto;min-width:0;gap:10px;padding:2px 0 2px 10px;border-radius:0;background:transparent;color:var(--ink)}
 [data-theme^="minimal-"] .dcr-qa-banner .dcr-qa-pulse{background:var(--ink)}
-[data-theme^="minimal-"] .dcr-qa-banner .dcr-qa-text{flex:1 1 auto}
 [data-theme^="minimal-"] .dcr-qa-banner :is(.dcr-qa-progress,button){flex:none;white-space:nowrap}
 [data-theme^="minimal-"] .dcr-qa-banner .dcr-qa-progress{color:var(--minimal-faint);font-size:12px;font-weight:400}
-[data-theme^="minimal-"] .dcr-qa-banner .dcr-qa-text{display:flex;align-items:baseline;gap:10px;min-width:0}
+[data-theme^="minimal-"] .dcr-qa-banner .dcr-qa-text{flex:1 1 auto;display:flex;align-items:baseline;gap:10px;min-width:0}
 [data-theme^="minimal-"] .dcr-qa-banner .dcr-qa-text strong{font-size:14px;font-weight:500;white-space:nowrap}
 [data-theme^="minimal-"] .dcr-qa-banner .dcr-qa-text span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--minimal-faint);font-size:12px}
 [data-theme^="minimal-"] .dcr-qa-banner .act-quiet{border-color:transparent;color:var(--muted)}
 [data-theme^="minimal-"] .dcr-qa-banner .act-quiet:hover{background:var(--minimal-soft);color:var(--ink)}
-[data-theme^="minimal-"] .dcr-app-prep{align-items:flex-end;padding-bottom:16px}
 [data-theme^="minimal-"] .dcr-app-prep-card{border-color:var(--line);box-shadow:0 8px 28px color-mix(in srgb,var(--shade) 9%,transparent)}
 [data-theme^="minimal-"] .dcr-app-prep-spin{width:16px;height:16px;margin-top:3px;border-width:2px}
-[data-theme^="minimal-"] .dcr-app-prep{background:color-mix(in srgb,var(--surface) 45%,transparent);-webkit-backdrop-filter:none;backdrop-filter:none}
+[data-theme^="minimal-"] .dcr-app-prep{align-items:flex-end;padding-bottom:16px;background:color-mix(in srgb,var(--surface) 45%,transparent);-webkit-backdrop-filter:none;backdrop-filter:none}
 [data-theme^="minimal-"] .file-card.is-viewed>summary{background:transparent;color:var(--minimal-faint)}
 [data-theme^="minimal-"] .context-details{border-color:transparent;background:transparent;padding-left:0;padding-right:0}
 [data-theme^="minimal-"] :is(dialog,.modal-box):focus-visible{outline:0}
@@ -185,49 +180,30 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 /* A section with nothing in it is not shown, and one rule separates what is. */
 [data-theme^="minimal-"] #my-review:has(>.review-empty){display:none}
 [data-theme^="minimal-"] .review-section{border-top:0;padding-top:0;margin-top:26px}
-[data-theme^="minimal-"] .overview-reading{max-width:920px}
-[data-theme^="minimal-"] .overview-intro .lead{max-width:none}
-[data-theme^="minimal-"] .overview-intro .lead-rest{max-width:none;font-size:16px}
 /* All changes is one command away; the list is the walkthrough. */
 [data-theme^="minimal-"] #navigation li:has(>button[data-view="files"]){display:none}
 /* A group is a title and its steps are its items: the title is the stronger of the two. */
-[data-theme^="minimal-"] .nav-group-title{margin:0 0 4px;padding:0 8px;color:var(--ink);font-size:13px;font-weight:600}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body strong{font-size:12.5px}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view]{padding-top:4px;padding-bottom:4px}
+[data-theme^="minimal-"] .nav-group-title{letter-spacing:0;text-transform:none;margin:0 0 4px;padding:0 8px;color:var(--ink);font-size:13px;font-weight:600}
 /* A step's number says nothing its place in the list does not; only the check for a finished one stays. */
 [data-theme^="minimal-"] #navigation .step-number:not(:has(svg)){display:none}
 /* The verdict strip is one fact by the progress: how many files need you. The rest is its tooltip. */
 [data-theme^="minimal-"] .dcr-jev{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);padding:0;border:0}
 [data-theme^="minimal-"] .progress-need{display:inline;padding:0;border:0;background:none;color:var(--ink);font:inherit;font-weight:600;text-align:left;cursor:pointer}
-[data-theme^="minimal-"] #dcr-jev-list{left:22px!important;top:auto!important;bottom:118px!important}
 [data-theme^="minimal-"] .overview-reading #my-review.review-section{border-top:0;padding-top:0;margin-top:26px}
-[data-theme^="minimal-"] .sidebar nav .nav-group-title{margin:0 0 4px;padding:0 8px;font-size:13.5px}
 [data-theme^="minimal-"] .sidebar nav .nav-section button[data-view]{min-height:0;height:auto}
 
 /* --- Minimal's page, as one system ----------------------------------------------------------------
    Sizes: 12.5 for facts, 13 for labels and the list, 14.5 for rows, 16 for prose, 20 for the lead,
    30 for the title. Space: 6 inside a group, 14 between a label and its rows, 44 between sections.
    A label is grey and medium; what it labels is ink. Nothing else carries weight. */
-[data-theme^="minimal-"] main#content:has(>.overview-reading){padding-top:72px}
-[data-theme^="minimal-"] .overview-reading{max-width:800px}
-[data-theme^="minimal-"] .overview-where{margin-bottom:14px}
-[data-theme^="minimal-"] .overview-intro h1{margin:0 0 18px;font-size:30px;line-height:1.2;letter-spacing:-.022em}
-[data-theme^="minimal-"] .overview-intro .lead{margin:0 0 12px;font-size:20px;line-height:1.45}
-[data-theme^="minimal-"] .overview-intro .lead-rest{margin:0;font-size:16px;line-height:1.7}
 [data-theme^="minimal-"] .overview-reading .overview-intro .overview-row{margin-top:36px}
 /* A section starts with its label, the same grey as a row's, and 44px of air above it. */
 [data-theme^="minimal-"] .overview-reading :is(.overview-comments,#my-review.review-section,.overview-settled){margin-top:44px}
 [data-theme^="minimal-"] .overview-reading :is(.overview-comments>h2,#my-review h2){margin:0 0 14px;color:var(--muted);font-size:13px;font-weight:500;letter-spacing:0}
-[data-theme^="minimal-"] .overview-reading .overview-todo{margin:0 0 6px;font-size:14.5px}
 /* Nothing waiting is a sentence, not a banner. */
-[data-theme^="minimal-"] .overview-clear{gap:10px;padding:0;border:0;border-radius:0;background:transparent;color:var(--ink)}
 [data-theme^="minimal-"] .overview-clear .review-icon{width:16px;height:16px;margin-top:3px;color:var(--dcr-ok)}
-[data-theme^="minimal-"] .overview-clear strong{font-size:14.5px;font-weight:600}
-[data-theme^="minimal-"] .overview-clear p{margin:2px 0 0;color:var(--muted);font-size:14.5px}
+[data-theme^="minimal-"] .overview-clear strong{font-weight:600}
 /* What is settled: rows with the page's rule, their names in the label's grey. */
-[data-theme^="minimal-"] .overview-settled .overview-fold{margin:0;border-top:1px solid var(--line)}
-[data-theme^="minimal-"] .overview-settled .overview-fold:last-child{border-bottom:1px solid var(--line)}
-[data-theme^="minimal-"] .overview-settled .overview-fold>summary{min-height:46px;padding:13px 0;align-items:center}
 [data-theme^="minimal-"] .overview-fold-title{color:var(--muted);font-size:13px;font-weight:500}
 [data-theme^="minimal-"] .overview-fold-title .badge{background:transparent;color:var(--minimal-faint);font-weight:400}
 
@@ -241,7 +217,6 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body strong{font-size:13px}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view]{padding:4px 8px}
 /* The step being read is marked on the rule itself. */
-[data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"])){margin-left:-5px;padding-left:4px;border-left:1px solid var(--ink)}
 /* A group of one step is its own title: it reads as a title, and opens like a step. */
 [data-theme^="minimal-"] #navigation .nav-section:not(:has(>.nav-group-title)) button[data-view] .step-body strong{color:var(--ink);font-weight:600}
 [data-theme^="minimal-"] #navigation .nav-section:not(:has(>.nav-group-title)) button[data-view]{padding:0 8px}
@@ -251,11 +226,9 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
    what it says on the left, where it is on the right, in the code's face and the label's grey.
    The app, QA, previews, the ranking and the revisions are commands (⌘K), not rows on the page. */
 [data-theme^="minimal-"] main#content:has(>.overview-reading){padding-top:84px}
-[data-theme^="minimal-"] .overview-reading{max-width:640px}
 [data-theme^="minimal-"] .overview-where{margin-bottom:14px;color:var(--minimal-faint)}
-[data-theme^="minimal-"] .overview-intro h1{margin:0 0 20px;font-size:26px;font-weight:600;line-height:1.25;letter-spacing:-.022em}
+[data-theme^="minimal-"] .overview-intro h1{margin:0 0 20px;font-weight:600;line-height:1.25;letter-spacing:-.022em}
 [data-theme^="minimal-"] .overview-intro :is(.lead,.lead-rest){display:inline;margin:0;color:var(--ink-neutral-3);font-size:15px;line-height:1.75;letter-spacing:0}
-[data-theme^="minimal-"] .overview-intro .lead{color:var(--ink)}
 [data-theme^="minimal-"] .overview-reading :is(.dcr-try,.overview-revision,.risk-fold,.risk-rank.risk-none,.ui-changes){display:none}
 /* A list's label: small, grey, with the page's 48px of air above it. */
 [data-theme^="minimal-"] .overview-reading :where(.overview-comments,.risk-brief,#my-review.review-section,.overview-settled){display:block;margin:48px 0 0;padding:0;border:0}
@@ -268,39 +241,27 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .risk-brief ol{margin:0;padding:0;list-style:none}
 [data-theme^="minimal-"] .risk-brief button{display:flex;align-items:baseline;justify-content:space-between;gap:24px;width:100%;padding:7px 0;border:0;background:none;color:var(--ink);font:inherit;font-size:14px;text-align:left;cursor:pointer}
 [data-theme^="minimal-"] .risk-brief button>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-[data-theme^="minimal-"] .risk-brief code,[data-theme^="minimal-"] .thread-at{flex:none;color:var(--minimal-faint);font:12px var(--mono);white-space:nowrap}
-[data-theme^="minimal-"] .risk-brief button:hover>span,[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-summary:hover>strong{text-decoration:underline;text-decoration-color:var(--line-neutral-4);text-underline-offset:4px}
+[data-theme^="minimal-"] .risk-brief code{flex:none;color:var(--minimal-faint);font:12px var(--mono);white-space:nowrap}
+[data-theme^="minimal-"] .risk-brief button:hover>span{text-decoration:underline;text-decoration-color:var(--line-neutral-4);text-underline-offset:4px}
 /* A closed comment is such a line: what it says, and where. Its kind, its author and the rest come when it opens. */
-[data-theme^="minimal-"] .overview-reading .review-thread:has(>.thread-details:not([open])){display:block;margin:0;padding:0;border:0}
-[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-file,[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-summary>:not(strong,.thread-at){display:none}
-[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-summary{justify-content:space-between;gap:24px;padding:7px 0}
-[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-summary>strong{font-size:14px;font-weight:400;color:var(--ink)}
-[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-at{display:block;order:2}
 /* Open, a comment is set apart by space and one rule above and below it. */
-[data-theme^="minimal-"] .overview-reading .review-thread:has(>.thread-details[open]){margin:12px 0 20px;padding:14px 0 6px;border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);border-radius:0}
 /* Your comments: the same lines; its two actions are words beside the label. */
 [data-theme^="minimal-"] #my-review .section-heading{display:flex;align-items:baseline;justify-content:space-between;margin:0 0 6px}
 [data-theme^="minimal-"] #my-review .section-heading h2{margin:0}
 [data-theme^="minimal-"] #my-review .section-heading h2 .badge{display:none}
-[data-theme^="minimal-"] #my-review .section-heading .comment-actions .btn{height:auto;min-height:0;padding:0 0 0 16px;color:var(--minimal-faint);font-size:12px;font-weight:400}
-[data-theme^="minimal-"] #my-review .section-heading .comment-actions .btn:hover{background:none;color:var(--ink)}
+[data-theme^="minimal-"] #my-review .section-heading .comment-actions{--button-height:auto;--button-min-height:0;--button-pad:0 0 0 16px;--button-ink:var(--minimal-faint);--button-size:12px;--button-weight:400;--button-hover-bg:transparent;--button-hover-ink:var(--ink)}
 /* What is settled: two quiet lines at the end. */
 [data-theme^="minimal-"] .overview-settled .overview-fold,[data-theme^="minimal-"] .overview-settled .overview-fold:last-child{margin:0;border:0}
-[data-theme^="minimal-"] .overview-settled .overview-fold>summary{min-height:0;padding:7px 0}
-[data-theme^="minimal-"] .overview-settled .overview-fold-title{margin:0;font-size:14px;color:var(--muted)}
 [data-theme^="minimal-"] .overview-clear p{font-size:14px}
 [data-theme^="minimal-"] .overview-clear strong{font-size:14px}
-[data-theme^="minimal-"] .overview-intro .lead::after{content:" "}
 [data-theme^="minimal-"] .overview-reading #my-review.review-section:has(>.review-empty){display:none}
 [data-theme^="minimal-"] .overview-reading .overview-todo strong{white-space:nowrap}
 /* What waits on the reader comes before what to read first, as designed. */
-[data-theme^="minimal-"] .overview-reading{display:flex;flex-direction:column}
 [data-theme^="minimal-"] .overview-reading>.risk-brief{order:1}
 [data-theme^="minimal-"] .overview-reading>#my-review{order:2}
 [data-theme^="minimal-"] .overview-reading>.overview-settled{order:3}
 
 /* --- Round four, from the real review: one column of 760px, one way to show a comment --------------- */
-[data-theme^="minimal-"] .overview-reading{max-width:760px}
 [data-theme^="minimal-"] .overview-intro h1{font-size:28px}
 [data-theme^="minimal-"] .overview-intro :is(.lead,.lead-rest){font-size:15.5px}
 /* The list: its checks stand in one column at the right, whatever the indent. */
@@ -309,173 +270,73 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] #navigation button[data-view]{position:relative;width:100%;padding-right:30px}
 [data-theme^="minimal-"] #navigation button[data-view] .step-number{position:absolute;right:8px;top:5px;margin:0}
 [data-theme^="minimal-"] .sidebar nav li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"])){margin-left:0;padding-left:0;border-left:0}
-[data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]))>button{box-shadow:inset 1px 0 var(--ink);margin-left:-5px;padding-left:13px;width:calc(100% + 5px)}
 /* Nothing waiting is one sentence. */
-[data-theme^="minimal-"] .overview-clear{display:flex;align-items:baseline}
-[data-theme^="minimal-"] .overview-clear>div{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
-[data-theme^="minimal-"] .overview-clear p{margin:0;color:var(--minimal-faint)}
+[data-theme^="minimal-"] .overview-clear{gap:10px;padding:0;border:0;border-radius:0;background:transparent;color:var(--ink);display:flex;align-items:baseline}
+[data-theme^="minimal-"] .overview-clear p{color:var(--minimal-faint)}
 /* A fold's head is a list's label: one size, one grey, one baseline; its arrow is small and at the right. */
 [data-theme^="minimal-"] .overview-settled{display:flex;flex-direction:column;gap:28px}
 [data-theme^="minimal-"] .overview-settled .overview-fold>summary{display:flex;align-items:baseline;gap:8px;min-height:0;padding:0 0 6px;margin:0;color:var(--minimal-faint);font-size:12px}
 [data-theme^="minimal-"] .overview-settled .overview-fold-title{display:inline;margin:0;color:var(--minimal-faint);font-size:12px;font-weight:400}
-[data-theme^="minimal-"] .overview-settled .overview-fold-title .badge{padding:0;margin-left:2px;border:0;background:none;color:inherit;font:inherit}
-[data-theme^="minimal-"] .overview-settled .overview-fold-note{color:var(--minimal-faint);font-size:12px}
-[data-theme^="minimal-"] .overview-settled .overview-fold-note .btn{height:auto;min-height:0;padding:0 0 0 10px;border:0;background:none;color:var(--ink);font-size:12px}
+[data-theme^="minimal-"] .overview-settled .overview-fold-note{color:var(--minimal-faint);font-size:12px;--button-height:auto;--button-min-height:0;--button-pad:0 0 0 10px;--button-border-width:0;--button-bg:transparent;--button-ink:var(--ink);--button-size:12px}
 [data-theme^="minimal-"] .overview-settled .overview-fold>summary>.review-icon{width:13px;height:13px;align-self:center}
 [data-theme^="minimal-"] .overview-settled .overview-fold[open]>summary{margin-bottom:0}
 /* A closed comment: what it says, and on the right its state and place. Nothing else. */
-[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-badges{display:none!important}
-[data-theme^="minimal-"] .review-thread .thread-file{display:none!important}
-[data-theme^="minimal-"] .thread-at[data-state]::before{content:attr(data-state) "  ·  ";white-space:pre;font-family:var(--review-font-family)}
-[data-theme^="minimal-"] .review-thread:has(>.thread-details:not([open])) .thread-summary{display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:24px}
 /* Open: a title, one quiet line about it, the text, and what became of it. */
-[data-theme^="minimal-"] .overview-reading .review-thread:has(>.thread-details[open]){margin:10px 0 14px;padding:18px 0 20px}
-[data-theme^="minimal-"] .review-thread:has(>.thread-details[open]) .thread-summary{display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:baseline;padding:0;background:transparent}
-[data-theme^="minimal-"] .review-thread:has(>.thread-details[open]) .thread-summary>:not(strong,.thread-at){display:none}
-[data-theme^="minimal-"] .review-thread:has(>.thread-details[open]) .thread-summary>strong{font-size:16px;font-weight:600;line-height:1.4}
-[data-theme^="minimal-"] .review-thread:has(>.thread-details[open]) .thread-at{display:block}
-[data-theme^="minimal-"] .thread-meta{display:flex;flex-wrap:wrap;gap:2px 8px;margin:4px 0 16px;color:var(--minimal-faint);font-size:12.5px}
-[data-theme^="minimal-"] .thread-meta i{font-style:normal;opacity:.6}
-[data-theme^="minimal-"] .thread-meta-path{font:11.5px var(--mono);overflow-wrap:anywhere}
-[data-theme^="minimal-"] .review-thread .thread-body{padding:0;max-width:640px}
-[data-theme^="minimal-"] .review-thread .comment-discussion{color:var(--ink-neutral-3);font-size:14.5px;line-height:1.7}
-[data-theme^="minimal-"] .review-thread :is(.thread-was,.thread-follows){margin:10px 0 0}
-[data-theme^="minimal-"] .review-thread :is(.thread-was,.thread-follows)>summary{color:var(--muted);font-size:13px}
-[data-theme^="minimal-"] .review-thread .thread-was pre{border:0;background:var(--minimal-soft)}
-[data-theme^="minimal-"] .review-thread .thread-source{display:none}
+[data-theme^="minimal-"] .overview-reading :is(.thread-was,.thread-follows){margin:10px 0 0}
+[data-theme^="minimal-"] .overview-reading :is(.thread-was,.thread-follows)>summary{color:var(--muted);font-size:13px}
+[data-theme^="minimal-"] .overview-reading .thread-was pre{border:0;background:var(--minimal-soft)}
 /* The conversation: names and words, no faces, no cards. */
-[data-theme^="minimal-"] .review-thread .dcr-thread{max-width:640px;padding:0;margin-top:22px;border:0;background:transparent}
-[data-theme^="minimal-"] .review-thread :is(.dcr-avatar,.dcr-face,.agent-face){display:none!important}
-[data-theme^="minimal-"] .review-thread .dcr-closure{padding:0;border:0;background:transparent}
-[data-theme^="minimal-"] .review-thread .dcr-closure-head{display:flex;gap:8px;align-items:baseline;margin:0 0 4px;font-size:12.5px;color:var(--minimal-faint)}
-[data-theme^="minimal-"] .review-thread .dcr-closure-head strong{color:var(--ink);font-size:13px;font-weight:600}
-[data-theme^="minimal-"] .review-thread .dcr-closure-main{display:block;padding:0}
-[data-theme^="minimal-"] .review-thread .dcr-closure-by{display:none}
-[data-theme^="minimal-"] .review-thread .dcr-body{color:var(--ink-neutral-3);font-size:14px;line-height:1.65}
-[data-theme^="minimal-"] .review-thread .dcr-checks{display:flex;gap:14px;margin-top:6px}
-[data-theme^="minimal-"] .review-thread .dcr-check{padding:0;border:0;background:none;color:var(--minimal-faint);font-size:12.5px}
-[data-theme^="minimal-"] .review-thread .dcr-check strong{color:var(--ink-neutral-3);font-weight:500}
-[data-theme^="minimal-"] .review-thread .dcr-stage{margin-top:18px;border:0;background:transparent}
-[data-theme^="minimal-"] .review-thread .dcr-stage-head{padding:0;color:var(--muted);font-size:13px}
-[data-theme^="minimal-"] .review-thread .dcr-msg{gap:0;padding:8px 0 0}
-[data-theme^="minimal-"] .review-thread .dcr-msg-head{font-size:12.5px;color:var(--minimal-faint)}
-[data-theme^="minimal-"] .review-thread .dcr-msg-head strong{color:var(--ink)}
-[data-theme^="minimal-"] .review-thread .dcr-reply{margin-top:16px;border-color:var(--line);background:transparent}
-[data-theme^="minimal-"] .review-thread .thread-footer{margin-top:18px;padding:0;border:0;background:transparent}
-[data-theme^="minimal-"] .review-thread .thread-summary>:is(strong,.thread-at){grid-column:auto!important;grid-row:1!important}
-[data-theme^="minimal-"] .review-thread .thread-summary>.thread-at{grid-column:2!important;justify-self:end}
-[data-theme^="minimal-"] .review-thread .thread-summary>strong{grid-column:1!important}
-[data-theme^="minimal-"] .review-thread .thread-summary>:not(strong,.thread-at){display:none!important}
-[data-theme^="minimal-"] .overview-settled .review-thread:has(>.thread-details:not([open])) .thread-summary>strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400}
+[data-theme^="minimal-"] .dcr-card .dcr-closure{padding:0;border:0;background:transparent}
+[data-theme^="minimal-"] .dcr-card .dcr-closure-head strong{color:var(--ink);font-size:13px;font-weight:600}
+[data-theme^="minimal-"] .dcr-card .dcr-closure-main{display:block;padding:0}
+[data-theme^="minimal-"] .dcr-card .dcr-closure-by{display:none}
+[data-theme^="minimal-"] .dcr-card{--message-space:14px;--message-text-size:14px;--message-text-line:1.65;--message-text-ink:var(--ink-neutral-3)}
+[data-theme^="minimal-"] .dcr-card .dcr-checks{display:flex;gap:14px;margin-top:6px}
+[data-theme^="minimal-"] .dcr-card .dcr-check strong{color:var(--ink-neutral-3);font-weight:500}
+[data-theme^="minimal-"] .dcr-card .dcr-stage{margin-top:18px;border:0;background:transparent}
+[data-theme^="minimal-"] .dcr-card .dcr-stage-head{padding:0;color:var(--muted);font-size:13px}
+[data-theme^="minimal-"] .dcr-card .dcr-reply{margin-top:16px;border-color:var(--line);background:transparent}
 [data-theme^="minimal-"] .overview-reading .overview-settled{display:flex;flex-direction:column;gap:30px}
-[data-theme^="minimal-"] .overview-resolved .thread-at[data-state]::before{content:none}
-[data-theme^="minimal-"] .overview-reading .review-thread:is(.is-earlier,.is-resolved){opacity:1}
-[data-theme^="minimal-"] .overview-reading .review-thread:is(.is-earlier,.is-resolved) .thread-summary>strong{color:var(--ink)}
-[data-theme^="minimal-"] .review-thread .thread-details,[data-theme^="minimal-"] .review-thread .thread-summary{border:0!important;box-shadow:none!important}
-[data-theme^="minimal-"] .thread-meta-path{font:inherit}
-[data-theme^="minimal-"] .overview-reading .review-thread:is(.is-earlier,.is-resolved){background:transparent}
-[data-theme^="minimal-"] .overview-reading .review-thread.is-earlier>.thread-details>.thread-summary{padding:0}
-[data-theme^="minimal-"] .overview-reading .review-thread.is-earlier:has(>.thread-details:not([open])) .thread-summary,[data-theme^="minimal-"] .overview-reading .review-thread:has(>.thread-details:not([open])) .thread-summary{padding:8px 0!important}
-[data-theme^="minimal-"] .overview-reading .review-thread:has(>.thread-details[open]) .thread-summary>strong{font-size:16px!important;font-weight:600!important;color:var(--ink)!important}
-[data-theme^="minimal-"] .review-thread .thread-footer{justify-content:flex-start;gap:22px}
-[data-theme^="minimal-"] .review-thread .thread-footer :is(.btn,summary.btn){height:auto;min-height:0;padding:0;border:0;background:none;box-shadow:none;color:var(--muted);font-size:13.5px;font-weight:400}
-[data-theme^="minimal-"] .review-thread .thread-footer :is(.btn,summary.btn):hover{color:var(--ink)}
-[data-theme^="minimal-"] .review-thread .thread-footer .comment-actions{gap:22px}
-[data-theme^="minimal-"] .review-thread .thread-footer .comment-actions>:first-child .btn:first-child{color:var(--ink);font-weight:500}
-[data-theme^="minimal-"] .review-thread .thread-footer .btn>.review-icon,[data-theme^="minimal-"] .review-thread .thread-footer .btn>svg{display:none}
-[data-theme^="minimal-"] .review-thread .dcr-closure-head{justify-content:flex-start}
+[data-theme^="minimal-"] .dcr-card .dcr-closure-head{display:flex;gap:8px;align-items:baseline;margin:0 0 4px;font-size:12.5px;color:var(--minimal-faint);justify-content:flex-start}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view],[data-theme^="minimal-"] #navigation>ul button[data-view]{padding-right:30px}
 /* A reply: who, then what they concluded, on one line; then what they said. */
-[data-theme^="minimal-"] .review-thread .dcr-msg{display:block}
-[data-theme^="minimal-"] .review-thread .dcr-msg-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
-[data-theme^="minimal-"] .review-thread .dcr-msg-head :is(.dcr-model,.thread-model,.dcr-role){display:none}
-[data-theme^="minimal-"] .review-thread .dcr-msg-head :is(.dcr-verdict,.dcr-badge,[class*="dcr-v-"]){padding:0;border:0;background:none;color:var(--muted);font-size:12.5px;font-weight:400}
-[data-theme^="minimal-"] .review-thread .dcr-msg-head :is(.dcr-verdict,.dcr-badge,[class*="dcr-v-"]) svg{display:none}
 
 /* --- the summary: the lead on its own line, then short paragraphs with air between them ------------- */
-[data-theme^="minimal-"] .overview-intro .lead{display:block;margin:0 0 14px;color:var(--ink);font-size:17px;line-height:1.55}
+[data-theme^="minimal-"] .overview-intro .lead{max-width:none;display:block;margin:0 0 14px;color:var(--ink);font-size:17px;line-height:1.55}
 [data-theme^="minimal-"] .overview-intro .lead::after{content:none}
-[data-theme^="minimal-"] .overview-intro .lead-rest{display:block;max-width:640px;color:var(--ink-neutral-3);font-size:15px;line-height:1.7}
-[data-theme^="minimal-"] .overview-intro .lead-rest p{margin:0 0 14px}
 [data-theme^="minimal-"] .overview-intro :is(.lead,.lead-rest) code{background:var(--minimal-soft)}
 
 /* --- the foot of the list: one line, how far and how many need you, beside a small gear ------------ */
-[data-theme^="minimal-"] .sidebar{position:relative}
-[data-theme^="minimal-"] .sidebar-footer{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:8px 10px;margin:0;padding:10px 8px 0}
-[data-theme^="minimal-"] .sidebar-footer #progress{grid-column:1;font-size:12px;color:var(--minimal-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-[data-theme^="minimal-"] .sidebar-footer .progress-need{grid-column:1;grid-row:1;justify-self:end;font-size:12px}
-[data-theme^="minimal-"] .sidebar-footer progress{grid-column:1 / -1;grid-row:2;width:100%}
-[data-theme^="minimal-"] .sidebar-footer .dcr-todo-link{display:none}
-[data-theme^="minimal-"] .sidebar-settings{position:absolute;right:20px;bottom:17px;width:auto;margin:0;padding:2px;gap:0;color:var(--minimal-faint)}
-[data-theme^="minimal-"] .sidebar-settings>span:not(#settings-icon){position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
-[data-theme^="minimal-"] .sidebar-settings #settings-icon{display:inline-grid}
-[data-theme^="minimal-"] .sidebar-settings .review-icon{width:15px;height:15px}
-[data-theme^="minimal-"] .sidebar-footer{padding-right:34px}
-[data-theme^="minimal-"] .sidebar-footer #progress{grid-row:1}
-[data-theme^="minimal-"] .review-thread .thread-summary>strong code{font:.9em var(--mono)}
+[data-theme^="minimal-"] body:not(.navigation-open) .sidebar{position:relative}
+[data-theme^="minimal-"] .sidebar-footer #progress{color:var(--minimal-faint)}
+[data-theme^="minimal-"] .sidebar-footer .sidebar-settings{padding:2px;color:var(--minimal-faint)}
 
 /* --- who wrote it, in a glance: a small face before each comment's line --------------------------- */
-[data-theme^="minimal-"] .review-thread .thread-summary{grid-template-columns:18px minmax(0,1fr) auto!important;gap:0 12px!important}
-[data-theme^="minimal-"] .review-thread .thread-summary>.thread-face{display:inline-grid!important;grid-column:1!important;grid-row:1!important;place-items:center;align-self:center;width:18px;height:18px;overflow:hidden;border-radius:50%;background:var(--minimal-soft);color:var(--muted);font-size:10px}
-[data-theme^="minimal-"] .review-thread .thread-summary>.thread-face :is(img,svg){width:100%;height:100%;object-fit:cover}
-[data-theme^="minimal-"] .review-thread .thread-summary>.thread-face[data-agent] svg{width:12px;height:12px}
-[data-theme^="minimal-"] .review-thread .thread-summary>.thread-face b{font-weight:600}
-[data-theme^="minimal-"] .review-thread .thread-summary>strong{grid-column:2!important}
-[data-theme^="minimal-"] .review-thread .thread-summary>.thread-at{grid-column:3!important}
-[data-theme^="minimal-"] .review-thread:has(>.thread-details[open]) .thread-summary>.thread-face{width:22px;height:22px}
 /* The lists line up with the faces: what to read first starts where the comments' words do. */
 [data-theme^="minimal-"] .risk-brief button{padding-left:30px}
 
 /* --- room: a wider list, so step names fit on a line, and a wider page for the lines ------------- */
-@media(min-width:1100px){
-  html[data-theme^="minimal-"] body:not(.sidebar-collapsed):not(.zen) .workspace{grid-template-columns:384px minmax(0,1fr)}
-  html[data-theme^="minimal-"] body.ledger-open:not(.sidebar-collapsed):not(.zen) .workspace{grid-template-columns:384px minmax(0,1fr) var(--ledger-w,380px)}
-  /* With the list hidden, Your review still keeps its column, so the page never runs under it. */
-  html[data-theme^="minimal-"] body.ledger-open.sidebar-collapsed:not(.zen) .workspace{grid-template-columns:minmax(0,1fr) var(--ledger-w,380px)}
-}
-[data-theme^="minimal-"] .overview-reading{max-width:880px}
-[data-theme^="minimal-"] .overview-intro .lead-rest{max-width:680px}
+[data-theme^="minimal-"] .overview-reading{display:flex;flex-direction:column;max-width:880px}
+[data-theme^="minimal-"] .overview-intro .lead-rest{margin:0;display:block;color:var(--ink-neutral-3);font-size:15px;line-height:1.7;max-width:680px}
 
 /* --- Round five: the Overview's comments read as threads --------------------------------------------
    What to read first left the Overview: the walkthrough's order already says it, and the files that
    stand out keep their risk mark in the list. */
-[data-theme^="minimal-"] .overview-reading .risk-brief{display:none!important}
+[data-theme^="minimal-"] .overview-reading .risk-brief{display:none}
 /* A fold's count sits on the label's baseline. */
-[data-theme^="minimal-"] .overview-settled .overview-fold-title .badge{display:inline;vertical-align:baseline;line-height:inherit;height:auto;min-height:0}
+[data-theme^="minimal-"] .overview-settled .overview-fold-title .badge{padding:0;margin-left:2px;border:0;background:none;color:inherit;font:inherit;display:inline;vertical-align:baseline;line-height:inherit;height:auto;min-height:0}
 /* A comment's body, its replies and its actions hang under its title, in from the face. */
-[data-theme^="minimal-"] .overview-reading .review-thread:has(>.thread-details[open]) .thread-body{margin-left:30px}
-[data-theme^="minimal-"] .overview-reading .review-thread:has(>.thread-details[open])>:is(.dcr-thread,.thread-footer){margin-left:30px}
 /* A reply is said by its face: who wrote it is the face; what they concluded and when, beside it. */
-[data-theme^="minimal-"] .review-thread .dcr-msg{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;padding:14px 0 0}
-[data-theme^="minimal-"] .review-thread .dcr-msg>.dcr-avatar{display:inline-grid!important;place-items:center;width:18px;height:18px;margin-top:1px;overflow:hidden;border-radius:50%;background:transparent}
-[data-theme^="minimal-"] .review-thread .dcr-msg>.dcr-avatar :is(svg,img){width:12px;height:12px}
-[data-theme^="minimal-"] .review-thread .dcr-msg>.dcr-avatar img{width:100%;height:100%;object-fit:cover}
-[data-theme^="minimal-"] .review-thread .dcr-msg-head>strong{display:none}
-[data-theme^="minimal-"] .review-thread .dcr-msg-head .dcr-verdict{color:var(--ink-neutral-3)}
 /* What became of it and who checked it, the same way. */
-[data-theme^="minimal-"] .review-thread .dcr-checks .dcr-avatar{display:inline-grid!important;place-items:center;width:16px;height:16px;border-radius:50%;background:transparent}
-[data-theme^="minimal-"] .review-thread .dcr-checks .dcr-avatar svg{width:11px;height:11px}
-[data-theme^="minimal-"] .review-thread .dcr-check{display:inline-flex;align-items:center;gap:6px}
-[data-theme^="minimal-"] .review-thread .dcr-check strong{display:none}
+[data-theme^="minimal-"] .dcr-card .dcr-check{padding:0;border:0;background:none;color:var(--minimal-faint);font-size:12.5px;display:inline-flex;align-items:center;gap:6px}
+[data-theme^="minimal-"] .dcr-card .dcr-check strong{display:none}
 /* Actions are real buttons, small and quiet; the one that settles it stands apart at the right. */
-[data-theme^="minimal-"] .review-thread .thread-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:20px}
-[data-theme^="minimal-"] .review-thread .thread-footer .comment-actions{display:flex;align-items:center;gap:8px}
-[data-theme^="minimal-"] .review-thread .thread-footer :is(.btn,summary.btn){height:28px;min-height:28px;padding:0 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink-neutral-3);font-size:13px;font-weight:500}
-[data-theme^="minimal-"] .review-thread .thread-footer :is(.btn,summary.btn):hover{border-color:var(--line-neutral-4);color:var(--ink)}
-[data-theme^="minimal-"] .review-thread .thread-footer .dcr-split-more{padding:0 7px}
-[data-theme^="minimal-"] .review-thread .thread-footer .comment-actions>:first-child .btn:first-child{font-weight:500}
-[data-theme^="minimal-"] .review-thread :is(.dcr-msg,.dcr-checks) .dcr-avatar{color:var(--ink)}
-[data-theme^="minimal-"] .review-thread .thread-footer :is(.dcr-split-more,.more-toggle)>svg,[data-theme^="minimal-"] .review-thread .thread-footer :is(.dcr-split-more,.more-toggle) .review-icon{display:inline-block!important;width:14px;height:14px}
-[data-theme^="minimal-"] .review-thread .thread-footer .dcr-split{display:inline-flex;gap:0}
-[data-theme^="minimal-"] .review-thread .thread-footer .dcr-split:has(>.dcr-split-menu:not([hidden])) .dcr-split-main .btn{border-top-right-radius:0;border-bottom-right-radius:0}
-[data-theme^="minimal-"] .review-thread .thread-footer .dcr-split-menu>summary{margin-left:-1px;border-top-left-radius:0;border-bottom-left-radius:0}
-[data-theme^="minimal-"] .review-thread .thread-footer .btn-primary{color:var(--ink);font-weight:600}
 
 /* --- the composer, as in a chat: your face beside what you type ------------------------------------- */
 [data-theme^="minimal-"] .composer{padding:12px 14px 12px 12px}
 [data-theme^="minimal-"] .composer-head{min-height:0;margin-bottom:8px;padding:0}
-[data-theme^="minimal-"] .composer-head :is(.composer-where,.composer-as){display:none!important}
-[data-theme^="minimal-"] .composer-mode span{padding:3px 9px;font-size:12.5px}
+[data-theme^="minimal-"] .composer-head :is(.composer-where,.composer-as){display:none}
+[data-theme^="minimal-"] .composer-mode>span{padding:3px 9px;font-size:12.5px}
 [data-theme^="minimal-"] .composer-modes{background:var(--minimal-soft);border:0}
 [data-theme^="minimal-"] .composer-modes svg{width:13px;height:13px}
 [data-theme^="minimal-"] .composer-body{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;align-items:start}
@@ -492,11 +353,11 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .composer-foot{margin:10px 0 0 32px;padding:0;border:0}
 [data-theme^="minimal-"] .composer-blocking{color:var(--minimal-faint);font-size:12.5px}
 [data-theme^="minimal-"] .composer-blocking input{width:13px;height:13px}
-[data-theme^="minimal-"] .composer [data-composer-cancel]{display:none!important}
+[data-theme^="minimal-"] .composer [data-composer-cancel]{display:none}
 [data-theme^="minimal-"] .composer-actions .act{height:30px;border-radius:8px;font-size:13px;box-shadow:none}
 [data-theme^="minimal-"] .composer-actions :is(.act-agent,.act-gh,.act-pr) svg{display:none}
 [data-theme^="minimal-"] .composer-actions .composer-key{opacity:.6}
-[data-theme^="minimal-"] .composer-type input:checked+span{background:none!important;box-shadow:none!important}
+[data-theme^="minimal-"] .composer-type input:checked+span{background:none;box-shadow:none}
 
 /* --- the open step, as a quiet drill-down --------------------------------------------------------------
    A group's title is the one bold thing. The step being read is the same weight as the others, only in
@@ -505,15 +366,12 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] #navigation button[aria-expanded="true"] .step-body small{display:none}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body strong,[data-theme^="minimal-"] #navigation .nav-section button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]) .step-body strong{font-weight:400}
 [data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]))>button{box-shadow:inset 1px 0 var(--line-neutral-4)}
-[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view][aria-current="page"])>.nav-files{margin:2px 0 8px 16px;padding:0;border:0}
 [data-theme^="minimal-"] .sidebar nav button.nav-file{min-height:0;gap:8px;padding:3px 8px;border:0;background:transparent;color:var(--muted);font:12px/1.5 var(--mono)}
 [data-theme^="minimal-"] .sidebar nav button.nav-file .nav-file-name{font-weight:400;color:inherit}
 [data-theme^="minimal-"] .sidebar nav button.nav-file[aria-current="location"],[data-theme^="minimal-"] .sidebar nav button.nav-file[aria-current="location"] .nav-file-name{background:transparent;color:var(--ink);font-weight:400}
 [data-theme^="minimal-"] .sidebar nav button.nav-file:hover{color:var(--ink)}
 /* Reviewed or not: a small ring, filled with a check once done. */
-[data-theme^="minimal-"] .sidebar nav .file-status{flex:0 0 11px;width:11px;height:11px;margin-top:4px;border:1px solid var(--line-neutral-4);border-radius:50%;background:transparent}
-[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status{border-color:var(--muted);background:var(--muted);color:var(--surface)}
-[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status .review-icon{width:9px;height:9px;margin:0;vertical-align:top}
+[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status .review-icon{margin:0;vertical-align:top}
 [data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed:not([aria-current="location"]){color:var(--minimal-faint)}
 /* Risk is a small grey word, not a badge. */
 [data-theme^="minimal-"] .sidebar nav .nav-file .need{padding:0;border:0;background:none;color:var(--minimal-faint);font:10.5px var(--mono);letter-spacing:.02em}
@@ -522,109 +380,57 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .sidebar nav .nav-tests-label{margin:8px 0 2px;padding:0 8px;border:0;color:var(--minimal-faint);font-size:11px;font-weight:400;letter-spacing:.02em;text-transform:none}
 [data-theme^="minimal-"] .sidebar nav .nav-tests-label::after{content:none;display:none}
 [data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"])){margin-left:0;padding-left:0;border-left:0}
-[data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]))>button{margin-left:-5px;padding-left:13px;box-shadow:inset 1px 0 var(--line-neutral-4)}
-[data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{margin:8px 0 2px;padding:0 8px;color:var(--minimal-faint);font-size:11px;font-weight:400;letter-spacing:0;text-transform:none}
 
 /* --- marks on the left, where they belong to their line ------------------------------------------------
    A finished step's check sits before its name; a file's review mark is a small square before its name,
    empty until it is reviewed, then a check: it looks like what it is, something to click. */
-[data-theme^="minimal-"] #navigation .nav-section button[data-view]{display:grid;grid-template-columns:14px minmax(0,1fr);column-gap:6px;align-items:baseline;padding-right:8px}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number{position:static;order:0;grid-column:1;width:14px;min-width:0;color:var(--minimal-faint)}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number:not(:has(svg)){display:block;visibility:hidden}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number .review-icon{width:12px;height:12px;vertical-align:-1px}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body{grid-column:2;order:0}
-[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view][aria-current="page"])>.nav-files{margin-left:28px}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view]{grid-template-columns:14px minmax(0,1fr)}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number:not(:has(svg)){visibility:hidden}
 [data-theme^="minimal-"] .sidebar nav button.nav-file{align-items:center}
-[data-theme^="minimal-"] .sidebar nav .file-status{flex:0 0 12px;width:12px;height:12px;margin:0;border:1px solid var(--line-neutral-5);border-radius:3px;background:var(--surface);cursor:pointer}
-[data-theme^="minimal-"] .sidebar nav .file-status:hover{border-color:var(--ink)}
-[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status{display:grid;place-items:center;border-color:transparent;background:transparent;color:var(--muted)}
-[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status .review-icon{width:12px;height:12px}
-[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status:hover{color:var(--ink)}
 /* Tests fold away until asked for: the word and how many, nothing more. */
 [data-theme^="minimal-"] .sidebar nav .nav-tests-toggle{display:inline-flex;align-items:baseline;gap:5px;padding:2px 0;color:var(--minimal-faint);cursor:pointer}
 [data-theme^="minimal-"] .sidebar nav .nav-tests-toggle:hover{color:var(--ink)}
 [data-theme^="minimal-"] .sidebar nav .nav-tests-count{display:inline}
 [data-theme^="minimal-"] .sidebar nav .nav-tests-toggle::after{content:"›";display:inline-block;transition:transform .12s}
 [data-theme^="minimal-"] .sidebar nav .nav-tests-toggle[aria-expanded="true"]::after{transform:rotate(90deg)}
-[data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{margin:6px 0 0;padding:0 8px 0 28px}
-[data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]))>button{margin-left:-5px;padding-left:13px;width:calc(100% + 5px)}
-[data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{padding:0 8px}
-[data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]){margin-left:-5px!important;padding-left:13px!important;width:calc(100% + 5px)!important}
 
 /* --- one mark that is clicked, one that is read ----------------------------------------------------------
    A file's box is a real checkbox: square, always drawn, filled in ink with a white check once reviewed;
    it is the only thing in the list you tick. A step is not ticked: once all its files are read its name
    goes grey and a small check follows it on its own line of text. */
-[data-theme^="minimal-"] #navigation .nav-section button[data-view]{display:flex!important;align-items:baseline;gap:0;padding-right:8px}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body{order:1;flex:0 1 auto;min-width:0}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number{order:2;flex:none;position:static;width:auto;margin:0 0 0 6px;visibility:visible}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number:not(:has(svg)){display:none!important}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view]{align-items:baseline;gap:0;padding-right:8px}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number{grid-column:1;min-width:0;color:var(--minimal-faint);order:2;flex:none;position:static;width:auto;margin:0 0 0 6px;visibility:visible}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number:not(:has(svg)){display:none}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number .review-icon{width:12px;height:12px;vertical-align:-1px;color:var(--minimal-faint)}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view]:has(.step-number svg) .step-body strong{color:var(--minimal-faint)}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view]:not(:has(.step-number svg)) .step-body strong{color:var(--ink-neutral-3)}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view]:is([aria-current="page"],[aria-expanded="true"]) .step-body strong{color:var(--ink)}
-[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view][aria-current="page"])>.nav-files{margin-left:16px}
 [data-theme^="minimal-"] .sidebar nav .file-status{flex:0 0 14px;width:14px;height:14px;margin:0;border:1.5px solid var(--line-neutral-5);border-radius:4px;background:var(--surface);cursor:pointer}
 [data-theme^="minimal-"] .sidebar nav .file-status:hover{border-color:var(--ink)}
 [data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status{display:grid;place-items:center;border-color:var(--ink-neutral-3);background:var(--ink-neutral-3);color:var(--surface)}
 [data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status .review-icon{width:10px;height:10px;stroke-width:3}
 [data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status:hover{border-color:var(--ink);background:var(--ink);color:var(--surface)}
-[data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{padding:0 8px 0 0}
-[data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{padding:0 8px 0 8px}
 
 /* --- Round 6, built from the canvas's Proposed boards ---------------------------------------------------
    Tests are files like the others: no fold, no count; the word test sits where the risk does. */
-[data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{display:none}
+[data-theme^="minimal-"] .sidebar nav .nav-files li.nav-tests-label{color:var(--minimal-faint);font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;margin:6px 0 0;padding:0 8px 0 8px;display:none}
 [data-theme^="minimal-"] .sidebar nav .nav-tests-label ~ li>.nav-file::after{content:"test";flex:none;margin-left:auto;color:var(--minimal-faint);font:10.5px var(--mono);letter-spacing:.02em}
 /* A finished step's check is on its line of text, at its end. */
-[data-theme^="minimal-"] #navigation .nav-section button[data-view]{display:block!important}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body{display:inline}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view]{display:block}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body{grid-column:2;order:1;flex:0 1 auto;min-width:0;display:inline}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body strong{display:inline}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number:has(svg){display:none!important}
+[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number:has(svg){display:none}
 [data-theme^="minimal-"] #navigation .nav-section .step-done{display:inline}
 [data-theme^="minimal-"] #navigation .nav-section .step-done .review-icon{display:inline-block;width:13px;height:13px;margin-left:6px;vertical-align:-2px;stroke-width:2.25}
 
 /* A comment opened in the code: the Overview's thread, on a card. No header band, path or badges. */
-[data-theme^="minimal-"] .comment-popover[popover]{width:600px;max-height:min(560px,calc(100dvh - 24px));padding:16px 18px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 16px 44px color-mix(in srgb,var(--shade) 12%,transparent)}
-[data-theme^="minimal-"] .comment-popover .popover-heading{position:absolute;top:12px;right:12px;padding:0;border:0;background:transparent}
+[data-theme^="minimal-"] .comment-popover[popover]{max-height:min(560px,calc(100dvh - 24px));padding:16px 18px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 16px 44px color-mix(in srgb,var(--shade) 12%,transparent)}
 [data-theme^="minimal-"] .comment-popover .popover-heading strong{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
-[data-theme^="minimal-"] .comment-popover .popover-heading .btn{width:28px;height:28px;min-height:0;padding:0;border:0;background:transparent;box-shadow:none;color:var(--muted)}
-[data-theme^="minimal-"] .popover-comment{padding:0;font-family:var(--review-font-family)}
-[data-theme^="minimal-"] .popover-comment+.popover-comment{margin-top:16px;padding-top:16px;border-color:var(--line)}
-[data-theme^="minimal-"] .popover-comment>:is(.comment-location,.thread-badges){display:none}
-[data-theme^="minimal-"] .popover-comment .popover-title{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:0 12px;align-items:baseline;padding-right:30px}
-[data-theme^="minimal-"] .popover-comment .popover-title>.thread-face{display:inline-grid!important;place-items:center;align-self:center;width:18px;height:18px;overflow:hidden;border-radius:50%;color:var(--ink)}
-[data-theme^="minimal-"] .popover-comment .popover-title>.thread-face :is(svg,img){width:13px;height:13px;object-fit:cover}
-[data-theme^="minimal-"] .popover-comment .popover-title>.thread-face img{width:100%;height:100%}
-[data-theme^="minimal-"] .popover-comment .popover-title h4{margin:0;color:var(--ink);font-size:15px;font-weight:600;line-height:1.4}
-[data-theme^="minimal-"] .popover-comment .popover-title h4 code{font:.9em var(--mono)}
-[data-theme^="minimal-"] .popover-comment .popover-title .thread-at{display:block;color:var(--minimal-faint);font:12px var(--mono)}
-[data-theme^="minimal-"] .popover-comment>:not(.popover-title,.comment-location,.thread-badges,.thread-footer){margin-left:30px}
-[data-theme^="minimal-"] .popover-comment>.thread-footer{padding:0 0 0 30px}
-[data-theme^="minimal-"] .popover-comment .thread-meta{margin:2px 0 12px 30px}
-[data-theme^="minimal-"] .popover-comment .comment-discussion{color:var(--ink-neutral-3);font-size:14px;line-height:1.65}
-[data-theme^="minimal-"] .popover-comment p{color:inherit;font-size:inherit}
+[data-theme^="minimal-"] .comment-popover .popover-heading{position:absolute;top:12px;right:12px;padding:0;border:0;background:transparent;--button-square:28px;--button-close-border:transparent;--button-close-bg:transparent;--button-close-ink:var(--muted)}
 /* Its replies, indented one step more with their faces, and its actions as small outlined buttons. */
-[data-theme^="minimal-"] .popover-comment .dcr-thread{margin-top:18px;padding:0 0 0 30px;border:0;background:transparent}
-[data-theme^="minimal-"] .popover-comment :is(.dcr-closure,.dcr-stage){padding:0;border:0;background:transparent}
-[data-theme^="minimal-"] .popover-comment .dcr-msg{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;padding:12px 0 0}
-[data-theme^="minimal-"] .popover-comment .dcr-msg>.dcr-avatar{display:inline-grid;place-items:center;width:18px;height:18px;margin-top:1px;overflow:hidden;border-radius:50%;background:transparent;color:var(--ink)}
-[data-theme^="minimal-"] .popover-comment .dcr-msg>.dcr-avatar :is(svg,img){width:13px;height:13px}
-[data-theme^="minimal-"] .popover-comment .dcr-msg-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;font-size:12.5px;color:var(--minimal-faint)}
-[data-theme^="minimal-"] .popover-comment .dcr-msg-head>strong,[data-theme^="minimal-"] .popover-comment .dcr-msg-head :is(.dcr-model,.thread-model,.dcr-role){display:none}
-[data-theme^="minimal-"] .popover-comment .dcr-msg-head .dcr-verdict{padding:0;border:0;background:none;color:var(--ink-neutral-3);font-size:12.5px;font-weight:400}
-[data-theme^="minimal-"] .popover-comment .dcr-msg-head .dcr-verdict svg{display:none}
-[data-theme^="minimal-"] .popover-comment .dcr-body{color:var(--ink-neutral-3);font-size:13.5px;line-height:1.6}
-[data-theme^="minimal-"] .popover-comment .thread-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px}
-[data-theme^="minimal-"] .popover-comment .comment-actions{display:flex;align-items:center;gap:8px;margin:0}
-[data-theme^="minimal-"] .popover-comment .thread-footer :is(.dcr-split-more,.more-toggle){padding:0 7px}
-[data-theme^="minimal-"] .popover-comment .thread-footer :is(.dcr-split-more,.more-toggle) .review-icon{display:inline-block!important;width:14px;height:14px}
-[data-theme^="minimal-"] .popover-comment .dcr-split{display:inline-flex;gap:0}
-[data-theme^="minimal-"] .popover-comment .dcr-split:has(>.dcr-split-menu:not([hidden])) .dcr-split-main .btn{border-top-right-radius:0;border-bottom-right-radius:0}
-[data-theme^="minimal-"] .popover-comment .dcr-split-menu>summary{margin-left:-1px;border-top-left-radius:0;border-bottom-left-radius:0}
-[data-theme^="minimal-"] .popover-comment .thread-footer :is(.btn,summary.btn){height:28px;min-height:28px;padding:0 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface)!important;box-shadow:none;color:var(--ink-neutral-3)!important;font-size:13px;font-weight:500}
-[data-theme^="minimal-"] .popover-comment .thread-footer .btn-primary{color:var(--ink)!important;font-weight:600}
-[data-theme^="minimal-"] .popover-comment .thread-footer .btn>:is(svg,.agent-face):not(:only-child){display:none}
+[data-theme^="minimal-"] .dcr-popover{margin-top:18px;padding:0;border:0;background:transparent}
+[data-theme^="minimal-"] .dcr-popover :is(.dcr-closure,.dcr-stage){padding:0;border:0;background:transparent}
+[data-theme^="minimal-"] .dcr-popover{--message-space:12px;--message-text-size:13.5px;--message-text-line:1.6;--message-text-ink:var(--ink-neutral-3)}
 
 /* Everything settled: one All clear line, Resolved closed right under it. */
 [data-theme^="minimal-"] .overview-comments:has(.overview-clear)>h2{display:none}
@@ -634,7 +440,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .overview-clear p{margin:0}
 
 /* A file name stays on one line, its box under the step's text; too long, it loses its middle, never its end. */
-[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view][aria-current="page"])>.nav-files{margin-left:0}
+[data-theme^="minimal-"] .sidebar nav li:has(>button[data-view])>.nav-files{margin:2px 0 8px 16px;padding:0;border:0;margin-left:0}
 [data-theme^="minimal-"] .sidebar nav button.nav-file .nav-file-name{display:flex;min-width:0;white-space:nowrap;overflow-wrap:normal}
 [data-theme^="minimal-"] .sidebar nav button.nav-file .name-head{min-width:0;overflow:hidden;text-overflow:ellipsis}
 [data-theme^="minimal-"] .sidebar nav button.nav-file .name-tail{flex:none}
@@ -645,18 +451,13 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] :is(.sidebar-hide,.sidebar-show){place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--minimal-faint)}
 [data-theme^="minimal-"] :is(.sidebar-hide,.sidebar-show):hover{background:var(--minimal-soft);color:var(--ink)}
 [data-theme^="minimal-"] :is(.sidebar-hide,.sidebar-show) .review-icon{width:17px;height:17px;stroke-width:1.8}
-@media(min-width:1200px){
-  html[data-theme^="minimal-"] .sidebar-hide{display:grid;flex:none}
-  html[data-theme^="minimal-"] body.sidebar-collapsed .sidebar-show{display:grid;position:fixed;top:28px;left:18px;z-index:30}
-}
 
 /* --- The Overview while you read ------------------------------------------------------------------ */
 /* Where you are is underlined. */
 [data-theme^="minimal-"] .sidebar nav button[data-view][aria-current="page"] .step-body>strong{text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:5px}
-/* A group shows its steps only when you are in it; its title opens its first step. */
-[data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title):not(:has(button[aria-current="page"]))>.menu{display:none}
-[data-theme^="minimal-"] .sidebar nav .nav-group-title[data-view]{cursor:pointer}
-[data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title):not(:has(button[aria-current="page"]))>.nav-group-title:hover{text-decoration:underline;text-underline-offset:5px}
+/* A group you are not in starts folded; its title unfolds it. */
+html[data-theme^="minimal-"]{--nav-groups:current}
+[data-theme^="minimal-"] #navigation button.nav-group-toggle{padding:0;color:inherit}
 /* A quiet pointer at the first step with files left; not on the step you are on. */
 [data-theme^="minimal-"] .sidebar nav .step-next{display:inline;margin-left:10px;color:var(--minimal-faint);font-size:11.5px;font-weight:400;text-decoration:none;white-space:nowrap}
 [data-theme^="minimal-"] .sidebar nav .step-next::before{content:"← "}
@@ -670,27 +471,8 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] :is(.ledger-hide,.ledger-show):hover{background:var(--minimal-soft);color:var(--ink)}
 [data-theme^="minimal-"] :is(.ledger-hide,.ledger-show) .review-icon{width:17px;height:17px;stroke-width:1.8}
 [data-theme^="minimal-"] .ledger-hide{display:grid}
-@media(min-width:1200px){
-  html[data-theme^="minimal-"] body:not(.ledger-open):not(.zen) .ledger-show{display:grid;position:fixed;top:14px;right:18px;z-index:30}
-}
 /* Each comment one quiet row, as on the Overview: the agent's mark, the title, the file and line;
    under it, the marks of the agents who answered, and new when it is. */
-[data-theme^="minimal-"] .ledger-item::before{display:none}
-[data-theme^="minimal-"] .ledger-item[data-ledger] .ledger-place,[data-theme^="minimal-"] .ledger-item[data-ledger] .ledger-by{display:none}
-[data-theme^="minimal-"] .ledger-item[data-ledger] .ledger-msg{grid-template-columns:18px minmax(0,1fr) auto;column-gap:12px;align-items:baseline;padding:14px 18px 0 22px}
-[data-theme^="minimal-"] .ledger-item[data-ledger] .ledger-msg>:is(.comment-avatar,.dcr-avatar){grid-row:auto;align-self:start;width:18px;height:18px;margin-top:1px;background:transparent;box-shadow:none;color:var(--ink)}
-[data-theme^="minimal-"] .ledger-item[data-ledger] .ledger-msg>:is(.comment-avatar,.dcr-avatar) :is(svg,img){width:15px;height:15px}
-[data-theme^="minimal-"] .ledger-item[data-ledger] .ledger-subject{font-size:14px;line-height:1.45}
-[data-theme^="minimal-"] .ledger-item[data-ledger] .ledger-at{display:block;padding:0;border:0;background:none;color:var(--minimal-faint);font:11.5px var(--mono);white-space:nowrap;cursor:pointer}
-[data-theme^="minimal-"] .ledger-item[data-ledger] .ledger-at:hover{color:var(--ink);text-decoration:underline}
-[data-theme^="minimal-"] .ledger-item[data-ledger]{display:flex;flex-wrap:wrap;align-items:center;padding-bottom:12px}
-[data-theme^="minimal-"] .ledger-item[data-ledger]>.ledger-msg{flex:1 0 100%}
-[data-theme^="minimal-"] .ledger-item[data-ledger] .dcr-peek{width:auto;padding:5px 0 0 52px}
-[data-theme^="minimal-"] .ledger-item[data-ledger] .dcr-peek :is(b,.dcr-peek-when,.dcr-peek-end){display:none}
-[data-theme^="minimal-"] .ledger-item[data-ledger] .dcr-peek-faces{gap:6px}
-[data-theme^="minimal-"] .ledger-item[data-ledger] .dcr-peek-faces>:is(.dcr-avatar,.comment-avatar){width:14px;height:14px;margin:0;background:transparent;box-shadow:none;color:var(--minimal-faint)}
-[data-theme^="minimal-"] .ledger-item[data-ledger] .dcr-peek-faces>* :is(svg,img){width:13px;height:13px}
-[data-theme^="minimal-"] .ledger-item[data-ledger] .ledger-meta{display:flex;align-items:center;gap:6px;margin:5px 0 0 8px;padding:0}
 /* Template previews have the Previews tab and ⌘K. */
 [data-theme^="minimal-"] .ledger-previews{display:none}
 
@@ -702,13 +484,11 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] #settings-dialog.has-agents[data-tab="agents"] .settings-body>:not(.settings-agents){display:none}
 [data-theme^="minimal-"] #settings-dialog.has-agents[data-tab="agents"] .settings-agents{display:block}
 [data-theme^="minimal-"] .settings-agents header{display:flex;align-items:center;gap:10px;margin:0 0 4px}
-[data-theme^="minimal-"] .settings-agents header .dcr-avatar{width:20px;height:20px;background:transparent;color:var(--ink)}
 [data-theme^="minimal-"] .settings-agents .dcr-presence-who{display:flex;align-items:baseline;gap:8px;min-width:0}
 [data-theme^="minimal-"] .settings-agents .dcr-presence-who strong{font-size:13px;font-weight:500}
 [data-theme^="minimal-"] .settings-agents .dcr-presence-who span{color:var(--minimal-faint);font-size:11.5px}
 [data-theme^="minimal-"] .settings-agents .dcr-presence-word{display:inline-flex;align-items:center;gap:6px;margin-left:auto;color:var(--minimal-faint);font-size:12px}
 [data-theme^="minimal-"] .settings-agents .dcr-presence-line{margin:0 0 0 30px;color:var(--muted);font-size:12.5px}
-[data-theme^="minimal-"] .settings-agents .dcr-presence-line .dcr-presence-dot{display:none}
 [data-theme^="minimal-"] .settings-agents :is(.dcr-presence-help,.dcr-presence-cmd){margin-left:30px}
 [data-theme^="minimal-"] .settings-agents .dcr-adv{margin-top:18px;padding:16px 0 0;border-color:var(--line)}
 [data-theme^="minimal-"] .settings-agents .dcr-adv-title{color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
@@ -716,20 +496,9 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .settings-agents .dcr-adv-row,[data-theme^="minimal-"] .settings-agents .dcr-adv-row.is-on{padding:0;background:none}
 [data-theme^="minimal-"] .settings-agents .dcr-adv-who strong{font-weight:500}
 [data-theme^="minimal-"] .settings-agents .dcr-adv-status::before{display:none}
-[data-theme^="minimal-"] .settings-agents .dcr-face-sm{background:transparent;color:var(--ink)}
 [data-theme^="minimal-"] .settings-agents .dcr-voice-link{display:block;margin-top:18px;padding:16px 0 0;border:0;border-top:1px solid var(--line);background:none;color:var(--ink);font:inherit;font-size:13px;text-align:left;cursor:pointer}
 [data-theme^="minimal-"] .settings-agents .dcr-voice-link::after{content:" ›"}
 /* The presence dot: the same tiny dot as a chat app's, on the corner of the agent's mark. */
-[data-theme^="minimal-"] .settings-agents .dcr-presence-word .dcr-presence-dot{width:6px;height:6px;box-sizing:border-box;border-radius:50%;background:var(--dcr-ok)}
-[data-theme^="minimal-"] .settings-agents .dcr-presence-word.dcr-presence-work .dcr-presence-dot{background:var(--dcr-work)}
-[data-theme^="minimal-"] .settings-agents .dcr-presence-word.dcr-presence-off .dcr-presence-dot{border:1.5px solid var(--minimal-faint);background:transparent}
-[data-theme^="minimal-"] .review-bar .bar-agent{position:relative}
-[data-theme^="minimal-"] .review-bar .bar-agent span{opacity:1;filter:none}
-[data-theme^="minimal-"] .review-bar .bar-agent::after{content:"";position:absolute;right:1px;bottom:5px;width:6px;height:6px;box-sizing:border-box;border:1.5px solid var(--minimal-faint);border-radius:50%;background:var(--surface);box-shadow:0 0 0 2px var(--surface)}
-[data-theme^="minimal-"] .review-bar .bar-agent[data-tone="ok"]::after{border:0;background:var(--dcr-ok)}
-[data-theme^="minimal-"] .review-bar .bar-agent[data-tone="work"]::after{border:0;background:var(--dcr-work);animation:bar-agent-work 1.4s ease-in-out infinite}
-[data-theme^="minimal-"] .review-bar .bar-agent[data-tone="work"] span{animation:none}
-@media(prefers-reduced-motion:reduce){[data-theme^="minimal-"] .review-bar .bar-agent[data-tone="work"]::after{animation:none}}
 
 /* The page keeps a gutter for Your review's icon, open or hidden, so the section pager stops before it. */
 @media(min-width:1200px){
@@ -738,20 +507,6 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 
 /* --- One icon per panel, just outside it: the same button opens and closes it, and stays on the
    panel's edge, so neither panel looks like an app of its own. The finder takes the list's width. --- */
-[data-theme^="minimal-"] :is(.sidebar-show,.ledger-show) .when-open{display:none}
-[data-theme^="minimal-"] body:not(.sidebar-collapsed) .sidebar-show .when-open,[data-theme^="minimal-"] body.ledger-open .ledger-show .when-open{display:contents}
-[data-theme^="minimal-"] body:not(.sidebar-collapsed) .sidebar-show .when-closed,[data-theme^="minimal-"] body.ledger-open .ledger-show .when-closed{display:none}
-@media(min-width:1200px){
-  html[data-theme^="minimal-"] :is(.sidebar-hide,.ledger-hide){display:none}
-  html[data-theme^="minimal-"] body:not(.zen) .sidebar-show{display:grid;position:fixed;top:28px;left:392px;z-index:30}
-  html[data-theme^="minimal-"] body.sidebar-collapsed:not(.zen) .sidebar-show{left:18px}
-  html[data-theme^="minimal-"] body:not(.zen) .ledger-show{display:grid;position:fixed;top:14px;right:18px;z-index:30}
-  /* Your review lies over the page below 1500px, at its own width, and is a column above it. */
-  html[data-theme^="minimal-"] body.ledger-open:not(.zen) .ledger-show{right:calc(min(var(--ledger-w,420px),92vw) + 8px)}
-}
-@media(min-width:1500px){
-  html[data-theme^="minimal-"] body.ledger-open:not(.zen) .ledger-show{right:calc(var(--ledger-w,380px) + 8px)}
-}
 
 /* --- Your review on one conversation, drawn as the Overview draws it: the agent's mark and the title
    first, the file and line as the link to the code, then each answer as a mark and a quiet line. --- */
@@ -760,59 +515,30 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] #ledger .dcr-detail-title{display:grid;grid-template-columns:18px minmax(0,1fr);gap:4px 12px;align-items:start;border:0}
 [data-theme^="minimal-"] #ledger .dcr-detail-title .ledger-where{display:none}
 [data-theme^="minimal-"] #ledger .dcr-detail-mark{display:grid;grid-column:1;grid-row:1;place-items:center;width:18px;height:18px;margin-top:1px}
-[data-theme^="minimal-"] #ledger .dcr-detail-mark .dcr-avatar{width:16px;height:16px;background:transparent;color:var(--ink)}
-[data-theme^="minimal-"] #ledger .dcr-detail-mark .dcr-avatar svg{width:14px;height:14px}
 [data-theme^="minimal-"] #ledger .dcr-detail-title strong{grid-column:2;grid-row:1;font-size:15px;font-weight:600;line-height:1.4}
 [data-theme^="minimal-"] #ledger .dcr-detail-code{grid-column:2;justify-self:start;min-height:0;height:auto;padding:0;border:0;background:none;color:var(--ink-neutral-3);font:12px var(--mono);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
 [data-theme^="minimal-"] #ledger .dcr-detail-code:hover{color:var(--ink);text-decoration-color:currentColor}
 [data-theme^="minimal-"] #ledger .dcr-detail-code>:not(.dcr-detail-at){display:none}
 [data-theme^="minimal-"] #ledger .dcr-detail-code .dcr-detail-at:not(:empty){display:inline}
 [data-theme^="minimal-"] #ledger .dcr-detail-code:has(.dcr-detail-at:empty){display:none}
-[data-theme^="minimal-"] #ledger .dcr-detail .dcr-msg{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;padding:16px 0 0;border:0;background:none}
-[data-theme^="minimal-"] #ledger .dcr-detail .dcr-msg>.dcr-avatar{display:inline-grid;place-items:center;width:18px;height:18px;margin-top:1px;overflow:hidden;border-radius:50%;background:transparent;color:var(--ink)}
-[data-theme^="minimal-"] #ledger .dcr-detail .dcr-msg>.dcr-avatar :is(svg,img){width:13px;height:13px}
-[data-theme^="minimal-"] #ledger .dcr-detail .dcr-msg>.dcr-avatar img{width:100%;height:100%;object-fit:cover}
-[data-theme^="minimal-"] #ledger .dcr-detail .dcr-origin.dcr-agent{padding-top:10px}
-[data-theme^="minimal-"] #ledger .dcr-detail .dcr-origin.dcr-agent>.dcr-avatar{visibility:hidden}
-[data-theme^="minimal-"] #ledger .dcr-detail .dcr-msg-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;font-size:12px;color:var(--minimal-faint)}
-[data-theme^="minimal-"] #ledger .dcr-detail .dcr-msg-head>strong,[data-theme^="minimal-"] #ledger .dcr-detail .dcr-msg-head :is(.dcr-model,.thread-model){display:none}
-[data-theme^="minimal-"] #ledger .dcr-detail .dcr-adversary .dcr-msg-head .dcr-role{display:none}
-[data-theme^="minimal-"] #ledger .dcr-detail .dcr-msg.dcr-you .dcr-msg-head>strong{display:inline;color:var(--ink);font-weight:500}
-[data-theme^="minimal-"] #ledger .dcr-detail .dcr-msg-head :is(.dcr-verdict,.dcr-badge,[class*="dcr-v-"]){padding:0;border:0;background:none;color:var(--ink-neutral-3);font-size:12px;font-weight:400}
-[data-theme^="minimal-"] #ledger .dcr-detail .dcr-msg-head :is(.dcr-verdict,.dcr-badge) svg{display:none}
-[data-theme^="minimal-"] #ledger .dcr-detail .dcr-body{margin-top:3px;font-size:13.5px;line-height:1.6}
-[data-theme^="minimal-"] #ledger :is(.dcr-detail-title strong,.ledger-subject) code{padding:0;border:0;background:none;font-family:var(--mono);font-size:.92em}
+[data-theme^="minimal-"] #ledger .dcr-detail{--message-you-name:inline;--message-text-size:13.5px;--message-text-line:1.6;--message-text-top:3px}
 /* An adversary that did not answer: its mark, faint, and the words, in line with the answers. */
 [data-theme^="minimal-"] #ledger .dcr-detail :is(.dcr-opinions,.dcr-ops,ul:has(>.dcr-op)){margin:16px 0 0;padding:0;border:0;list-style:none}
 [data-theme^="minimal-"] #ledger .dcr-detail .dcr-op{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;align-items:center;padding:6px 0 0;border:0;background:none}
-[data-theme^="minimal-"] #ledger .dcr-detail .dcr-op>.dcr-avatar{display:inline-grid;place-items:center;width:18px;height:18px;background:transparent;color:var(--ink);opacity:.4}
-[data-theme^="minimal-"] #ledger .dcr-detail .dcr-op>.dcr-avatar svg{width:13px;height:13px}
 [data-theme^="minimal-"] #ledger .dcr-detail .dcr-op-line{color:var(--minimal-faint);font-size:12px}
 [data-theme^="minimal-"] #ledger .dcr-detail .dcr-op-line strong{color:inherit;font-weight:400}
 
 /* --- Your review in two groups, as on the Overview: the agent's comments, then yours. A comment the
    agent adds in a new revision joins its own group, so nothing lands in the middle of yours. --- */
 [data-theme^="minimal-"] #ledger .ledger-list{display:flex;flex-direction:column}
-[data-theme^="minimal-"] #ledger .ledger-item[data-by="agent"]{order:0}
-[data-theme^="minimal-"] #ledger .ledger-item[data-ledger]:not([data-conversation]){order:1}
-[data-theme^="minimal-"] #ledger .ledger-item[data-by="person"]{order:2}
-[data-theme^="minimal-"] #ledger .ledger-item:is(:nth-child(1 of [data-by="agent"]),:nth-child(1 of [data-ledger]:not([data-conversation])),:nth-child(1 of [data-by="person"]))::before{position:static;display:block;flex:1 0 100%;width:auto;height:auto;padding:16px 22px 2px;background:none;color:var(--minimal-faint);font-size:12px}
-[data-theme^="minimal-"] #ledger .ledger-item:nth-child(1 of [data-by="agent"])::before{content:"Agent comments"}
-[data-theme^="minimal-"] #ledger .ledger-item:nth-child(1 of [data-ledger]:not([data-conversation]))::before{content:"Your comments"}
-[data-theme^="minimal-"] #ledger .ledger-item:nth-child(1 of [data-by="person"])::before{content:"From GitHub"}
+:nth-child(1 of [data-ledger]:not([data-conversation])),:nth-child(1 of [data-by="person"]))::before{position:static;display:block;flex:1 0 100%;width:auto;height:auto;padding:16px 22px 2px;background:none;color:var(--minimal-faint);font-size:12px}
 /* Your own row is drawn as the agent's: your face, the short title, the file and line, who answered. */
-[data-theme^="minimal-"] #ledger .ledger-item[data-ledger]:not([data-conversation]) .ledger-meta :is([data-resolve],[data-copy]),[data-theme^="minimal-"] #ledger .ledger-item .dcr-new{display:none}
-[data-theme^="minimal-"] #ledger .ledger-item[data-ledger] .ledger-msg>.comment-avatar img{border-radius:50%}
-[data-theme^="minimal-"] #ledger .ledger-item[data-ledger] .ledger-subject{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
 /* On the Overview the comments are headed the same way: Agent comments, then Your comments. */
 html[data-theme^="minimal-"] #content .overview-reading .overview-comments:not(:has(.overview-clear))>h2{display:block;font-size:0}
 [data-theme^="minimal-"] .overview-reading .overview-comments:not(:has(.overview-clear))>h2::before{content:"Agent comments";font-size:12px}
 [data-theme^="minimal-"] .overview-reading .overview-todo{display:none}
 /* Your review is a column of its own here, so the bar centres on what is left without taking it off twice. */
-@media(min-width:741px) and (max-width:1499px){
-  html[data-theme^="minimal-"] body.ledger-open:not(.zen) .review-bar{left:50%;width:min(640px,calc(100% - 28px))}
-}
 [data-theme^="minimal-"] #ledger .dcr-detail-code{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* --- Try the change: the three things to do with the change as quiet rows, like the comments under
@@ -824,29 +550,21 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
 [data-theme^="minimal-"] .overview-reading .dcr-try :is(.dcr-try-row,.dcr-try-line)[hidden]{display:none}
 [data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-icon{display:grid;align-self:center;place-items:center;color:var(--minimal-faint)}
 [data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-icon svg{width:15px;height:15px;stroke-width:1.8}
-[data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-do{font-weight:400}
+[data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-do{grid-column:2;font-weight:400}
 [data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-about{min-width:0;color:var(--minimal-faint);font-size:13px}
 [data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-about button{color:var(--ink-neutral-3);font-size:13px}
-[data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-more button{color:var(--ink);font-size:13px;font-weight:500;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:4px}
+[data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-more button{color:var(--ink);font-size:13px;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:4px}
 [data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-more button:hover{text-decoration-color:currentColor}
 [data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-templates{display:none}
-[data-theme^="minimal-"] .overview-reading .dcr-try-risk .risk-brief{display:none!important}
-[data-theme^="minimal-"] .overview-reading .dcr-try-risk.is-open .risk-brief{display:block!important;grid-column:2 / -1;margin:4px 0 4px}
+[data-theme^="minimal-"] .overview-reading .dcr-try-risk .risk-brief{display:none}
+[data-theme^="minimal-"] .overview-reading .dcr-try-risk.is-open .risk-brief{display:block;grid-column:2 / -1;margin:4px 0 4px}
 [data-theme^="minimal-"] .overview-reading .dcr-try-risk .risk-brief h2{display:none}
 [data-theme^="minimal-"] .overview-reading .dcr-try-risk .risk-brief button{padding:5px 0;font-size:13.5px}
 
 /* Your comments on the Overview: the short title, the file cut in its middle, no "yours" (the heading says it). */
-[data-theme^="minimal-"] .review-thread.is-own .thread-at[data-state]::before{content:none}
-[data-theme^="minimal-"] .thread-at .name-head{min-width:0;overflow:hidden;text-overflow:ellipsis}
-[data-theme^="minimal-"] .thread-at .name-tail{flex:none}
 
 /* --- The way to the code is an icon, not the file's name: it takes you there, and the name is in its
    tooltip, so the title keeps the room. In Your review and on the Overview alike. --- */
-[data-theme^="minimal-"] #ledger .ledger-item[data-ledger] .ledger-at{display:grid;place-items:center;align-self:start;width:24px;height:24px;margin-top:-2px;border-radius:6px;color:var(--minimal-faint)}
-[data-theme^="minimal-"] #ledger .ledger-item[data-ledger] .ledger-at:hover{background:var(--minimal-soft);color:var(--ink);text-decoration:none}
-[data-theme^="minimal-"] :is(#ledger .ledger-at,.thread-go) svg{width:14px;height:14px;stroke-width:1.8}
-[data-theme^="minimal-"] #content .overview-reading .thread-summary:has(.thread-go) .thread-at{display:none}
-[data-theme^="minimal-"] .overview-reading .thread-go:hover{background:var(--minimal-soft);color:var(--ink)}
 /* The risk ranking's files, under its row: the score first (a number and a short bar, darker the higher),
    then why, then the file as a link; a migration is just "migration". */
 [data-theme^="minimal-"] .overview-reading .dcr-try-risk .risk-brief ol{display:grid;gap:0;margin:0;padding:0;list-style:none}
@@ -863,8 +581,6 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
 [data-theme^="minimal-"] .risk-brief-go svg{width:12px;height:12px;stroke-width:1.8}
 [data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-about code{padding:0 3px;border-radius:4px;background:var(--minimal-soft);font:12px var(--mono)}
 /* Your own comment, opened: its words line up under its title, like the agent's, with no label over them. */
-[data-theme^="minimal-"] .overview-reading .review-thread.is-own .thread-body{padding-left:0}
-[data-theme^="minimal-"] .overview-reading .review-thread.is-own .thread-meta{display:none}
 
 /* The panels' icons sit outside the panels, over the page's edge: the page keeps a gutter for each, so
    text never runs under them as it scrolls. */
@@ -872,38 +588,24 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
   html[data-theme^="minimal-"] body:not(.sidebar-collapsed):not(.zen) main#content{padding-left:52px}
   html[data-theme^="minimal-"] body.ledger-open:not(.zen) main#content{padding-right:52px}
 }
-/* Below 1500px Your review lies over the page at 420px: the page's column for it is as wide. */
-@media(min-width:1100px) and (max-width:1499px){
-  html[data-theme^="minimal-"] body.ledger-open:not(.sidebar-collapsed):not(.zen) .workspace{grid-template-columns:384px minmax(0,1fr) min(var(--ledger-w,420px),92vw)}
-  html[data-theme^="minimal-"] body.ledger-open.sidebar-collapsed:not(.zen) .workspace{grid-template-columns:minmax(0,1fr) min(var(--ledger-w,420px),92vw)}
-}
 
 /* --- A comment's actions, in the code's popover and on the Overview: one split button whose halves
    meet, the agent's plain mark, and while you write a note only the box and what sends it. --- */
-[data-theme^="minimal-"] :is(.review-thread,.popover-comment) .thread-footer .dcr-split:has(>.dcr-split-menu:not([hidden])) .dcr-split-main .btn{border-top-right-radius:0;border-bottom-right-radius:0}
-[data-theme^="minimal-"] :is(.review-thread,.popover-comment) .thread-footer .dcr-split>.dcr-split-menu>summary.btn{margin-left:-1px;border-top-left-radius:0;border-bottom-left-radius:0}
-[data-theme^="minimal-"] :is(.review-thread,.popover-comment) .thread-footer .btn .dcr-avatar{display:inline-grid;place-items:center;width:14px;height:14px;background:transparent!important;box-shadow:none;color:var(--ink)}
-[data-theme^="minimal-"] :is(.review-thread,.popover-comment) .thread-footer .btn .dcr-avatar svg{width:12px;height:12px}
 /* Writing a note: the split steps aside (the note's own button sends it), and hidden buttons stay hidden. */
-[data-theme^="minimal-"] :is(.review-thread,.popover-comment) .thread-footer .dcr-split.is-writing{display:none}
-[data-theme^="minimal-"] :is(.review-thread,.popover-comment) :is(.dcr-actions,.thread-footer) [hidden]{display:none!important}
 /* In the popover its × already closes it, so the note needs no Cancel; Esc still does the same. */
-[data-theme^="minimal-"] .popover-comment .dcr-reply [data-dcr-cancel]{display:none}
-[data-theme^="minimal-"] :is(.review-thread,.popover-comment) .dcr-reply{border-top:0;padding-top:0}
-[data-theme^="minimal-"] :is(.review-thread,.popover-comment) .dcr-actions .btn-primary{height:28px;min-height:28px;padding:0 12px;border:0;border-radius:8px;background:var(--ink)!important;color:var(--surface)!important;font-weight:600}
-[data-theme^="minimal-"] :is(.review-thread,.popover-comment) .dcr-actions .btn-primary:hover{opacity:.86}
+[data-theme^="minimal-"] .dcr-popover .dcr-reply [data-dcr-cancel]{display:none}
+[data-theme^="minimal-"] :is(.dcr-card,.dcr-popover) .dcr-reply{border-top:0;padding-top:0}
+[data-theme^="minimal-"] :is(.dcr-card,.dcr-popover) .dcr-actions{--button-height:28px;--button-min-height:28px;--button-radius:8px;--button-primary-pad:0 12px;--button-primary-border:transparent;--button-primary-bg:var(--ink);--button-primary-hover-bg:color-mix(in srgb,var(--ink) 86%,var(--surface));--button-primary-ink:var(--surface);--button-primary-weight:600}
 /* An adversary that did not answer, in the popover and on the Overview as in Your review: a faint line. */
-[data-theme^="minimal-"] :is(.popover-comment,.review-thread) :is(.dcr-opinions,.dcr-ops,ul:has(>.dcr-op)){margin:14px 0 0;padding:0;border:0;list-style:none}
-[data-theme^="minimal-"] :is(.popover-comment,.review-thread) .dcr-op{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;align-items:center;padding:4px 0 0;border:0;background:none}
-[data-theme^="minimal-"] :is(.popover-comment,.review-thread) .dcr-op>.dcr-avatar{display:inline-grid;place-items:center;width:18px;height:18px;background:transparent!important;color:var(--ink);opacity:.4}
-[data-theme^="minimal-"] :is(.popover-comment,.review-thread) .dcr-op>.dcr-avatar svg{width:13px;height:13px}
-[data-theme^="minimal-"] :is(.popover-comment,.review-thread) .dcr-op-line{color:var(--minimal-faint);font-size:12px}
-[data-theme^="minimal-"] :is(.popover-comment,.review-thread) .dcr-op-line strong{color:inherit;font-weight:400}
+[data-theme^="minimal-"] :is(.dcr-popover,.dcr-card) :is(.dcr-opinions,.dcr-ops,ul:has(>.dcr-op)){margin:14px 0 0;padding:0;border:0;list-style:none}
+[data-theme^="minimal-"] :is(.dcr-popover,.dcr-card) .dcr-op{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;align-items:center;padding:4px 0 0;border:0;background:none}
+[data-theme^="minimal-"] :is(.dcr-popover,.dcr-card) .dcr-op-line{color:var(--minimal-faint);font-size:12px}
+[data-theme^="minimal-"] :is(.dcr-popover,.dcr-card) .dcr-op-line strong{color:inherit;font-weight:400}
 
 /* --- A QA review says one thing at a time. While the agent gets the app ready, the app blurs and one
    card in its middle says what it is doing, for how long, and how to stop; nothing is recorded then.
    While it records there is no blur, and the bar says so on two lines. The sharing pill steps aside. --- */
-[data-theme^="minimal-"] #dcr-app.is-agent-driving .dcr-app-foot{display:none!important}
+[data-theme^="minimal-"] #dcr-app.is-agent-driving .dcr-app-foot{display:none}
 [data-theme^="minimal-"] #dcr-app .dcr-app-prep{align-items:center;justify-content:center;padding:24px;background:color-mix(in srgb,var(--surface) 45%,transparent);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 [data-theme^="minimal-"] #dcr-app .dcr-app-prep-card{width:min(440px,100%);box-sizing:border-box;padding:18px 20px 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 16px 40px color-mix(in srgb,var(--shade) 10%,transparent);pointer-events:auto}
 [data-theme^="minimal-"] #dcr-app .dcr-app-prep-spin{display:none}
@@ -951,18 +653,14 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
 
 /* --- Every agent's mark is its plain logo in the ink colour, wherever it appears (rows, threads,
    buttons, toasts, Settings): no company colours, no circles behind it. --- */
-html[data-theme^="minimal-"]{--agent-claude:var(--ink)!important;--agent-codex:var(--ink)!important;--agent-gemini:var(--ink)!important;--agent-grok:var(--ink)!important;--agent-opencode:var(--ink)!important;--agent-other:var(--ink)!important;--agent-claude-bg:transparent!important;--agent-codex-bg:transparent!important;--agent-gemini-bg:transparent!important;--agent-grok-bg:transparent!important;--agent-opencode-bg:transparent!important;--agent-antigravity-bg:transparent!important;--agent-other-bg:transparent!important}
 /* Your review's footer counts nothing the list does not already show. */
 [data-theme^="minimal-"] #dcr-panel .dcr-foot-status{display:none}
 /* An adversary that did not answer keeps its mark beside the words, on the Overview too. */
-[data-theme^="minimal-"] :is(.popover-comment,.review-thread,#ledger) .dcr-op>.dcr-avatar{display:inline-grid!important;width:18px;height:18px}
-[data-theme^="minimal-"] :is(.popover-comment,.review-thread,#ledger) .dcr-op-line{display:flex;gap:6px;white-space:nowrap}
+[data-theme^="minimal-"] :is(.dcr-popover,.dcr-card,#ledger) .dcr-op-line{display:flex;gap:6px;white-space:nowrap}
 /* One line between two comments, not one under each and another over the next. */
-[data-theme^="minimal-"] .overview-reading .review-thread .thread-footer{border-bottom:0}
-[data-theme^="minimal-"] .overview-reading .review-thread{border-top:0}
 
 /* The result's check is the plain mark, no circle behind it. */
-[data-theme^="minimal-"] .dcr-qa-done .dcr-qa-check{display:inline-grid;place-items:center;width:18px;height:18px;margin-top:1px;border:0;border-radius:0;background:none!important;box-shadow:none;color:var(--ink)}
+[data-theme^="minimal-"] .dcr-qa-done .dcr-qa-check{display:inline-grid;place-items:center;width:18px;height:18px;margin-top:1px;border:0;border-radius:0;background:none;box-shadow:none;color:var(--ink)}
 [data-theme^="minimal-"] .dcr-qa-done .dcr-qa-check svg{width:16px;height:16px}
 
 /* --- What QA recorded, drawn as the rest of the Overview: no grey cards. In a comment, Actual and
@@ -972,7 +670,7 @@ html[data-theme^="minimal-"]{--agent-claude:var(--ink)!important;--agent-codex:v
 [data-theme^="minimal-"] .overview-reading .qa-journey .qa-route:empty{display:none}
 [data-theme^="minimal-"] .overview-reading .qa-journey :is(.qa-result,.qa-expected){margin:0 0 6px;padding:0;border:0;background:none;color:var(--ink);font-size:inherit;line-height:1.6}
 [data-theme^="minimal-"] .overview-reading .qa-journey :is(.qa-result,.qa-expected) strong{margin-right:4px;color:var(--minimal-faint);font-weight:400}
-[data-theme^="minimal-"] .overview-reading .qa-preview{display:flex;align-items:center;gap:14px;width:auto;max-width:100%;margin:8px 0 0;padding:0;border:0;border-radius:0;background:none!important;box-shadow:none;color:var(--ink);text-align:left;cursor:pointer}
+[data-theme^="minimal-"] .overview-reading .qa-preview{display:flex;align-items:center;gap:14px;width:auto;max-width:100%;margin:8px 0 0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;color:var(--ink);text-align:left;cursor:pointer}
 [data-theme^="minimal-"] .overview-reading .qa-preview-image{position:relative;flex:none;width:112px;height:70px;overflow:hidden;border:1px solid var(--line);border-radius:8px;background:var(--minimal-soft)}
 [data-theme^="minimal-"] .overview-reading .qa-preview-image :is(img,video){width:100%;height:100%;object-fit:cover;object-position:top}
 [data-theme^="minimal-"] .overview-reading .qa-preview-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:color-mix(in srgb,var(--ink) 75%,transparent);color:var(--surface);font-size:10px}
@@ -986,15 +684,14 @@ html[data-theme^="minimal-"]{--agent-claude:var(--ink)!important;--agent-codex:v
 [data-theme^="minimal-"] .overview-reading .other-checks>h2 .badge{display:none}
 [data-theme^="minimal-"] .overview-reading .qa-check-list{display:grid;gap:0}
 [data-theme^="minimal-"] .overview-reading .qa-preview-compact{display:grid;grid-template-columns:112px minmax(0,1fr);gap:0 16px;align-items:start;margin:0;padding:10px 0}
-[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-copy{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 16px}
 [data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-copy>strong{grid-column:1;font-size:14px;font-weight:400}
-[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status{grid-column:2;grid-row:1;padding:0;border:0;background:none;color:var(--minimal-faint);font-size:12px;font-weight:400;text-transform:none}
+[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status{grid-column:2;grid-row:1;padding:0;border:0;background:none;color:var(--minimal-faint);font-weight:400;text-transform:none}
 [data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status.failed{color:var(--ink)}
 [data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-action{display:none}
 [data-theme^="minimal-"] .overview-reading .qa-preview-compact small{grid-column:1 / -1;color:var(--minimal-faint);font-size:12.5px;line-height:1.5}
 
 /* A flow's result is a mark after its name: a check when it passed, an ✕ when it failed. */
-[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-copy{display:block}
+[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-copy{grid-template-columns:minmax(0,1fr) auto;gap:3px 16px;display:block}
 [data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-copy>strong{display:inline}
 [data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status{display:inline-block;margin-left:6px;font-size:0;vertical-align:baseline}
 [data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status::before{content:"✓";color:var(--ink-neutral-3);font-size:13px}
@@ -1009,11 +706,9 @@ html[data-theme^="minimal-"]{--agent-claude:var(--ink)!important;--agent-codex:v
 [data-theme^="minimal-"] .ledger-head .ledger-export:not([hidden]){display:grid;place-items:center;width:26px;height:26px;margin:0 auto 0 6px;padding:0;border:0;border-radius:6px;background:none;color:var(--minimal-faint);cursor:pointer}
 [data-theme^="minimal-"] .ledger-head .ledger-export:hover{background:var(--minimal-soft);color:var(--ink)}
 [data-theme^="minimal-"] .ledger-head .ledger-export svg{width:15px;height:15px;stroke-width:1.8}
-[data-theme^="minimal-"] #settings-dialog.has-agents[data-tab="agents"] .settings-round:not([hidden]){display:block;margin:18px 0 0;padding:16px 0 0;border-top:1px solid var(--line)}
 [data-theme^="minimal-"] .settings-round h2{margin:0 0 8px;color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
 [data-theme^="minimal-"] .settings-round p{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;color:var(--muted);font-size:12.5px}
-[data-theme^="minimal-"] .settings-round .btn{flex:none;height:30px;min-height:30px;padding:0 11px;border:1px solid var(--line)!important;border-radius:8px;color:var(--ink)!important;font-weight:500}
-[data-theme^="minimal-"] #settings-dialog.has-agents[data-tab="agents"] .settings-round:not([hidden]){margin-inline:10px}
+[data-theme^="minimal-"] #settings-dialog.has-agents[data-tab="agents"] .settings-round:not([hidden]){display:block;margin:18px 0 0;padding:16px 0 0;border-top:1px solid var(--line);margin-inline:10px}
 [data-theme^="minimal-"] .settings-agents .dcr-presence-help{margin-top:8px;color:var(--muted);font-size:12.5px;line-height:1.45}
 [data-theme^="minimal-"] .settings-agents .dcr-presence-cmd code{font-size:11.5px}
 
@@ -1023,27 +718,33 @@ html[data-theme^="minimal-"]{--agent-claude:var(--ink)!important;--agent-codex:v
 [data-theme^="minimal-"] .dcr-publish-box header h2{font-size:15px;font-weight:600}
 [data-theme^="minimal-"] .dcr-publish-steps{gap:14px;margin-top:18px}
 [data-theme^="minimal-"] .dcr-publish-steps li{grid-template-columns:18px minmax(0,1fr) auto;align-items:start;gap:0 12px}
-[data-theme^="minimal-"] .dcr-publish-steps .dcr-step-mark,[data-theme^="minimal-"] .dcr-publish-steps li.is-done .dcr-step-mark{width:18px;height:auto;border:0;border-radius:0;background:none!important;color:var(--ink-neutral-3);font-size:13px;font-weight:500}
+[data-theme^="minimal-"] .dcr-publish-steps .dcr-step-mark,[data-theme^="minimal-"] .dcr-publish-steps li.is-done .dcr-step-mark{width:18px;height:auto;border:0;border-radius:0;background:none;color:var(--ink-neutral-3);font-size:13px;font-weight:500}
 [data-theme^="minimal-"] .dcr-publish-steps .dcr-step-mark svg{width:14px;height:14px;margin-top:2px}
 [data-theme^="minimal-"] .dcr-publish-steps li b,[data-theme^="minimal-"] .dcr-publish-steps li.is-done b{color:var(--ink);font-weight:500}
 [data-theme^="minimal-"] .dcr-publish-steps small{display:block;color:var(--minimal-faint);font-size:12.5px}
 [data-theme^="minimal-"] .dcr-publish-preview{margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
 [data-theme^="minimal-"] .dcr-publish-preview h3{margin:0 0 8px;color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
-[data-theme^="minimal-"] .dcr-publish-preview .dcr-body{padding-left:14px;border-left:2px solid var(--line);font-size:13px;line-height:1.65;color:var(--ink-neutral-3)}
-[data-theme^="minimal-"] .dcr-publish-preview .dcr-body>:first-child{margin:0 0 4px;color:var(--ink);font-size:13px;font-weight:600}
-[data-theme^="minimal-"] .dcr-publish-preview .dcr-body .dcr-emoji{display:none}
-[data-theme^="minimal-"] .dcr-publish-preview .dcr-body :is(ul,ol){margin:0;padding:0;list-style:none}
-[data-theme^="minimal-"] .dcr-publish-preview .dcr-body li{margin:0}
-[data-theme^="minimal-"] .dcr-publish-preview .dcr-body li::marker{content:none}
-[data-theme^="minimal-"] .dcr-publish-preview .dcr-body strong{color:var(--ink);font-weight:500}
-[data-theme^="minimal-"] .dcr-publish-preview .dcr-body code{padding:0;background:none;font-size:12px;color:var(--ink-neutral-3)}
+[data-theme^="minimal-"] .dcr-publish-preview .dcr-publish-body{padding-left:14px;border-left:2px solid var(--line);font-size:13px;line-height:1.65;color:var(--ink-neutral-3)}
+[data-theme^="minimal-"] .dcr-publish-preview .dcr-publish-body>:first-child{margin:0 0 4px;color:var(--ink);font-size:13px;font-weight:600}
+[data-theme^="minimal-"] .dcr-publish-preview .dcr-publish-body .dcr-emoji{display:none}
+[data-theme^="minimal-"] .dcr-publish-preview .dcr-publish-body :is(ul,ol){margin:0;padding:0;list-style:none}
+[data-theme^="minimal-"] .dcr-publish-preview .dcr-publish-body li{margin:0}
+[data-theme^="minimal-"] .dcr-publish-preview .dcr-publish-body li::marker{content:none}
+[data-theme^="minimal-"] .dcr-publish-preview .dcr-publish-body strong{color:var(--ink);font-weight:500}
+[data-theme^="minimal-"] .dcr-publish-preview .dcr-publish-body code{padding:0;background:none;font-size:12px;color:var(--ink-neutral-3)}
 [data-theme^="minimal-"] .dcr-publish-box .dcr-gh-actions{margin-top:22px;padding:0;border:0;background:none}
-[data-theme^="minimal-"] .dcr-publish-box .dcr-gh-actions :is(.act-primary,.act-gh){background:var(--ink)!important;border-color:var(--ink)!important;color:var(--surface)!important}
+[data-theme^="minimal-"] .dcr-publish-box .dcr-gh-actions :is(.act-primary,.act-gh){background:var(--ink);border-color:var(--ink);color:var(--surface)}
 
 /* The way to a comment's code follows its title's last word. */
-[data-theme^="minimal-"] .overview-reading .review-thread .thread-summary .thread-go{display:inline-grid;place-items:center;width:20px;height:20px;margin-left:2px;padding:0;border:0;border-radius:4px;background:none;color:var(--minimal-faint);vertical-align:-4px;cursor:pointer}
-[data-theme^="minimal-"] .overview-reading .review-thread .thread-summary .thread-go:hover{color:var(--ink)}
-[data-theme^="minimal-"] .overview-reading .review-thread .thread-summary .thread-go svg{width:14px;height:14px}
-[data-theme^="minimal-"] .overview-reading .review-thread:has(>.thread-details[open]) .thread-summary .thread-go{display:none}
 /* One line between two comments, open or closed: only the line under each. */
-[data-theme^="minimal-"] .overview-reading .review-thread{border-top-width:0!important}
+
+/* Minimal's list is wider, and each panel's icon sits just outside the panel's edge in every tier:
+   at the page's corner when the panel is closed, beside its edge when it is open. */
+html[data-theme^="minimal-"]{--list-w:384px}
+html[data-theme^="minimal-"] :is(.sidebar-hide,.ledger-hide){display:none}
+/* Its icons' line is the file name's line when reading a file. */
+html[data-theme^="minimal-"]{--panel-icon-top:25px}
+html[data-theme^="minimal-"] body:not(.zen) .sidebar-show{display:grid;position:fixed;top:var(--panel-icon-top);left:18px;z-index:30}
+html[data-theme^="minimal-"] body.list-open:not(.zen) .sidebar-show{left:calc(min(var(--list-w),85vw) + 8px)}
+html[data-theme^="minimal-"] body:not(.zen) .ledger-show{display:grid;position:fixed;top:var(--panel-icon-top);right:18px;z-index:30}
+html[data-theme^="minimal-"] body.ledger-open:not(.zen) .ledger-show{right:calc(var(--ledger-size) + 8px)}

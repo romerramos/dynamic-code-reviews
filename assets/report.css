@@ -1,6 +1,6 @@
 /* Native HTML components styled by daisyUI; application layout and diff rules. */
-:root{--chrome-h:56px;--toolbar-h:52px;color:var(--ink)}
-*{box-sizing:border-box}html{font:15px/1.5 var(--review-font-family);color-scheme:light}button,input,textarea{font-family:inherit}button,summary{cursor:pointer}input[type="search"]{width:100%}textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:calc(8px * var(--round))}progress{width:100%}fieldset{padding:0;border:0}dialog:not([open]){display:none}dialog::backdrop{background:color-mix(in srgb,var(--bg-neutral-8) 33.3%,transparent);backdrop-filter:blur(3px)}dialog article header{display:flex;flex-direction:row-reverse;justify-content:space-between;align-items:center}dialog article footer{display:flex;justify-content:flex-end;gap:10px}body{margin:0;background:var(--canvas);color:var(--ink)}button{font-size:13px;font-weight:550;margin:0;white-space:nowrap;}button.btn-ghost{}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--line-accent-5);outline-offset:2px}h1,h2,h3,h4{color:var(--ink);letter-spacing:-.025em}h1{font-size:27px;line-height:1.25;margin-bottom:14px}h2{font-size:20px;margin:30px 0 14px}h3{font-size:16px;margin:0 0 9px}p{margin:0 0 15px}small,.muted{color:var(--muted);font-size:12px}a{color:var(--accent)}.app-header{height:76px;display:grid;grid-template-columns:320px minmax(0,1fr) auto;align-items:center;gap:20px;padding:0 24px;border-bottom:1px solid var(--line);background:var(--bg-neutral-1)}.brand{display:flex;gap:12px;align-items:center}.brand strong{font-size:14px}.brand small{display:block;font-size:11px;margin-top:1px}.brand-icon{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center}.brand-icon svg{display:block;width:38px;height:38px}.header-title{display:flex;align-items:center;gap:12px;min-width:0}.header-title strong{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.workspace{display:grid;grid-template-columns:320px minmax(0,1fr);height:calc(100dvh - 76px)}.sidebar{padding:24px 18px 18px;border-right:1px solid var(--line);overflow-y:auto;display:flex;flex-direction:column;background:var(--bg-neutral-1);min-width:0}.sidebar input{font-size:13px;background:var(--bg-neutral-1);margin-bottom:15px}.sidebar nav{display:block;flex:1;min-width:0}.sidebar nav button{display:flex;align-items:center;gap:10px;width:100%;max-width:100%;min-width:0;white-space:normal;text-align:left;padding:11px 12px;border:1px solid transparent;background:transparent;color:var(--ink-neutral-4);border-radius:calc(7px * var(--round));margin:3px 0;font-weight:500}.sidebar nav button:hover{background:var(--bg-neutral-3)}.sidebar nav button[aria-current="page"]{color:var(--ink-accent-3);background:var(--accent-soft);border-color:var(--line-accent-1)}.step-body{flex:1;min-width:0}.step-body strong{display:block;font-weight:560;line-height:1.4;font-size:13px}.step-body small{display:block;color:var(--ink-neutral-6);margin-top:3px;font-size:11px}.step-number{align-self:flex-start;flex:0 0 24px;width:24px;height:24px;border:1px solid var(--line-neutral-2);border-radius:calc(6px * var(--round));display:grid;place-items:center;font-size:11px;background:var(--bg-neutral-1);color:var(--ink-neutral-5)}.sidebar details{border:none;margin:19px 0 12px}.sidebar summary{font-size:11px;line-height:1.45;letter-spacing:.045em;font-weight:650;text-transform:uppercase;color:var(--ink-neutral-5);margin:0 0 7px;padding:0 5px;min-height:25px}.sidebar summary::after{height:1rem;width:1rem}.sidebar-footer{padding:20px 8px 0;color:var(--muted);font-size:12px}.sidebar-footer progress{height:4px;margin:0 0 7px}.sidebar-footer small{display:block;margin-top:10px;font-size:11px}kbd{padding:1px 4px;background:var(--bg-neutral-3);color:var(--ink-neutral-6);box-shadow:none;font-size:10px;border:1px solid var(--line-neutral-2);border-radius:calc(3px * var(--round))}.review-area{min-width:0;display:flex;flex-direction:column;overflow:hidden}.review-toolbar{display:flex;justify-content:space-between;gap:12px;align-items:center;min-height:65px;padding:12px 28px;border-bottom:1px solid var(--line);background:var(--bg-neutral-1)}.toolbar-navigation,.toolbar-options{display:flex;align-items:center;gap:10px}.toolbar-navigation span{font-size:12px;color:var(--muted);margin-left:5px}.toolbar-navigation button{padding:5px 10px}.toolbar-options fieldset{margin:0;width:auto;box-shadow:none}.toolbar-options fieldset button{padding:5px 13px;border-color:var(--line-neutral-2);color:var(--ink-neutral-5);background:var(--bg-neutral-1);font-size:12px}.toolbar-options fieldset button[aria-pressed=true]{background:var(--accent-soft);color:var(--ink-accent-3);border-color:var(--line-accent-2)}.toolbar-options label{font-size:12px;margin:0;white-space:nowrap;color:var(--ink-neutral-5)}.toolbar-options input{width:14px;height:14px;margin-right:5px}.toolbar-options>button{font-size:12px;padding:5px 12px}/* ?: every key, by where it works. */
+:root{--chrome-h:56px;color:var(--ink)}
+*{box-sizing:border-box}html{font:15px/1.5 var(--review-font-family);color-scheme:light}button,input,textarea{font-family:inherit}button,summary{cursor:pointer}input[type="search"]{width:100%}textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:calc(8px * var(--round))}progress{width:100%}fieldset{padding:0;border:0}dialog:not([open]){display:none}dialog::backdrop{background:color-mix(in srgb,var(--bg-neutral-8) 33.3%,transparent);backdrop-filter:blur(3px)}dialog>article>header{display:flex;flex-direction:row-reverse;justify-content:space-between;align-items:center}dialog>article>footer{display:flex;justify-content:flex-end;gap:10px}body{margin:0;background:var(--canvas);color:var(--ink)}button{font-size:13px;font-weight:550;margin:0;white-space:nowrap;}button.btn-ghost{}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--line-accent-5);outline-offset:2px}h1,h2,h3,h4{color:var(--ink);letter-spacing:-.025em}h1{font-size:27px;line-height:1.25;margin-bottom:14px}h2{font-size:20px;margin:30px 0 14px}h3{font-size:16px;margin:0 0 9px}p{margin:0 0 15px}small,.muted{color:var(--muted);font-size:12px}a{color:var(--accent)}.app-header{grid-template-columns:320px minmax(0,1fr) auto}.brand{display:flex;gap:12px;align-items:center}.brand strong{font-size:14px}.brand small{display:block;font-size:11px;margin-top:1px}.brand-icon{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center}.brand-icon svg{display:block;width:38px;height:38px}.workspace{display:grid;grid-template-columns:320px minmax(0,1fr);height:calc(100dvh - 76px)}.sidebar{border-right:1px solid var(--line);overflow-y:auto;display:flex;flex-direction:column;min-width:0}.sidebar input{background:var(--bg-neutral-1)}.sidebar nav{display:block;flex:1;min-width:0}.sidebar nav button{display:flex;align-items:center;gap:10px;width:100%;max-width:100%;min-width:0;white-space:normal;text-align:left;padding:11px 12px;border:1px solid transparent;background:transparent;color:var(--ink-neutral-4);border-radius:calc(7px * var(--round));margin:3px 0;font-weight:500}.sidebar nav button:hover{background:var(--bg-neutral-3)}.sidebar nav button[aria-current="page"]{color:var(--ink-accent-3);background:var(--accent-soft);border-color:var(--line-accent-1)}.step-body{flex:1;min-width:0}.step-body strong{display:block;font-weight:560;line-height:1.4;font-size:13px}.step-body small{display:block;color:var(--ink-neutral-6);margin-top:3px;font-size:11px}.step-number{align-self:flex-start;flex:0 0 24px;width:24px;height:24px;border:1px solid var(--line-neutral-2);border-radius:calc(6px * var(--round));display:grid;place-items:center;font-size:11px;background:var(--bg-neutral-1);color:var(--ink-neutral-5)}.sidebar details{border:none;margin:19px 0 12px}.sidebar summary{font-size:11px;line-height:1.45;letter-spacing:.045em;font-weight:650;text-transform:uppercase;color:var(--ink-neutral-5);margin:0 0 7px;padding:0 5px;min-height:25px}.sidebar summary::after{height:1rem;width:1rem}.sidebar-footer{color:var(--muted)}.sidebar-footer small{display:block;margin-top:10px;font-size:11px}kbd{padding:1px 4px;background:var(--bg-neutral-3);color:var(--ink-neutral-6);box-shadow:none;font-size:10px;border:1px solid var(--line-neutral-2);border-radius:calc(3px * var(--round))}.review-area{min-width:0;display:flex;flex-direction:column;overflow:hidden}.review-toolbar{justify-content:space-between;align-items:center;border-bottom:1px solid var(--line)}.toolbar-navigation,.toolbar-options{display:flex;align-items:center;gap:10px}.toolbar-navigation span{font-size:12px;color:var(--muted);margin-left:5px}.toolbar-navigation button{padding:5px 10px;--_icon-button-pad:5px 10px}.toolbar-options fieldset{margin:0;width:auto;box-shadow:none}.toolbar-options fieldset button{padding:5px 13px;border-color:var(--line-neutral-2);color:var(--ink-neutral-5);background:var(--bg-neutral-1);font-size:12px}.toolbar-options label{font-size:12px;margin:0;white-space:nowrap;color:var(--ink-neutral-5)}.toolbar-options input{width:14px;height:14px;margin-right:5px}.toolbar-options>button{font-size:12px;padding:5px 12px;--_icon-button-pad:5px 12px}/* ?: every key, by where it works. */
 .keys-box{width:min(760px,calc(100vw - 24px));max-width:none}
 .keys-box header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:4px}
 .keys-box h2{margin:0;font-size:17px}
@@ -46,14 +46,16 @@ main#content:focus{outline:none}
    with it; left to the page, each one made the whole page as tall as the content. */
 main#content{position:relative;overflow-y:auto;scroll-behavior:smooth;min-width:0;padding:30px 28px 70px;flex:1;scrollbar-gutter:stable}.page-intro{max-width:920px}.eyebrow{font-size:11px;letter-spacing:.09em;text-transform:uppercase;font-weight:650;color:var(--accent);margin-bottom:9px}.lead{font-size:15px;line-height:1.7;color:var(--ink-neutral-5)}.metrics{display:flex;gap:10px;flex-wrap:wrap;margin:19px 0 14px}.badge{display:inline-flex;align-items:center;gap:5px;border-radius:calc(5px * var(--round));padding:3px 8px;font-size:11px;line-height:1.4;font-weight:550;background:var(--accent-soft);color:var(--accent);white-space:nowrap}.badge.neutral{background:var(--bg-neutral-3);color:var(--ink-neutral-5)}.badge.success{color:var(--ink-green-1);background:var(--bg-green-1)}.badge.warning{color:var(--ink-amber-4);background:var(--bg-amber-3)}.badge.blocking{color:var(--ink-red-2);background:var(--bg-red-1)}.flow{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin:22px 0 28px}.flow span{border:1px solid var(--line-neutral-2);border-radius:calc(6px * var(--round));background:var(--bg-neutral-1);padding:8px 11px;font-size:12px;color:var(--ink-neutral-5)}.flow b{font-weight:400;color:var(--ink-neutral-7)}.group-card{border:1px solid var(--line);border-radius:calc(9px * var(--round));background:var(--bg-neutral-1);margin:14px 0;padding:21px 23px;box-shadow:0 2px 3px color-mix(in srgb,var(--shade) 1.2%,transparent)}.group-title{display:flex;gap:12px;align-items:flex-start}.group-card .group-number{width:29px;height:29px;border-radius:calc(8px * var(--round));display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-size:12px;flex-shrink:0}.group-card p{color:var(--ink-neutral-5);font-size:14px;line-height:1.65}.group-actions{display:flex;gap:9px;flex-wrap:wrap;margin:10px 0 0 41px}.group-actions button{font-size:12px;padding:6px 10px}.section-card{background:var(--bg-neutral-1);border:1px solid var(--line);border-radius:calc(9px * var(--round));padding:23px;margin:16px 0;font-size:14px}.section-card p,.section-card li{color:var(--ink-neutral-5)}.section-card li{margin:7px 0}.section-card h3{font-size:15px}.verdict{border:1px solid var(--line-green-1);background:var(--bg-green-1);border-radius:calc(8px * var(--round));padding:15px 19px;font-size:14px;color:var(--ink-green-1);margin:18px 0}.verdict small{display:block;color:var(--ink-neutral-6);margin-top:4px}.step-overview{display:flex;justify-content:space-between;align-items:flex-start;gap:24px}.viewed-control{white-space:nowrap;font-size:12px;margin:4px 0;color:var(--muted)}.viewed-control input{width:16px;height:16px}.context-details{background:var(--bg-neutral-1);border:1px solid var(--line);border-radius:calc(8px * var(--round));padding:12px 16px;margin:14px 0 24px;font-size:13px}.context-details summary{font-size:12px;font-weight:550;color:var(--ink-neutral-5);margin:0}.context-details[open] summary{margin-bottom:13px}.context-details ul{margin-bottom:0;color:var(--ink-neutral-5)}/* A file's diff is laid out when it nears the screen; a large change has a hundred thousand rows,
    and laying them all out at once made All changes take seconds to open. */
-.file-card{content-visibility:auto;contain-intrinsic-size:auto 480px;margin:24px 0;border:1px solid var(--line-neutral-2);border-radius:calc(9px * var(--round));background:var(--bg-neutral-1);overflow:hidden;padding:0}.file-card>summary{display:flex;align-items:center;gap:10px;background:var(--bg-neutral-2);padding:13px 16px;margin:0!important;border-bottom:1px solid var(--line);font-weight:500;list-style:none}.file-card>summary::after{flex-shrink:0}.file-card>summary .filename{font:12px/1.6 var(--mono);overflow-wrap:anywhere;flex:1;min-width:0;color:var(--ink-neutral-4)}.file-icon{font:11px var(--mono);color:var(--ink-neutral-7);border:1px solid var(--line-neutral-2);border-radius:calc(4px * var(--round));padding:2px 4px}.file-summary{padding:11px 17px;font-size:12px;color:var(--ink-neutral-5);border-bottom:1px solid var(--line)}.diff-scroll{overflow-x:auto}.diff-table{table-layout:fixed;width:100%;border-collapse:separate;border-spacing:0;margin:0;background:var(--bg-neutral-1)}.diff-table.split{min-width:820px}.diff-table.unified{min-width:480px}.diff-table col.gutter{width:48px}.diff-table td,.diff-table th{padding:0;border:0;vertical-align:top;font-weight:400;background:transparent}.diff-table thead th{padding:8px 14px;font:11px/1.4 var(--review-font-family);color:var(--ink-neutral-7);background:var(--bg-neutral-1);text-align:left;border-bottom:1px solid var(--line-neutral-2)}.diff-table thead .after{border-left:1px solid var(--line-neutral-2)}.diff-table td.gutter{padding:0 9px 0 3px;text-align:right;font:11px/24px var(--mono);color:var(--ink-neutral-7);user-select:none;background:var(--bg-neutral-1)}.diff-table td.code{padding:0 12px 0 8px;color:var(--ink-neutral-3)}.diff-table td.code code{display:block;background:transparent;border:0;padding:0;margin:0;border-radius:0;font:13px/24px var(--mono);white-space:pre-wrap;overflow-wrap:anywhere;tab-size:2;color:inherit}.diff-table td.side-divider{border-left:1px solid var(--line-neutral-2)}.diff-table td.add{background:var(--added)}.diff-table td.del{background:var(--removed)}.diff-table td.empty{background:repeating-linear-gradient(-45deg,var(--bg-neutral-2),var(--bg-neutral-2) 3px,var(--bg-neutral-3) 3px,var(--bg-neutral-3) 4px)}.sign{color:var(--ink-neutral-7);margin-right:6px;user-select:none}.del .sign{color:var(--ink-red-3)}.add .sign{color:var(--ink-green-3)}.diff-table .range-heading td{padding:12px 16px;background:var(--bg-neutral-3);border-top:1px solid var(--line-neutral-2);border-bottom:1px solid var(--line-neutral-2)}.range-heading .range-label{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--ink-neutral-7);margin-bottom:5px}.range-heading p{font:12px/1.55 var(--review-font-family);color:var(--ink-neutral-5);margin:0;max-width:1050px}.diff-table .annotation-row td{background:var(--bg-neutral-1);padding:10px 14px}.inline-comment{background:var(--note-bg);border:1px solid var(--line-amber-2);border-left:3px solid var(--line-amber-6);border-radius:calc(6px * var(--round));padding:12px 15px;max-width:100%;scroll-margin-top:15px}.comment-meta{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font:11px/1.5 var(--review-font-family);color:var(--ink-amber-5);margin-bottom:5px}.inline-comment h4{font:600 13px/1.5 var(--review-font-family);margin:0 0 6px;color:var(--ink-amber-2);letter-spacing:0}.inline-comment p{font:12px/1.65 var(--review-font-family);color:var(--ink-amber-3);margin:0}.inline-comment button{font-size:10px;padding:2px 8px;border:1px solid var(--line-amber-3);background:transparent;color:var(--ink-amber-4);white-space:nowrap}/* A comment marks its lines in the line numbers only, the same on changed and unchanged lines: amber numbers and one thin rule between them and the code. The code keeps the diff's own colours. */.diff-table td.gutter.annotated{box-shadow:inset -2px 0 var(--ring-amber-1)}.diff-table td.gutter.annotated .line-number{color:var(--ink-amber-3);font-weight:650}.code-row.is-current-change>.gutter.annotated:first-child{box-shadow:inset 3px 0 var(--ring-accent-2),inset -2px 0 var(--ring-amber-1)}.diff-table td.range-selected{background-color:var(--bg-amber-3)!important}.newline-marker{font:10px/1.4 var(--review-font-family);color:var(--ink-amber-6);padding-left:12px}.local-notes{background:var(--bg-neutral-1);border:1px solid var(--line);padding:16px 20px;border-radius:calc(8px * var(--round));margin-top:24px}.local-notes summary{font-size:13px;font-weight:550;margin:0}.local-notes[open] summary{margin-bottom:12px}.local-notes textarea{font-size:13px;min-height:100px}.local-notes small{display:block}.file-list{display:grid;gap:9px}.file-list .section-card{margin:0}.file-list code{font-size:12px;overflow-wrap:anywhere}.file-links{display:flex;gap:7px;margin-top:8px}.file-links button{font-size:11px;padding:5px 9px}.empty-state{text-align:center;padding:30px;color:var(--muted)}.focus .workspace{grid-template-columns:1fr}.focus .sidebar{display:none}.focus main#content{padding-inline:40px}dialog article{max-width:740px;padding:25px;border-radius:calc(12px * var(--round));font-size:14px}dialog article header{background:var(--bg-neutral-1);margin:-25px -25px 22px;padding:23px 25px;border-bottom:1px solid var(--line)}dialog article h2{margin:0;font-size:20px}dialog article footer{margin:20px -25px -25px;background:var(--bg-neutral-2);padding:16px 25px;border-top:1px solid var(--line)}dialog pre{font-size:11px;padding:10px;overflow-wrap:anywhere;white-space:pre-wrap}dialog .details-section{padding-bottom:15px;border-bottom:1px solid var(--line);margin-bottom:18px}dialog ul{padding-left:20px}dialog li{font-size:13px;color:var(--ink-neutral-5)}#toast{position:fixed;bottom:25px;left:50%;transform:translateX(-50%);background:var(--bg-neutral-7);color:var(--ink-neutral-9);padding:10px 20px;border-radius:calc(8px * var(--round));font-size:13px;box-shadow:0 5px 20px color-mix(in srgb,var(--shade) 16.9%,transparent);z-index:100}.skip-link{position:fixed;left:20px;top:-60px;z-index:101;background:var(--bg-neutral-1);padding:10px}.skip-link:focus{top:10px}
+.file-card{content-visibility:auto;contain-intrinsic-size:auto 480px;margin:24px 0;border:1px solid var(--line-neutral-2);border-radius:calc(9px * var(--round));background:var(--bg-neutral-1);overflow:hidden;padding:0}.file-card>summary{display:flex;align-items:center;gap:10px;background:var(--bg-neutral-2);padding:13px 16px;margin:0!important;border-bottom:1px solid var(--line);font-weight:500;list-style:none}.file-card>summary::after{flex-shrink:0}.file-card>summary .filename{font:12px/1.6 var(--mono);overflow-wrap:anywhere;flex:1;min-width:0;color:var(--ink-neutral-4)}.file-icon{font:11px var(--mono);color:var(--ink-neutral-7);border:1px solid var(--line-neutral-2);border-radius:calc(4px * var(--round));padding:2px 4px}.file-summary{padding:11px 17px;font-size:12px;color:var(--ink-neutral-5);border-bottom:1px solid var(--line)}.diff-scroll{overflow-x:auto}.diff-table{table-layout:fixed;width:100%;border-collapse:separate;border-spacing:0;margin:0;background:var(--bg-neutral-1)}.diff-table.split{min-width:820px}.diff-table.unified{min-width:480px}.diff-table td,.diff-table th{padding:0;border:0;vertical-align:top;font-weight:400;background:transparent}.diff-table thead th{padding:8px 14px;font:11px/1.4 var(--review-font-family);color:var(--ink-neutral-7);background:var(--bg-neutral-1);text-align:left;border-bottom:1px solid var(--line-neutral-2)}.diff-table thead .after{border-left:1px solid var(--line-neutral-2)}.diff-table td.gutter{padding:0 9px 0 3px;text-align:right;font:11px/24px var(--mono);color:var(--ink-neutral-7);user-select:none;background:var(--bg-neutral-1)}.diff-table td.code{padding:0 12px 0 8px;color:var(--ink-neutral-3)}.diff-table td.code code{display:block;background:transparent;border:0;padding:0;margin:0;border-radius:0;font:13px/24px var(--mono);white-space:pre-wrap;overflow-wrap:anywhere;tab-size:2;color:inherit}.diff-table td.side-divider{border-left:1px solid var(--line-neutral-2)}.diff-table td.add{background:var(--added)}.diff-table td.del{background:var(--removed)}.diff-table td.empty{background:repeating-linear-gradient(-45deg,var(--bg-neutral-2),var(--bg-neutral-2) 3px,var(--bg-neutral-3) 3px,var(--bg-neutral-3) 4px)}.sign{color:var(--ink-neutral-7);margin-right:6px;user-select:none}.del .sign{color:var(--ink-red-3)}.add .sign{color:var(--ink-green-3)}.diff-table .range-heading td{padding:12px 16px;background:var(--bg-neutral-3);border-top:1px solid var(--line-neutral-2);border-bottom:1px solid var(--line-neutral-2)}.range-heading .range-label{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--ink-neutral-7);margin-bottom:5px}.range-heading p{font:12px/1.55 var(--review-font-family);color:var(--ink-neutral-5);margin:0;max-width:1050px}.diff-table .annotation-row td{background:var(--bg-neutral-1);padding:10px 14px}.inline-comment{background:var(--note-bg);border:1px solid var(--line-amber-2);border-left:3px solid var(--line-amber-6);border-radius:calc(6px * var(--round));padding:12px 15px;max-width:100%;scroll-margin-top:15px}.comment-meta{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font:11px/1.5 var(--review-font-family);color:var(--ink-amber-5);margin-bottom:5px}.inline-comment h4{font:600 13px/1.5 var(--review-font-family);margin:0 0 6px;color:var(--ink-amber-2);letter-spacing:0}.inline-comment p{font:12px/1.65 var(--review-font-family);color:var(--ink-amber-3);margin:0}.inline-comment button{font-size:10px;padding:2px 8px;border:1px solid var(--line-amber-3);background:transparent;color:var(--ink-amber-4);white-space:nowrap}/* A comment marks its lines in the line numbers only, the same on changed and unchanged lines: amber numbers and one thin rule between them and the code. The code keeps the diff's own colours. */.diff-table td.gutter.annotated{box-shadow:inset -2px 0 var(--ring-amber-1)}.diff-table td.gutter.annotated .line-number{color:var(--ink-amber-3);font-weight:650}.code-row.is-current-change>.gutter.annotated:first-child{box-shadow:inset 3px 0 var(--ring-accent-2),inset -2px 0 var(--ring-amber-1)}.diff-table td.range-selected{background-color:var(--bg-amber-3)!important}.newline-marker{font:10px/1.4 var(--review-font-family);color:var(--ink-amber-6);padding-left:12px}.local-notes{background:var(--bg-neutral-1);border:1px solid var(--line);padding:16px 20px;border-radius:calc(8px * var(--round));margin-top:24px}.local-notes summary{font-size:13px;font-weight:550;margin:0}.local-notes[open] summary{margin-bottom:12px}.local-notes textarea{font-size:13px;min-height:100px}.local-notes small{display:block}.file-list{display:grid;gap:9px}.file-list .section-card{margin:0}.file-list code{font-size:12px;overflow-wrap:anywhere}.file-links{display:flex;gap:7px;margin-top:8px}.file-links button{font-size:11px;padding:5px 9px}.empty-state{text-align:center;padding:30px;color:var(--muted)}.focus .workspace{grid-template-columns:1fr}.focus .sidebar{display:none}.focus main#content{padding-inline:40px}/* The details dialog: a header band, its body, a footer band; each part holds its own padding, so the bands reach the box's edges. */
+dialog>article{max-width:740px;padding:0;border-radius:calc(12px * var(--round));font-size:14px}
+dialog>article>:not(header,footer){padding-inline:25px}dialog>article>header{background:var(--bg-neutral-1);margin:0 0 22px;padding:23px 25px;border-bottom:1px solid var(--line)}dialog>article h2{margin:0;font-size:20px}dialog>article>footer{margin:20px 0 0;background:var(--bg-neutral-2);padding:16px 25px;border-top:1px solid var(--line)}dialog pre{font-size:11px;padding:10px;overflow-wrap:anywhere;white-space:pre-wrap}dialog .details-section{padding-bottom:15px;border-bottom:1px solid var(--line);margin-bottom:18px}dialog ul{padding-left:20px}dialog li{font-size:13px;color:var(--ink-neutral-5)}#toast{position:fixed;bottom:25px;left:50%;transform:translateX(-50%);background:var(--bg-neutral-7);color:var(--ink-neutral-9);padding:10px 20px;border-radius:calc(8px * var(--round));font-size:13px;box-shadow:0 5px 20px color-mix(in srgb,var(--shade) 16.9%,transparent);z-index:100}.skip-link{position:fixed;left:20px;top:-60px;z-index:101;background:var(--bg-neutral-1);padding:10px}.skip-link:focus{top:10px}
 @media(min-width:1650px){.diff-table td.code code{font-size:13px;line-height:24px}.diff-table td.gutter{line-height:24px}.workspace{grid-template-columns:340px minmax(0,1fr)}}
 @media(max-width:1050px){.workspace{grid-template-columns:290px minmax(0,1fr)}.app-header{grid-template-columns:290px minmax(0,1fr) auto;padding:0 18px;gap:10px}.review-toolbar{padding:12px 18px}.toolbar-navigation span{display:none}main#content{padding:25px 18px}.step-overview{display:block}.viewed-control{display:block;margin:15px 0}.header-title strong{max-width:220px}}
-@media(max-width:740px){.app-header{height:auto;min-height:76px;grid-template-columns:1fr auto;padding:14px 16px}.header-title{display:none}.workspace{display:block;height:auto}.sidebar{max-height:330px;border-right:0;border-bottom:1px solid var(--line);padding:18px}.sidebar-footer{display:none}.review-area{overflow:visible}.review-toolbar{position:sticky;top:0;z-index:5;padding:10px 12px;flex-wrap:wrap}main#content{overflow:visible;padding:25px 12px}.toolbar-options{gap:8px}.toolbar-options label{font-size:11px}.group-actions{margin-left:0}.group-card{padding:18px}.diff-table.split{min-width:820px}.focus main#content{padding:25px 12px}}
+@media(max-width:740px){.app-header{height:auto;min-height:76px;grid-template-columns:1fr auto}.header-title{display:none}.workspace{display:block}.sidebar{max-height:330px;border-right:0;border-bottom:1px solid var(--line);padding:18px}.sidebar-footer{display:none}.review-area{overflow:visible}.review-toolbar{padding:10px 12px;flex-wrap:wrap}main#content{overflow:visible;padding:25px 12px}.toolbar-options{gap:8px}.toolbar-options label{font-size:11px}.group-actions{margin-left:0}.group-card{padding:18px}.diff-table.split{min-width:820px}.focus main#content{padding:25px 12px}}
 @media print{.app-header,.sidebar,.review-toolbar,.local-notes,.viewed-control,dialog,.skip-link{display:none}.workspace,.review-area{display:block;height:auto;overflow:visible}main#content{overflow:visible;padding:0}.file-card{break-inside:auto}.diff-scroll{overflow:visible}.diff-table.split{min-width:0}.diff-table td.code code{font-size:8px;line-height:14px}.diff-table td.gutter{font-size:8px;line-height:14px}.inline-comment{break-inside:avoid}body{background:var(--bg-neutral-1)}}
 
 /* daisyUI component integration; no Tailwind runtime or generated utilities. */
-.badge{height:auto;min-height:20px;border:0}.app-header .btn{height:34px;font-weight:550}.toolbar-options .btn{height:30px;min-height:30px}.sidebar nav .menu{width:100%;padding:0;gap:3px;font-size:13px}.sidebar nav .menu>li{margin:0;display:block;min-width:0}.sidebar nav .menu>li>button{display:flex;width:100%;min-height:52px;margin:0;border-radius:calc(8px * var(--round))}.sidebar nav .menu>li>button[aria-current=page]{background:var(--bg-accent-3);border-color:var(--line-accent-1);color:var(--ink-accent-3)}.sidebar nav .menu>li>button:hover{background:var(--bg-accent-2)}.sidebar nav .menu>li>button::after{display:none}.toolbar-options fieldset button[aria-pressed=true]{background:var(--color-primary);border-color:var(--color-primary);color:var(--ink-neutral-9)}.group-actions .btn{height:32px;min-height:32px}.group-card.card{box-shadow:0 2px 6px color-mix(in srgb,var(--shade) 2%,transparent)}.inline-comment .badge{border-radius:calc(4px * var(--round))}.sidebar details summary{list-style:none}.sidebar details summary::before{content:'⌄';margin-right:7px;color:var(--ink-neutral-7)}.sidebar details:not([open]) summary::before{content:'›'}.modal-box{width:min(740px,calc(100vw - 40px));max-width:740px}.modal-box>header .btn{position:static}.viewed-control input{margin-right:6px}.section-card.alert{display:block}.review-toolbar button:disabled{opacity:.35}.local-notes>summary::marker{color:var(--ink-neutral-7)}
+.badge{height:auto;min-height:20px;border:0}.app-header .btn{--_button-height:34px;--_button-weight:550}.toolbar-options .btn{--_button-height:30px;--_button-min-height:30px}.sidebar nav .menu{width:100%;padding:0;gap:3px;font-size:13px}.sidebar nav .menu>li{margin:0;display:block;min-width:0}.sidebar nav .menu>li>button{display:flex;width:100%;min-height:52px;margin:0;border-radius:calc(8px * var(--round))}.sidebar nav .menu>li>button[aria-current=page]{background:var(--bg-accent-3);border-color:var(--line-accent-1);color:var(--ink-accent-3)}.sidebar nav .menu>li>button:hover{background:var(--bg-accent-2)}.sidebar nav .menu>li>button::after{display:none}.toolbar-options fieldset button[aria-pressed=true]{background:var(--color-primary);border-color:var(--color-primary);color:var(--ink-neutral-9)}.group-actions .btn{--_button-height:32px;--_button-min-height:32px}.group-card.card{box-shadow:0 2px 6px color-mix(in srgb,var(--shade) 2%,transparent)}.inline-comment .badge{border-radius:calc(4px * var(--round))}.sidebar details summary{list-style:none}.sidebar details summary::before{content:'⌄';margin-right:7px;color:var(--ink-neutral-7)}.sidebar details:not([open]) summary::before{content:'›'}.modal-box{width:min(740px,calc(100vw - 40px));max-width:740px}.modal-box>header .btn{position:static}.viewed-control input{margin-right:6px}.section-card.alert{display:block}.review-toolbar button:disabled{opacity:.35;--_icon-button-disabled-opacity:.35}.local-notes>summary::marker{color:var(--ink-neutral-7)}
 
 /* Comments belong to a source-side gutter, never to a full-width diff row. */
 .diff-table col.gutter{width:60px}
@@ -64,65 +66,35 @@ main#content{position:relative;overflow-y:auto;scroll-behavior:smooth;min-width:
 .comment-popover[popover]{position:fixed;inset:auto;margin:0;width:390px;max-width:calc(100vw - 24px);max-height:min(440px,calc(100dvh - 24px));overflow-y:auto;padding:0;border:1px solid var(--line-amber-3);border-radius:calc(10px * var(--round));background:var(--bg-neutral-1);color:var(--ink);box-shadow:0 8px 32px color-mix(in srgb,var(--shade) 14.1%,transparent);z-index:30;text-align:left}
 .comment-popover .popover-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 15px;border-bottom:1px solid var(--line-amber-1);background:var(--bg-amber-1);font:12px/1.5 var(--review-font-family)}
 .comment-popover .popover-heading strong{font-weight:600;color:var(--ink-amber-3)}
-.comment-popover .popover-heading .btn{width:23px;height:23px;min-height:23px}
-.popover-comment{padding:14px 16px;font:13px/1.65 var(--review-font-family)}
-.popover-comment+.popover-comment{border-top:1px solid var(--line-amber-1)}
-.popover-comment .comment-meta{justify-content:flex-start;gap:8px;margin-bottom:10px}
-.popover-comment h4{font-size:13px;font-weight:600;line-height:1.55;color:var(--ink-amber-1);letter-spacing:0;margin:0 0 9px}
-.popover-comment p{font-size:13px;color:var(--ink-amber-3);margin:0 0 12px}
-.popover-comment .btn{font-size:11px;height:26px;min-height:26px;padding:3px 9px;color:var(--ink-amber-3);background:var(--bg-amber-4);border:1px solid var(--line-amber-1)}
+.comment-popover .popover-heading .btn{--_button-square:23px}
 @media print{.comment-trigger,.comment-popover{display:none!important}}
 /* Review series keep navigation compact and history prose readable. */
-.header-actions{display:flex;align-items:center;gap:12px}.revision-control{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted)}.revision-control .select{width:145px;min-width:145px;min-height:36px;height:36px;padding-inline:12px 36px;font-size:12px;line-height:1.4;flex-shrink:0}.increment-card{max-width:1050px}.increment-card h2{margin:5px 0 12px}.increment-card details{margin:16px 0}.increment-card summary{font-size:13px;font-weight:600}.increment-card>a{display:inline-block;margin-top:12px;font-size:13px}.increment-card code{font-size:12px;overflow-wrap:anywhere}.finding-state{margin:16px 0}.finding-state strong{display:block;font-size:13px;margin-top:6px}.finding-state p{margin:5px 0}.group-title h3 .badge{vertical-align:middle;margin-left:7px}
+.header-actions{display:flex;align-items:center}.revision-control{display:flex;align-items:center;font-size:11px;color:var(--muted)}.increment-card{max-width:1050px}.increment-card h2{margin:5px 0 12px}.increment-card details{margin:16px 0}.increment-card summary{font-size:13px;font-weight:600}.increment-card>a{display:inline-block;margin-top:12px;font-size:13px}.increment-card code{font-size:12px;overflow-wrap:anywhere}.finding-state{margin:16px 0}.finding-state strong{display:block;font-size:13px;margin-top:6px}.finding-state p{margin:5px 0}.group-title h3 .badge{vertical-align:middle;margin-left:7px}
 @media(max-width:1050px){.header-actions{gap:4px}.revision-control>span{display:none}.header-title #scope{display:none}}
 .verdict.alert-warning{background:var(--bg-amber-1);border-color:var(--line-amber-2);color:var(--ink-amber-2)}.verdict.alert-warning small{color:var(--ink-amber-5)}
 /* Review reading flow: distinct observations, bounded prose, direct code access. */
-.review-section,.evidence-section{max-width:1050px;margin:36px 0}.section-heading{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:18px}.section-heading h2{margin:0 0 7px}.section-heading p{color:var(--ink-neutral-5);font-size:13px;margin:0}.review-comment{background:var(--bg-neutral-1);border:1px solid var(--line-neutral-2);border-radius:calc(10px * var(--round));padding:22px 24px;margin:12px 0}.review-comment h3{font-size:16px;line-height:1.5;letter-spacing:-.01em;margin:10px 0;color:var(--ink-neutral-2);max-width:78ch}.comment-location{font:12px/1.65 var(--mono);color:var(--ink-neutral-5);overflow-wrap:anywhere;margin:8px 0}.comment-discussion{font-size:14px;line-height:1.75;max-width:78ch;overflow-wrap:anywhere;color:var(--ink-neutral-3);margin:10px 0 15px}.comment-discussion p{margin:0 0 .75em}.comment-discussion>:last-child{margin-bottom:0}.comment-discussion ul,.comment-discussion ol{margin:.2em 0 .75em;padding-left:1.3em}.comment-discussion ul{list-style:disc}.comment-discussion ol{list-style:decimal}.comment-discussion li{margin:.15em 0}.comment-discussion code{padding:1px 5px;border-radius:calc(5px * var(--round));background:color-mix(in oklab,currentColor 8%,transparent);font:.88em/1.4 var(--mono)}.comment-discussion pre{margin:.4em 0 .8em;padding:10px 12px;overflow:auto;border-radius:calc(8px * var(--round));background:color-mix(in oklab,currentColor 6%,transparent)}.comment-discussion pre code{padding:0;background:none}.comment-discussion :is(h3,h4,h5,h6){margin:.9em 0 .4em;font-size:1em;font-weight:700;line-height:1.4}.comment-discussion h3{font-size:1.1em}.comment-discussion .md-table{margin:.4em 0 .8em;overflow-x:auto}.comment-discussion table{border-collapse:collapse;font-size:.92em}.comment-discussion :is(th,td){padding:4px 10px;border:1px solid color-mix(in oklab,currentColor 18%,transparent);text-align:left;vertical-align:top;overflow-wrap:normal}.comment-discussion th{font-weight:700;background:color-mix(in oklab,currentColor 6%,transparent)}.comment-discussion a{text-decoration:underline}.comment-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}.comment-actions .btn{height:30px;min-height:30px}.review-comment .comment-meta{justify-content:flex-start;gap:12px;color:var(--ink-neutral-5)}.snippet-details{margin:14px 0;color:var(--ink-neutral-5);font-size:12px}.snippet-details summary{width:fit-content}.comment-snippet{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.8 var(--mono);background:var(--bg-neutral-2);color:var(--ink-neutral-3);border:1px solid var(--line-neutral-2);border-radius:calc(7px * var(--round));padding:12px 16px;margin:12px 0;max-height:220px;overflow:auto}.personal-comment{border-left:3px solid var(--line-accent-5)}.review-empty{border:1px dashed var(--line-neutral-3);border-radius:calc(9px * var(--round));padding:22px;color:var(--ink-neutral-5);font-size:14px;max-width:85ch}.evidence-section{border-top:1px solid var(--line-neutral-2);padding:25px 0 0}.evidence-section h2{font-size:18px;margin:0 0 15px}.evidence-section p,.evidence-section li{font-size:14px;line-height:1.8;color:var(--ink-neutral-3);max-width:80ch}.evidence-section ul{padding-left:22px;margin:16px 0}.evidence-section li{margin:12px 0}.popover-comment .comment-actions{margin-top:12px}.popover-comment .comment-location{font-size:10px;color:var(--ink-amber-5)}.popover-comment p{white-space:pre-wrap}.review-section .badge{font-size:11px}
+.review-section,.evidence-section{max-width:1050px;margin:36px 0}.section-heading{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:18px}.section-heading h2{margin:0 0 7px}.section-heading p{color:var(--ink-neutral-5);font-size:13px;margin:0}.review-comment{background:var(--bg-neutral-1);border:1px solid var(--line-neutral-2);border-radius:calc(10px * var(--round));padding:22px 24px;margin:12px 0}.review-comment h3{font-size:16px;line-height:1.5;letter-spacing:-.01em;margin:10px 0;color:var(--ink-neutral-2);max-width:78ch}.comment-location{font:12px/1.65 var(--mono);color:var(--ink-neutral-5);overflow-wrap:anywhere;margin:8px 0}.comment-discussion{font-size:14px;line-height:1.75;max-width:78ch;overflow-wrap:anywhere;color:var(--ink-neutral-3);margin:10px 0 15px}.comment-discussion p{margin:0 0 .75em}.comment-discussion>:last-child{margin-bottom:0}.comment-discussion ul,.comment-discussion ol{margin:.2em 0 .75em;padding-left:1.3em}.comment-discussion ul{list-style:disc}.comment-discussion ol{list-style:decimal}.comment-discussion li{margin:.15em 0}.comment-discussion code{padding:1px 5px;border-radius:calc(5px * var(--round));background:color-mix(in oklab,currentColor 8%,transparent);font:.88em/1.4 var(--mono)}.comment-discussion pre{margin:.4em 0 .8em;padding:10px 12px;overflow:auto;border-radius:calc(8px * var(--round));background:color-mix(in oklab,currentColor 6%,transparent)}.comment-discussion pre code{padding:0;background:none}.comment-discussion :is(h3,h4,h5,h6){margin:.9em 0 .4em;font-size:1em;font-weight:700;line-height:1.4}.comment-discussion h3{font-size:1.1em}.comment-discussion .md-table{margin:.4em 0 .8em;overflow-x:auto}.comment-discussion table{border-collapse:collapse;font-size:.92em}.comment-discussion :is(th,td){padding:4px 10px;border:1px solid color-mix(in oklab,currentColor 18%,transparent);text-align:left;vertical-align:top;overflow-wrap:normal}.comment-discussion th{font-weight:700;background:color-mix(in oklab,currentColor 6%,transparent)}.comment-discussion a{text-decoration:underline}.comment-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}.comment-actions .btn{--_button-height:30px;--_button-min-height:30px}.review-comment .comment-meta{justify-content:flex-start;gap:12px;color:var(--ink-neutral-5)}.snippet-details{margin:14px 0;color:var(--ink-neutral-5);font-size:12px}.snippet-details summary{width:fit-content}.comment-snippet{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.8 var(--mono);background:var(--bg-neutral-2);color:var(--ink-neutral-3);border:1px solid var(--line-neutral-2);border-radius:calc(7px * var(--round));padding:12px 16px;margin:12px 0;max-height:220px;overflow:auto}.personal-comment{border-left:3px solid var(--line-accent-5)}.review-empty{border:1px dashed var(--line-neutral-3);border-radius:calc(9px * var(--round));padding:22px;color:var(--ink-neutral-5);font-size:14px;max-width:85ch}.evidence-section{border-top:1px solid var(--line-neutral-2);padding:25px 0 0}.evidence-section h2{font-size:18px;margin:0 0 15px}.evidence-section p,.evidence-section li{font-size:14px;line-height:1.8;color:var(--ink-neutral-3);max-width:80ch}.evidence-section ul{padding-left:22px;margin:16px 0}.evidence-section li{margin:12px 0}.review-section .badge{font-size:11px}
 /* All changes renders the full diff once, grouped by responsibility. */
-.category-filters{display:flex;flex-wrap:wrap;gap:6px;position:sticky;top:-30px;padding:12px 0;background:var(--canvas);z-index:3;border-bottom:1px solid var(--line-neutral-2);margin:20px 0 30px}.category-filters .btn{font-size:12px;height:32px;min-height:32px}.category-filters button span{opacity:.7;margin-left:4px}.category-heading{padding:4px 0 0;margin:30px 0 12px}.category-heading h2{margin:0 0 7px}.category-heading p{font-size:13px;color:var(--ink-neutral-5);max-width:85ch}.category-section>.file-card{margin-top:16px}
+.category-filters{display:flex;flex-wrap:wrap;gap:6px;position:sticky;top:-30px;padding:12px 0;background:var(--canvas);z-index:3;border-bottom:1px solid var(--line-neutral-2);margin:20px 0 30px}.category-filters .btn{--_button-size:12px;--_button-height:32px;--_button-min-height:32px}.category-filters button span{opacity:.7;margin-left:4px}.category-heading{padding:4px 0 0;margin:30px 0 12px}.category-heading h2{margin:0 0 7px}.category-heading p{font-size:13px;color:var(--ink-neutral-5);max-width:85ch}.category-section>.file-card{margin-top:16px}
 /* Line buttons work with mouse, keyboard, or consecutive tablet taps. */
-.line-number{display:inline-block;width:100%;border:0;background:transparent;color:inherit;text-align:right;padding:0;font:inherit;line-height:24px;border-radius:calc(3px * var(--round));min-height:24px}.line-number:hover,.line-number:focus-visible{background:var(--bg-accent-3);color:var(--ink-accent-3)}.diff-table td.user-range-selected{background:var(--bg-accent-3)!important;box-shadow:inset 3px 0 var(--ring-accent-2)}.range-actions{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:16px;padding:12px 16px;border:1px solid var(--line-accent-2);border-radius:calc(10px * var(--round));background:var(--bg-neutral-1);box-shadow:0 6px 26px color-mix(in srgb,var(--shade) 14.9%,transparent);z-index:30;max-width:calc(100vw - 28px)}.range-actions[hidden]{display:none}.range-actions strong{display:block;font-size:12px;max-width:46ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.range-actions small{display:block;margin-top:3px;font-size:11px}.range-actions button{flex-shrink:0}.editor-label{display:block;font-size:13px;color:var(--ink-neutral-5);margin:15px 0}.editor-label .input,.editor-label .textarea{display:block;width:100%;margin-top:6px}.editor-label .select{margin-left:12px;min-height:32px;height:32px;font-size:12px}.editor-blocking{display:flex;gap:10px;align-items:center;font-size:12px;color:var(--ink-neutral-5)}.modal-box>header{display:flex;align-items:center;justify-content:space-between;gap:12px}.modal-box>header h2{margin:0;font-size:20px}.modal-box>footer{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:22px}#comment-editor .modal-box{max-height:calc(100dvh - 40px);overflow-y:auto}#copy-dialog textarea{width:100%;font:12px/1.6 var(--mono)}#copy-dialog .btn{margin-top:14px}
+.line-number{display:inline-block;width:100%;border:0;background:transparent;color:inherit;text-align:right;padding:0;font:inherit;line-height:24px;border-radius:calc(3px * var(--round));min-height:24px}.line-number:hover,.line-number:focus-visible{background:var(--bg-accent-3);color:var(--ink-accent-3)}.range-actions{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:16px;padding:12px 16px;border:1px solid var(--line-accent-2);border-radius:calc(10px * var(--round));background:var(--bg-neutral-1);box-shadow:0 6px 26px color-mix(in srgb,var(--shade) 14.9%,transparent);z-index:30;max-width:calc(100vw - 28px)}.range-actions[hidden]{display:none}.range-actions strong{display:block;font-size:12px;max-width:46ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.range-actions small{display:block;margin-top:3px;font-size:11px}.range-actions button{flex-shrink:0}.editor-label{display:block;font-size:13px;color:var(--ink-neutral-5);margin:15px 0}.editor-label .input,.editor-label .textarea{display:block;width:100%;margin-top:6px}.editor-label .select{margin-left:12px;min-height:32px;height:32px;font-size:12px}.editor-blocking{display:flex;gap:10px;align-items:center;font-size:12px;color:var(--ink-neutral-5)}.modal-box>header{display:flex;align-items:center;justify-content:space-between;gap:12px}.modal-box>header h2{margin:0;font-size:20px}.modal-box>footer{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:22px}#comment-editor .modal-box{max-height:calc(100dvh - 40px);overflow-y:auto}#copy-dialog textarea{width:100%;font:12px/1.6 var(--mono)}#copy-dialog .btn{margin-top:14px}
 #nav-toggle{display:inline-flex;align-items:center;justify-content:center}
-@media(max-width:1199px){.app-header{grid-template-columns:minmax(0,1fr) auto;height:70px;padding:0 18px}.header-title{display:none}.workspace{height:calc(100dvh - 70px - var(--status-h));grid-template-columns:minmax(0,1fr)}.sidebar{display:none}.navigation-open .sidebar{display:flex;position:fixed;top:130px;bottom:0;left:0;width:320px;max-width:85vw;z-index:15;box-shadow:8px 8px 28px color-mix(in srgb,var(--shade) 14.9%,transparent)}.review-toolbar{padding:10px 18px;min-height:60px;flex-wrap:wrap;gap:8px}#nav-toggle{display:inline-flex;align-items:center;justify-content:center}main#content{padding:24px 18px 100px}.focus main#content{padding-inline:18px}.category-filters{top:-24px}.diff-table.unified{min-width:0}.diff-table td.code{padding-right:8px}.section-heading{align-items:flex-start;flex-wrap:wrap}.brand small{max-width:30ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.review-comment{padding:18px}.toolbar-options{gap:6px}.toolbar-options .btn{padding:5px 10px}.toolbar-navigation span{display:none}}
-@media(max-width:650px){.brand strong{font-size:12px}.brand-icon,.brand-icon svg{width:32px;height:32px}.brand-icon{flex-basis:32px}.brand{gap:8px}.header-actions{gap:0}.revision-control{display:none}.app-header .btn{font-size:11px;padding:5px}.toolbar-options #focus{display:none}.review-toolbar{padding:8px 12px}.toolbar-options fieldset button{padding:5px 8px}.diff-table col.gutter{width:47px}.diff-table td.gutter{padding-left:21px;padding-right:4px}.diff-table td.code code{font-size:12px;line-height:24px}.comment-trigger{left:2px}.range-actions{bottom:10px;gap:7px;padding:10px;left:14px;right:14px;transform:none}.range-actions>div{min-width:0;flex:1}.range-actions strong{max-width:100%}.range-actions small{font-size:10px}.review-comment{padding:15px}.section-heading .btn{white-space:normal;height:auto;min-height:32px}.modal-box>footer{align-items:flex-start;flex-direction:column}}
+@media(max-width:1199px){.app-header{grid-template-columns:minmax(0,1fr) auto;padding:0 18px}.workspace{height:calc(100dvh - 70px - var(--status-h));grid-template-columns:minmax(0,1fr)}.sidebar{display:none}.navigation-open .sidebar{display:flex;position:fixed;bottom:0;left:0;width:320px;max-width:85vw;z-index:15;box-shadow:8px 8px 28px color-mix(in srgb,var(--shade) 14.9%,transparent)}.review-toolbar{gap:8px}#nav-toggle{display:inline-flex;align-items:center;justify-content:center}main#content{padding:24px 18px 100px}.focus main#content{padding-inline:18px}.category-filters{top:-24px}.diff-table.unified{min-width:0}.diff-table td.code{padding-right:8px}.section-heading{align-items:flex-start;flex-wrap:wrap}.brand small{max-width:30ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.review-comment{padding:18px}.toolbar-options .btn{--_button-pad:5px 10px}.toolbar-navigation span{display:none}}
+@media(max-width:650px){.brand strong{font-size:12px}.brand-icon,.brand-icon svg{width:32px;height:32px}.brand-icon{flex-basis:32px}.brand{gap:8px}.app-header .btn{--_button-size:11px;--_button-pad:5px}.diff-table td.code code{font-size:12px;line-height:24px}.comment-trigger{left:2px}.range-actions{gap:7px;padding:10px;left:14px;right:14px;transform:none}.range-actions>div{min-width:0;flex:1}.range-actions strong{max-width:100%}.range-actions small{font-size:10px}.review-comment{padding:15px}.section-heading .btn{white-space:normal;--_button-height:auto;--_button-min-height:32px}.modal-box>footer{align-items:flex-start;flex-direction:column}}
 /* Overview threads: source first, one reading column, explicit local resolution. */
-.review-thread{display:block;min-width:0;max-width:960px;margin:18px 0 24px;padding:0;background:var(--bg-neutral-1);border:1px solid var(--line-neutral-3);border-radius:calc(10px * var(--round));overflow:hidden}
-.thread-file{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:13px 18px;background:var(--bg-neutral-2);border-bottom:1px solid var(--line-neutral-2)}
-.thread-file-path{font:600 12px/1.7 var(--mono);overflow-wrap:anywhere;min-width:0;color:var(--ink-neutral-3)}
-.thread-range{font-size:12px;white-space:nowrap;color:var(--ink-neutral-4)}
 .thread-outdated{display:inline-block;margin-right:8px;padding:1px 8px;border:1px solid var(--line-amber-3);border-radius:calc(5px * var(--round));background:var(--bg-amber-1);color:var(--ink-neutral-3);font-size:11px;line-height:1.5;font-weight:650}
 .thread-follows{margin:14px 0 0;font-size:13px;color:var(--ink-neutral-5)}.thread-follows summary{cursor:pointer}.thread-follows .comment-discussion{margin-top:8px}
 .thread-was{margin:14px 0 0}.thread-was figcaption{margin-bottom:6px;font-size:12px;color:var(--ink-neutral-5)}
 .thread-was pre{margin:0;padding:10px 12px;overflow-x:auto;border:1px solid var(--line-neutral-2);border-radius:calc(6px * var(--round));background:var(--bg-neutral-2);color:var(--ink-neutral-4);font:12px/1.6 var(--mono)}
-.review-thread .thread-details{display:block;margin:0;padding:0;border:0;border-radius:0;background:transparent}
-.review-thread .thread-summary{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:16px 20px;cursor:pointer;list-style:none;background:var(--bg-neutral-1)}
-.thread-summary::-webkit-details-marker{display:none}
-.thread-summary:after{display:none}
-.thread-chevron{display:inline-flex;margin-left:auto;color:var(--ink-neutral-5)}
-.thread-summary>strong{display:block;flex-basis:100%;font-size:15px;line-height:1.5;color:var(--ink-neutral-2)}
 .thread-disclosure{font-size:12px;color:var(--ink-neutral-5)}
-.thread-details[open]>.thread-summary{padding:7px 18px;background:var(--bg-neutral-2);border-bottom:1px solid var(--line-neutral-2)}
-.thread-details[open]>.thread-summary>.thread-badges,.thread-details[open]>.thread-summary>strong{display:none}
-.thread-details[open]>.thread-summary>.thread-chevron{transform:rotate(180deg)}
-.thread-body{display:block;padding:20px 24px 22px}
 .thread-badges{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
-.thread-type{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--thread-ink)}
-.thread-type-icon{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:calc(7px * var(--round));background:var(--thread-tint);font:700 15px/1 var(--review-font-family)}
 .review-icon{display:inline-block;flex:none;width:16px;height:16px;vertical-align:middle;stroke-width:1.8}
-.thread-type-icon .review-icon{width:17px;height:17px}
 .thread-priority .review-icon{width:13px;height:13px;margin-right:4px}
-.thread-resolved{display:inline-flex;align-items:center;gap:5px}
 .comment-trigger .review-icon{width:14px;height:14px}
-.type-blue{--thread-ink:var(--type-blue-ink);--thread-tint:var(--type-blue-tint)}.type-green{--thread-ink:var(--type-green-ink);--thread-tint:var(--type-green-tint)}.type-purple{--thread-ink:var(--type-purple-ink);--thread-tint:var(--type-purple-tint)}.type-amber{--thread-ink:var(--type-amber-ink);--thread-tint:var(--type-amber-tint)}.type-red{--thread-ink:var(--type-red-ink);--thread-tint:var(--type-red-tint)}.type-teal{--thread-ink:var(--type-teal-ink);--thread-tint:var(--type-teal-tint)}.type-slate{--thread-ink:var(--type-slate-ink);--thread-tint:var(--type-slate-tint)}
 .thread-priority{display:inline-flex;align-items:center;padding:3px 9px;border:1px solid;border-radius:calc(5px * var(--round));font-size:11px;line-height:1.5;font-weight:650}
 .thread-priority.is-blocking{background:var(--bg-red-3);color:var(--ink-neutral-9);border-color:var(--line-red-3)}.thread-priority.is-optional{background:var(--bg-neutral-1);color:var(--ink-neutral-5);border-color:var(--line-neutral-3)}
-.thread-resolved{color:var(--ink-green-1);font-size:12px;font-weight:650}.thread-author{font-size:12px;color:var(--ink-neutral-5)}
-.thread-body .thread-type-hint{margin:7px 0 16px;font-size:12px;line-height:1.5;color:var(--ink-neutral-5)}
-.thread-body h3{margin:0 0 8px;font-size:16px;font-weight:650;line-height:1.6;color:var(--ink-neutral-2);max-width:78ch}
-.thread-body .comment-discussion{margin:0;font-size:14px;line-height:1.8;color:var(--ink-neutral-3);max-width:78ch}
-.thread-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:12px 18px;border-top:1px solid var(--line-neutral-2);background:var(--bg-neutral-1)}
+.thread-resolved{display:inline-flex;align-items:center;gap:5px;color:var(--ink-green-1);font-size:12px;font-weight:650}.thread-author{font-size:12px;color:var(--ink-neutral-5)}
 .thread-footer .comment-actions{display:flex;flex-wrap:wrap;gap:8px;margin:0}
-.review-thread.is-resolved{background:var(--bg-neutral-2);border-color:var(--line-neutral-2)}
 .overview-fold{margin:0 0 6px}
 .overview-fold>summary{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 14px;padding:10px 2px;list-style:none;cursor:pointer;color:var(--ink-neutral-4)}
 .overview-fold>summary::-webkit-details-marker{display:none}
@@ -132,15 +104,8 @@ main#content{position:relative;overflow-y:auto;scroll-behavior:smooth;min-width:
 .overview-fold[open]>summary>.review-icon{transform:rotate(180deg)}
 .overview-fold[open]>summary{margin-bottom:12px}
 .overview-fold>summary:focus-visible{outline:2px solid var(--line-accent-6);outline-offset:2px}
-.review-thread.is-earlier{background:var(--bg-neutral-2);border-color:var(--line-neutral-2)}
-/* Folded, a comment from an earlier revision is its file and its subject; opened, all of it. */
-.review-thread.is-earlier:has(>.thread-details:not([open]))>:is(.dcr-thread,.thread-footer){display:none}
-.review-thread.is-earlier:has(>.thread-details:not([open])) .thread-summary{padding-top:12px;padding-bottom:12px}
-/* The section already says these are on code that changed: one tag a card, what became of it. */
-.review-thread.is-earlier .thread-outdated{display:none}
-.review-thread.is-earlier .thread-summary strong{font-weight:550;color:var(--ink-neutral-4)}
-.thread-summary:focus-visible,.thread-code:focus-visible{outline:2px solid var(--line-accent-6);outline-offset:-3px}
-@media(max-width:767px){.thread-file{flex-direction:column;gap:2px}.thread-body{padding:18px}.thread-footer{padding:12px}.thread-code-line{grid-template-columns:44px minmax(0,1fr)}.thread-code-line>code{padding:0 10px}.thread-line-number{padding:0 8px}}
+.thread-code:focus-visible{outline:2px solid var(--line-accent-6);outline-offset:-3px}
+@media(max-width:767px){.thread-code-line{grid-template-columns:44px minmax(0,1fr)}.thread-code-line>code{padding:0 10px}.thread-line-number{padding:0 8px}}
 
 /* Captured QA is optional and stays secondary to the review. */
 .qa-flow { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--line-neutral-2); }
@@ -214,7 +179,6 @@ main#content{position:relative;overflow-y:auto;scroll-behavior:smooth;min-width:
 .related-tests-summary { display: block; margin: 8px 0 0 16px; font-size: 14px; line-height: 1.6; color: var(--muted); }
 .related-tests-content { padding: 0 16px 8px; }
 .related-tests .file-card { background: var(--bg-neutral-1); }
-button.thread-source { display: flex; width: calc(100% - 56px); justify-content: space-between; padding: 12px 14px; text-align: left; }
 @media(max-width:767px) { .expanded-diff-header { padding: 16px 56px 14px 16px; } .expanded-diff-header h2 { font-size: 15px; } .expanded-diff-body { padding: 8px; } }
 
 /* Keep controls usable when the navigation rail has more content than height. */
@@ -233,32 +197,25 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 .sidebar-footer{flex-shrink:0}
 .history-links{display:flex;flex-wrap:wrap;gap:12px 20px;margin-top:18px;font-size:13px}
 
-@media(max-width:1199px){.navigation-open .sidebar{max-height:none}}
+@media(max-width:1199px){}
 @media(max-width:650px){
-  .app-header{height:112px;grid-template-columns:1fr;padding:10px 12px;gap:8px}
-  .header-actions{justify-content:space-between;gap:10px}
+  
+  
   .revision-control{display:flex}
   .revision-control>span{display:none}
   .workspace{height:calc(100dvh - 112px - var(--status-h))}
-  .review-toolbar{min-height:96px;align-content:center}
-  .navigation-open .sidebar{top:208px}
+  
+  
 }
 
 /* Overview is a reading surface; diff steps retain the full available width. */
 .overview-reading{width:100%;max-width:840px;margin:10px auto 0;padding-bottom:32px}
 .overview-intro{margin-bottom:32px}
 .overview-intro h1{font-size:30px;line-height:1.25;letter-spacing:-.025em;margin:0 0 16px}
-.overview-intro .lead{font-size:17px;line-height:1.65;color:var(--ink-neutral-3);margin-bottom:18px}
 .overview-update{font-size:13px;line-height:1.6;color:var(--ink-neutral-5);margin:0 0 12px}
 .overview-update strong{font-weight:600;color:var(--ink-neutral-3)}
 .overview-status{margin:0 0 18px;font-size:14px;line-height:1.6;color:var(--ink-neutral-5)}.overview-status strong{font-weight:600;color:var(--ink-neutral-2)}.overview-status[hidden]{display:none}
 .overview-fold+.overview-status{margin-top:14px}
-.comment-own{display:grid;grid-template-columns:32px minmax(0,1fr);column-gap:10px;align-items:start}
-.comment-avatar{display:grid;place-items:center;width:32px;height:32px;overflow:hidden;border-radius:calc(50% * var(--round));background:var(--bg-neutral-3);color:var(--ink-neutral-2);font-size:12px;font-weight:600}
-.comment-avatar>img{width:100%;height:100%;object-fit:cover}
-.comment-own-head{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:0 0 2px;font-size:12px;line-height:1.35}
-.comment-own-head strong{font-size:13px;font-weight:600;color:var(--ink-neutral-2)}
-.comment-own-main h4{margin:0;font-size:14px;font-weight:500;line-height:1.55}
 /* What is typed shows as typed. JetBrains Mono joins ... or => through its contextual alternates
    (calt): the first characters become empty spacers and the last one is drawn wide over them, which a
    field clips, so characters seem to vanish once the word is done. A field does not take the page's
@@ -270,27 +227,8 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 .since-outdated{padding:14px 16px;border-top:1px solid var(--line-neutral-2)}.since-outdated h3{margin:0 0 10px;font-size:12px;font-weight:600;color:var(--ink-neutral-5)}
 .overview-history{display:flex;flex-wrap:wrap;gap:18px;font-size:13px}
 .overview-notice{padding:12px 16px;border-left:3px solid var(--line-amber-5);background:var(--bg-amber-1);font-size:14px;line-height:1.6}
-.overview-comments .review-thread{max-width:none;margin:0 0 28px;border-color:var(--line-neutral-2);border-radius:calc(12px * var(--round))}
-.overview-reading .thread-file{background:var(--bg-neutral-2);padding:12px 24px}
-.overview-reading .thread-file-path{font-weight:500;color:var(--ink-neutral-5)}
-.overview-reading .thread-summary,.overview-reading .thread-details[open]>.thread-summary{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px 16px;padding:24px 28px 18px;background:var(--bg-neutral-1);border-bottom:0}
-.overview-reading .thread-summary>.thread-badges,.overview-reading .thread-details[open]>.thread-summary>.thread-badges{display:flex;grid-column:1}
-.overview-reading .thread-summary>strong,.overview-reading .thread-details[open]>.thread-summary>strong{display:block;grid-column:1;grid-row:2;font-size:20px;line-height:1.4;font-weight:600}
-.overview-reading .thread-chevron{grid-column:2;grid-row:1 / 3;align-self:start}
-.overview-reading .thread-body{padding:0 28px 24px}
-/* The reader's own comment is a message, laid out as every message under it is: the face in a column
-   of its own, and the name, the words and what follows them all on one edge beside it (28px + 12px). */
-.overview-reading .review-thread.is-own .thread-summary,.overview-reading .review-thread.is-own .thread-details[open]>.thread-summary{grid-template-columns:32px minmax(0,1fr) auto;column-gap:10px;row-gap:2px}
-.overview-reading .review-thread.is-own .thread-summary>.comment-avatar{grid-column:1;grid-row:1 / 3;align-self:start;font-size:13px}
-.overview-reading .review-thread.is-own .thread-summary>:is(.thread-badges,strong){grid-column:2}
-.overview-reading .review-thread.is-own .thread-chevron{grid-column:3}
-.overview-reading .review-thread.is-own .thread-summary>strong{font-size:14px;font-weight:500;line-height:1.55}
-.overview-reading .review-thread.is-own .thread-body{padding-left:70px}
-.overview-reading .review-thread.is-own .thread-source{margin-left:70px}
-.overview-reading .comment-discussion{font-size:16px;line-height:1.65;color:var(--ink-neutral-3);max-width:none}
-.overview-reading .thread-footer{padding:14px 24px;background:var(--bg-neutral-2)}
+.overview-reading .review-comment .comment-discussion{font-size:16px;line-height:1.65;color:var(--ink-neutral-3);max-width:none}
 .thread-severity{font-size:12px;font-weight:600;color:var(--ink-neutral-5)}
-.thread-source{margin:0 28px 20px;border:1px solid var(--line-neutral-2);border-radius:calc(7px * var(--round));overflow:hidden}
 .overview-reading .qa-asset{margin:22px 0 0}
 .overview-reading .qa-asset img,.overview-reading .qa-asset video{width:auto;height:auto;max-height:none}
 .overview-reading .qa-asset figcaption{font-size:13px;line-height:1.55;color:var(--ink-neutral-5)}
@@ -301,14 +239,6 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
   .overview-reading{margin-top:0}
   .overview-intro h1{font-size:25px}
   .overview-intro .lead{font-size:16px}
-  .overview-reading .thread-file{padding:12px 16px;align-items:flex-start}
-  .overview-reading .thread-summary,.overview-reading .thread-details[open]>.thread-summary{padding:20px 18px 16px}
-  .overview-reading .thread-summary>strong,.overview-reading .thread-details[open]>.thread-summary>strong{font-size:18px}
-  .overview-reading .thread-body{padding:0 18px 20px}
-  .overview-reading .review-thread.is-own .thread-body{padding-left:60px}
-  .overview-reading .review-thread.is-own .thread-source{margin-left:60px}
-  .overview-reading .thread-footer{padding:12px 16px}
-  .thread-source{margin:0 18px 18px}
 }
 
 /* Scope describes code; revision updates describe the report. */
@@ -331,10 +261,11 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 .other-checks h2{font-size:18px;margin:0 0 14px}
 .other-checks h2 .badge{vertical-align:middle}
 @media(max-width:520px){.qa-preview,.qa-preview-compact{grid-template-columns:100px minmax(0,1fr)}.qa-preview-image,.qa-preview-compact .qa-preview-image{height:72px}.qa-evidence-modal>header{padding:16px 18px 12px}.qa-evidence-scroll{padding:14px 18px 20px}}
-#my-review{margin-top:24px;border-top:1px solid var(--line-neutral-2);padding-top:28px}
+/* Your comments reach past the reading column for their cards; the rule above them keeps to the column. */
+#my-review{margin-top:24px;padding-top:28px;background:linear-gradient(var(--section-rule),var(--section-rule)) top center / calc(100% - 2 * var(--comment-inset)) 1px no-repeat}
 #my-review .section-heading{flex-wrap:wrap;gap:16px}
 #my-review .section-heading p{font-size:14px;max-width:60ch;line-height:1.6}
-.thread-footer{flex-wrap:wrap;gap:12px}
+.thread-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--line-neutral-2);background:var(--bg-neutral-1);flex-wrap:wrap;gap:12px}
 
 /* File progress is shared by the walkthrough and All changes. */
 .file-card > summary { flex-wrap: wrap; }
@@ -376,7 +307,6 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 .sidebar nav .nav-files li.nav-tests-label{display:flex;flex-direction:row;justify-content:flex-start;align-items:center;gap:9px;margin:12px 6px 4px;color:var(--ink-neutral-6);font-size:10px;font-weight:650;letter-spacing:.07em;text-transform:uppercase}
 .sidebar nav .nav-tests-label::after{content:"";height:1px;flex:1;background:var(--bg-neutral-5)}
 .sidebar nav .nav-component { border: 1px solid var(--line); border-radius:calc(7px * var(--round)); margin: 6px 0; background: var(--bg-neutral-1); }
-.sidebar nav .nav-component.is-current { border-color: var(--line-neutral-5); box-shadow: inset 3px 0 var(--ring-neutral-2); }
 .sidebar nav .nav-component-title { width: calc(100% - 8px); padding: 4px 6px; margin: 4px 4px 0; border-radius:calc(4px * var(--round)); align-items: flex-start; }
 .sidebar nav .nav-component strong { display: block; white-space: normal; overflow-wrap: anywhere; font-size: 12px; line-height: 1.5; }
 .sidebar nav .nav-component-count { flex: none; font-size: 11px; padding-top: 2px; font-variant-numeric: tabular-nums; }
@@ -395,7 +325,6 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 .sidebar nav .nav-component strong { font-family: var(--mono); font-weight: 600; }
 .sidebar nav .nav-component-files button { background: var(--bg-neutral-1); color: var(--ink-neutral-3); border-color: var(--line-neutral-2); }
 .sidebar nav .nav-component-files button:is(:hover, :active) { background: var(--bg-neutral-3); color: var(--ink-neutral-2); border-color: var(--line-neutral-5); }
-.sidebar nav .nav-component-files button[aria-current="location"] { background: var(--bg-neutral-4); color: var(--ink-neutral-2); border-color: var(--line-neutral-5); }
 .sidebar nav .nav-component button:focus-visible { outline: 2px solid var(--line-neutral-6); outline-offset: -2px; }
 .file-status.is-viewed { color: var(--ink-green-1); border-color: var(--line-green-3); background: var(--bg-green-1); }
 @media print { .file-viewed, .step-progress { display: none; } .component-card [role="tabpanel"][hidden] { display: block; } .component-card > header { position: static; } }
@@ -404,14 +333,14 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 .font-controls{display:flex;align-items:center;gap:2px;white-space:nowrap}.font-controls output{font-size:11px;min-width:32px;text-align:center}
 .diff-table td.code code{font-size:var(--code-font-size,12px);line-height:var(--code-line-height,22px)}
 .diff-table td.gutter,.diff-table .line-number{line-height:var(--code-line-height,24px);min-height:var(--code-line-height,24px)}
-.focus-reader{width:100%;min-width:0}.focus-file-header{position:sticky;top:-30px;z-index:5;background:var(--canvas);padding:14px 0;border-bottom:1px solid var(--line-neutral-2);display:flex;flex-wrap:wrap;align-items:end;gap:12px 24px}
+.focus-reader{width:100%;min-width:0}/* Reading a file, the space above it is the header's own (--reader-top), not the page's: the header sticks flush at the top, covers what scrolls under it, and its file name never moves. */
 .focus-location{flex:1;min-width:0}.focus-location .eyebrow{display:block;margin-bottom:5px;font-size:11px}.focus-location label{font-size:12px;display:block;margin-bottom:5px}.focus-location select{width:100%;max-width:100%;font:13px var(--mono);height:38px;min-height:38px}
-.focus-file-actions{display:flex;gap:6px;flex-wrap:wrap}.focus-file-header details{flex-basis:100%;font-size:13px}.focus-file-header details p{max-width:90ch;margin:8px 0}.focus-reader .diff-scroll{margin-top:12px}.focus-end{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:24px 0}.focus-end span{font-size:13px;overflow-wrap:anywhere}.focus-unavailable{padding:14px;border-left:3px solid var(--line-amber-5);background:var(--bg-amber-1)}
-@media(max-width:1199px){.focus-file-header{top:-24px}.toolbar-options{flex-wrap:wrap}.focus-file-actions{width:100%}.focus-location .eyebrow{overflow-wrap:anywhere}}
-@media(max-width:650px){.toolbar-options #focus{display:inline-flex}.focus-file-header{top:-25px}.font-controls .btn{padding:4px 7px}}
+.focus-file-header details{flex-basis:100%;font-size:13px}.focus-file-header details p{max-width:90ch;margin:8px 0}.focus-reader .diff-scroll{margin-top:12px}.focus-end{justify-content:space-between;align-items:center;gap:16px;padding:24px 0}.focus-end span{font-size:13px;overflow-wrap:anywhere}.focus-unavailable{padding:14px;border-left:3px solid var(--line-amber-5);background:var(--bg-amber-1)}
+@media(max-width:1199px){.toolbar-options{gap:6px;flex-wrap:wrap}.focus-file-actions{width:100%}.focus-location .eyebrow{overflow-wrap:anywhere}}
+@media(max-width:650px){.toolbar-options #focus{display:inline-flex}.font-controls .btn{--_button-pad:4px 7px}}
 
-.toolbar-options{flex-wrap:wrap}.toolbar-options #focus{display:inline-flex;white-space:nowrap}.toolbar-options #focus[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);box-shadow:inset 0 0 0 1px var(--ring-accent-1)}
-.focus-file-actions{align-items:center}.focus-file-actions #change-position{font-size:11px;font-variant-numeric:tabular-nums}.focus-file-actions .file-viewed{margin-left:8px}
+.toolbar-options #focus{display:inline-flex;white-space:nowrap}.toolbar-options #focus[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);box-shadow:inset 0 0 0 1px var(--ring-accent-1)}
+.focus-file-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.focus-file-actions .file-viewed{margin-left:8px}
 .diff-table .focus-annotation td{padding:8px 12px;background:var(--bg-neutral-2);border-top:1px solid var(--line-neutral-2);border-bottom:1px solid var(--line-neutral-2);font:12px/1.5 var(--review-font-family);color:var(--ink-neutral-4);white-space:normal}
 .focus-annotation .annotation-label{display:inline-block;margin-right:10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-accent-4)}.focus-annotation small{margin-left:12px;font-size:10px;color:var(--ink-neutral-5);white-space:nowrap}
 
@@ -425,56 +354,44 @@ button.thread-source { display: flex; width: calc(100% - 56px); justify-content:
 .review-note-popover[popover]{border-color:var(--line-accent-2);background:var(--bg-neutral-1)}
 .review-note-popover .popover-heading{border-bottom-color:var(--line-accent-1);background:var(--bg-accent-2)}
 .review-note-popover .popover-heading strong{color:var(--ink-accent-3)}
-.review-note-popover .popover-comment p{color:var(--ink-accent-2)}
-.review-note-popover .popover-comment small{color:var(--ink-accent-5)}
 .focus-reader td.code:has(>.review-note-trigger){padding-left:36px}
 @media(max-width:650px){.review-note-trigger{left:2px}}
 
-.current-file{display:flex;align-items:center;gap:10px;min-width:0}.current-file code{font:13px/1.6 var(--mono);overflow-wrap:anywhere;user-select:text}.current-file .copy-file-path{flex:none;margin:0}.focus-file-position{font-size:12px;display:block;margin-bottom:5px}
+.current-file{display:flex;align-items:center;min-width:0}.current-file code{user-select:text}.focus-file-position{font-size:12px;display:block;margin-bottom:5px}
 
 .code-row.is-current-change > .gutter:first-child{box-shadow:inset 3px 0 var(--ring-accent-2)}
-.diff-table td.user-range-selected{position:relative;z-index:2;background:var(--bg-accent-4)!important;box-shadow:inset 4px 0 var(--ring-accent-3)!important}
+.diff-table td.user-range-selected{background:var(--bg-accent-3)!important;box-shadow:inset 3px 0 var(--ring-accent-2);position:relative;z-index:2;background:var(--bg-accent-4)!important;box-shadow:inset 4px 0 var(--ring-accent-3)!important}
 .diff-table td.user-range-selected .line-number{color:var(--ink-accent-3);font-weight:700}
 
-.focus-component{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}.focus-component>span{font-size:11px;color:var(--muted);overflow-wrap:anywhere}.focus-component .btn{font-size:11px;min-height:28px;height:28px;padding:3px 10px}.focus-component [aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:var(--line-accent-2)}
+.focus-component{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}.focus-component>span{font-size:11px;color:var(--muted);overflow-wrap:anywhere}.focus-component .btn{--_button-size:11px;--_button-min-height:28px;--_button-height:28px;--_button-pad:3px 10px}.focus-component [aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:var(--line-accent-2)}
 
 /* Keep controls close to the information they act on, regardless of width. */
-body.reading-focus main#content{padding-top:12px}
-.focus-file-header{display:block;padding:10px 0;top:-12px}
-.focus-meta{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:6px 14px;font-size:11px;line-height:1.5}
-.focus-group{flex:0 1 auto;min-width:0;color:var(--accent);font-weight:600;overflow-wrap:anywhere}
+body.reading-focus main#content{padding-top:0}
 .focus-meta .focus-file-position{margin:0;font-size:11px;white-space:nowrap}
-.focus-meta .focus-file-actions{width:auto;flex-wrap:nowrap;gap:2px;flex:none;border-left:1px solid var(--line);padding-left:10px}
-.focus-file-actions .btn{width:28px;min-height:28px;height:28px;padding:0}
-.focus-file-actions #change-position{white-space:nowrap;min-width:82px;text-align:center}
+.focus-file-actions .btn{width:28px;--_button-min-height:28px;--_button-height:28px;--_button-pad:0}
 .focus-meta .file-viewed{margin:0;display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border:1px solid var(--line-accent-3);border-radius:calc(6px * var(--round));background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
 .focus-meta .file-viewed:hover{border-color:var(--accent)}
 .focus-meta .file-viewed:has(input:checked){border-color:var(--line-green-3);background:var(--bg-green-1);color:var(--ink-green-1)}
 .focus-meta .file-viewed input{width:15px;height:15px;border-radius:calc(3px * var(--round))}
-.focus-progress-actions>[data-focus-next]{height:29px;min-height:29px;font-size:11px;padding:4px 8px}
-.focus-identity{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin-top:6px;min-width:0}
 .focus-file-header .current-file{flex:0 1 auto;min-width:0;margin:0;gap:6px;align-items:center}
-.current-file code{flex:0 1 auto;min-width:0;font-size:12px;line-height:1.65;overflow-wrap:anywhere}
-.current-file .copy-file-path{flex:none;width:auto;height:28px;min-height:28px;padding:4px 6px;font-size:11px;display:inline-flex;gap:4px}
+.current-file code{flex:0 1 auto;min-width:0;overflow-wrap:anywhere}
+.current-file .copy-file-path{margin:0;--_icon-button-pad:4px 6px;flex:none;width:auto;height:28px;min-height:28px;padding:4px 6px;font-size:11px;display:inline-flex;gap:4px}
 .copy-file-path svg{width:14px;height:14px}
 .focus-identity .focus-component{margin:0;flex:none}.focus-identity .focus-component>span{display:none}
-.focus-file-header .file-about{flex:0 1 auto;min-width:95px;font-size:11px}
 .file-about summary{width:fit-content;color:var(--muted);padding:4px 0}
 .focus-file-header .file-about[open]{flex-basis:100%}.file-about p{font-size:13px}
 @media(max-width:650px){
- .focus-file-header{top:-12px}
- .focus-meta{gap:6px 10px}.focus-group{flex-basis:100%}
+ .focus-meta{gap:6px 10px}
  .focus-meta .focus-file-actions{padding-left:8px}
  .focus-meta .file-viewed{font-size:11px;padding:5px 7px}
  .focus-file-header .current-file{flex-wrap:wrap;column-gap:8px;row-gap:0}
  .current-file code{flex-basis:100%;font-size:11px}
- .focus-identity{gap:2px 12px}
- .review-toolbar{flex-wrap:wrap;padding:8px 12px;gap:6px}.toolbar-options{gap:6px}
+ 
+ .review-toolbar{flex-wrap:wrap}.toolbar-options{gap:6px}
  .toolbar-options fieldset button{padding:4px 8px}
 }
 
-.focus-progress-actions{display:flex;align-items:center;gap:8px}
-@media(max-width:650px){.focus-file-header .current-file{display:contents}.focus-identity> .file-about{min-width:95px}.focus-progress-actions{flex-basis:100%}}
+@media(max-width:650px){.focus-identity> .file-about{min-width:95px}}
 
 .token.comment,.token.prolog,.token.doctype,.token.cdata{color:var(--tok-comment);font-style:italic}
 .token.punctuation{color:var(--tok-punct)}
@@ -496,7 +413,6 @@ body.reading-focus main#content{padding-top:12px}
 .focus-body.has-preview .diff-scroll{margin-top:0}
 .preview-panel{min-width:0;border:1px solid var(--line-accent-1);border-radius:calc(10px * var(--round));background:var(--bg-neutral-2)}
 .preview-panel.side{position:sticky;top:96px;max-height:calc(100dvh - 190px);overflow:auto}
-.preview-panel.inline{margin:12px 16px}
 .preview-panel>summary{display:flex;align-items:center;gap:8px;padding:10px 14px;font-size:13px;font-weight:600;color:var(--ink-accent-3);list-style:none;cursor:pointer;white-space:nowrap}
 .preview-panel>summary::-webkit-details-marker{display:none}
 .preview-panel>summary::after{content:"";margin-left:auto;width:7px;height:7px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform .15s}
@@ -524,16 +440,14 @@ body.reading-focus main#content{padding-top:12px}
   .focus-body.has-preview:has(>.preview-panel.side:not([open])){display:block}
   .preview-panel.side:not([open]){display:none}
 }
-.preview-toggle{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border:1px solid var(--line-accent-2);border-radius:calc(999px * var(--round));background:var(--bg-accent-2);color:var(--ink-accent-1);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
 .preview-toggle svg{width:14px;height:14px}
-.preview-toggle .preview-count{min-width:18px;padding:0 6px;border-radius:calc(999px * var(--round));background:var(--bg-accent-5);color:var(--ink-neutral-9);font-size:11px;line-height:18px;text-align:center}
-.preview-toggle:hover{background:var(--bg-accent-4)}
-.preview-toggle[aria-expanded="true"]{background:var(--bg-accent-5);color:var(--ink-neutral-9);border-color:var(--line-accent-8)}
+.preview-toggle .preview-count{border-radius:calc(999px * var(--round));color:var(--ink-neutral-9);font-size:11px;text-align:center}
+.preview-toggle[aria-expanded="true"]{color:var(--ink-neutral-9)}
 .preview-toggle[aria-expanded="true"] .preview-count{background:var(--bg-neutral-1);color:var(--ink-accent-1)}
 .preview-toggle:focus-visible{outline:3px solid var(--line-accent-5);outline-offset:2px}
 .preview-none{font-size:12px;color:var(--muted)}
 .preview-example figcaption .preview-stand-ins{color:var(--ink-amber-2)}
-.preview-twin-note{flex-basis:100%;color:var(--muted);font-size:11px}.preview-twin-note .btn{font-size:11px;min-height:0;height:auto;padding:0 6px}
+.preview-twin-note{flex-basis:100%;color:var(--muted);font-size:11px}.preview-twin-note .btn{--_button-size:11px;--_button-min-height:0;--_button-height:auto;--_button-pad:0 6px}
 
 /* Sidebar location, two distinct levels without extra lines. The active step reads as a
    heading (filled number, accent title, no box) with its files indented beneath it;
@@ -544,7 +458,8 @@ body.reading-focus main#content{padding-top:12px}
 .sidebar nav .menu>li>button[data-view][aria-current="page"] .step-number svg{color:var(--ink-neutral-9)}
 .sidebar nav .menu>li>button[data-view] .step-number .review-icon{width:15px;height:15px}
 .sidebar nav .menu>li>button[data-view][aria-current="page"] .step-body strong{color:var(--ink-accent-1);font-weight:620}
-.sidebar nav li:has(>button[data-view][aria-current="page"])>.nav-files{margin:2px 0 16px 34px}
+/* A step's files, open or unfolded: their checks in the column of the step's mark (12px pad + 1px border + half of 24 - 14, less the file row's own 7px). */
+.sidebar nav li:has(>button[data-view])>.nav-files{margin:2px 0 16px 11px}
 .sidebar nav button.nav-file[aria-current="location"],.sidebar nav .nav-component.is-current{background:var(--accent-soft);color:var(--ink-accent-1);border-color:transparent;box-shadow:none}
 .sidebar nav button.nav-file[aria-current="location"] .nav-file-name,.sidebar nav .nav-component.is-current strong{color:var(--ink-accent-1);font-weight:650}
 .sidebar nav .nav-component-files button[aria-current="location"]{background:var(--bg-neutral-1);color:var(--ink-accent-1);border-color:var(--line-accent-2)}
@@ -574,7 +489,7 @@ body.reading-focus main#content{padding-top:12px}
 .header-count.is-new{background:var(--bg-green-1);color:var(--ink-green-1)}
 .header-count.is-pending{background:var(--bg-amber-2);color:var(--ink-amber-2)}
 .revision-control{gap:0}.revision-control>span{display:none}
-.revision-control .select{width:auto;min-width:0;height:32px;min-height:32px;padding-inline:10px 30px;border-color:transparent;background-color:transparent;font-size:13px;font-weight:550;color:var(--ink-neutral-3)}
+.revision-control .select{line-height:1.4;flex-shrink:0;width:auto;min-width:0;height:32px;min-height:32px;padding-inline:10px 30px;border-color:transparent;background-color:transparent;font-size:13px;font-weight:550;color:var(--ink-neutral-3)}
 .revision-control .select:hover{background-color:var(--bg-neutral-3)}
 /* daisyUI's open list inherits the select's background, which is transparent here and tinted elsewhere:
    it would show the page through it. Every list gets a solid surface; the focus ring is the page's own. */
@@ -586,12 +501,11 @@ html[data-mode="dark"] .revision-control .select:is(:focus,:open):not(:focus-vis
 /* Sidebar: the walkthrough as a table of contents. */
 .sidebar{padding:18px 14px 14px;background:var(--bg-neutral-2)}
 .sidebar input{height:36px;min-height:36px;font-size:13px;margin-bottom:12px}
-.sidebar-footer{display:flex;flex-direction:column;gap:6px;padding:14px 6px 2px;border-top:1px solid var(--line);margin-top:12px;font-size:12px;font-variant-numeric:tabular-nums}
+.sidebar-footer{flex-direction:column;border-top:1px solid var(--line);font-size:12px;font-variant-numeric:tabular-nums}
 .sidebar-footer progress{height:4px;margin:0}
 .sidebar-settings{flex:none;display:flex;align-items:center;gap:10px;width:100%;margin-top:12px;padding:9px 10px;border:0;border-radius:calc(8px * var(--round));background:transparent;color:var(--ink-neutral-3);font-size:13px;font-weight:550;text-align:left}
 .sidebar-settings:hover,.sidebar-settings:focus-visible{background:var(--bg-neutral-2);color:var(--ink)}
-.sidebar-settings #settings-icon{display:inline-grid;color:var(--ink-neutral-5)}.sidebar-settings .review-icon,.view-all .review-icon{width:16px;height:16px}
-.sidebar-settings+.sidebar-footer{margin-top:6px}
+.sidebar-settings #settings-icon{color:var(--ink-neutral-5)}.sidebar-settings .review-icon,.view-all .review-icon{width:16px;height:16px}
 .view-all{display:inline-flex;align-items:center;gap:8px;font-size:13px}.view-all #view-all-icon{display:inline-grid}
 .settings-box{width:min(440px,calc(100vw - 24px));max-width:none}
 .settings-box header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}.settings-box header h2{margin:0;font-size:17px}
@@ -610,7 +524,7 @@ html[data-mode="dark"] .revision-control .select:is(:focus,:open):not(:focus-vis
 .icon-button:hover:not(:disabled){background:var(--bg-neutral-3);color:var(--ink)}
 .icon-button:disabled{opacity:.3;cursor:default}
 .icon-button .review-icon{width:17px;height:17px}
-.pager .icon-button{width:28px;height:28px;border-radius:calc(7px * var(--round))}
+.pager .icon-button{width:28px;height:28px;--_icon-button-radius:calc(7px * var(--round))}
 .pager .icon-button[hidden]{display:none}
 .toolbar-options{gap:8px;flex-wrap:nowrap}
 .view-toggle{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 12px 0 10px;border:1px solid var(--line);border-radius:calc(10px * var(--round));background:var(--bg-neutral-1);color:var(--ink-neutral-3);font-size:12.5px;font-weight:600}
@@ -631,17 +545,17 @@ html[data-mode="dark"] .revision-control .select:is(:focus,:open):not(:focus-vis
 .view-keys p{margin:0;font-size:12px;line-height:1.9;color:var(--muted)}
 .view-keys kbd{font:600 10.5px/1 var(--mono);padding:2px 5px}
 /* File by file header: orientation row, then the file and its actions. */
-.focus-file-header{padding:12px 0 10px;background:var(--canvas);border-bottom:1px solid var(--line)}
-.focus-meta{justify-content:space-between;gap:6px 16px;font-size:12px}
-.focus-group{display:inline-flex;align-items:baseline;flex-wrap:wrap;gap:0 7px;min-width:0;color:var(--ink-neutral-5);font-weight:500}
+.focus-file-header{position:sticky;top:0;z-index:5;padding:calc(var(--reader-top,12px) + var(--header-pad-top,14px)) 0 14px;flex-wrap:wrap;align-items:end;gap:12px 24px;display:block;--header-pad-top:12px;padding-bottom:10px;background:var(--canvas);border-bottom:1px solid var(--line)}
+.focus-meta{display:flex;align-items:center;flex-wrap:wrap;line-height:1.5;justify-content:space-between;gap:6px 16px;font-size:12px}
+.focus-group{flex:0 1 auto;overflow-wrap:anywhere;display:inline-flex;align-items:baseline;flex-wrap:wrap;gap:0 7px;min-width:0;color:var(--ink-neutral-5);font-weight:500}
 .crumb-number{align-self:center;padding:0 6px;border-radius:calc(5px * var(--round));background:var(--bg-accent-3);color:var(--accent);font:650 10.5px/18px var(--mono)}
 .crumb-sep{color:var(--ink-neutral-8)}
 .crumb-step{color:var(--ink);font-weight:600}
-.focus-meta .focus-file-actions{border:1px solid var(--line);border-left:1px solid var(--line);border-radius:calc(9px * var(--round));padding:1px;gap:0;background:var(--bg-neutral-1)}
-.focus-file-actions .icon-button{width:26px;height:26px;border-radius:calc(7px * var(--round))}
+.focus-meta .focus-file-actions{width:auto;flex-wrap:nowrap;flex:none;border:1px solid var(--line);border-left:1px solid var(--line);border-radius:calc(9px * var(--round));padding:1px;gap:0;background:var(--bg-neutral-1)}
+.focus-file-actions .icon-button{width:26px;height:26px;--_icon-button-radius:calc(7px * var(--round))}
 .focus-file-actions .icon-button .review-icon{width:15px;height:15px}
-.focus-file-actions #change-position{min-width:92px;font-size:11.5px;color:var(--ink-neutral-3)}
-.focus-identity{gap:6px 10px;margin-top:10px}
+.focus-file-actions #change-position{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:center;min-width:92px;font-size:11.5px;color:var(--ink-neutral-3)}
+.focus-identity{display:flex;align-items:center;flex-wrap:wrap;min-width:0;gap:6px 10px;margin-top:10px}
 .current-file{gap:4px}
 .current-file code{font:600 14px/1.5 var(--mono);color:var(--ink);letter-spacing:-.01em}
 .copy-file-path.icon-button{width:28px;height:28px}.copy-file-path .review-icon{width:14px;height:14px}
@@ -652,15 +566,15 @@ html[data-mode="dark"] .revision-control .select:is(:focus,:open):not(:focus-vis
 .file-about>summary .review-icon{width:14px;height:14px}
 .file-about[open]>summary{color:var(--ink)}
 .file-about>p{max-width:80ch;color:var(--ink-neutral-3);line-height:1.6}
-.focus-progress-actions{margin-left:auto;gap:6px}
+.focus-progress-actions{display:flex;align-items:center;margin-left:auto;gap:6px}
 .focus-progress-actions .file-viewed{display:inline-flex;align-items:center;gap:7px;margin:0;height:32px;padding:0 11px;border:1px solid var(--line-neutral-3);border-radius:calc(9px * var(--round));background:var(--bg-neutral-1);color:var(--ink-neutral-3);font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap}
 .focus-progress-actions .file-viewed:hover{border-color:var(--line-neutral-4)}
 .focus-progress-actions .file-viewed:has(input:checked){border-color:var(--line-green-2);background:var(--bg-green-1);color:var(--ink-green-1)}
 .focus-progress-actions .file-viewed input{width:15px;height:15px}
-.focus-progress-actions>[data-focus-next]{height:32px;min-height:32px;padding:0 10px;font-size:12.5px;gap:5px}
+.focus-progress-actions>[data-focus-next]{--_button-height:32px;--_button-min-height:32px;--_button-pad:0 10px;--_button-size:12.5px;--_button-gap:5px}
 .focus-progress-actions>[data-focus-next] .review-icon{width:14px;height:14px}
 /* Template previews: one chip per file whose label tells its state. */
-.preview-toggle{height:28px;gap:6px;padding:0 10px;border:1px solid var(--line-accent-1);border-radius:calc(999px * var(--round));background:var(--bg-accent-2);color:var(--ink-accent-1);font-size:12px;font-weight:600}
+.preview-toggle{display:inline-flex;align-items:center;cursor:pointer;white-space:nowrap;height:28px;gap:6px;padding:0 10px;border:1px solid var(--line-accent-1);border-radius:calc(999px * var(--round));background:var(--bg-accent-2);color:var(--ink-accent-1);font-size:12px;font-weight:600}
 .preview-toggle:hover{background:var(--bg-accent-3)}
 .preview-toggle .preview-count{min-width:18px;padding:0 5px;background:var(--accent);line-height:18px}
 .preview-toggle[aria-expanded="true"]{background:var(--accent);border-color:var(--accent)}
@@ -693,7 +607,7 @@ html[data-mode="dark"] .revision-control .select:is(:focus,:open):not(:focus-vis
 .hub-meta{display:flex;align-items:center;flex-wrap:wrap;gap:4px 6px;margin-top:3px;font-size:12px;color:var(--ink-neutral-5)}
 .hub-meta .review-icon{width:13px;height:13px;color:var(--ink-amber-4)}
 .hub-actions{display:flex;gap:6px;flex:none}
-#preview-hub .btn-ghost{border:1px solid var(--line);background:var(--bg-neutral-1);color:var(--ink-neutral-3);font-weight:550}
+#preview-hub .btn-ghost{--_button-border-width:1px;--_button-border-color:var(--line);--_button-bg:var(--bg-neutral-1);--_button-ink:var(--ink-neutral-3);--_button-weight:550}
 #preview-hub .btn-ghost:hover{border-color:var(--line-neutral-3);background:var(--bg-neutral-2)}
 .hub-inline{margin:4px 0 8px}
 .hub-footer{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;padding:12px 0 4px}
@@ -707,7 +621,7 @@ html[data-mode="dark"] .revision-control .select:is(:focus,:open):not(:focus-vis
 .evidence-request>.review-icon{width:18px;height:18px;color:var(--accent)}
 .evidence-request strong{font-size:14px}
 .evidence-request p{margin:1px 0 0;font-size:13px;line-height:1.5;color:var(--muted)}
-.evidence-request .btn{height:32px;min-height:32px;font-size:12.5px}
+.evidence-request .btn{--_button-height:32px;--_button-min-height:32px;--_button-size:12.5px}
 .evidence-requests>small{display:block;margin-top:10px;font-size:12px}
 .overview-intro .eyebrow{color:var(--muted)}
 /* Narrow screens keep both bars on one line each; the drawer opens beneath them. */
@@ -752,28 +666,12 @@ html[data-syntax="dracula"][data-mode="dark"]{--tok-comment:#6272a4;--tok-punct:
 
 /* Dark surfaces. The derived dark rules at the end of the stylesheet cover fixed colours. */
 /* Agent marks in their company colours. Variables, so the derived dark theme leaves them as set. */
-:root{--agent-claude:#d97757;--agent-claude-bg:#f8e7df;--agent-codex:#0d0d0d;--agent-codex-bg:#ececec;--agent-gemini:#7b61c0;--agent-gemini-bg:#ece9f7;--agent-grok:#ffffff;--agent-grok-bg:#111111;--agent-antigravity-bg:#eef1f6;--agent-opencode:#ffffff;--agent-opencode-bg:#131010;--agent-other:var(--accent);--agent-other-bg:var(--accent-soft)}
-:is(.agent-face,.dcr-face){display:inline-grid;place-items:center;flex:none;border-radius:calc(50% * var(--round));background:var(--agent-other-bg);color:var(--agent-other)}
-:is(.agent-face,.dcr-face) svg{width:58%;height:58%;fill:currentColor}
-:is(.agent-face,.dcr-face) b{font-weight:700;line-height:1}
-.agent-face>img{width:100%;height:100%;border-radius:inherit;object-fit:cover}
-:is(.agent-face,.dcr-face)[data-agent="claude"]{background:var(--agent-claude-bg);color:var(--agent-claude)}
-:is(.agent-face,.dcr-face)[data-agent="codex"]{background:var(--agent-codex-bg);color:var(--agent-codex)}
-:is(.agent-face,.dcr-face)[data-agent="gemini"]{background:var(--agent-gemini-bg);color:var(--agent-gemini)}
-:is(.agent-face,.dcr-face)[data-agent="grok"]{background:var(--agent-grok-bg);color:var(--agent-grok)}
-:is(.agent-face,.dcr-face)[data-agent="antigravity"]{background:var(--agent-antigravity-bg)}
-:is(.agent-face,.dcr-face)[data-agent="antigravity"] svg{width:66%;height:66%}
-:is(.agent-face,.dcr-face)[data-agent="opencode"]{background:var(--agent-opencode-bg);color:var(--agent-opencode)}
-:is(.agent-face,.dcr-face)[data-agent="opencode"] svg{width:50%;height:50%}
 /* Who wrote a comment, quietly at the end of its badge row: "by (mark) Claude". */
 .thread-by{display:inline-flex;align-items:center;gap:5px;margin-left:auto;color:var(--muted);font-size:12.5px;white-space:nowrap}
-.thread-by .agent-face{margin-left:1px}
+.thread-by>.ui-avatar{--avatar-size:18px;margin-left:1px}
 /* The model and effort behind it, when the agent said: tiny, for whoever wants to know. */
 .thread-model,.dcr-model{color:var(--muted);font:500 10.5px/1 var(--mono);letter-spacing:-.01em;opacity:.85;white-space:nowrap}
 .thread-model{margin-left:2px}
-.agent-face{width:18px;height:18px}
-.agent-face b{font-size:9.5px}
-html[data-mode="dark"]{--agent-claude:#ec9a7c;--agent-claude-bg:#3b2620;--agent-codex:#f2f2f2;--agent-codex-bg:#2d2f33;--agent-gemini:#b5a2ec;--agent-gemini-bg:#2c2742;--agent-grok:#ffffff;--agent-grok-bg:#000000;--agent-antigravity-bg:#262a33}
 
 html[data-mode="dark"] .view-select{color:inherit}
 .view-select{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;font-size:13px;color:var(--ink-neutral-3)}
@@ -791,10 +689,9 @@ body.ledger-open .ledger{display:flex}
 .ledger-title{margin:16px 0 4px;padding:0 16px;font-size:12px;font-weight:650;color:var(--ink-neutral-3)}
 /* A row as a chat message: its place in the code, a link, on top; then the face on the left, beside
    the name and, under it, what was said; what comes after (replies, actions) lines up with the text. */
-.ledger-place{display:flex;align-items:center;gap:4px;max-width:100%;padding:12px 16px 0;border:0;background:transparent;color:var(--muted);font-size:12px;text-align:left;overflow-wrap:anywhere}
 .ledger-place>svg{flex:none;width:12px;height:12px;opacity:0;transition:opacity .12s}
 /* In Your review a path keeps one line at every width, cut as on a phone (pathFit): the lines it is on always show. */
-.ledger-place{min-width:0}
+.ledger-place{display:flex;align-items:center;gap:4px;max-width:100%;padding:12px 16px 0;border:0;background:transparent;color:var(--muted);font-size:12px;text-align:left;overflow-wrap:anywhere;min-width:0}
 .ledger-place .path-fit{display:flex;min-width:0;max-width:100%;overflow:hidden;white-space:nowrap}
 .ledger-place .path-parts{display:flex;flex:0 1 auto;min-width:0;overflow:hidden}
 .ledger-place .path-head,.ledger-place .path-rest{flex:none;white-space:pre}
@@ -802,12 +699,11 @@ body.ledger-open .ledger{display:flex}
 .ledger-place .path-name{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .ledger-place:hover{color:var(--accent)}.ledger-place:hover>svg,.ledger-place:focus-visible>svg{opacity:1}
 .ledger-msg{display:grid;grid-template-columns:24px minmax(0,1fr);column-gap:10px;row-gap:1px;padding:8px 16px 0;cursor:pointer}
-.ledger-msg>:is(.comment-avatar,.dcr-avatar){grid-row:span 2;width:24px;height:24px;font-size:11px}
+.ledger-msg>.ui-avatar{grid-row:span 2;--avatar-size:24px}
 .ledger-by{display:flex;align-items:baseline;gap:8px;min-width:0;align-self:center}
 .ledger-name{font-size:12.5px;font-weight:600;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ledger-when{flex:none;font-size:11.5px;color:var(--muted)}
 .ledger-msg:hover .ledger-subject{text-decoration:underline}
-.thread-you{font-weight:600;color:var(--ink-neutral-2)}
 .ledger-group h3{margin:14px 0 2px;padding:0 16px;font-size:12px;font-weight:600;color:var(--muted);overflow-wrap:anywhere}
 .ledger-list{list-style:none;margin:0;padding:0}
 .ledger-item{position:relative;border-top:1px solid var(--line)}
@@ -828,21 +724,13 @@ body.ledger-open .ledger{display:flex}
 .ledger-previews{margin:14px 0 0;padding:12px 16px 0;border-top:1px solid var(--line);font-size:13px}
 .ledger-previews strong{display:block;margin-bottom:2px}
 .ledger-previews p{margin:0 0 8px;color:var(--muted)}
-.ledger-footer{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
+.ledger-footer{display:flex;flex-wrap:wrap;gap:8px;border-top:1px solid var(--line)}
 .ledger-footer:empty{display:none}
 .ledger-toggle{display:inline-flex;align-items:center;gap:6px;width:auto;padding:0 10px}
 .ledger-label{font-size:13px;font-weight:550}
 .ledger-count{min-width:18px;height:18px;padding:0 5px;border-radius:calc(9px * var(--round));background:var(--accent);color:var(--ink-neutral-9);font-size:11px;font-weight:600;line-height:18px;text-align:center}
 @media(max-width:900px){.ledger-label{display:none}}
 .ledger-count[hidden]{display:none}
-@media(min-width:1500px){
-  body.ledger-open .workspace{grid-template-columns:320px minmax(0,1fr) var(--ledger-w,380px)}
-  body.ledger-open.sidebar-collapsed .workspace{grid-template-columns:minmax(0,1fr) var(--ledger-w,380px)}
-}
-@media(min-width:1650px){body.ledger-open .workspace{grid-template-columns:340px minmax(0,1fr) var(--ledger-w,420px)}body.ledger-open.sidebar-collapsed .workspace{grid-template-columns:minmax(0,1fr) var(--ledger-w,420px)}}
-@media(max-width:1499px){
-  body.ledger-open .ledger{position:fixed;z-index:18;top:0;right:0;bottom:var(--status-h);width:var(--ledger-w,420px);max-width:92vw;box-shadow:-8px 0 28px color-mix(in srgb,var(--shade) 14.9%,transparent);animation:ledger-in .16s ease-out}
-}
 /* Your review's left edge: drag it to make the panel wider or narrower. The hint sits inside the
    panel, which clips anything outside it. */
 .ledger{position:relative}
@@ -876,7 +764,7 @@ body.zen.ledger-open .workspace,body.zen.ledger-open.sidebar-collapsed .workspac
 /* Visual evidence: one quiet line under What changed. */
 .evidence-strip{display:flex;align-items:center;flex-wrap:wrap;gap:4px 6px;margin:18px 0 22px;font-size:13px;color:var(--muted)}
 .evidence-strip>span{margin-right:6px}
-.evidence-strip .btn{font-weight:500}
+.evidence-strip .btn{--_button-weight:500}
 .evidence-strip .btn svg{width:15px;height:15px}
 .evidence-strip small{margin-left:4px;font-size:12px;color:var(--muted)}
 .evidence-strip small:empty{display:none}
@@ -940,11 +828,9 @@ button.line-number:hover::before{opacity:1;transform:scale(1)}
 
 /* The composer, in the code, directly under the lines it is about. */
 tr.inline-compose>td{padding:0!important;border:0!important;background:var(--surface)!important}
-.composer{position:sticky;left:0;box-sizing:border-box;width:min(720px,calc(100vw - 80px));margin:10px 0 12px 56px;padding:12px 14px 12px;border:1px solid color-mix(in oklab,var(--line-accent-8) 45%,var(--line));border-radius:calc(12px * var(--round));background:var(--surface);color:var(--ink);box-shadow:0 8px 28px color-mix(in srgb,var(--shade) 12.2%,transparent),0 0 0 3px color-mix(in oklab,var(--ring-accent-3) 12%,transparent);font:14px/1.5 var(--review-font-family);white-space:normal}
+.composer{position:sticky;left:0;box-sizing:border-box;width:100cqi;margin:10px 0 12px;padding:12px 14px 12px;border:1px solid color-mix(in oklab,var(--line-accent-8) 45%,var(--line));border-radius:calc(12px * var(--round));background:var(--surface);color:var(--ink);box-shadow:0 8px 28px color-mix(in srgb,var(--shade) 12.2%,transparent),0 0 0 3px color-mix(in oklab,var(--ring-accent-3) 12%,transparent);font:14px/1.5 var(--review-font-family);white-space:normal}
 @media(prefers-reduced-motion:no-preference){.composer{animation:composer-in .16s ease-out}}
 @keyframes composer-in{from{opacity:0;transform:translateY(-4px)}}
-.composer-head{display:flex;align-items:center;justify-content:space-between;margin:0 0 8px}
-.composer-where{font-size:12.5px;color:var(--muted)}
 .composer-types{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
 .composer-type input{position:absolute;opacity:0;pointer-events:none}
 .composer-type span{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border:1px solid var(--line);border-radius:calc(999px * var(--round));color:var(--muted);font-size:13px;font-weight:550;cursor:pointer}
@@ -1038,7 +924,7 @@ dialog.stage::backdrop{background:color-mix(in srgb,var(--bg-neutral-8) 40%,tran
 .gh-act:hover{border-color:var(--line-neutral-5);background:var(--bg-neutral-2);color:var(--ink-neutral-1)}
 .gh-act svg{width:14px;height:14px}.gh-menu>summary.gh-act{display:inline-flex;align-items:center;list-style:none;cursor:pointer}.gh-menu>summary.gh-act::-webkit-details-marker{display:none}.gh-menu>summary.gh-act svg:last-child{width:12px;height:12px;opacity:.7}
 .more-menu{position:relative;display:inline-flex}
-.more-menu>summary{list-style:none;padding:0 8px}
+.more-menu>summary{list-style:none;padding:0 8px;--btn-p:8px}
 .more-menu>summary::-webkit-details-marker{display:none}
 .more-menu>summary svg{width:16px;height:16px}
 .more-menu[open]>summary{background:var(--bg-neutral-3)}
@@ -1046,12 +932,12 @@ dialog.stage::backdrop{background:color-mix(in srgb,var(--bg-neutral-8) 40%,tran
 .more-item{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:0;border-radius:calc(7px * var(--round));background:none;color:var(--ink-neutral-2);font-size:13px;font-weight:500;line-height:1.2;text-align:left;cursor:pointer}
 .more-item:hover,.more-item:focus-visible{background:var(--bg-neutral-3);outline:none}
 .more-item svg{width:15px;height:15px;color:var(--ink-neutral-5)}
-.composer-head{gap:12px}
-.composer-where{margin-left:auto}
+.composer-head{display:flex;align-items:center;justify-content:space-between;margin:0 0 8px;gap:12px}
+.composer-where{font-size:12.5px;color:var(--muted);margin-left:auto}
 .composer-modes{display:inline-flex;gap:2px;padding:3px;border-radius:calc(9px * var(--round));background:var(--bg-neutral-3)}
 .composer-modes[hidden]{display:none}
 .composer-mode input{position:absolute;opacity:0;pointer-events:none}
-.composer-mode span{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:calc(7px * var(--round));color:var(--ink-neutral-5);font-size:13px;font-weight:600;cursor:pointer}
+.composer-mode>span{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:calc(7px * var(--round));color:var(--ink-neutral-5);font-size:13px;font-weight:600;cursor:pointer}
 .composer-mode span svg{width:14px;height:14px}
 .composer-mode:hover span{color:var(--ink-neutral-2)}
 .composer-mode input:checked+span{background:var(--bg-neutral-1);color:var(--ink-neutral-2);box-shadow:0 1px 2px rgba(17,22,31,.12),0 0 0 1px rgba(17,22,31,.06)}
@@ -1067,10 +953,6 @@ dialog.stage::backdrop{background:color-mix(in srgb,var(--bg-neutral-8) 40%,tran
 .act-pr{background:var(--ink);color:var(--surface)}
 .act-pr:hover:not(:disabled){background:color-mix(in oklab,var(--ink) 88%,var(--surface))}
 .act[hidden]{display:none}
-.popover-comment .comment-actions .btn.btn-primary{color:var(--ink-neutral-9);background:var(--bg-accent-5);border-color:var(--line-accent-8)}
-.popover-comment .comment-actions .btn.dcr-act-reply{color:var(--ink-accent-3);background:var(--bg-neutral-1);border-color:var(--line-accent-8)}
-.popover-comment .comment-actions .btn.gh-act{color:var(--ink-neutral-2);background:var(--bg-neutral-1);border-color:var(--line-neutral-3)}
-.popover-comment .comment-actions .more-toggle{background:transparent;border-color:transparent}
 
 /* GitHub, as GitHub shows it: green for what commits to the pull request (Start a review, Submit
    review), neutral for a single comment, an amber Pending tag while a comment waits in your review
@@ -1096,7 +978,7 @@ dialog.stage::backdrop{background:color-mix(in srgb,var(--bg-neutral-8) 40%,tran
 @media(max-width:1199px){
   .header-actions :is(#revision-navigation,#context-toggle){display:none}
   .header-more{display:inline-flex}
-  .header-more>summary{width:36px;height:36px;padding:0;justify-content:center}
+  .header-more>summary{width:36px;height:36px;padding:0;--_button-pad:0;--_button-height:36px;justify-content:center}
   .header-more>summary svg{width:20px;height:20px}
   .header-more .more-list{left:auto!important;right:8px;min-width:230px}
   .header-more .more-item,.more-row{min-height:44px;font-size:14px}
@@ -1110,10 +992,10 @@ dialog.stage::backdrop{background:color-mix(in srgb,var(--bg-neutral-8) 40%,tran
 .gh-tag-pending{border:1px solid var(--line-amber-5);background:var(--bg-amber-3);color:var(--ink-amber-2)}
 .gh-tag-posted{border:1px solid var(--line-green-4);background:var(--bg-green-2);color:var(--ink-green-1)}
 .gh-tag-posted:hover{text-decoration:underline}
-.btn.gh-posted{gap:6px;border:1px solid var(--line-green-4);background:var(--bg-green-2);color:var(--ink-green-1);font-weight:550}
-.btn.gh-posted:hover{background:var(--bg-green-3);border-color:var(--line-green-5)}
+.btn.gh-posted{--_button-gap:6px;--_button-border-width:1px;--_button-border-color:var(--line-green-4);--_button-bg:var(--bg-green-2);--_button-ink:var(--ink-green-1);--_button-weight:550}
+.btn.gh-posted:hover{--_button-hover-bg:var(--bg-green-3);--_button-hover-border:var(--line-green-5)}
 .btn.gh-posted svg{width:14px;height:14px}
-.btn.gh-busy{gap:8px;opacity:1}
+.btn.gh-busy{--_button-gap:8px;opacity:1}
 .gh-spinner{flex:none;display:inline-block;width:13px;height:13px;border:2px solid color-mix(in oklab,currentColor 25%,transparent);border-top-color:currentColor;border-radius:calc(50% * var(--round));animation:gh-spin .7s linear infinite}
 @keyframes gh-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.gh-spinner{animation-duration:2s}}
@@ -1199,12 +1081,11 @@ button.risk-path:hover .path-name{text-decoration:underline}
      bottom leaves with it. Nothing in the header scrolls either: it keeps an update, when there is
      one, and one menu for the rest (the app, the previews, the revision, the details). */
   html,body{overflow-x:clip}
-  .header-actions{flex:none;gap:2px}
+  .header-actions{justify-content:space-between;flex:none;gap:2px}
   /* The pager and the menus sit at the bottom, under the thumb, and the reading starts at the top. */
-  .review-toolbar{position:fixed;top:auto;bottom:0;left:0;right:0;z-index:16;border-top:1px solid var(--line);border-bottom:0;padding-bottom:env(safe-area-inset-bottom)}
+  
   main#content{padding:16px 12px calc(var(--toolbar-h) + 28px + env(safe-area-inset-bottom))}
-  /* The file's header scrolls away with the page: pinned, it would keep a fifth of the screen. */
-  .focus-file-header{position:static}
+  
   /* Line numbers take less of the line. */
   .diff-table col.gutter{width:42px}
   .diff-table td.gutter{padding-left:20px;padding-right:5px;font-size:10px}
@@ -1220,7 +1101,7 @@ button.risk-path:hover .path-name{text-decoration:underline}
      the menu, as on a wide screen. Going from file to file is in the page, at the top and the end of
      each, and by a swipe. Focus mode is for a wide screen. */
   :root{--toolbar-h:56px}
-  .review-toolbar{display:flex;align-items:stretch;gap:0;height:calc(var(--toolbar-h) + env(safe-area-inset-bottom));min-height:0;padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  .review-toolbar{align-content:center;position:fixed;top:auto;bottom:0;left:0;right:0;z-index:16;border-top:1px solid var(--line);border-bottom:0;display:flex;align-items:stretch;gap:0;height:calc(var(--toolbar-h) + env(safe-area-inset-bottom));min-height:0;padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
   .review-toolbar :is(#zen-toggle,#view-toggle),.toolbar-navigation .pager{display:none}
   .toolbar-navigation,.toolbar-options{display:contents}
   .review-toolbar :is(#nav-toggle,#ledger-toggle,#dcr-presence){position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;flex:1 1 0;width:auto;min-width:0;height:auto;min-height:0;margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;color:var(--muted);font:500 10px/1 var(--review-font-family);letter-spacing:.01em}
@@ -1239,7 +1120,7 @@ button.risk-path:hover .path-name{text-decoration:underline}
      What is for a wide screen and a pointer stays there: the pager of changed sections (a swipe
      scrolls), copying the path, who should review the file, and the template's preview, which the
      Previews tab at the top opens. Why this file is its icon; it opens under the header. */
-  .focus-file-header{position:relative;padding:8px 0 10px}
+  .focus-file-header{position:relative;--header-pad-top:8px;padding-bottom:10px}
   .focus-meta{padding-right:9ch}
   .focus-meta .focus-file-actions,.focus-file-header :is(.copy-file-path,.need-set,.preview-toggle,.not-visual-note){display:none}
   .focus-group{flex-basis:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--muted);font-weight:500}
@@ -1248,7 +1129,7 @@ button.risk-path:hover .path-name{text-decoration:underline}
   .focus-identity{gap:6px 8px;margin-top:2px}
   /* The path keeps one line: its first folder and the file's name whole, the folders between cut
      from the left (the nearest folder says most). A tap on it shows the whole path, and takes it back. */
-  .focus-file-header .current-file{flex-basis:100%}
+  .focus-file-header .current-file{display:contents;flex-basis:100%}
   .focus-file-header .current-file code{display:flex;flex:0 0 100%;min-width:0;white-space:nowrap;overflow-wrap:normal}
   .current-file .path-head{flex:none;color:var(--muted)}
   .current-file .path-mid{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;direction:rtl;text-align:left;color:var(--muted)}
@@ -1272,8 +1153,8 @@ button.risk-path:hover .path-name{text-decoration:underline}
 @media(min-width:651px) and (max-width:1199px){
   :root{--chrome-h:44px;--toolbar-h:44px}
   .header-meta #repo-label{flex:none}
-  .review-area:has(.focus-reader) main#content{padding-top:12px}
-  .focus-file-header{top:-12px;padding:6px 0 8px}
+  .review-area:has(.focus-reader) main#content{padding-top:0}
+  .focus-file-header{--header-pad-top:6px;padding-bottom:8px}
   .focus-meta .focus-file-actions,.focus-file-header :is(.copy-file-path,.need-set,.preview-toggle,.not-visual-note){display:none}
   .focus-group{flex:1 1 100%;flex-wrap:nowrap;white-space:nowrap;overflow:hidden;color:var(--muted)}
   .focus-group .crumb-group{min-width:0;overflow:hidden;text-overflow:ellipsis}
@@ -1314,7 +1195,6 @@ button.risk-path:hover .path-name{text-decoration:underline}
 }
 
 /* UI changes: the agent's screenshots of the running app, as one pile that opens them one at a time. */
-.ui-changes{margin:24px 0 22px}
 .shot-stack{display:flex;align-items:center;gap:26px;width:100%;padding:16px 22px 18px 18px;text-align:left;white-space:normal;font-weight:400;color:inherit;cursor:pointer;border:1px solid var(--line-neutral-2);border-radius:calc(12px * var(--round));background:var(--bg-neutral-1)}
 .shot-stack:hover{border-color:var(--line-accent-4);background:var(--bg-accent-1)}
 .shot-stack:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -1360,13 +1240,6 @@ button.risk-path:hover .path-name{text-decoration:underline}
 .ui-changes-none{margin:18px 0 0;font-size:13px;color:var(--muted)}
 .ui-changes-none strong{margin-right:8px;color:var(--ink-neutral-3);font-weight:600}
 /* A comment from an earlier revision is history: folded, it is one quiet line; open, that line stays and closes it again. */
-.review-thread.is-earlier>.thread-file{padding:8px 16px}
-.review-thread.is-earlier>.thread-details>.thread-summary,.overview-reading .review-thread.is-earlier>.thread-details>.thread-summary{display:flex;flex-wrap:nowrap;align-items:center;gap:10px;padding:9px 16px;background:transparent;border-bottom:0}
-.review-thread.is-earlier>.thread-details[open]>.thread-summary{border-bottom:1px solid var(--line-neutral-2)}
-.review-thread.is-earlier>.thread-details>.thread-summary>.thread-badges,.overview-reading .review-thread.is-earlier>.thread-details>.thread-summary>.thread-badges{display:flex;flex:none;flex-wrap:nowrap;font-size:12px}
-.review-thread.is-earlier>.thread-details>.thread-summary>strong,.overview-reading .review-thread.is-earlier>.thread-details>.thread-summary>strong{display:block;flex:1 1 auto;min-width:0;font-size:13px;line-height:1.5;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.review-thread.is-earlier>.thread-details>.thread-summary>.comment-avatar{flex:none}
-.review-thread.is-earlier>.thread-details>.thread-summary :is(.thread-priority,.thread-severity,.thread-resolved){display:none}
 /* Go to definition: a name defined in the review is underlined under the pointer; the line it opens on glows once. */
 #content td.code .symbol-link{cursor:pointer;border-radius:2px}
 #content td.code .symbol-link:hover{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
@@ -1380,7 +1253,7 @@ button.risk-path:hover .path-name{text-decoration:underline}
 .definition-where{display:flex;align-items:center;gap:8px;font:12px/1.5 var(--mono);overflow-wrap:anywhere}
 .definition-where small{color:var(--muted);font-family:var(--review-font-family)}
 .definition-menu button>code{font:12px/1.5 var(--mono);color:var(--ink-neutral-5);white-space:pre;overflow:hidden;text-overflow:ellipsis;background:none;padding:0}
-.definition-back{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--line);border-radius:calc(8px * var(--round));background:var(--surface);color:var(--ink);font:12px/1.4 var(--review-font-family);cursor:pointer;position:fixed;left:50%;bottom:calc(var(--status-h, 0px) + 22px);transform:translateX(-50%);z-index:39;box-shadow:0 5px 20px color-mix(in srgb,var(--shade) 16.9%,transparent)}
+.definition-back{align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--line);border-radius:calc(8px * var(--round));background:var(--surface);color:var(--ink);font:12px/1.4 var(--review-font-family);cursor:pointer;position:fixed;left:50%;bottom:calc(var(--status-h, 0px) + 22px);transform:translateX(-50%);z-index:39;box-shadow:0 5px 20px color-mix(in srgb,var(--shade) 16.9%,transparent)}
 .definition-back:hover{background:var(--bg-neutral-3)}
 .definition-back[hidden]{display:none}
 .definition-back kbd{font:10px var(--mono);color:var(--muted);margin-left:4px}
@@ -1388,7 +1261,7 @@ button.risk-path:hover .path-name{text-decoration:underline}
 /* The bar under what is being read: its field, the next step, and the way to every command. A theme
    shows it (display:flex) when it does without the header and the toolbar. */
 .review-area{position:relative}
-.review-bar{display:none;position:absolute;z-index:30;left:50%;bottom:calc(var(--status-h) + 22px);transform:translateX(-50%);width:min(640px,calc(100% - 28px));min-height:46px;align-items:center;gap:8px;padding:7px 8px 7px 14px;border:1px solid var(--line);border-radius:calc(14px * var(--round));background:var(--surface);color:var(--ink);box-shadow:0 8px 28px color-mix(in srgb,var(--shade) 9%,transparent);font:13px/1.4 var(--review-font-family)}
+.review-bar{position:absolute;z-index:30;left:50%;bottom:calc(var(--status-h) + 22px);transform:translateX(-50%);width:min(640px,calc(100% - 28px));min-height:46px;align-items:center;gap:8px;padding:7px 8px 7px 10px;border:1px solid var(--line);border-radius:calc(14px * var(--round));background:var(--surface);color:var(--ink);box-shadow:0 8px 28px color-mix(in srgb,var(--shade) 9%,transparent);font:13px/1.4 var(--review-font-family)}
 .review-bar [hidden]{display:none}
 .review-bar form{flex:1;min-width:0;display:flex}
 /* The field is a prompt box: one line in the bar, and as the text wraps it grows upward to about nine
@@ -1414,11 +1287,11 @@ button.risk-path:hover .path-name{text-decoration:underline}
 .bar-bubble-dots i:nth-child(3){animation-delay:.4s}
 @keyframes bar-bubble-dot{0%,60%,100%{opacity:.25}30%{opacity:1}}
 @media(prefers-reduced-motion:reduce){.bar-bubble-dots i{animation:none;opacity:.6}}
-.review-bar button{flex:none;height:30px;padding:0 11px;border:0;border-radius:calc(9px * var(--round));background:transparent;color:var(--muted);font:inherit;white-space:nowrap}
-.review-bar button:hover{color:var(--ink)}
+.review-bar button:where(:not(.btn)){flex:none;height:30px;padding:0 11px;border:0;border-radius:calc(9px * var(--round));background:transparent;color:var(--muted);font:inherit;white-space:nowrap}
+.review-bar button:where(:not(.btn)):hover{color:var(--ink)}
+/* Its action is the theme's own primary Button, at the bar's height. */
+.review-bar .bar-primary{flex:none;white-space:nowrap}
 .review-bar .bar-soft{max-width:46%;overflow:hidden;text-overflow:ellipsis;background:var(--bg-neutral-3);color:var(--ink);font-weight:550}
-.review-bar .bar-primary{background:var(--ink);color:var(--surface);font-weight:550}
-.review-bar .bar-primary:hover{color:var(--surface);opacity:.86}
 .review-bar .bar-keys{padding:0 4px}
 .review-bar kbd{padding:3px 7px;border-radius:calc(6px * var(--round));background:var(--bg-neutral-3);color:var(--muted);font:11px/1.4 var(--mono)}
 .review-bar .bar-nav{display:none;margin-left:-6px;padding:0 8px}
@@ -1444,12 +1317,8 @@ dialog.palette::backdrop{background:color-mix(in srgb,var(--ink) 14%,transparent
 .palette-list kbd{flex:none;color:var(--muted);font:11px/1.4 var(--mono)}
 .palette-list mark{background:transparent;color:inherit;font-weight:700;text-decoration:underline;text-underline-offset:3px}
 /* Your review floats over the reading area on a narrower window: the bar keeps to what is left of it. */
-@media(min-width:741px) and (max-width:1499px){body.ledger-open .review-bar{left:calc(50% - min(var(--ledger-w,420px),92vw) / 2);width:min(640px,calc(100% - min(var(--ledger-w,420px),92vw) - 28px))}}
 body.zen.ledger-open .review-bar{left:calc(50% - min(var(--ledger-w,420px),92vw) / 2);width:min(640px,calc(100% - min(var(--ledger-w,420px),92vw) - 28px))}
-.review-bar .bar-agent{display:grid;place-items:center;width:20px;margin-left:-4px;padding:0}
-.review-bar .bar-agent span{width:8px;height:8px;border-radius:50%;background:var(--dcr-off)}
-.review-bar .bar-agent[data-tone="ok"] span{background:var(--dcr-ok)}
-.review-bar .bar-agent[data-tone="work"] span{background:var(--dcr-work)}
+.review-bar .bar-agent{display:grid;place-items:center;padding:0}
 
 /* The Overview opens with what the change does, said once and large enough to read; the rest of
    the summary follows more quietly, and the facts about the review are one small line. */
@@ -1459,10 +1328,6 @@ body.zen.ledger-open .review-bar{left:calc(50% - min(var(--ledger-w,420px),92vw)
 .overview-facts :is(p,nav){margin:0;font-size:inherit;color:inherit}
 .overview-facts .overview-history{display:flex;gap:14px}
 .overview-settled{margin-top:28px}
-/* A comment is one line (where it is, what it says) until the reader opens it. */
-.review-thread:has(>.thread-details:not([open]))>:is(.dcr-thread,.thread-footer){display:none}
-.review-thread:has(>.thread-details:not([open])) .thread-summary{padding-top:10px;padding-bottom:12px}
-.review-thread:has(>.thread-details:not([open])) .thread-summary strong{font-size:15px}
 /* The risk ranking is a line until it is asked for, like the other things the Overview offers. */
 .risk-fold{margin:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .risk-fold>summary{display:grid;grid-template-columns:150px minmax(0,1fr) auto;align-items:baseline;gap:4px 18px;padding:11px 0;font-size:14px}
@@ -1471,22 +1336,8 @@ body.zen.ledger-open .review-bar{left:calc(50% - min(var(--ledger-w,420px),92vw)
 .risk-fold[open]>summary{margin-bottom:4px}
 .risk-fold .risk-rank{margin:0 0 12px;padding:0;border:0;background:transparent;box-shadow:none}
 .risk-fold .risk-head h2{display:none}
-/* A closed comment: what it says, then where, in two short lines with a hairline between comments. */
-.review-thread:has(>.thread-details:not([open])){display:flex;flex-direction:column-reverse;margin:0;border-width:0 0 1px;border-radius:0;background:transparent}
-.review-thread:has(>.thread-details:not([open])) .thread-file{padding:0 0 11px;border:0;background:transparent;font-size:12px}
-.review-thread:has(>.thread-details:not([open])) .thread-summary{display:flex!important;align-items:center;flex-wrap:nowrap!important;gap:10px;padding:11px 0 2px;background:transparent}
-.review-thread:has(>.thread-details:not([open])) .thread-summary>strong{order:1;flex:1 1 0!important;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14.5px;font-weight:550}
-.review-thread:has(>.thread-details:not([open])) .thread-summary>.thread-chevron{order:3}
-.review-thread:has(>.thread-details:not([open])) .thread-summary>:not(strong,.thread-chevron){order:2;flex:none}
-.review-thread:has(>.thread-details[open]){margin-top:14px}
-/* Closed, its line is its kind and what it says; who wrote it and how urgent it is come with the rest. */
-.review-thread:has(>.thread-details:not([open])) .thread-badges{display:contents}
-.review-thread:has(>.thread-details:not([open])) .thread-badges>:is(.thread-priority.is-optional,.thread-severity,.thread-by,.gh-slot:empty){display:none}
-.review-thread:has(>.thread-details:not([open])) .thread-badges>.thread-type{order:0;flex:none;min-width:86px}
 .overview-comments{margin-top:30px}
 .overview-comments>h2{margin-bottom:6px}
-.review-thread:has(>.thread-details[open]) .thread-summary>strong{font-size:17px}
-.review-thread:has(>.thread-details:not([open])) .thread-summary>:first-child:not(.thread-badges){order:0}
 
 /* Above the title: where the review is working, in one small line. A long branch name is cut, not wrapped. */
 .overview-where{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;margin:0 0 10px;color:var(--muted);font-size:12.5px}
@@ -1502,7 +1353,6 @@ body.dcr-has-app .ui-changes{display:none}
 .ui-changes .shot-stack-text{display:contents}
 .ui-changes .shot-stack-text strong{color:var(--ink);font-size:14px;font-weight:600}
 .ui-changes .shot-stack-text span{color:var(--muted)}
-.progress-need{display:none}
 
 /* The Overview's rows are one component: a quiet label, what there is to say, and the ways on at the
    right, the first of them the one most likely wanted. Space sets them apart, not rules. */
@@ -1527,14 +1377,12 @@ body.dcr-has-app .ui-changes{display:none}
    only what it alone offers (the app's recordings, QA, the risk ranking). */
 .overview-reading :is(.overview-intro .overview-revision,.dcr-try-previews,.dcr-try-more [data-try="browse"]){display:none}
 /* With nothing to settle, space alone separates All clear from your comments. */
-.overview-reading:has(.overview-clear) #my-review{margin-top:44px;padding-top:0;border-top:0}
+.overview-reading:has(.overview-clear) #my-review{margin-top:44px;padding-top:0;background:none}
 /* The recordings are opened from where they are counted. */
 .overview-reading .dcr-try-about [data-try-shots]{margin-left:10px;padding:0;border:0;background:none;color:var(--ink-accent-1);font:inherit;font-size:13px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 
 /* Pieces only some themes show: a closed comment's place in a few characters, and the files that stand out as plain lines. */
-.thread-at,.risk-brief{display:none}
 
-.thread-meta{display:none}
 details.thread-was>summary{margin-bottom:6px;font-size:12px;color:var(--ink-neutral-5);cursor:pointer}
 details.thread-was:not([open])>summary{margin-bottom:0}
 
@@ -1545,36 +1393,34 @@ details.thread-was:not([open])>summary{margin-bottom:0}
 .overview-intro .lead-rest p{margin:0 0 12px}
 .overview-intro .lead-rest p:last-child{margin-bottom:0}
 
-.thread-face{display:none}
 
 .composer-body{display:block}
 .composer-face{display:none}
 .composer-agent-mark{display:inline-grid;place-items:center;width:14px;height:14px;margin-right:6px;vertical-align:-2px}
 .composer-agent-mark svg{width:14px;height:14px}
+/* The agent's mark in ink, its PresenceDot on its corner (the mark's own grid cell, no offsets). */
+/* The agent's face as the theme draws faces (its brand colours, or its plain mark), with its dot. */
 /* The bar's mark of the agent: faint when none is listening, full when one is, breathing while it works. */
-.review-bar .bar-agent{width:22px}
-.review-bar .bar-agent span{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:transparent;color:var(--ink);opacity:.35;filter:grayscale(1)}
-.review-bar .bar-agent span svg{width:14px;height:14px}
-.review-bar .bar-agent[data-tone="ok"] span{background:transparent;opacity:1;filter:none}
-.review-bar .bar-agent[data-tone="work"] span{background:transparent;opacity:1;filter:none;animation:bar-agent-work 1.4s ease-in-out infinite}
-@keyframes bar-agent-work{50%{opacity:.4}}
-@media(prefers-reduced-motion:reduce){.review-bar .bar-agent[data-tone="work"] span{animation:none}}
+.review-bar .bar-agent{width:22px;--presence-size:6px;--avatar-size:18px;color:var(--ink)}
 /* Going back from a definition is its own small card above the bar, so the bar keeps its room. */
 .review-bar #bar-back{position:absolute;left:0;bottom:calc(100% + 8px);max-width:100%;height:30px;padding:0 12px;border:1px solid var(--line);border-radius:calc(10px * var(--round));background:var(--surface);box-shadow:0 6px 18px color-mix(in srgb,var(--shade) 7%,transparent);color:var(--ink);font-weight:500}
-.composer-agent-mark svg,.review-bar .bar-agent span svg{fill:currentColor!important;stroke:none!important}
-.composer-mode .composer-agent-mark{display:inline-grid!important;flex:none;width:14px;height:14px}
-.composer-mode .composer-agent-mark svg{display:block;width:14px!important;height:14px!important;min-width:14px}
+.composer-agent-mark svg,.review-bar .bar-agent-mark svg{fill:currentColor;stroke:none}
+.composer-mode .composer-agent-mark{display:inline-grid;flex:none;width:14px;height:14px;margin:0}
+.composer-mode .composer-agent-mark svg{display:block;width:14px;height:14px}
 
 .sidebar nav .nav-tests-toggle{all:unset;cursor:default;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit}
 .sidebar nav .nav-tests-count{display:none}
-.popover-title{display:contents}
 .step-done{display:none}
 .sidebar-top{display:contents}
-.sidebar-hide,.sidebar-show,.ledger-hide,.ledger-show,.step-next,.ledger-at,.thread-go,.qa-preview-flow{display:none}
+.risk-brief{display:none}
+/* A review note beside the code: its summary and its ranges. */
+.review-note-popover .popover-comment{padding:14px 16px;font:13px/1.65 var(--review-font-family)}
+.review-note-popover .popover-comment p{margin:0 0 12px;font-size:13px;color:var(--ink-accent-2);white-space:pre-wrap}
+.review-note-popover .popover-comment small{color:var(--ink-accent-5)}
+.sidebar-hide,.sidebar-show,.ledger-hide,.ledger-show,.step-next,.ledger-at,.qa-preview-flow{display:none}
 /* Settings split in General and Agents, for a theme that shows the agent there instead of on its card. */
 .settings-tabs,.settings-agents,.settings-round,.ledger-export{display:none}
 .step-end{white-space:nowrap}
-.popover-comment .thread-footer{padding:12px 0 0;border:0;background:none}
 
 /* ==========================================================================================
    One layout for every theme (each draws it in its own look): a slim header with the review's
@@ -1585,7 +1431,7 @@ details.thread-was:not([open])>summary{margin-bottom:0}
    ========================================================================================== */
 :root{--toolbar-h:0px}
 .review-toolbar,.definition-back{display:none}
-.review-bar{display:flex}
+.review-bar{--button-height:30px;--button-min-height:30px;display:flex}
 body:has(#inline-composer) .review-bar{display:none}
 main#content{padding-bottom:104px}
 :is(#toast,.range-actions,.leader-menu){bottom:calc(var(--status-h) + 84px)}
@@ -1595,13 +1441,14 @@ main#content{padding-bottom:104px}
 .dcr-jev{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);padding:0;border:0}
 .progress-need{display:inline;padding:0;border:0;background:none;color:var(--ink);font:inherit;font-weight:600;text-align:left;cursor:pointer}
 #dcr-jev-list{left:22px!important;top:auto!important;bottom:118px!important}
-.sidebar{position:relative}
-.sidebar-footer{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:8px 10px;margin:0;padding:10px 8px 0}
-.sidebar-footer #progress{grid-column:1;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sidebar-footer .progress-need{grid-column:1;grid-row:1;justify-self:end;font-size:12px}
-.sidebar-footer progress{grid-column:1 / -1;grid-row:2;width:100%}
+body:not(.navigation-open) .sidebar{position:relative}
+/* The list's foot: how far you are and what needs you on one line, the bar under it, Settings' gear in its own column beside both. */
+.sidebar-footer{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px 10px;margin:0;padding:10px 8px 0}
+.sidebar-footer #progress{grid-column:1;grid-row:1;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-footer .progress-need{grid-column:2;grid-row:1;font-size:12px}
+.sidebar-footer progress{grid-column:1 / 3;grid-row:2;width:100%}
 .sidebar-footer .dcr-todo-link{display:none}
-.sidebar-settings{position:absolute;right:20px;bottom:17px;width:auto;margin:0;padding:2px;gap:0;color:var(--muted)}
+.sidebar-footer .sidebar-settings{grid-column:3;grid-row:1 / 3;width:auto;margin:0;padding:2px;gap:0;color:var(--muted)}
 .sidebar-settings>span:not(#settings-icon){position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 .sidebar-settings #settings-icon{display:inline-grid}
 .sidebar-settings .review-icon{width:15px;height:15px}
@@ -1610,38 +1457,11 @@ main#content{padding-bottom:104px}
 :is(.sidebar-hide,.sidebar-show){place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--muted)}
 :is(.sidebar-hide,.sidebar-show):hover{background:var(--bg-neutral-2);color:var(--ink)}
 :is(.sidebar-hide,.sidebar-show) .review-icon{width:17px;height:17px;stroke-width:1.8}
-@media(min-width:1200px){
-  html .sidebar-hide{display:grid;flex:none}
-  html body.sidebar-collapsed .sidebar-show{display:grid;position:fixed;top:calc(var(--chrome-h) + 12px);left:18px;z-index:30}
-}
 #ledger-close{display:none}
 :is(.ledger-hide,.ledger-show){place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--muted)}
 :is(.ledger-hide,.ledger-show):hover{background:var(--bg-neutral-2);color:var(--ink)}
 :is(.ledger-hide,.ledger-show) .review-icon{width:17px;height:17px;stroke-width:1.8}
 .ledger-hide{display:grid}
-@media(min-width:1200px){
-  html body:not(.ledger-open):not(.zen) .ledger-show{display:grid;position:fixed;top:calc(var(--chrome-h) + 10px);right:18px;z-index:30}
-}
-/* Each comment one quiet row, as on the Overview: the agent's mark, the title, the file and line;
-   under it, the marks of the agents who answered, and new when it is. */
-.ledger-item::before{display:none}
-.ledger-item[data-ledger] .ledger-place,.ledger-item[data-ledger] .ledger-by{display:none}
-.ledger-item[data-ledger] .ledger-msg{grid-template-columns:18px minmax(0,1fr) auto;column-gap:12px;align-items:baseline;padding:14px 18px 0 22px}
-.ledger-item[data-ledger] .ledger-msg>:is(.comment-avatar,.dcr-avatar){grid-row:auto;align-self:start;width:18px;height:18px;margin-top:1px;box-shadow:none}
-.ledger-item[data-ledger] .ledger-msg>:is(.comment-avatar,.dcr-avatar) :is(svg,img){width:15px;height:15px}
-.ledger-item[data-ledger] .ledger-subject{font-size:14px;line-height:1.45}
-.ledger-item[data-ledger] .ledger-at{display:block;padding:0;border:0;background:none;color:var(--muted);font:11.5px var(--mono);white-space:nowrap;cursor:pointer}
-.ledger-item[data-ledger] .ledger-at:hover{color:var(--ink);text-decoration:underline}
-.ledger-item[data-ledger]{display:flex;flex-wrap:wrap;align-items:center;padding-bottom:12px}
-.ledger-item[data-ledger]>.ledger-msg{flex:1 0 100%}
-.ledger-item[data-ledger] .dcr-peek{width:auto;padding:5px 0 0 52px}
-.ledger-item[data-ledger] .dcr-peek :is(b,.dcr-peek-when,.dcr-peek-end){display:none}
-.ledger-item[data-ledger] .dcr-peek-faces{gap:6px}
-/* Who answered: each agent's own small logo, in its colours, as the adversaries' toggle shows them. */
-.ledger-item[data-ledger] .dcr-peek-faces>:is(.dcr-avatar,.comment-avatar){width:18px;height:18px;margin:0;box-shadow:none;filter:none;opacity:1}
-.ledger-item[data-ledger] .dcr-peek-faces>.dcr-avatar svg{width:58%;height:58%}
-.ledger-item[data-ledger] .dcr-peek-faces>* img{width:100%;height:100%}
-.ledger-item[data-ledger] .ledger-meta{display:flex;align-items:center;gap:6px;margin:5px 0 0 8px;padding:0}
 /* Template previews have the Previews tab and ⌘K. */
 .ledger-previews{display:none}
 #settings-dialog.has-agents .settings-tabs{display:flex;gap:20px;margin:6px 0 14px}
@@ -1650,13 +1470,11 @@ main#content{padding-bottom:104px}
 #settings-dialog.has-agents[data-tab="agents"] .settings-body>:not(.settings-agents){display:none}
 #settings-dialog.has-agents[data-tab="agents"] .settings-agents{display:block}
 .settings-agents header{display:flex;align-items:center;gap:10px;margin:0 0 4px}
-.settings-agents header .dcr-avatar{width:20px;height:20px}
+.settings-agents header>.ui-avatar{--avatar-size:20px}
 .settings-agents .dcr-presence-who{display:flex;align-items:baseline;gap:8px;min-width:0}
 .settings-agents .dcr-presence-who strong{font-size:13px;font-weight:500}
 .settings-agents .dcr-presence-who span{color:var(--muted);font-size:11.5px}
-.settings-agents .dcr-presence-word{display:inline-flex;align-items:center;gap:6px;margin-left:auto;color:var(--muted);font-size:12px}
-.settings-agents .dcr-presence-line{margin:0 0 0 30px;color:var(--muted);font-size:12.5px}
-.settings-agents .dcr-presence-line .dcr-presence-dot{display:none}
+.settings-agents .dcr-presence-line{margin:0 0 0 30px;color:var(--muted);font-size:12.5px;--presence-dot:none}
 .settings-agents :is(.dcr-presence-help,.dcr-presence-cmd){margin-left:30px}
 .settings-agents .dcr-adv{margin-top:18px;padding:16px 0 0;border-color:var(--line)}
 .settings-agents .dcr-adv-title{color:var(--muted);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
@@ -1664,128 +1482,57 @@ main#content{padding-bottom:104px}
 .settings-agents .dcr-adv-row,.settings-agents .dcr-adv-row.is-on{padding:0;background:none}
 .settings-agents .dcr-adv-who strong{font-weight:500}
 .settings-agents .dcr-adv-status::before{display:none}
-.settings-agents .dcr-face-sm{}
 .settings-agents .dcr-voice-link{display:block;margin-top:18px;padding:16px 0 0;border:0;border-top:1px solid var(--line);background:none;color:var(--ink);font:inherit;font-size:13px;text-align:left;cursor:pointer}
 .settings-agents .dcr-voice-link::after{content:" ›"}
 /* The presence dot: the same tiny dot as a chat app's, on the corner of the agent's mark. */
-.settings-agents .dcr-presence-word .dcr-presence-dot{width:6px;height:6px;box-sizing:border-box;border-radius:50%;background:var(--dcr-ok)}
-.settings-agents .dcr-presence-word.dcr-presence-work .dcr-presence-dot{background:var(--dcr-work)}
-.settings-agents .dcr-presence-word.dcr-presence-off .dcr-presence-dot{border:1.5px solid var(--muted);background:transparent}
-.review-bar .bar-agent{position:relative}
-.review-bar .bar-agent span{opacity:1;filter:none}
-.review-bar .bar-agent::after{content:"";position:absolute;right:1px;bottom:5px;width:6px;height:6px;box-sizing:border-box;border:1.5px solid var(--muted);border-radius:50%;background:var(--surface);box-shadow:0 0 0 2px var(--surface)}
-.review-bar .bar-agent[data-tone="ok"]::after{border:0;background:var(--dcr-ok)}
-.review-bar .bar-agent[data-tone="work"]::after{border:0;background:var(--dcr-work);animation:bar-agent-work 1.4s ease-in-out infinite}
-.review-bar .bar-agent[data-tone="work"] span{animation:none}
-@media(prefers-reduced-motion:reduce){.review-bar .bar-agent[data-tone="work"]::after{animation:none}}
+.settings-agents .dcr-presence-word{display:inline-flex;align-items:center;gap:6px;margin-left:auto;color:var(--muted);font-size:12px;--presence-size:6px}
 #ledger .dcr-detail-bar [data-dcr-close]{display:none}
 #ledger .dcr-detail-bar .dcr-back{color:var(--muted);font-weight:400}
 #ledger .dcr-detail-title{display:grid;grid-template-columns:18px minmax(0,1fr);gap:4px 12px;align-items:start;border:0}
 #ledger .dcr-detail-title .ledger-where{display:none}
 #ledger .dcr-detail-mark{display:grid;grid-column:1;grid-row:1;place-items:center;width:18px;height:18px;margin-top:1px}
-#ledger .dcr-detail-mark .dcr-avatar{width:16px;height:16px}
-#ledger .dcr-detail-mark .dcr-avatar svg{width:14px;height:14px}
+#ledger .dcr-detail-mark>.ui-avatar{--avatar-size:16px}
 #ledger .dcr-detail-title strong{grid-column:2;grid-row:1;font-size:15px;font-weight:600;line-height:1.4}
 #ledger .dcr-detail-code{grid-column:2;justify-self:start;min-height:0;height:auto;padding:0;border:0;background:none;color:var(--ink-neutral-3);font:12px var(--mono);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
 #ledger .dcr-detail-code:hover{color:var(--ink);text-decoration-color:currentColor}
 #ledger .dcr-detail-code>:not(.dcr-detail-at){display:none}
 #ledger .dcr-detail-code .dcr-detail-at:not(:empty){display:inline}
 #ledger .dcr-detail-code:has(.dcr-detail-at:empty){display:none}
-#ledger .dcr-detail .dcr-msg{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;padding:16px 0 0;border:0;background:none}
-#ledger .dcr-detail .dcr-msg>.dcr-avatar{display:inline-grid;place-items:center;width:18px;height:18px;margin-top:1px;overflow:hidden;border-radius:50%}
-#ledger .dcr-detail .dcr-msg>.dcr-avatar :is(svg,img){width:13px;height:13px}
-#ledger .dcr-detail .dcr-msg>.dcr-avatar img{width:100%;height:100%;object-fit:cover}
+#ledger .dcr-detail .dcr-msg{border:0;background:none}
+#ledger .dcr-detail .dcr-msg>.ui-avatar{--avatar-size:18px;margin-top:1px}
 #ledger .dcr-detail .dcr-origin.dcr-agent{padding-top:10px}
-#ledger .dcr-detail .dcr-origin.dcr-agent>.dcr-avatar{visibility:hidden}
-#ledger .dcr-detail .dcr-msg-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;font-size:12px;color:var(--muted)}
-#ledger .dcr-detail .dcr-msg-head>strong,#ledger .dcr-detail .dcr-msg-head :is(.dcr-model,.thread-model){display:none}
-#ledger .dcr-detail .dcr-adversary .dcr-msg-head .dcr-role{display:none}
-#ledger .dcr-detail .dcr-msg.dcr-you .dcr-msg-head>strong{display:inline;color:var(--ink);font-weight:500}
+#ledger .dcr-detail .dcr-origin.dcr-agent>.ui-avatar{visibility:hidden}
+#ledger .dcr-detail{--message-face-col:18px;--message-gap:12px;--message-space:16px;--message-head-size:12px;--message-head-ink:var(--comment-quiet);--message-name:none;--message-you-name:inline;--message-model:none;--message-text-top:3px;--message-text-size:13.5px;--message-text-line:1.6}
+#ledger .dcr-detail .dcr-adversary{--message-role:none}
 #ledger .dcr-detail .dcr-msg-head :is(.dcr-verdict,.dcr-badge,[class*="dcr-v-"]){padding:0;border:0;background:none;color:var(--ink-neutral-3);font-size:12px;font-weight:400}
 #ledger .dcr-detail .dcr-msg-head :is(.dcr-verdict,.dcr-badge) svg{display:none}
-#ledger .dcr-detail .dcr-body{margin-top:3px;font-size:13.5px;line-height:1.6}
 #ledger :is(.dcr-detail-title strong,.ledger-subject) code{padding:0;border:0;background:none;font-family:var(--mono);font-size:.92em}
 /* An adversary that did not answer: its mark, faint, and the words, in line with the answers. */
 #ledger .dcr-detail :is(.dcr-opinions,.dcr-ops,ul:has(>.dcr-op)){margin:16px 0 0;padding:0;border:0;list-style:none}
 #ledger .dcr-detail .dcr-op{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;align-items:center;padding:6px 0 0;border:0;background:none}
-#ledger .dcr-detail .dcr-op>.dcr-avatar{display:inline-grid;place-items:center;width:18px;height:18px;opacity:.4}
-#ledger .dcr-detail .dcr-op>.dcr-avatar svg{width:13px;height:13px}
+#ledger .dcr-detail .dcr-op>.ui-avatar{--avatar-size:18px;opacity:.4}
 #ledger .dcr-detail .dcr-op-line{color:var(--muted);font-size:12px}
 #ledger .dcr-detail .dcr-op-line strong{color:inherit;font-weight:400}
 
-/* --- Your review in two groups, as on the Overview: the agent's comments, then yours. A comment the
-   agent adds in a new revision joins its own group, so nothing lands in the middle of yours. --- */
 #ledger .ledger-list{display:flex;flex-direction:column}
-#ledger .ledger-item[data-by="agent"]{order:0}
-#ledger .ledger-item[data-ledger]:not([data-conversation]){order:1}
-#ledger .ledger-item[data-by="person"]{order:2}
-#ledger .ledger-item:is(:nth-child(1 of [data-by="agent"]),:nth-child(1 of [data-ledger]:not([data-conversation])),:nth-child(1 of [data-by="person"]))::before{position:static;display:block;flex:1 0 100%;width:auto;height:auto;padding:16px 22px 2px;background:none;color:var(--muted);font-size:12px}
-#ledger .ledger-item:nth-child(1 of [data-by="agent"])::before{content:"Agent comments"}
-#ledger .ledger-item:nth-child(1 of [data-ledger]:not([data-conversation]))::before{content:"Your comments"}
-#ledger .ledger-item:nth-child(1 of [data-by="person"])::before{content:"From GitHub"}
-/* Your own row is drawn as the agent's: your face, the short title, the file and line, who answered. */
-#ledger .ledger-item[data-ledger]:not([data-conversation]) .ledger-meta :is([data-resolve],[data-copy]),#ledger .ledger-item .dcr-new{display:none}
-#ledger .ledger-item[data-ledger] .ledger-msg>.comment-avatar img{border-radius:50%}
-#ledger .ledger-item[data-ledger] .ledger-subject{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 #ledger .dcr-detail-code{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#ledger .ledger-item[data-ledger] .ledger-at{display:grid;place-items:center;align-self:start;width:24px;height:24px;margin-top:-2px;border-radius:6px;color:var(--muted)}
-#ledger .ledger-item[data-ledger] .ledger-at:hover{background:var(--bg-neutral-2);color:var(--ink);text-decoration:none}
-:is(#ledger .ledger-at,.thread-go) svg{width:14px;height:14px;stroke-width:1.8}
 #dcr-panel .dcr-foot-status{display:none}
 /* An adversary that did not answer keeps its mark beside the words, on the Overview too. */
-:is(.popover-comment,.review-thread,#ledger) .dcr-op>.dcr-avatar{display:inline-grid!important;width:18px;height:18px}
-:is(.popover-comment,.review-thread,#ledger) .dcr-op-line{display:flex;gap:6px;white-space:nowrap}
+:is(.dcr-popover,.dcr-card,#ledger) .dcr-op>.ui-avatar{--avatar-size:18px;opacity:var(--op-face-opacity,1)}
+:is(.dcr-popover,.dcr-card,#ledger) .dcr-op-line{display:flex;gap:6px;white-space:nowrap}
 #ledger-footer{display:none}
 .ledger-head h2{display:flex;align-items:center}
 .ledger-head .ledger-export:not([hidden]){display:grid;place-items:center;width:26px;height:26px;margin:0 auto 0 6px;padding:0;border:0;border-radius:6px;background:none;color:var(--muted);cursor:pointer}
 .ledger-head .ledger-export:hover{background:var(--bg-neutral-2);color:var(--ink)}
 .ledger-head .ledger-export svg{width:15px;height:15px;stroke-width:1.8}
-#settings-dialog.has-agents[data-tab="agents"] .settings-round:not([hidden]){display:block;margin:18px 0 0;padding:16px 0 0;border-top:1px solid var(--line)}
 .settings-round h2{margin:0 0 8px;color:var(--muted);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
 .settings-round p{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;color:var(--muted);font-size:12.5px}
-.settings-round .btn{flex:none;height:30px;min-height:30px;padding:0 11px;border:1px solid var(--line)!important;border-radius:8px;color:var(--ink)!important;font-weight:500}
-#settings-dialog.has-agents[data-tab="agents"] .settings-round:not([hidden]){margin-inline:10px}
+.settings-round .btn{flex:none;--_button-height:30px;--_button-min-height:30px;--_button-pad:0 11px;--button-border-width:1px;--button-border-color:var(--line);--_button-radius:8px;--button-ink:var(--ink);--_button-weight:500}
+#settings-dialog.has-agents[data-tab="agents"] .settings-round:not([hidden]){display:block;margin:18px 0 0;padding:16px 0 0;border-top:1px solid var(--line);margin-inline:10px}
 .settings-agents .dcr-presence-help{margin-top:8px;color:var(--muted);font-size:12.5px;line-height:1.45}
 .settings-agents .dcr-presence-cmd code{font-size:11.5px}
-/* Your review is a column of its own on a wide screen, so it never covers the header or the page. */
-@media(min-width:1100px) and (max-width:1499px){
-  body.ledger-open:not(.zen):not(.sidebar-collapsed) .workspace{grid-template-columns:320px minmax(0,1fr) min(var(--ledger-w,420px),92vw)}
-  body.ledger-open.sidebar-collapsed:not(.zen) .workspace{grid-template-columns:minmax(0,1fr) min(var(--ledger-w,420px),92vw)}
-  body.ledger-open:not(.zen) .ledger{position:static;width:auto;max-width:none;box-shadow:none;animation:none}
-  body.ledger-open:not(.zen) .review-bar{left:50%;width:min(640px,calc(100% - 28px))}
-}
-/* A row says who answered; whether it is on GitHub is in its conversation. */
-#ledger .ledger-item[data-ledger] .ledger-meta .gh-slot{display:none}
-/* A panel's icon holds both of its states; it shows the one that says what a click will do. */
-:is(.sidebar-show,.ledger-show) .when-open{display:none}
-body:not(.sidebar-collapsed) .sidebar-show .when-open,body.ledger-open .ledger-show .when-open{display:contents}
-body:not(.sidebar-collapsed) .sidebar-show .when-closed,body.ledger-open .ledger-show .when-closed{display:none}
 
-/* A closed comment on the Overview is one line, the same for every comment: the face, the type as a
-   plain word, a check when resolved, the title, and an icon to the code. The file and lines show once
-   it is open; the name is the face. */
-.overview-reading .review-thread:has(>.thread-details:not([open])) .thread-file{display:none}
-.overview-reading .thread-summary :is(.thread-you,.thread-type-icon,.thread-priority,.thread-by){display:none}
-.overview-reading .thread-summary>.comment-avatar{order:-1}
-.overview-reading .thread-summary .thread-type{padding:0;border:0;background:none;color:var(--muted);font-weight:500}
-.overview-reading .thread-summary .thread-resolved{font-size:0;padding:0;border:0;background:none;color:var(--muted)}
-.overview-reading .thread-summary .thread-resolved svg{width:14px;height:14px}
-.overview-reading .thread-summary:has(.thread-go) .thread-at{display:none}
-.overview-reading .thread-summary .thread-go:hover{color:var(--ink)}
-.overview-reading .thread-summary .thread-go svg{width:14px;height:14px}
-/* A comment carried from an earlier revision is still yours: same place and colour as the others. */
-.overview-reading #my-review .review-thread.is-earlier .thread-summary{padding-left:0}
-.overview-reading #my-review .review-thread.is-earlier .thread-summary strong{color:var(--ink-neutral-2)}
-.overview-reading .thread-summary{align-items:center}
-.overview-reading .review-thread .thread-summary .thread-resolved{font-size:0!important;letter-spacing:0}
-.overview-reading .review-thread .thread-summary .thread-resolved::before,.overview-reading .review-thread .thread-summary .thread-resolved::after{content:none}
-/* The way to a comment's code sits right after its title, not at the far edge; an open comment has
-   View in file instead. */
-.overview-reading .review-thread:has(>.thread-details[open]) .thread-go{display:none}
 
-/* --- A comment on the Overview is one line, open or closed, in every theme: the face, the type as a
-   plain word, a check when resolved, then the title with the way to its code right after its last
-   word. Opening it shows the rest under that same line; nothing in the line moves. --- */
 
 
 /* On a dark page a shadow barely shows, so what floats is lifted the way dark interfaces lift it: its
@@ -1793,3 +1540,78 @@ body:not(.sidebar-collapsed) .sidebar-show .when-closed,body.ledger-open .ledger
    scrolling under it. */
 html[data-mode="dark"] .review-bar{background:color-mix(in srgb,var(--ink) 9%,var(--surface));border-color:color-mix(in srgb,var(--ink) 26%,transparent);box-shadow:0 0 0 6px color-mix(in srgb,var(--surface) 85%,black),0 16px 40px rgba(0,0,0,.6)}
 html[data-mode="dark"] .review-bar textarea{background:transparent}
+
+/* ==========================================================================================
+   Layout tiers, the one place that says where the list and Your review go at each width.
+   Wide (1400px and up): both are columns beside the page. Laptop (1200-1399px): the list is a
+   column; Your review slides over the page. Tablet and phone (under 1200px): both slide over the
+   page. In every tier each panel has its icon in sight, and the icon shows what a click will do:
+   body.list-open and body.ledger-open say which panels are open, whichever way they are shown.
+   A theme sets --list-w; --ledger-w is the width you dragged Your review to.
+   ========================================================================================== */
+:root{--list-w:320px;--ledger-size:min(var(--ledger-w,400px),92vw)}
+@media(min-width:1200px){
+  body:not(.zen) .workspace{grid-template-columns:var(--list-w) minmax(0,1fr)}
+  body.sidebar-collapsed:not(.zen) .workspace{grid-template-columns:minmax(0,1fr)}
+}
+@media(min-width:1400px){
+  :root{--ledger-size:min(var(--ledger-w,400px),40vw)}
+  body.ledger-open:not(.zen) .workspace{grid-template-columns:var(--list-w) minmax(0,1fr) var(--ledger-size)}
+  body.ledger-open.sidebar-collapsed:not(.zen) .workspace{grid-template-columns:minmax(0,1fr) var(--ledger-size)}
+  body.ledger-open:not(.zen) .ledger{position:static;width:auto;max-width:none;box-shadow:none;animation:none}
+}
+@media(min-width:741px) and (max-width:1399px){
+  body.ledger-open .ledger{position:fixed;z-index:18;top:var(--chrome-h);right:0;bottom:var(--status-h);width:var(--ledger-size);max-width:none;box-shadow:-8px 0 28px color-mix(in srgb,var(--shade) 14.9%,transparent)}
+  body.ledger-open .review-bar{left:calc(50% - var(--ledger-size) / 2);width:min(640px,calc(100% - var(--ledger-size) - 28px))}
+}
+@media(min-width:741px) and (max-width:1199px){
+  
+  .sidebar-scrim{inset:var(--chrome-h) 0 var(--status-h) 0}
+  /* The panels' icons float at the page's top corners here, over a pinned file header too: the page
+     keeps a gutter on each side for them. */
+  main#content{padding-left:60px;padding-right:60px}
+}
+/* The panels' icons: the list's own close sits beside its finder; when the list is closed, its icon
+   waits at the page's top left. Your review's waits at the top right. */
+.sidebar-hide{display:grid;flex:none}
+/* Both icons sit on one line; a theme moves the line with --panel-icon-top. */
+:root{--panel-icon-top:calc(var(--chrome-h) + 12px)}
+body:not(.list-open):not(.zen) .sidebar-show{display:grid;position:fixed;top:var(--panel-icon-top);left:18px;z-index:30}
+body:not(.ledger-open):not(.zen) .ledger-show{display:grid;position:fixed;top:var(--panel-icon-top);right:18px;z-index:30}
+:is(.sidebar-show,.ledger-show) .when-open{display:none}
+body.list-open .sidebar-show .when-open,body.ledger-open .ledger-show .when-open{display:contents}
+body.list-open .sidebar-show .when-closed,body.ledger-open .ledger-show .when-closed{display:none}
+/* The bar says what comes next (Reviewed, Next file), so a file does not end with it again. */
+.focus-end{display:none}
+/* The resize hint is hidden, not just transparent, until it shows: it must not sit over Your review's rows. */
+.ledger-resize-tip{visibility:hidden}
+.ledger-resize:hover .ledger-resize-tip,.ledger-resize:focus-visible .ledger-resize-tip,body[data-resize] .ledger-resize-tip{visibility:visible}
+/* Dialogs fit what the screen shows: on iOS 100vh counts the area behind the browser's address bar,
+   so a dialog centred in it loses its top. The dynamic viewport is what is in sight. */
+/* A dialog and its box fit what the screen shows (dvh), not the height under a hidden address bar (daisyUI's 100vh), so its top and × stay in view on an iPad. */
+dialog.modal{height:100dvh;max-height:100dvh}
+dialog.modal>.modal-box{max-height:calc(100dvh - 32px)}
+/* Settings keeps its title, close and tabs in sight; only the settings themselves scroll. */
+.settings-box{display:flex;flex-direction:column;overflow:hidden}
+.settings-box>:is(header,.settings-tabs){flex:none}
+.settings-box>.settings-body{flex:1 1 auto;min-height:0;overflow-y:auto}
+/* Keyboard hints mean nothing on a touch screen. */
+@media(hover:none) and (pointer:coarse){.settings-box .view-keys{display:none}}
+/* On a tablet the list opens as a drawer over the page, the bar included. */
+@media(min-width:741px) and (max-width:1199px){
+  .navigation-open .sidebar{top:var(--chrome-h);bottom:var(--status-h);width:min(var(--list-w),85vw);max-width:none;z-index:40}
+  .navigation-open .sidebar-scrim{z-index:35}
+}
+/* A file's name is as wide as it is, so Why this file sits right after it; the file's own actions keep the far end. */
+.focus-identity>.current-file{flex:0 1 auto;min-width:0}
+.focus-identity>.file-about{margin-left:8px}
+.focus-identity>.focus-progress-actions{margin-left:auto}
+/* A group's title folds its steps: it reads as the title it is, with no button look. */
+.sidebar nav button.nav-group-toggle{display:inline;width:auto;min-height:0;padding:0;margin:0;border:0;border-radius:0;background:none;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit;line-height:inherit;cursor:pointer}
+.sidebar nav button.nav-group-toggle:hover{background:none;text-decoration:underline;text-underline-offset:4px}
+/* A comment box opened between lines spans the code block it sits in, edge to edge, as wide as the block shows (not the scrolled width). */
+.diff-scroll{container-type:inline-size}
+/* Your review's title sits on the line the panel icons and the file name share: the head is as tall as twice the distance from the panel's top to that line. */
+.ledger-head{box-sizing:border-box;min-height:calc(2 * (var(--panel-icon-top) + var(--panel-icon-size,32px) / 2 - var(--chrome-h)));padding-block:0}
+/* The command key sits in the middle of its button. */
+.review-bar .bar-keys{display:grid;place-items:center}

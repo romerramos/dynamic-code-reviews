@@ -1,3 +1,4 @@
+@layer app{
 /* Scoped to #qa-panel so the served review keeps its own styles. */
 #qa-panel[hidden],#qa-panel [hidden]{display:none!important}
 body.qa-standalone{margin:0;background:#f4f5f9;color:#19243b;font:16px/1.6 system-ui}
@@ -48,4 +49,5 @@ section#qa-panel #qa-notice{color:inherit;opacity:.85}
 @media(max-width:650px){
   section#qa-panel{grid-template-columns:minmax(0,1fr)}
   section#qa-panel>.qa-primary{grid-column:1;grid-row:auto;margin:10px 0 4px}
+}
 }

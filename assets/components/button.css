@@ -1,0 +1,33 @@
+/* Button (button.js), on daisyUI's .btn. A theme gives buttons its look with tokens; one it leaves
+   unset keeps daisyUI's own look, through daisyUI's own variables (--btn-p, --size, --btn-bg ...),
+   so every browser draws the same button. A context that wants other buttons sets the same tokens
+   with a leading underscore (--_button-height): its default, which the theme's own token still
+   overrides. Nothing else styles a .btn's properties.
+   Tokens: --button-bg, -ink, -border-color, -border-width, -radius, -shadow, -height, -min-height,
+   -pad, -gap, -size, -weight; on hover --button-hover-bg, -hover-ink, -hover-border; --button-open
+   and --button-close: what stands before and after the label (a terminal's brackets), and
+   --button-bracket their ink; --button-primary-*: the one action that matters; --button-disabled-*;
+   --button-focus-outline, -offset. */
+/* daisyUI's ink and fill for each state (--_ink, --_bg, set below), so an unset token gives exactly what daisyUI draws;
+   a <button> takes the page's button type (report.css: button{13px, 550}), as every other button on it does. */
+button.btn{--_size:13px;--_weight:550}
+.btn:is(.btn-ghost,.btn-soft,.btn-outline,.btn-dash){--_ink:var(--btn-rest-fg,var(--btn-color,var(--color-base-content)))}
+.btn.btn-link{--_ink:var(--btn-color,var(--color-primary))}
+.btn:is(:hover,.btn-active,:active:not(.btn-active)){--_ink:var(--btn-fg,var(--color-base-content))}
+.btn:is(:disabled,[disabled],[aria-disabled=true]){--_ink:color-mix(in oklch,var(--color-base-content) 20%,transparent)}
+.btn:is(:disabled,[disabled],[aria-disabled=true]):not(.btn-link,.btn-ghost){--_bg:color-mix(in oklab,var(--color-base-content) 10%,transparent)}
+.btn{--_ink:var(--btn-fg);--_bg:var(--btn-bg);--_size:var(--fontsize,.875rem);--_weight:600;border-width:var(--button-border-width,var(--_button-border-width,var(--border)));border-color:var(--button-border-color,var(--_button-border-color,var(--btn-border)));border-radius:var(--button-radius,var(--_button-radius,var(--radius-field)));background-color:var(--button-bg,var(--_button-bg,var(--_bg)));box-shadow:var(--button-shadow,var(--_button-shadow,var(--btn-inset) inset,var(--btn-shadow)));color:var(--button-ink,var(--_button-ink,var(--_ink)));font-size:var(--button-size,var(--_button-size,var(--_size)))}
+.btn:not(.btn-square,.btn-circle){gap:var(--button-gap,var(--_button-gap,.375rem));height:var(--button-height,var(--_button-height,var(--size)));min-height:var(--button-min-height,var(--_button-min-height,auto));padding:var(--button-pad,var(--_button-pad,0 var(--btn-p)));font-weight:var(--button-weight,var(--_button-weight,var(--_weight)))}
+.btn:is(.btn-square,.btn-circle){width:var(--button-square,var(--_button-square,var(--size)));height:var(--button-square,var(--_button-square,var(--size)));min-height:var(--button-square,var(--_button-square,auto))}
+.btn.btn-circle{border-radius:var(--button-radius,var(--_button-radius,3.40282e38px))}
+.btn:hover:not(:disabled){background-color:var(--button-hover-bg,var(--_button-hover-bg,var(--button-bg,var(--_button-bg,var(--_bg)))));color:var(--button-hover-ink,var(--_button-hover-ink,var(--button-ink,var(--_button-ink,var(--_ink)))));border-color:var(--button-hover-border,var(--_button-hover-border,var(--button-border-color,var(--_button-border-color,var(--btn-border)))))}
+.btn:not(.btn-square,.btn-circle)::before{content:var(--button-open,var(--_button-open,none));color:var(--button-bracket,var(--_button-bracket,inherit));font-weight:400}
+.btn:not(.btn-square,.btn-circle)::after{content:var(--button-close,var(--_button-close,none));color:var(--button-bracket,var(--_button-bracket,inherit));font-weight:400}
+.btn:not(.btn-square,.btn-circle):hover:not(:disabled)::before,.btn:not(.btn-square,.btn-circle):hover:not(:disabled)::after{color:var(--button-bracket-hover,var(--_button-bracket-hover,var(--button-bracket,var(--_button-bracket,inherit))))}
+.btn.btn-primary{--button-open:var(--button-primary-open,var(--_button-primary-open,none));--button-close:var(--button-primary-close,var(--_button-primary-close,none));border-color:var(--button-primary-border,var(--_button-primary-border,var(--btn-border)));background-color:var(--button-primary-bg,var(--_button-primary-bg,var(--_bg)));box-shadow:var(--button-primary-shadow,var(--_button-primary-shadow,var(--button-shadow,var(--_button-shadow,var(--btn-inset) inset,var(--btn-shadow)))));color:var(--button-primary-ink,var(--_button-primary-ink,var(--_ink)));font-weight:var(--button-primary-weight,var(--_button-primary-weight,var(--_weight)))}
+.btn.btn-primary:not(:disabled){padding:var(--button-primary-pad,var(--_button-primary-pad,var(--button-pad,var(--_button-pad,0 var(--btn-p)))))}
+.btn.btn-primary:hover:not(:disabled){background-color:var(--button-primary-hover-bg,var(--_button-primary-hover-bg,var(--button-primary-bg,var(--_button-primary-bg,var(--_bg)))));color:var(--button-primary-ink,var(--_button-primary-ink,var(--_ink)))}
+.btn.btn-circle.btn-ghost{border-color:var(--button-close-border,var(--_button-close-border,var(--btn-border)));background-color:var(--button-close-bg,var(--_button-close-bg,var(--_bg)));box-shadow:var(--button-shadow,var(--_button-shadow,var(--btn-inset) inset,var(--btn-shadow)));color:var(--button-close-ink,var(--_button-close-ink,var(--_ink)))}
+.btn.btn-circle.btn-ghost:hover{color:var(--button-close-hover-ink,var(--_button-close-hover-ink,var(--button-close-ink,var(--_button-close-ink,var(--_ink)))))}
+.btn:disabled{color:var(--button-disabled-ink,var(--_button-disabled-ink,var(--_ink)));background-color:var(--button-disabled-bg,var(--_button-disabled-bg,var(--_bg)));opacity:var(--button-disabled-opacity,var(--_button-disabled-opacity,1))}
+.btn:focus-visible{outline:var(--button-focus-outline,var(--_button-focus-outline,2px solid var(--btn-color,var(--color-base-content))));outline-offset:var(--button-focus-offset,var(--_button-focus-offset,2px))}
