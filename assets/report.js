@@ -1530,7 +1530,12 @@
     // The lines go near the top, so the card has room under them.
     const lines = [...trigger.closest('table')?.querySelectorAll('.code.range-selected') || []];
     const last = lines.at(-1)?.getBoundingClientRect();
-    if (last && last.bottom + Math.min(popover.scrollHeight, 420) > commentFloor()) $('content').scrollTop += lines[0].getBoundingClientRect().top - 120;
+    if (last && last.bottom + Math.min(popover.scrollHeight, 420) > commentFloor()) {
+      // The page scrolls on a phone, the reading pane elsewhere.
+      const delta = lines[0].getBoundingClientRect().top - 120;
+      if (getComputedStyle($('content')).overflowY === 'visible') window.scrollBy({top: delta, behavior: 'instant'});
+      else $('content').scrollTop += delta;
+    }
     positionComment();
     popover.querySelector('[data-close-comment]').focus({preventScroll:true});
   }
@@ -3128,11 +3133,11 @@
     return [280, Math.max(280, Math.min(760, wide ? window.innerWidth - 640 : window.innerWidth * 0.92))];
   };
   function setLedgerWidth(width, save = true) {
-    if (width == null) { document.body.style.removeProperty('--ledger-w'); ledgerResize?.removeAttribute('aria-valuenow'); }
+    if (width == null) { document.documentElement.style.removeProperty('--ledger-w'); ledgerResize?.removeAttribute('aria-valuenow'); }
     else {
       const [least, most] = ledgerLimits();
       width = Math.round(Math.min(most, Math.max(least, width)));
-      document.body.style.setProperty('--ledger-w', `${width}px`);
+      document.documentElement.style.setProperty('--ledger-w', `${width}px`);
       ledgerResize?.setAttribute('aria-valuenow', width);
     }
     if (save) try { width == null ? localStorage.removeItem(LEDGER_WIDTH) : localStorage.setItem(LEDGER_WIDTH, String(width)); } catch { /* this visit only */ }
@@ -3182,7 +3187,7 @@
       else return;
       event.preventDefault();
     });
-    window.addEventListener('resize', () => { const width = parseFloat(document.body.style.getPropertyValue('--ledger-w')); if (width) setLedgerWidth(width, false); });
+    window.addEventListener('resize', () => { const width = parseFloat(document.documentElement.style.getPropertyValue('--ledger-w')); if (width) setLedgerWidth(width, false); });
   }
   $('ledger-toggle').onclick = () => setLedger(!ledgerOpen());
   $('ledger-close').onclick = () => setLedger(false);
@@ -3757,6 +3762,7 @@
     if (wideScreen()) { state.sidebarCollapsed = !state.sidebarCollapsed; persist(); applySidebar(); return; }
     const open = document.body.classList.toggle('navigation-open');
     $('nav-toggle').setAttribute('aria-expanded', open);
+    if (open && ledgerOpen()) setLedger(false);
   };
   window.addEventListener('resize', applySidebar);
   applySidebar();
@@ -3888,7 +3894,14 @@
   // it holds both icons, and says what it will do.
   $('ledger-show').innerHTML = `<span class="when-closed">${icon('panel-right-open')}</span><span class="when-open">${icon('panel-right-close')}</span>`;
   $('ledger-hide').addEventListener('click', () => setLedger(false));
-  $('ledger-show').addEventListener('click', () => setLedger(!document.body.classList.contains('ledger-open')));
+  $('ledger-show').addEventListener('click', () => {
+    const open = !document.body.classList.contains('ledger-open');
+    // Below a wide screen the two panels open over the page, so one at a time.
+    if (open && !wideScreen() && document.body.classList.contains('navigation-open')) $('nav-toggle').click();
+    setLedger(open);
+  });
+  $('bar-review').innerHTML = $('ledger-show').innerHTML;
+  $('bar-review').addEventListener('click', () => $('ledger-show').click());
   $('sidebar-show').innerHTML = `<span class="when-closed">${icon('panel-left-open')}</span><span class="when-open">${icon('panel-left-close')}</span>`;
   const labelPanelIcons = () => {
     // The list is open as a column (wide screens) or as a drawer (narrower): one class says which,
@@ -3897,7 +3910,7 @@
     if (document.body.classList.contains('list-open') !== listOpen) document.body.classList.toggle('list-open', listOpen);
     const ledger = document.body.classList.contains('ledger-open') ? 'Hide your review' : 'Show your review';
     const list = listOpen ? 'Hide the list' : 'Show the list';
-    [['ledger-show', ledger], ['sidebar-show', list]].forEach(([id, label]) => { if ($(id).title !== label) { $(id).title = label; $(id).setAttribute('aria-label', label); } });
+    [['ledger-show', ledger], ['bar-review', ledger], ['sidebar-show', list]].forEach(([id, label]) => { if ($(id).title !== label) { $(id).title = label; $(id).setAttribute('aria-label', label); } });
   };
   if (typeof MutationObserver !== 'undefined') {
     new MutationObserver(labelPanelIcons).observe(document.body, {attributes: true, attributeFilter: ['class']});
@@ -4158,7 +4171,7 @@
   function stepTitle(title, done) {
     if (!done) return escape(title);
     const cut = title.lastIndexOf(' ') + 1;
-    return `${escape(title.slice(0, cut))}<span class="step-end">${escape(title.slice(cut))}<span class="step-done">${icon('check')}</span></span>`;
+    return `${escape(title.slice(0, cut))}<span class="step-last">${escape(title.slice(cut))}<span class="step-done">${icon('check')}</span></span>`;
   }
   function barNext() {
     const reading = fileReadingActive() ? readingFile() : null;

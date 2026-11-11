@@ -34,7 +34,8 @@
    width with a margin of the inset (block flow, so vertical margins still collapse as before). */
 .overview-reading{max-width:calc(840px + 2 * var(--comment-inset))}
 .overview-reading>:not(.overview-comments,#my-review,.overview-settled),.overview-reading>:is(.overview-comments,#my-review,.overview-settled)>:not(.ui-comment,.overview-fold),.overview-reading>.overview-settled>.overview-fold>summary{margin-inline:var(--comment-inset)}
-main#content:has(>.overview-reading){padding-inline:max(0px,calc(28px - var(--comment-inset)))}
+/* Where the page sets a gutter (--page-gutter, room for icons that float at its sides), the column keeps it. */
+main#content:has(>.overview-reading){padding-inline:var(--page-gutter,max(0px,calc(28px - var(--comment-inset))))}
 .ui-comment>.thread-details>.thread-source{border:var(--comment-source-border,1px solid var(--line-neutral-2));border-radius:calc(7px * var(--round));overflow:hidden}
 /* The conversation's messages keep the comment's columns: faces on its face column, words on its title's. */
 .ui-comment{--message-face-col:var(--comment-face-col);--message-gap:var(--comment-gap);--message-face:var(--comment-message-face)}

@@ -49,7 +49,7 @@
 [data-theme^="minimal-"] *{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 
 /* --- the list: step names, and nothing around them ------------------------------------------------ */
-[data-theme^="minimal-"] .sidebar{padding:22px 14px 18px 22px;background:var(--surface);border:0}
+[data-theme^="minimal-"] .sidebar{padding:22px 14px var(--drawer-foot,18px) 22px;background:var(--surface);border:0}
 [data-theme^="minimal-"] #search{height:32px;border:0;background:var(--minimal-soft);box-shadow:none;font-size:13px}
 [data-theme^="minimal-"] #navigation button{gap:8px;padding:5px 8px;background:transparent;border:0;box-shadow:none;color:var(--muted)}
 [data-theme^="minimal-"] .sidebar nav button{min-height:0;margin:0;align-items:baseline}
@@ -333,7 +333,6 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 /* Actions are real buttons, small and quiet; the one that settles it stands apart at the right. */
 
 /* --- the composer, as in a chat: your face beside what you type ------------------------------------- */
-[data-theme^="minimal-"] .composer{padding:12px 14px 12px 12px}
 [data-theme^="minimal-"] .composer-head{min-height:0;margin-bottom:8px;padding:0}
 [data-theme^="minimal-"] .composer-head :is(.composer-where,.composer-as){display:none}
 [data-theme^="minimal-"] .composer-mode>span{padding:3px 9px;font-size:12.5px}
@@ -424,7 +423,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] #navigation .nav-section .step-done .review-icon{display:inline-block;width:13px;height:13px;margin-left:6px;vertical-align:-2px;stroke-width:2.25}
 
 /* A comment opened in the code: the Overview's thread, on a card. No header band, path or badges. */
-[data-theme^="minimal-"] .comment-popover[popover]{max-height:min(560px,calc(100dvh - 24px));padding:16px 18px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 16px 44px color-mix(in srgb,var(--shade) 12%,transparent)}
+[data-theme^="minimal-"] .comment-popover[popover]{max-height:min(560px,calc(100dvh - 24px));padding:16px 18px 0;--popover-foot-pad:16px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 16px 44px color-mix(in srgb,var(--shade) 12%,transparent)}
 [data-theme^="minimal-"] .comment-popover .popover-heading strong{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 [data-theme^="minimal-"] .comment-popover .popover-heading{position:absolute;top:12px;right:12px;padding:0;border:0;background:transparent;--button-square:28px;--button-close-border:transparent;--button-close-bg:transparent;--button-close-ink:var(--muted)}
 /* Its replies, indented one step more with their faces, and its actions as small outlined buttons. */
@@ -744,7 +743,8 @@ html[data-theme^="minimal-"]{--list-w:384px}
 html[data-theme^="minimal-"] :is(.sidebar-hide,.ledger-hide){display:none}
 /* Its icons' line is the file name's line when reading a file. */
 html[data-theme^="minimal-"]{--panel-icon-top:25px}
-html[data-theme^="minimal-"] body:not(.zen) .sidebar-show{display:grid;position:fixed;top:var(--panel-icon-top);left:18px;z-index:30}
-html[data-theme^="minimal-"] body.list-open:not(.zen) .sidebar-show{left:calc(min(var(--list-w),85vw) + 8px)}
-html[data-theme^="minimal-"] body:not(.zen) .ledger-show{display:grid;position:fixed;top:var(--panel-icon-top);right:18px;z-index:30}
-html[data-theme^="minimal-"] body.ledger-open:not(.zen) .ledger-show{right:calc(var(--ledger-size) + 8px)}
+/* They are the panels' only close, so they sit above the open drawer's scrim. */
+@media(min-width:741px){html[data-theme^="minimal-"] body:not(.zen) .sidebar-show{display:grid;position:fixed;top:var(--panel-icon-top);left:18px;z-index:45}}
+@media(min-width:741px){html[data-theme^="minimal-"] body.list-open:not(.zen) .sidebar-show{left:calc(min(var(--list-w),85vw) + 8px)}}
+@media(min-width:741px){html[data-theme^="minimal-"] body:not(.zen) .ledger-show{display:grid;position:fixed;top:var(--panel-icon-top);right:18px;z-index:45}}
+@media(min-width:741px){html[data-theme^="minimal-"] body.ledger-open:not(.zen) .ledger-show{right:calc(var(--ledger-size) + 8px)}}

@@ -386,3 +386,13 @@
 [data-theme^="terminal-"] .risk-low .risk-bar i{background:repeating-linear-gradient(90deg,color-mix(in oklab,var(--ink) 35%,transparent) 0 6px,transparent 6px 8px)}
 /* A group's title folds its steps; it keeps the title's look. */
 [data-theme^="terminal-"] .sidebar nav button.nav-group-toggle,[data-theme^="terminal-"] .sidebar nav button.nav-group-toggle:hover{padding:0;background:none}
+/* Phone: the overview's table becomes a list, each row its item, what it is now and what is next,
+   one under the other; no header, no rule, no column bars. */
+@media(max-width:740px){
+  [data-theme^="terminal-"] .overview-reading :is(.dcr-try-head,.dcr-try-rule){display:none}
+  [data-theme^="terminal-"] .overview-reading :is(.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary){grid-template-columns:minmax(0,1fr);row-gap:2px;padding:8px 0;border-bottom:1px dashed var(--line)}
+  [data-theme^="terminal-"] .overview-reading :is(.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary)>:not(svg,[hidden]){white-space:normal}
+  [data-theme^="terminal-"] .overview-reading :is(.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary)>:not(svg,[hidden])::before,[data-theme^="terminal-"] .overview-reading :is(.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary)::after,[data-theme^="terminal-"] .overview-reading .risk-fold>summary::before,[data-theme^="terminal-"] .overview-reading .risk-rank.risk-none h2::before{content:none}
+  [data-theme^="terminal-"] .overview-reading .risk-fold.overview-fold>summary::after{grid-row:auto;grid-column:1;content:"[ show ]"}
+  [data-theme^="terminal-"] .overview-reading .risk-fold.overview-fold[open]>summary::after{content:"[ hide ]"}
+}

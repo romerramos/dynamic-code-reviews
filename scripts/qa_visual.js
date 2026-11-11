@@ -25,7 +25,7 @@ const COMPARE = option('compare', null) && path.resolve(option('compare'));
 const THEMES = list('themes', 'aida,terminal,minimal');
 const MODES = list('modes', 'light,dark');
 const VIEWPORTS = list('viewports', '1440x900,1280x800,1133x744,744x1133').map(size => { const [width, height] = size.split('x').map(Number); return {width, height, name: size}; });
-const STATES = list('states', 'overview,resolved,open-one,open-all,sidebar-collapsed,ledger,conversation,popover,popover-own,settings,offline');
+const STATES = list('states', 'overview,resolved,open-one,open-all,sidebar-collapsed,ledger,conversation,popover,popover-own,composer,settings,offline');
 const NO_FAIL = args.includes('--no-fail');
 // --probe file.js: print what an expression in that file returns in each combination, and nothing else.
 const PROBE = option('probe', null) && fs.readFileSync(option('probe'), 'utf8');
@@ -77,6 +77,16 @@ const steps = {
     await sleep(600);
   },
   async popover(page) { await openPopover(page, 'fee-window'); },
+  // The comment box, opened by a real click on an added line's number with no comment, in the file a comment is on.
+  async composer(page) {
+    await page.evaluate(`document.querySelector('.thread-go[data-comment="fee-window"]')?.click() || document.querySelector('[data-comment="fee-window"]')?.click()`);
+    await sleep(900);
+    // Going to the comment may open it; a click outside would only close it again.
+    await page.evaluate(`document.querySelectorAll('[popover]').forEach(node => node.matches(':popover-open') && node.hidePopover())`);
+    const at = await page.evaluate(`(() => { const cell = [...document.querySelectorAll('#content .gutter[data-side="new"][data-line]')].find(node => node.getBoundingClientRect().width && node.closest('tr').querySelector('td.code.add') && !node.closest('tr').querySelector('.comment-trigger')); cell?.scrollIntoView({block: 'center'}); const r = cell?.getBoundingClientRect(); return r ? {x: r.left + r.width / 2, y: r.top + r.height / 2} : null; })()`);
+    if (at) { await sleep(300); await page.click(at.x, at.y); }
+    await sleep(700);
+  },
   async 'popover-own'(page) { await openPopover(page, 'mine-file-note'); },
   async settings(page) {
     await page.evaluate(`document.querySelector('[data-open-settings]')?.click()`);
@@ -156,15 +166,28 @@ function measure(context) {
   // 2. Nothing overlaps: no two pieces of text on top of each other, in what is on screen.
   const scopes = [...document.querySelectorAll('.overview-reading, #ledger:not([hidden]), .comment-popover:popover-open, #settings-dialog[open] .modal-box, .review-bar')].filter(visible);
   const overlaps = [];
+  // A sticky element with a solid fill hides what scrolls under it.
+  const covers = (top, under) => {
+    for (let at = top; at; at = at.parentElement) {
+      const s = getComputedStyle(at);
+      if (s.position === 'sticky' && !/rgba\(.*, 0\)|transparent/.test(s.backgroundColor)) return !at.contains(under);
+    }
+    return false;
+  };
   scopes.forEach(scope => {
     const rects = textRects(scope).map(item => ({...item, r: shown(item.r, item.node)})).filter(item => item.r);
     for (let i = 0; i < rects.length; i++) for (let j = i + 1; j < rects.length; j++) {
       const a = rects[i], b = rects[j];
       if (a.node === b.node || a.node.contains(b.node) || b.node.contains(a.node)) continue;
+      if (covers(a.node, b.node) || covers(b.node, a.node)) continue; // words scrolled under a pinned footer are hidden, not overlapped
       if (inter(a.r, b.r) > 4) overlaps.push(`${label(a.node)} "${a.node.textContent.trim().slice(0, 20)}" × ${label(b.node)} "${b.node.textContent.trim().slice(0, 20)}"`);
     }
   });
   add('no-overlap', !overlaps.length, overlaps.slice(0, 4).join(' | '));
+  // The panel icons that float at the page's corners keep the page's words out from under them.
+  const icons = ['sidebar-show', 'ledger-show'].map(id => document.getElementById(id)).filter(node => node && visible(node) && getComputedStyle(node).position === 'fixed');
+  const underIcons = content ? icons.flatMap(icon => { const box = icon.getBoundingClientRect(); return textRects(content).map(item => ({...item, r: shown(item.r, item.node)})).filter(item => item.r && inter(item.r, box) > 4).map(item => `${icon.id} × ${label(item.node)} "${item.node.textContent.trim().slice(0, 20)}"`); }) : [];
+  add('icons-clear-of-text', !underIcons.length, underIcons.slice(0, 4).join(' | '));
 
   // 3. A comment's line: face, title and chevron do not overlap one another or touch the card's edge.
   const lines = [...document.querySelectorAll('.overview-reading .review-thread .thread-summary')].filter(visible);
@@ -177,11 +200,13 @@ function measure(context) {
 
   // 4. An open card keeps one inner margin: nothing crosses its edge, and its left and right margins match.
   const boxed = node => { const s = getComputedStyle(node); const border = ['Top', 'Right', 'Bottom', 'Left'].filter(side => parseFloat(s[`border${side}Width`]) > 0 && rgba(s[`border${side}Color`]).a > 0.1); const bg = rgba(s.backgroundColor); const filled = bg.a > 0.5 && distance(bg, backgroundOf(node.parentElement)) > 3; return {border, filled, shadow: s.boxShadow !== 'none', card: border.length >= 3 || filled || (s.boxShadow !== 'none' && border.length > 0)}; };
-  const cards = [...document.querySelectorAll('.overview-reading .review-thread:has(> .thread-details[open])')].filter(visible);
+  // Only a card whose title line is fully on screen: a sliver at the screen's edge has no margins to compare.
+  const onScreen = node => { const r = node?.getBoundingClientRect(); return r && r.top >= 0 && r.bottom <= innerHeight; };
+  const cards = [...document.querySelectorAll('.overview-reading .review-thread:has(> .thread-details[open])')].filter(visible).filter(card => onScreen(card.querySelector('.thread-summary')));
   const marginProblems = [];
   cards.forEach(card => {
     const box = card.getBoundingClientRect();
-    const leaves = [...textRects(card).map(item => shown(item.r, item.node) && item.r), ...[...card.querySelectorAll('button, img, svg, input, textarea, select, .btn')].filter(visible).filter(node => !node.parentElement.closest('svg')).map(node => shown(node.getBoundingClientRect(), node) && node.getBoundingClientRect())].filter(Boolean);
+    const leaves = [...textRects(card).map(item => shown(item.r, item.node)), ...[...card.querySelectorAll('button, img, svg, input, textarea, select, .btn, .ui-avatar')].filter(visible).filter(node => !node.parentElement.closest('svg')).map(node => shown(node.getBoundingClientRect(), node))].filter(Boolean); // what is on screen: a code block that scrolls shows only its part
     if (!leaves.length) return;
     const left = Math.min(...leaves.map(r => r.left)) - box.left, right = box.right - Math.max(...leaves.map(r => r.right));
     const top = Math.min(...leaves.map(r => r.top)) - box.top, bottom = box.bottom - Math.max(...leaves.map(r => r.bottom));
@@ -267,8 +292,9 @@ function measure(context) {
   const sameComponent = [...document.querySelectorAll('.overview-reading .review-thread')].every(node => node.dataset.ui === 'CommentCard') && [...document.querySelectorAll('#ledger .ledger-item[data-ledger]')].every(node => node.dataset.ui === 'LedgerRow');
   add('yours-and-agents-line-up', aligned(overviewCols) && aligned(ledgerCols) && sameComponent, `overview faces ${overviewCols.faces} titles ${overviewCols.titles}; ledger faces ${ledgerCols.faces} titles ${ledgerCols.titles}; one component ${sameComponent}`);
 
-  // 10. An answer's table or code does not scroll sideways when there is room.
-  const scrolling = [...document.querySelectorAll('.dcr-body :is(pre, table, .md-table, .table-wrap)')].filter(visible).filter(node => node.scrollWidth > node.clientWidth + 1 && node.scrollWidth < (node.closest('.dcr-msg, .dcr-detail, .review-thread, .popover-comment') || document.body).clientWidth);
+  // 10. An answer's table or code does not scroll sideways when there is room: it would fit in its message,
+  //     and it is held narrower than the column it sits in.
+  const scrolling = [...document.querySelectorAll('.dcr-body :is(pre, table, .md-table, .table-wrap)')].filter(visible).filter(node => node.scrollWidth > node.clientWidth + 1 && node.scrollWidth < (node.closest('.dcr-msg, .dcr-detail, .review-thread, .popover-comment') || document.body).clientWidth).filter(node => node.getBoundingClientRect().width < node.parentElement.clientWidth - 2); // a block already as wide as its column has no room to take
   add('answers-no-hscroll', !scrolling.length, scrolling.slice(0, 3).map(node => `${label(node)} ${node.scrollWidth}/${node.clientWidth}`).join(' | '));
 
   // 11. The floating bar stands apart from the page, in the dark too.
@@ -304,7 +330,7 @@ function measure(context) {
 async function lineStability(page) {
   const results = [];
   for (const id of ['fee-window', 'mine-file-note', 'refund-route']) {
-    const where = `(() => { const row = document.querySelector('.review-thread[data-thread-id="${id}"]'); if (!row) return null; const box = node => { const r = node?.getBoundingClientRect(); return r && r.width ? [r.left, r.top + document.getElementById('content').scrollTop, r.width] : null; }; return {face: box(row.querySelector('.thread-summary :is(.thread-face,.comment-avatar,.ui-avatar):not([hidden])')), title: box(row.querySelector('.thread-summary > strong')), chevron: box(row.querySelector('.thread-chevron'))}; })()`;
+    const where = `(() => { const row = document.querySelector('.review-thread[data-thread-id="${id}"]'); if (!row) return null; const box = node => { const r = node?.getBoundingClientRect(); return r && r.width ? [r.left, r.top + document.getElementById('content').scrollTop + window.scrollY, r.width] : null; }; return {face: box(row.querySelector('.thread-summary :is(.thread-face,.comment-avatar,.ui-avatar):not([hidden])')), title: box(row.querySelector('.thread-summary > strong')), chevron: box(row.querySelector('.thread-chevron'))}; })()`;
     const before = await page.evaluate(where);
     if (!before) continue;
     await toggle(page, id);
@@ -337,14 +363,18 @@ function roomCheck() {
 // Each panel has an icon in sight that opens it, and a way to close it again, at every width.
 async function panelsOpenAndClose(page) {
   const results = [];
-  for (const [name, show, hide, panel] of [['list', 'sidebar-show', 'sidebar-hide', '.sidebar'], ['your review', 'ledger-show', 'ledger-hide', '#ledger']]) {
+  // A phone has no corner icons: the bar's ☰ and panel icon open and close the panels.
+  for (const [name, controls, panel] of [['list', ['sidebar-show', 'sidebar-hide', 'bar-nav'], '.sidebar'], ['your review', ['ledger-show', 'ledger-hide', 'bar-review'], '#ledger']]) {
     const state = `(() => {
       const usable = id => { const node = document.getElementById(id); if (!node) return null; const r = node.getBoundingClientRect(); if (!r.width || getComputedStyle(node).visibility === 'hidden') return null;
         const x = r.left + r.width / 2, y = r.top + r.height / 2; if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) return null;
         const top = document.elementFromPoint(x, y); return top && (top === node || node.contains(top)) ? id : null; };
       const p = document.querySelector(${JSON.stringify(panel)}); const r = p && p.getBoundingClientRect();
-      const open = !!(r && r.width > 40 && r.right > 0 && r.left < innerWidth && getComputedStyle(p).display !== 'none' && !p.hidden);
-      return {open, control: usable(${JSON.stringify(show)}) || usable(${JSON.stringify(hide)})};
+      // Open means on screen and on top: what is at the middle of its visible part belongs to it.
+      const seen = r && {x: (Math.max(r.left, 0) + Math.min(r.right, innerWidth)) / 2, y: (Math.max(r.top, 0) + Math.min(r.bottom, innerHeight)) / 2};
+      const atMiddle = seen && seen.y > 0 && seen.y < innerHeight && document.elementFromPoint(seen.x, seen.y);
+      const open = !!(r && r.width > 40 && r.right > 0 && r.left < innerWidth && r.top < innerHeight && r.bottom > 0 && getComputedStyle(p).display !== 'none' && !p.hidden && atMiddle && p.contains(atMiddle));
+      return {open, control: ${JSON.stringify(controls)}.map(usable).find(Boolean) || null};
     })()`;
     const first = await page.evaluate(state);
     if (!first.control) { results.push(`${name}: no icon in sight`); continue; }

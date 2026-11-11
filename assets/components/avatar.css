@@ -17,8 +17,9 @@ html[data-mode="dark"]{--agent-claude:#ec9a7c;--agent-claude-bg:#3b2620;--agent-
 .ui-avatar[data-agent="grok"]{--face-ink:var(--agent-grok);--face-bg:var(--agent-grok-bg)}
 .ui-avatar[data-agent="antigravity"]{--face-bg:var(--agent-antigravity-bg);--avatar-mark:66%}
 .ui-avatar[data-agent="opencode"]{--face-ink:var(--agent-opencode);--face-bg:var(--agent-opencode-bg);--avatar-mark:50%}
-/* Plain marks: the logo in the colour of the text around it (ink on a page, white on a dark button), as large as the face, nothing behind it. */
-html[data-avatar-style="mono"] .ui-avatar[data-kind="agent"]{--face-ink:currentColor;--face-bg:transparent;--avatar-mark:var(--avatar-mono-mark,82%)}
+/* Plain marks: the logo in ink, as large as the face, nothing behind it; a filled button that holds one
+   gives it its own text colour (--mono-mark-ink), so it shows on the fill. */
+html[data-avatar-style="mono"] .ui-avatar[data-kind="agent"]{--face-ink:var(--mono-mark-ink,var(--ink));--face-bg:transparent;--avatar-mark:var(--avatar-mono-mark,82%)}
 /* People: the photo, round, alone; else their initial on a quiet disc. */
 .ui-avatar:is([data-kind="you"],[data-kind="person"]){--face-ink:var(--ink-neutral-2);--face-bg:var(--bg-neutral-3)}
 .ui-avatar[data-photo]{background:none}

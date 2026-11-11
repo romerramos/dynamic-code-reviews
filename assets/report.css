@@ -828,7 +828,9 @@ button.line-number:hover::before{opacity:1;transform:scale(1)}
 
 /* The composer, in the code, directly under the lines it is about. */
 tr.inline-compose>td{padding:0!important;border:0!important;background:var(--surface)!important}
-.composer{position:sticky;left:0;box-sizing:border-box;width:100cqi;margin:10px 0 12px;padding:12px 14px 12px;border:1px solid color-mix(in oklab,var(--line-accent-8) 45%,var(--line));border-radius:calc(12px * var(--round));background:var(--surface);color:var(--ink);box-shadow:0 8px 28px color-mix(in srgb,var(--shade) 12.2%,transparent),0 0 0 3px color-mix(in oklab,var(--ring-accent-3) 12%,transparent);font:14px/1.5 var(--review-font-family);white-space:normal}
+/* It is a card in the code block: inset from the block's edge, never wider than a comfortable line
+   of writing, the block's full width (less the inset) on a narrow screen. */
+.composer{--composer-inset:clamp(8px,2cqi,20px);position:sticky;left:var(--composer-inset);box-sizing:border-box;width:min(calc(100cqi - 2 * var(--composer-inset)),720px);margin:12px var(--composer-inset) 14px;padding:16px 18px;border:1px solid color-mix(in oklab,var(--line-accent-8) 45%,var(--line));border-radius:calc(12px * var(--round));background:var(--surface);color:var(--ink);box-shadow:0 8px 28px color-mix(in srgb,var(--shade) 12.2%,transparent),0 0 0 3px color-mix(in oklab,var(--ring-accent-3) 12%,transparent);font:14px/1.5 var(--review-font-family);white-space:normal}
 @media(prefers-reduced-motion:no-preference){.composer{animation:composer-in .16s ease-out}}
 @keyframes composer-in{from{opacity:0;transform:translateY(-4px)}}
 .composer-types{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
@@ -932,12 +934,12 @@ dialog.stage::backdrop{background:color-mix(in srgb,var(--bg-neutral-8) 40%,tran
 .more-item{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:0;border-radius:calc(7px * var(--round));background:none;color:var(--ink-neutral-2);font-size:13px;font-weight:500;line-height:1.2;text-align:left;cursor:pointer}
 .more-item:hover,.more-item:focus-visible{background:var(--bg-neutral-3);outline:none}
 .more-item svg{width:15px;height:15px;color:var(--ink-neutral-5)}
-.composer-head{display:flex;align-items:center;justify-content:space-between;margin:0 0 8px;gap:12px}
+.composer-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;margin:0 0 8px;gap:6px 12px}
 .composer-where{font-size:12.5px;color:var(--muted);margin-left:auto}
 .composer-modes{display:inline-flex;gap:2px;padding:3px;border-radius:calc(9px * var(--round));background:var(--bg-neutral-3)}
 .composer-modes[hidden]{display:none}
 .composer-mode input{position:absolute;opacity:0;pointer-events:none}
-.composer-mode>span{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:calc(7px * var(--round));color:var(--ink-neutral-5);font-size:13px;font-weight:600;cursor:pointer}
+.composer-mode>span{display:inline-flex;align-items:center;gap:6px;height:28px;white-space:nowrap;padding:0 12px;border-radius:calc(7px * var(--round));color:var(--ink-neutral-5);font-size:13px;font-weight:600;cursor:pointer}
 .composer-mode span svg{width:14px;height:14px}
 .composer-mode:hover span{color:var(--ink-neutral-2)}
 .composer-mode input:checked+span{background:var(--bg-neutral-1);color:var(--ink-neutral-2);box-shadow:0 1px 2px rgba(17,22,31,.12),0 0 0 1px rgba(17,22,31,.06)}
@@ -1292,7 +1294,10 @@ button.risk-path:hover .path-name{text-decoration:underline}
 /* Its action is the theme's own primary Button, at the bar's height. */
 .review-bar .bar-primary{flex:none;white-space:nowrap}
 .review-bar .bar-soft{max-width:46%;overflow:hidden;text-overflow:ellipsis;background:var(--bg-neutral-3);color:var(--ink);font-weight:550}
-.review-bar .bar-keys{padding:0 4px}
+.review-bar .bar-keys{display:grid;place-items:center;padding:0 4px}
+/* On a phone the bar is where Your review opens, as the list does from its ☰. */
+.review-bar .bar-review{display:none;place-items:center;padding:0 6px}
+.review-bar .bar-review .review-icon{width:18px;height:18px}
 .review-bar kbd{padding:3px 7px;border-radius:calc(6px * var(--round));background:var(--bg-neutral-3);color:var(--muted);font:11px/1.4 var(--mono)}
 .review-bar .bar-nav{display:none;margin-left:-6px;padding:0 8px}
 #bar-meta{flex:none;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -1420,7 +1425,7 @@ details.thread-was:not([open])>summary{margin-bottom:0}
 .sidebar-hide,.sidebar-show,.ledger-hide,.ledger-show,.step-next,.ledger-at,.qa-preview-flow{display:none}
 /* Settings split in General and Agents, for a theme that shows the agent there instead of on its card. */
 .settings-tabs,.settings-agents,.settings-round,.ledger-export{display:none}
-.step-end{white-space:nowrap}
+.step-last{white-space:nowrap}
 
 /* ==========================================================================================
    One layout for every theme (each draws it in its own look): a slim header with the review's
@@ -1558,10 +1563,13 @@ html[data-mode="dark"] .review-bar textarea{background:transparent}
   :root{--ledger-size:min(var(--ledger-w,400px),40vw)}
   body.ledger-open:not(.zen) .workspace{grid-template-columns:var(--list-w) minmax(0,1fr) var(--ledger-size)}
   body.ledger-open.sidebar-collapsed:not(.zen) .workspace{grid-template-columns:minmax(0,1fr) var(--ledger-size)}
-  body.ledger-open:not(.zen) .ledger{position:static;width:auto;max-width:none;box-shadow:none;animation:none}
+  body.ledger-open:not(.zen) .ledger{position:relative;width:auto;max-width:none;box-shadow:none;animation:none}
+}
+/* Below 1400px Your review slides over the page; a phone stretches it to the whole screen. */
+@media(max-width:1399px){
+  body.ledger-open .ledger{position:fixed;z-index:18;top:var(--chrome-h);right:0;bottom:var(--status-h);width:var(--ledger-size);max-width:none;box-shadow:-8px 0 28px color-mix(in srgb,var(--shade) 14.9%,transparent)}
 }
 @media(min-width:741px) and (max-width:1399px){
-  body.ledger-open .ledger{position:fixed;z-index:18;top:var(--chrome-h);right:0;bottom:var(--status-h);width:var(--ledger-size);max-width:none;box-shadow:-8px 0 28px color-mix(in srgb,var(--shade) 14.9%,transparent)}
   body.ledger-open .review-bar{left:calc(50% - var(--ledger-size) / 2);width:min(640px,calc(100% - var(--ledger-size) - 28px))}
 }
 @media(min-width:741px) and (max-width:1199px){
@@ -1569,18 +1577,22 @@ html[data-mode="dark"] .review-bar textarea{background:transparent}
   .sidebar-scrim{inset:var(--chrome-h) 0 var(--status-h) 0}
   /* The panels' icons float at the page's top corners here, over a pinned file header too: the page
      keeps a gutter on each side for them. */
-  main#content{padding-left:60px;padding-right:60px}
+  :root{--page-gutter:60px}
+  main#content{padding-inline:var(--page-gutter)}
 }
 /* The panels' icons: the list's own close sits beside its finder; when the list is closed, its icon
    waits at the page's top left. Your review's waits at the top right. */
 .sidebar-hide{display:grid;flex:none}
 /* Both icons sit on one line; a theme moves the line with --panel-icon-top. */
 :root{--panel-icon-top:calc(var(--chrome-h) + 12px)}
-body:not(.list-open):not(.zen) .sidebar-show{display:grid;position:fixed;top:var(--panel-icon-top);left:18px;z-index:30}
-body:not(.ledger-open):not(.zen) .ledger-show{display:grid;position:fixed;top:var(--panel-icon-top);right:18px;z-index:30}
-:is(.sidebar-show,.ledger-show) .when-open{display:none}
-body.list-open .sidebar-show .when-open,body.ledger-open .ledger-show .when-open{display:contents}
-body.list-open .sidebar-show .when-closed,body.ledger-open .ledger-show .when-closed{display:none}
+/* From a tablet up the panels' icons sit in the page's corners; on a phone they are in the bar. */
+@media(min-width:741px){
+  body:not(.list-open):not(.zen) .sidebar-show{display:grid;position:fixed;top:var(--panel-icon-top);left:18px;z-index:30}
+  body:not(.ledger-open):not(.zen) .ledger-show{display:grid;position:fixed;top:var(--panel-icon-top);right:18px;z-index:30}
+}
+:is(.sidebar-show,.ledger-show,.bar-review) .when-open{display:none}
+body.list-open .sidebar-show .when-open,body.ledger-open :is(.ledger-show,.bar-review) .when-open{display:contents}
+body.list-open .sidebar-show .when-closed,body.ledger-open :is(.ledger-show,.bar-review) .when-closed{display:none}
 /* The bar says what comes next (Reviewed, Next file), so a file does not end with it again. */
 .focus-end{display:none}
 /* The resize hint is hidden, not just transparent, until it shows: it must not sit over Your review's rows. */
@@ -1613,5 +1625,18 @@ dialog.modal>.modal-box{max-height:calc(100dvh - 32px)}
 .diff-scroll{container-type:inline-size}
 /* Your review's title sits on the line the panel icons and the file name share: the head is as tall as twice the distance from the panel's top to that line. */
 .ledger-head{box-sizing:border-box;min-height:calc(2 * (var(--panel-icon-top) + var(--panel-icon-size,32px) / 2 - var(--chrome-h)));padding-block:0}
-/* The command key sits in the middle of its button. */
-.review-bar .bar-keys{display:grid;place-items:center}
+/* Phone: the bar is the page's controls. Its ☰ opens the list and its panel icon Your review, each over
+   the whole screen under the bar, with room at their foot so the bar never covers what they hold. */
+@media(max-width:740px){
+  /* --drawer-foot: the room a drawer leaves at its foot for the bar; a theme that sets a drawer's padding reads it. */
+  :root{--bar-room:calc(76px + env(safe-area-inset-bottom));--drawer-foot:var(--bar-room)}
+  .review-bar .bar-review{display:grid}
+  .navigation-open .sidebar{inset:0;z-index:25;width:100vw;max-width:none;max-height:none;padding-bottom:var(--drawer-foot);border:0}
+  .navigation-open .sidebar .sidebar-footer{display:grid}
+  body.ledger-open .ledger,body.zen.ledger-open .ledger{inset:0;z-index:25;width:100vw;max-width:none;padding-bottom:var(--drawer-foot)}
+  /* The overview's rows stack: what it is, its value, then what to do; the fold's chevron stays on its first line. */
+  .overview-reading :is(.overview-row,.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary,.ui-changes .shot-stack){grid-template-columns:minmax(0,1fr) auto;row-gap:4px}
+  .overview-reading :is(.overview-row,.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary,.ui-changes .shot-stack)>:not(:first-child,svg){grid-column:1 / -1}
+  .overview-reading :is(.overview-row-actions,.dcr-try-more){justify-self:start}
+  .overview-reading .risk-fold>summary>svg{grid-row:1;grid-column:2}
+}
