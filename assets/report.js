@@ -2777,7 +2777,7 @@
     const resolvedSection = settledAll.length ? fold('resolved', 'Resolved', settledAll.length, settledAll.map(comment => commentCard(comment)).join('')) : '';
     // With nothing left to do, one message says so, whether there never was anything or the
     // reader settled it all. What is settled stays folded below it.
-    const folded = settled.length + earlier.length;
+    const folded = settledAll.length + earlier.length;
     const clear = !inProgress && !feedback.findings.length && !failed.length && !pending && !current.some(comment => !comment.resolved)
       ? `<div class="overview-clear" data-overview-status>${icon('check-check')}<div><strong>All clear</strong><p>Nothing waits on you.${folded ? ` ${folded === 1 ? 'The comment is' : `The ${folded} comments are`} settled.` : ''}</p></div></div>` : '';
     const qa = review.qa;

@@ -1179,7 +1179,7 @@
     const path = earlier ? globalThis.ReviewTools.outdatedWhere(comment)?.path : (globalThis.ReviewTools.anchor(snapshot, comment)?.file.path || globalThis.ReviewTools.outdatedWhere(comment)?.path);
     const at = startedAt(comment, threads[comment.id]);
     const go = comment.general && !comment.outdated || !path ? null : {path, where: placeLines(comment, earlier)};
-    return UI.LedgerRow({id: comment.id, data: {conversation: '1', by: comment.author ? 'person' : 'agent', at, earlier: earlier ? '1' : null, state: resolved().includes(comment.id) ? 'resolved' : null},
+    return UI.LedgerRow({id: comment.id, data: {conversation: '1', by: comment.author ? 'person' : 'agent', at, earlier: earlier ? '1' : null},
       place: globalThis.ReviewTools.ledgerPlace(comment.id, comment.general && !comment.outdated ? '' : path, placeLines(comment, earlier)),
       face: byFace(comment), by: globalThis.ReviewTools.ledgerBy(tools.escape(byName(comment)), at), subject: titleHTML(comment.subject), go});
   };
@@ -1365,7 +1365,8 @@
       const forPR = !sentToAgent && (audience === 'pr' || (audience !== 'agent' && ghProvider.status().phase === 'ready'));
       const ghRow = ghData.posted?.[item.dataset.ledger] ? 'posted' : ghData.pending?.[item.dataset.ledger] ? 'pending' : 'draft';
       if (item.dataset.ghRow === undefined && forPR) item.dataset.ghRow = '';
-      const state = item.dataset.state === 'resolved' && own ? 'resolved' : forPR ? ghRow : STATE[thread?.delivery] || 'draft';
+      // Resolved is the row's last word, whoever wrote the comment: it is struck through as on the Overview.
+      const state = resolved().includes(item.dataset.ledger) || (item.dataset.state === 'resolved' && own) ? 'resolved' : forPR ? ghRow : STATE[thread?.delivery] || 'draft';
       set(item.dataset, 'state', state);
       const meta = item.querySelector('.ledger-meta');
       let status = meta.querySelector('.ledger-status');
