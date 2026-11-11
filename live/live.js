@@ -214,7 +214,7 @@
     // Under a thread the status line only says what is still happening; an answer is shown, not announced.
     // What became of the comment once its code changed: each agent's word, and the reader's closing buttons.
     const comment = comments().find(entry => entry.id === id);
-    const outcome = tools.closureHTML(thread, {plain: ledger, resolve: resolved().includes(id) ? null : id, still: !!comment && !comment.personal && online && !fixingId(), open: [...(openOpinions.get(id) || [])]});
+    const outcome = tools.closureHTML(thread, {plain: ledger, resolved: resolved().includes(id), resolve: resolved().includes(id) ? null : id, still: !!comment && !comment.personal && online && !fixingId(), open: [...(openOpinions.get(id) || [])]});
     // Your review is one thread in time: the closing block sits where it was said, among the messages.
     const html = tools.messagesHTML(thread, {seen, agent: listener, me, closure: ledger ? outcome : ''});
     // Keyed on the messages, not their text: "2 min ago" changes by itself and must not redraw.
@@ -408,7 +408,7 @@
   // Overview and on its row in Your review.
   const becameOf = id => {
     const closing = tools.closure(threads[id]);
-    return {state: closing?.state || 'none', label: !closing ? 'Not checked yet' : closing.state === 'waiting' ? 'Being checked' : closing.state === 'applies' ? 'Still applies' : resolved().includes(id) ? 'Resolved' : 'No longer a problem'};
+    return {state: resolved().includes(id) ? 'settled' : closing?.state || 'none', label: resolved().includes(id) ? 'Resolved' : !closing ? 'Not checked yet' : closing.state === 'waiting' ? 'Being checked' : closing.state === 'applies' ? 'Still applies' : 'No longer a problem'};
   };
   // A comment the agents differ on, or one sent back to be fixed, is the reader's to close: it
   // stays with the current comments until then.
@@ -1193,8 +1193,10 @@
   const peekHTML = (thread, id, earlier) => {
     const closing = tools.closure(thread);
     if (earlier || closing) {
-      const {label, state} = closing?.state === 'differ' ? {label: 'Not settled', state: 'differ'} : becameOf(id);
-      const against = (closing?.rows || []).slice(1).filter(row => closing.state === 'differ' && tools.outcomeSide(row.word) && tools.outcomeSide(row.word) !== closing.side);
+      // Once the reader resolved it, Resolved is the last word, whatever the agents still differ on.
+      const settledByYou = resolved().includes(id);
+      const {label, state} = settledByYou ? {label: 'Resolved', state: 'settled'} : closing?.state === 'differ' ? {label: 'Not settled', state: 'differ'} : becameOf(id);
+      const against = (closing?.rows || []).slice(1).filter(row => !settledByYou && closing.state === 'differ' && tools.outcomeSide(row.word) && tools.outcomeSide(row.word) !== closing.side);
       const note = against.length ? `${tools.names(against.map(row => tools.agentInfo(row.agent).name))} ${against.length === 1 ? 'says' : 'say'} ${closing.side === 'dealt' ? 'it still applies' : 'it is dealt with'}. You decide.` : '';
       return `<span class="dcr-peek-who"><span class="dcr-earlier-outcome dcr-c-${state}">${tools.escape(label)}</span><span class="dcr-peek-end">${chevron}</span></span>${note ? `<span class="dcr-peek-text">${tools.escape(note)}</span>` : ''}`;
     }

@@ -576,6 +576,38 @@ module SeriesChecks
       end
     end
 
+    # A checkout reviewed, the review taken back to the pull request before the push, then the push:
+    # the last revision has the code of the one the reviewer already read, and goes on from it.
+    checks['an update to code an earlier revision had brings back what was read and settled there'] = lambda do
+      require_relative '../lib/dcr/live_cli'
+      ReviewChecks.fixture do |root, _commit|
+        first = ReviewSeries.start(repo: root, name: 'again', report: initial(root))
+        series = File.dirname(File.dirname(first))
+        state = DCR::State.new(series)
+        original = File.read(File.join(root, 'sample.rb'))
+        changed = "class Sample\n  def value\n    3\n  end\nend\n"
+        key_of = ->(number) { DCR::State.review_key(ReviewSeries.manifest(series)['revisions'].find { |revision| revision['number'] == number }['fingerprint'], 'again', number) }
+        File.write(File.join(root, 'sample.rb'), changed)
+        assert(ReviewSeries.sync(repo: root, name: 'again')['revision'] == 2, 'The change was not saved as revision 2')
+        state.save_blob(key_of.call(2), state.read.dig('blobs', key_of.call(2)).to_h.merge('viewedFiles' => ['sample.rb']))
+        said = ->(number, word) { DCR::LiveCLI.reply(state, {dir: series, outcome: word, second_opinion: false, agent: 'claude'}, ['value-note', "Said of revision #{number}."], nil) }
+        said.call(2, 'addressed')
+        File.write(File.join(root, 'sample.rb'), original)
+        assert(ReviewSeries.sync(repo: root, name: 'again')['revision'] == 3, 'Going back was not saved as revision 3')
+        said.call(3, 'still-applies')
+        File.write(File.join(root, 'sample.rb'), changed)
+        result = ReviewSeries.sync(repo: root, name: 'again')
+        assert(result['revision'] == 4 && result['outdated_comments'].empty? && result['summary'].include?('the code of revision 2'), "The same code came back as new: #{result.slice('revision', 'summary', 'outdated')}")
+        key = key_of.call(4)
+        assert(state.read.dig('blobs', key, 'viewedFiles') == ['sample.rb'], 'A file read in revision 2 has to be read again in the same code')
+        note = DynamicReviews.extract(File.join(series, 'current.html'))['review']['comments'].find { |comment| comment['id'] == 'value-note' }
+        assert(note.dig('outdated', 'revision') == 1, "The comment is not where it was in revision 2: #{note}")
+        thread = state.read.dig('threads', key, 'value-note')
+        assert(thread['outcome'].values_at('verdict', 'revision') == ['addressed', 2], "What became of the comment in revision 2 did not come back: #{thread['outcome']}")
+        assert(thread['messages'].map { |message| message['body'] }.include?('Said of revision 3.'), 'What was said since was dropped from the conversation')
+      end
+    end
+
     checks['updates a review to the current code: comments follow their lines or become outdated'] = lambda do
       require_relative '../lib/dcr/live_cli'
       ReviewChecks.fixture do |root, _commit|

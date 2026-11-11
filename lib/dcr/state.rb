@@ -146,19 +146,39 @@ module DCR
     # viewed and keep a drawn preview. A changed file is no longer one JevMyPR marked reviewed
     # (autoReviewed), so its verdict on the new code marks it again. The block places one of the
     # reader's comments on the new code.
-    def carry_changed(from, to, kept)
+    # also: an earlier revision with exactly the new code. The files read there stay read, and what
+    # became of each comment there (its outcome and what was said of it) is its outcome again; what
+    # was said since stays in the conversation, as history.
+    def carry_changed(from, to, kept, also: nil)
       check_key(to)
       update do |state|
         if (blob = state['blobs'][from])
+          seen = also ? state['blobs'][also] || {} : {}
           state['blobs'][to] = Marshal.load(Marshal.dump(blob)).merge(
             'personalComments' => Array(blob['personalComments']).map { |comment| yield comment },
-            'viewedFiles' => Array(blob['viewedFiles']) & kept,
-            'autoReviewed' => Array(blob['autoReviewed']) & kept
+            'viewedFiles' => (Array(blob['viewedFiles']) & kept) | Array(seen['viewedFiles']),
+            'autoReviewed' => (Array(blob['autoReviewed']) & kept) | Array(seen['autoReviewed'])
           )
         end
         %w[threads github].each { |part| state[part][to] = Marshal.load(Marshal.dump(state[part][from])) if state[part][from] }
         state['previews'][to] = state['previews'][from].slice(*kept) if state['previews'][from]
+        (state['threads'][also] || {}).each { |id, then_thread| restore_outcome(state['threads'][to] ||= {}, id, then_thread) } if also
       end
+    end
+
+    # A comment's outcome as it was in an earlier revision of the same code. Messages that the
+    # conversation has since are kept; those about a later outcome become history.
+    def restore_outcome(threads, id, then_thread)
+      thread = threads[id]
+      return unless thread
+      thread.delete('outcome')
+      Array(thread['messages']).each { |message| message['about'] = 'earlier-outcome' if message['about'] == 'outcome' }
+      (thread['opinions'] || {}).each_value { |opinion| opinion['about'] = 'earlier-outcome' if opinion['about'] == 'outcome' }
+      return unless then_thread['outcome']
+      thread['outcome'] = Marshal.load(Marshal.dump(then_thread['outcome']))
+      said = Array(then_thread['messages']).select { |message| message['about'] == 'outcome' }.map { |message| message['id'] }
+      Array(thread['messages']).each { |message| message['about'] = 'outcome' if said.include?(message['id']) }
+      (then_thread['opinions'] || {}).each { |agent, opinion| (thread['opinions'] ||= {})[agent] = Marshal.load(Marshal.dump(opinion)) if opinion['about'] == 'outcome' }
     end
 
     # A revision saved again for the same code under another commit: everything kept for it,

@@ -733,16 +733,35 @@ module ReviewSeries
       changes = compare(previous['snapshot'], current)
       history['base'] = current['base'] # where the branch starts now, when it took in its base branch
       in_progress = previous.dig('review', 'status') == 'in_progress'
-      review = draft_review(previous['review'], current, changes, unexplained: true)
+      key = ->(revision, fingerprint) { DCR::State.review_key(fingerprint, name, revision) }
+      # Code the reviewer already had: an earlier revision with exactly this code (a checkout they
+      # reviewed, pushed after the review went back to the pull request) is where this one goes on
+      # from, with its explanations, its findings, where its comments sat and what became of them,
+      # and the files read in it. What changed since the latest revision is still said.
+      seen = history['revisions'][0...-1].reverse.lazy.map { |old| [old, DynamicReviews.extract(revision_path(path, old['number']))] }.find { |_, page| code_key(page['snapshot']) == code_key(current) }
+      if seen
+        seen_entry, seen_page = seen
+        seen_key = key.call(seen_entry['number'], seen_entry['fingerprint'])
+        seen_changes = compare(seen_page['snapshot'], current)
+        review = draft_review(seen_page['review'], current, seen_changes, unexplained: true)
+        # Where each comment sat in that revision: on its lines, or outdated as it was then.
+        posted_then = DCR::State.new(path).read.dig('comments', seen_key) || []
+        seen_comments = (Array(seen_page['review']['comments']).reject { |comment| posted_then.any? { |own| own['id'] == comment['id'] } } + posted_then).to_h do |comment|
+          match = comment['hunk'] && seen_changes['mapping'][comment['hunk']]
+          [comment['id'], match ? comment.merge('hunk' => match['hunk']) : comment]
+        end
+      else
+        review = draft_review(previous['review'], current, changes, unexplained: true)
+      end
       verified.call(review)
       place_unexplained(review, current)
       ranges = review['groups'].flat_map { |group| group['layers'] }.flat_map { |layer| layer['items'] }.flat_map { |item| item.fetch('summaries', {}).select { |_, prose| prose.strip.empty? }.keys }
       review['unreviewed'] = ranges unless in_progress || ranges.empty?
       anchors = DCR::Anchors.new(previous['snapshot'], current, changes['mapping'], entry['number'])
-      review['comments'] = with_posted(path, history, previous['review']).map { |comment| anchors.carry(comment) }
+      review['comments'] = with_posted(path, history, previous['review']).map { |comment| seen_comments&.[](comment['id']) || anchors.carry(comment) }
       # A finding stays open on a range that did not change; on one that did it needs checking again.
-      findings = Array(previous['review']['findings'])
-      review['findings'] = findings.filter_map { |finding| changes['mapping'][finding['hunk']]&.then { |match| finding.merge('hunk' => match['hunk']) } }
+      findings = Array((seen ? seen_page : previous)['review']['findings'])
+      review['findings'] = findings.filter_map { |finding| (seen ? seen_changes : changes)['mapping'][finding['hunk']]&.then { |match| finding.merge('hunk' => match['hunk']) } }
       lost = findings.map { |finding| finding['id'] } - review['findings'].map { |finding| finding['id'] }
       states = (previous['review'].dig('history', 'finding_states') || []).map do |state|
         lost.include?(state['id']) ? state.merge('status' => 'needs-rechecking', 'change' => 'needs-rechecking', 'reason' => 'The code it was found in changed in an update. Not checked again.') : state
@@ -756,13 +775,19 @@ module ReviewSeries
       review['screenshots'] = shots if shots.any?
       summary = "#{"This review is pull request ##{comparison['pr_number']}'s now. " if comparison}Updated to #{head ? 'the pull request as pushed' : 'the code as it is now'}: #{count(changed.length, 'file')} changed since revision #{entry['number']}"
       summary += in_progress || ranges.empty? ? '.' : ", #{count(ranges.length, 'range')} not reviewed yet."
+      summary += " It is the code of revision #{seen_entry['number']}, so what you read and settled there comes back." if seen
       summary += " #{count(outdated.length, 'comment')} #{outdated.length == 1 ? 'is' : 'are'} outdated." if outdated.any?
       summary += " #{count(dropped.length, 'screenshot')} of changed files #{dropped.length == 1 ? 'was' : 'were'} dropped." if dropped.any?
-      key = ->(revision, fingerprint) { DCR::State.review_key(fingerprint, name, revision) }
       DynamicReviews.validate(current, review)
       # The reader's side first, so a page that opens the new revision at once finds it there.
       state = DCR::State.new(path)
-      state.carry_changed(key.call(entry['number'], entry['fingerprint']), key.call(entry['number'] + 1, current['fingerprint']), kept) { |comment| anchors.carry(comment, full: true) }
+      new_key = key.call(entry['number'] + 1, current['fingerprint'])
+      if seen
+        seen_own = Array(state.read.dig('blobs', seen_key, 'personalComments')).to_h { |comment| match = comment['hunk'] && seen_changes['mapping'][comment['hunk']]; [comment['id'], match ? comment.merge('hunk' => match['hunk']) : comment] }
+        state.carry_changed(key.call(entry['number'], entry['fingerprint']), new_key, kept, also: seen_key) { |comment| seen_own[comment['id']] || anchors.carry(comment, full: true) }
+      else
+        state.carry_changed(key.call(entry['number'], entry['fingerprint']), new_key, kept) { |comment| anchors.carry(comment, full: true) }
+      end
       delta = since(previous['snapshot'], current, entry['number'])
       append(path, history, current, review, {'summary' => summary, 'files' => changes['files'], 'reused_ranges' => changes['mapping'].length,
              'inspected_ranges' => 0, 'changed_context' => [], 'groups' => {}, 'finding_states' => states, 'update' => true, 'since' => delta})
@@ -779,7 +804,7 @@ module ReviewSeries
        'key' => key.call(entry['number'] + 1, current['fingerprint']),
        'files' => changed.map { |file| file.slice('path', 'state') }, 'outdated' => outdated.map { |comment| comment['id'] },
        'screenshots_dropped' => dropped.map { |shot| shot.slice('id', 'title', 'page', 'comment_id') },
-       'unreviewed' => changes['required_hunks'].map { |hunk| hunk.slice('path', 'hunk', 'patch') }}
+       'unreviewed' => (seen ? seen_changes : changes)['required_hunks'].map { |hunk| hunk.slice('path', 'hunk', 'patch') }}
     end
   end
 

@@ -106,7 +106,8 @@ globalThis.LiveTools = (() => {
   // once: the headline is what became of it, and the checks say who agrees. open: the agents the
   // reader toggled. resolve: the comment's id while it is not resolved. still: it can be sent
   // back to the agent as a fix. plain: offer Resolve here too (off where the card has its own).
-  function closureHTML(thread, {resolve = null, still = false, open = [], plain = true} = {}) {
+  // resolved: the reader closed it; their word ends any disagreement, so nothing asks them to decide.
+  function closureHTML(thread, {resolve = null, still = false, open = [], plain = true, resolved = false} = {}) {
     const closing = closure(thread);
     if (!closing) return '';
     const toggled = new Set(open);
@@ -114,9 +115,9 @@ globalThis.LiveTools = (() => {
     const fixed = thread.fix?.state === 'done' && closing.side === 'dealt';
     const name = row => agentInfo(row.agent).name;
     const against = checks.filter(row => SIDES[row.word] && SIDES[row.word] !== closing.side);
-    const head = closing.state === 'differ' ? 'Not settled' : closing.side === 'applies' ? 'Still applies' : fixed ? 'Fixed' : 'No longer a problem';
+    const head = resolved ? 'Resolved' : closing.state === 'differ' ? 'Not settled' : closing.side === 'applies' ? 'Still applies' : fixed ? 'Fixed' : 'No longer a problem';
     // Only a disagreement needs a sentence: the headline no longer says what the agent found.
-    const differ = closing.state === 'differ';
+    const differ = closing.state === 'differ' && !resolved;
     const note = differ ? `${names(against.map(name))} ${against.length === 1 ? 'says' : 'say'} ${closing.side === 'dealt' ? 'it still applies' : 'it is dealt with'}. You decide.` : '';
     const did = !differ ? '' : fixed ? 'fixed it' : {addressed: 'says the new code deals with it', 'not-relevant': 'says it no longer matters', 'still-applies': 'says it still applies'}[main.word];
     const said = row => row.failed ? 'did not answer' : !SIDES[row.word] ? 'gave no clear answer' : SIDES[row.word] === closing.side ? 'agrees' : SIDES[row.word] === 'applies' ? 'says it still applies' : 'says it is dealt with';
@@ -133,7 +134,7 @@ globalThis.LiveTools = (() => {
     const buttons = !id ? '' : differ
       ? `${UI.Button({label: 'No longer a problem · Resolve', variant: 'primary', attrs: {'data-resolve': resolve, 'data-dcr-side': 'dealt'}})}${still ? UI.Button({label: 'Still a problem · Fix this', variant: null, attrs: {'data-dcr-still': resolve, 'data-dcr-side': 'applies'}}) : ''}`
       : plain ? UI.Button({label: 'Resolve', variant: closing.state === 'settled' ? 'primary' : null, attrs: {'data-resolve': resolve, 'data-dcr-side': closing.side}}) : '';
-    return `<section class="dcr-closure dcr-c-${closing.state}" aria-label="What became of this comment"><header class="dcr-closure-head"><strong>${head}</strong>${note ? `<span>${escape(note)}</span>` : ''}<span class="dcr-closure-rev">revision ${escape(closing.revision)}</span></header>`
+    return `<section class="dcr-closure dcr-c-${resolved ? 'settled' : closing.state}" aria-label="What became of this comment"><header class="dcr-closure-head"><strong>${head}</strong>${note ? `<span>${escape(note)}</span>` : ''}<span class="dcr-closure-rev">revision ${escape(closing.revision)}</span></header>`
       + `<div class="dcr-closure-main">${face(main.agent, 'sm')}<div class="dcr-closure-told"><p class="dcr-closure-by"><strong>${escape(name(main))}</strong>${did ? ` ${did}` : ''}${modelHTML(main)}</p>${String(main.body || '').trim() ? `<div class="dcr-body">${markdown(main.body)}</div>` : ''}`
       + `${chips ? `<div class="dcr-checks" aria-label="Checked by">${chips}</div>` : ''}${opened}</div></div>${buttons ? `<div class="dcr-closure-actions">${buttons}</div>` : ''}</section>`;
   }
