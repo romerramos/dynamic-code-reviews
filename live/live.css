@@ -38,6 +38,9 @@
 .dcr-state{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 14px;font-size:13px;color:var(--muted)}
 .dcr-state:empty{display:none}
 .dcr-state time{opacity:.8}
+.dcr-state-line{flex:1 1 100%;display:grid;grid-template-columns:var(--message-face-col,32px) minmax(0,1fr);column-gap:var(--message-gap,10px);align-items:center}
+.dcr-state-face{display:grid;place-items:center}
+.dcr-state-text{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px}
 .dcr-dot{flex:none;width:8px;height:8px;border-radius:calc(50% * var(--round));background:var(--dcr-off)}
 .dcr-tone-wait,.dcr-tone-work{background:var(--dcr-work)}
 .dcr-tone-done{background:var(--dcr-ok)}
