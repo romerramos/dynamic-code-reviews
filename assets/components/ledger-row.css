@@ -14,7 +14,7 @@
 .ui-ledger-row .ledger-at{display:grid;place-items:center;align-self:start;width:24px;height:20px;padding:0;border:0;border-radius:calc(6px * var(--round));background:none;color:var(--comment-quiet);cursor:pointer}
 .ui-ledger-row .ledger-at:hover{background:var(--bg-neutral-2);color:var(--ink)}
 .ui-ledger-row .ledger-at svg{width:14px;height:14px;stroke-width:1.8}
-.ui-ledger-row .dcr-peek{width:auto;padding:5px 0 0 52px}
+.ui-ledger-row .dcr-peek{margin:5px 0 0}
 .ui-ledger-row .dcr-peek :is(b,.dcr-peek-when,.dcr-peek-end){display:none}
 .ui-ledger-row .dcr-peek-faces{gap:6px}
 .ui-ledger-row .dcr-peek-faces>.ui-avatar{--avatar-size:var(--peek-face,18px);margin:0;box-shadow:none;filter:none;opacity:1}

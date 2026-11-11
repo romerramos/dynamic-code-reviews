@@ -3197,7 +3197,8 @@
   // A row is one thing to open: a click on what was said opens its conversation when it has one (the
   // served review adds it), else its place in the code; the place line above it always goes to the code.
   function ledgerClick(event) {
-    const said = event.target.closest('.ledger-msg');
+    // The replies line has its own way in: it is in what was said, not a click on it.
+    const said = !event.target.closest('[data-dcr-open]') && event.target.closest('.ledger-msg');
     if (said) { const item = said.closest('.ledger-item'); (item.querySelector('[data-dcr-open]') || item.querySelector('[data-ledger-jump]'))?.click(); return; }
     const jumpTo = event.target.closest('[data-ledger-jump]');
     if (jumpTo) rememberOverview();

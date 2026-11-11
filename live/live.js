@@ -1209,15 +1209,14 @@
     // Your own comment goes by its short title, once it has one.
     const subject = item.querySelector(':scope > .ledger-msg > .ledger-subject');
     if (thread?.title && subject && subject.dataset.title !== thread.title) { subject.innerHTML = titleHTML(thread.title); subject.dataset.title = thread.title; }
-    let peek = item.querySelector(':scope > .dcr-peek');
+    let peek = item.querySelector(':scope > .ledger-msg > .dcr-peek');
     if (!hasConversation(thread) && !item.dataset.earlier) { peek?.remove(); return; }
     if (!peek) {
       peek = Object.assign(document.createElement('button'), {type: 'button', className: 'dcr-peek'});
       peek.dataset.dcrOpen = item.dataset.ledger;
       peek.setAttribute('aria-label', `Open the conversation about ${comment?.subject || 'this comment'}`);
-      // The answer follows what it answers; the row's actions come after both.
-      const meta = item.querySelector(':scope > .ledger-meta');
-      meta ? meta.before(peek) : item.append(peek);
+      // Who answered sits under the title, in the title's column of the row's grid.
+      item.querySelector(':scope > .ledger-msg').append(peek);
     }
     const html = peekHTML(thread, item.dataset.ledger, !!item.dataset.earlier);
     if (peek.dataset.html !== html) { peek.innerHTML = html; peek.dataset.html = html; }
