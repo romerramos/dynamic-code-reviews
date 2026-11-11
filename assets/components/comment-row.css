@@ -10,6 +10,9 @@
 .ui-comment-face{display:grid;place-items:center;height:var(--comment-face-col,28px);--avatar-size:var(--comment-face-size,24px)}
 .ui-comment-title{display:block;min-width:0;margin:0;font-size:var(--comment-title-size,15px);font-weight:var(--comment-title-weight,550);line-height:var(--comment-title-line,1.4);color:var(--comment-title-ink,var(--ink-neutral-2))}
 .ui-comment-title code{font:.9em var(--mono)}
+/* A finding's priority opens its title, in the quiet ink; P0 and P1 in the alarm's. */
+.ui-comment-priority{margin-right:.5em;font:600 .78em var(--mono);color:var(--comment-quiet,var(--muted))}
+.ui-comment-priority:is([data-priority="P0"],[data-priority="P1"]){color:var(--ink-red-2)}
 details[open]>.ui-comment-line .ui-comment-title{font-weight:var(--comment-open-title-weight,600)}
 .ui-comment-tags{display:var(--comment-tags,flex);align-items:center;gap:6px}
 .ui-comment-tags:empty{display:none}

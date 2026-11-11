@@ -461,9 +461,12 @@ globalThis.ReviewTools = (() => {
     const comments = (review.comments || []).map(comment => ({...comment}));
     const findings = review.findings || [];
     const remaining = findings.filter(finding => {
+      // A finding that names its comment is that comment, whatever its label (a question or a
+      // nitpick too): the issue is said once, by the comment, with the finding's priority on it.
+      // One that names none is matched only when it is the one issue on its hunk.
       const candidates = comments.filter(comment => comment.label === 'issue' && comment.hunk === finding.hunk);
       const match = finding.comment_id
-        ? candidates.find(comment => comment.id === finding.comment_id)
+        ? comments.find(comment => comment.id === finding.comment_id)
         : candidates.length === 1 && findings.filter(other => other.hunk === finding.hunk).length === 1 ? candidates[0] : null;
       if (!match) return true;
       match.severity = finding.severity;

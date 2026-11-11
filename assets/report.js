@@ -2224,7 +2224,7 @@
     return UI.CommentCard({id: comment.id, open: threadsOpen.has(comment.id), resolved: comment.resolved, earlier: closed, own: comment.personal,
       row: {subject: comment.subject, title, face: authorFace(comment), go: found && comment.hunk ? {path: found.file.path, range} : null,
         tags: comment.personal && comment.audience === 'agent' ? '' : UI.Tag(comment.label),
-        place: place(found ? found.file.path : was?.path, found ? comment.start : comment.outdated?.start), state: stateWord(comment, closed)},
+        place: place(found ? found.file.path : was?.path, found ? comment.start : comment.outdated?.start), state: stateWord(comment, closed), priority: comment.severity || ''},
       meta: threadMeta(comment, found?.file.path || was?.path, found ? range : was?.lines),
       body: `${told ? `<div class="comment-discussion">${ReviewTools.markdown(told)}</div>` : ''}${wasCode}${follows}${commentShots(comment)}${commentEvidence(comment)}`,
       source,

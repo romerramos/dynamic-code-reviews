@@ -114,6 +114,7 @@ assert.equal(tools.overviewFeedback({comments:[issue],findings:[finding,{...find
 assert.equal(tools.overviewFeedback({comments:[issue,{...issue,id:'c2'}],findings:[finding]}).findings.length,1);
 assert.equal(tools.overviewFeedback({comments:[issue,{...issue,id:'c2'}],findings:[{...finding,comment_id:'c1'}]}).findings.length,0);
 assert.equal(tools.overviewFeedback({comments:[issue],findings:[{...finding,comment_id:'missing'}]}).findings.length,1);
+assert.deepEqual(tools.overviewFeedback({comments:[{...issue,label:'question'}],findings:[{...finding,comment_id:'c1'}]}), {comments:[{...issue,label:'question',severity:'P2'}],findings:[]});
 assert.deepEqual(tools.overviewFeedback({}),{comments:[],findings:[]});
 console.log('PASS overview deduplicates only matching issues and retains unmatched findings');
 const endpoints = {mode:'pr',base:'abcdef123',head:'123456789'};
