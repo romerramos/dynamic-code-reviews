@@ -140,6 +140,9 @@
   const quoteHTML = comment => {
     if (!comment) return '';
     const text = (comment.personal ? [comment.subject, comment.discussion] : [comment.discussion]).filter(Boolean).join('\n\n').trim();
+    // A comment that is all title (a teammate's one-line GitHub comment) has said everything in the
+    // bar above: no first message, rather than an empty one.
+    if (!text) return '';
     const who = comment.personal ? `<span class="you-name">${tools.escape(tools.youName(me))}</span>` : tools.escape(byName(comment));
     // Asking your own agent needs no label: the conversation is with it.
     const kind = (comment.audience === 'agent' ? '' : [comment.label, comment.decoration].filter(Boolean).join(' · ')).replace(/^./, letter => letter.toUpperCase());
