@@ -80,7 +80,7 @@ module DCR
 
         Attach everything in one go, which saves one revision the open review offers to the reviewer. This QA review replaces the clips of any previous QA review (the reviewer's own recordings stay), so record every item worth showing now, not only what is new:
         #{dcr} evidence attach #{flags} --file <items.json>
-        items.json: [{"path": "<saved file>", "comment_id": "<review comment id, or omit>", "screenshot_id": "<screenshot id, or omit>", "title": "<what the clip shows>", "result": "passed or failed", "expected": "<one short sentence on what should happen, in the reader's words, never 'works as intended'>", "observed": "<one sentence on what you saw>", "page": "<app path>"}]
+        items.json: [{"path": "<saved file>", "comment_id": "<review comment id, or omit>", "screenshot_id": "<screenshot id, or omit>", "title": "<what the clip shows>", "result": "passed or failed", "observed": "<one short sentence on what you saw>", "expected": "<only when it failed: one short sentence on what should happen instead>", "page": "<app path>"}]
         Use a review comment's id as comment_id so the clip appears on that comment. For a comment on the app, put its id in the title and reply in that thread with what you saw.
 
         Then reply to this thread: #{dcr} reply #{flags} #{id} '<what you recorded, what you skipped and why, and the data you created>'

@@ -667,8 +667,8 @@ html[data-theme^="minimal-"] body.review-in-progress .overview-reading .dcr-try:
 [data-theme^="minimal-"] .dcr-qa-done .dcr-qa-check{display:inline-grid;place-items:center;width:18px;height:18px;margin-top:1px;border:0;border-radius:0;background:none;box-shadow:none;color:var(--ink)}
 [data-theme^="minimal-"] .dcr-qa-done .dcr-qa-check svg{width:16px;height:16px}
 
-/* --- What QA recorded, drawn as the rest of the Overview: no grey cards. In a comment, Actual and
-   Expected are the comment's own size and the recording a small framed still with one quiet line;
+/* --- What QA recorded, drawn as the rest of the Overview: no grey cards. In a comment, what was seen
+   (or what should happen and what did instead) is the comment's own size and the recording a small framed still with one quiet line;
    Other flows checked is a heading like Agent comments, each flow a row. --- */
 [data-theme^="minimal-"] .overview-reading .qa-journey{margin:10px 0 0;padding:0;border:0;background:none;font-size:14.5px}
 [data-theme^="minimal-"] .overview-reading .qa-journey .qa-route:empty{display:none}

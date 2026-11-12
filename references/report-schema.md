@@ -191,8 +191,9 @@ still accounts for every changed visual template.
 Top-level `qa` is absent for nonvisual changes. It accepts `status` (pending,
 awaiting-environment, complete, partial, blocked, skipped), the exact snapshot `fingerprint`, `summary`,
 `environment`, and `flows`. Each flow has `title`, text `steps`, `observed`,
-`result` (passed, failed, blocked, not-run) and `assets`, and `expected` when there is
-something specific to expect (left out, the page shows no Expected line). The attachment
+`result` (passed, failed, blocked, not-run) and `assets`, and, on a failed flow, `expected`:
+one short sentence on what should happen. A passed flow shows only what was seen (the comment says
+what the change should do); a failed one shows Should and Instead. The attachment
 helper turns local asset `path` into a validated embedded `data_uri`; each asset
 needs a `caption` and may reference an existing generated `comment_id`.
 For an interaction, set flow `motion_preview` to a local WebM/MP4 asset with a

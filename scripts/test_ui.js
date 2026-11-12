@@ -152,15 +152,15 @@ console.log('PASS scope labels distinguish review modes and evidence links targe
 console.log('PASS Comment on GitHub links the PR lines GitHub names by the SHA-256 of the file path');
 
 const evidenceComment = {...comment,id:'c1',discussion:''};
-const evidenceQA = {flows:[{comment_id:'c1',steps:['Open the list.','Reopen the conversation.'],expected:'Row returns.',observed:'Row is missing.',assets:[]}]};
+const evidenceQA = {flows:[{comment_id:'c1',result:'failed',steps:['Open the list.','Reopen the conversation.'],expected:'Row returns.',observed:'Row is missing.',assets:[]}]};
 const post = tools.postingText(snapshot,evidenceComment,evidenceQA);
 assert.match(post,/File: app\/example.rb \(after lines 11–12\)/);
 assert.match(post,/1\. Open the list\.\n2\. Reopen the conversation\./);
-assert.match(post,/Expected: Row returns\.\nActual: Row is missing\./);
+assert.match(post,/Should: Row returns\.\nInstead: Row is missing\./);
 assert.ok(!post.includes('safe()') && !post.includes('Source:') && !post.includes('resolved locally'));
-for (const expected of ['', 'The change behaves as intended.']) {
-  const said = tools.postingText(snapshot,evidenceComment,{flows:[{...evidenceQA.flows[0],expected}]});
-  assert.ok(!said.includes('Expected:') && said.includes('Actual: Row is missing.'), 'a recording that said nothing it expected adds no Expected line');
+for (const flow of [{expected:''}, {expected:'The change behaves as intended.'}, {result:'passed'}]) {
+  const said = tools.postingText(snapshot,evidenceComment,{flows:[{...evidenceQA.flows[0],...flow}]});
+  assert.ok(!said.includes('Should:') && /(Failed|Seen in the app): Row is missing\./.test(said), 'a check that passed, or failed without a real expectation, says only what was seen');
 }
 assert.match(tools.commentText(snapshot,evidenceComment,evidenceQA),/11 \| safe\(\)/);
 assert.match(tools.commentText(snapshot,evidenceComment,evidenceQA),/2\. Reopen the conversation\./);

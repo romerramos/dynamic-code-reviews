@@ -234,15 +234,20 @@ globalThis.ReviewTools = (() => {
     const found = anchor(snapshot, comment);
     return found ? found.lines.map(line => `${line[comment.side]} | ${line.text}`).join('\n') : '';
   }
-  // What a recording expected, when it said: older recordings saved a stock line in its place.
-  function flowExpected(flow) {
+  // What a recording says, in at most two short lines. A check that passed says what was seen (the
+  // comment already says what the change should do); one that failed says what should happen and
+  // what happened instead. Older recordings saved a stock expectation, which says nothing.
+  function flowLines(flow) {
     const expected = String(flow?.expected || '').trim();
-    return expected === 'The change behaves as intended.' ? '' : expected;
+    const said = expected && !/^(the change )?(behaves|works) as intended\.?$/i.test(expected);
+    if (flow?.result === 'failed' && said) return [{kind: 'expected', label: 'Should', text: expected}, {kind: 'result', label: 'Instead', text: flow.observed}];
+    const label = {failed: 'Failed', blocked: 'Blocked', 'not-run': 'Not run'}[flow?.result] || 'Seen in the app';
+    return [{kind: 'result', label, text: flow?.observed}];
   }
   function commentBody(comment, qa) {
     const evidence = evidenceFlows(qa, comment).map(index => {
       const flow = qa.flows[index];
-      return `${flow.steps.map((step, i) => `${i + 1}. ${step}`).join('\n')}\n\n${flowExpected(flow) ? `Expected: ${flowExpected(flow)}\n` : ''}Actual: ${flow.observed}`;
+      return `${flow.steps.map((step, i) => `${i + 1}. ${step}`).join('\n')}\n\n${flowLines(flow).map(line => `${line.label}: ${line.text}`).join('\n')}`;
     });
     return [comment.discussion, ...evidence].filter(Boolean).join('\n\n');
   }
@@ -616,5 +621,5 @@ globalThis.ReviewTools = (() => {
     return views.includes(savedView) ? savedView : 'overview';
   };
 
-  return {whenText, ledgerPlace, ledgerBy, pathParts, pathFit, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, where, scopeLabel, sha256, githubLink, evidenceFlows, flowExpected, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  return {whenText, ledgerPlace, ledgerBy, pathParts, pathFit, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, where, scopeLabel, sha256, githubLink, evidenceFlows, flowLines, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();
