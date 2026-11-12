@@ -93,7 +93,7 @@ module DCR
       file = capture_file(capture_dir, input['path'])
       title = text(input['title'], 'A title')
       observed = text(input['observed'], 'What you saw')
-      expected = input['expected'].to_s.strip.then { |value| value.empty? ? 'The change behaves as intended.' : value[0, FIELD_LIMIT] }
+      expected = input['expected'].to_s.strip[0, FIELD_LIMIT]
       raise ArgumentError, 'Choose passed or failed' unless RESULTS.include?(input['result'])
       comment_id = input['comment_id'].to_s
       unless comment_id.empty? || Array(review['comments']).any? { |comment| comment['id'] == comment_id }

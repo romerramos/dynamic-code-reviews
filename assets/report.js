@@ -2399,7 +2399,7 @@
   }
   function qaFlow(flow, index, showTitle = true) {
     const labels = {passed:'Passed', failed:'Failed', blocked:'Blocked', 'not-run':'Not run'};
-    return `<div class="qa-journey" id="qa-flow-${index}" tabindex="-1">${showTitle ? `<h3>${escape(flow.title)}</h3>` : ''}<p class="qa-route">${(flow.journey || []).map(escape).join(' → ')}</p><p class="qa-result ${escape(flow.result)}">${showTitle ? `<strong>${labels[flow.result]}:</strong> ` : '<strong>Actual:</strong> '}${escape(flow.observed)}</p><p class="qa-expected"><strong>Expected:</strong> ${escape(flow.expected)}</p>${qaPreview(flow, index)}</div>`;
+    return `<div class="qa-journey" id="qa-flow-${index}" tabindex="-1">${showTitle ? `<h3>${escape(flow.title)}</h3>` : ''}<p class="qa-route">${(flow.journey || []).map(escape).join(' → ')}</p><p class="qa-result ${escape(flow.result)}">${showTitle ? `<strong>${labels[flow.result]}:</strong> ` : '<strong>Actual:</strong> '}${escape(flow.observed)}</p>${ReviewTools.flowExpected(flow) ? `<p class="qa-expected"><strong>Expected:</strong> ${escape(ReviewTools.flowExpected(flow))}</p>` : ''}${qaPreview(flow, index)}</div>`;
   }
   function commentEvidence(comment) {
     const indices = ReviewTools.evidenceFlows(review.qa, comment);
@@ -2553,7 +2553,7 @@
     const content = document.createElement('section');
     content.className = 'qa-evidence-modal';
     const media = flow.motion_preview ? `${renderQAAsset(flow.motion_preview, shotOf(flow) || (flow.assets || []).filter(asset => asset.data_uri.startsWith('data:image/')).at(-1))}${flow.assets?.length ? `<details class="qa-original-frames"><summary>Inspect ${flow.assets.length} original frame${flow.assets.length === 1 ? '' : 's'}</summary>${flow.assets.map(renderQAAsset).join('')}</details>` : ''}` : flow.presentation === 'sequence' ? renderQASequence(flow,index) : (flow.assets || []).map(renderQAAsset).join('');
-    content.innerHTML = `<header><span class="qa-preview-status ${escape(flow.result)}">${escape(flow.result)}</span><h2>${escape(flow.title)}</h2><p>${(flow.journey || []).map(escape).join(' → ')}</p></header><div class="qa-evidence-scroll">${media}<div class="qa-evidence-explanation"><p><strong>Actual:</strong> ${escape(flow.observed)}</p><p><strong>Expected:</strong> ${escape(flow.expected)}</p><h3>Steps checked</h3><ol>${flow.steps.map(step => `<li>${escape(step)}</li>`).join('')}</ol></div></div>`;
+    content.innerHTML = `<header><span class="qa-preview-status ${escape(flow.result)}">${escape(flow.result)}</span><h2>${escape(flow.title)}</h2><p>${(flow.journey || []).map(escape).join(' → ')}</p></header><div class="qa-evidence-scroll">${media}<div class="qa-evidence-explanation"><p><strong>Actual:</strong> ${escape(flow.observed)}</p>${ReviewTools.flowExpected(flow) ? `<p><strong>Expected:</strong> ${escape(ReviewTools.flowExpected(flow))}</p>` : ''}<h3>Steps checked</h3><ol>${flow.steps.map(step => `<li>${escape(step)}</li>`).join('')}</ol></div></div>`;
     expandedViewer.setElements([{type:'inline', content, width:'min(96vw, 1080px)', height:'92vh', draggable:false}]);
     expandedViewer.open();
     // Playback follows the explicit evidence click, never overview hover/load.

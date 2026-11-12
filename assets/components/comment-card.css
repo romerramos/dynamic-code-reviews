@@ -22,6 +22,8 @@
 .ui-comment-body{display:block;padding:var(--comment-body-top) var(--comment-pad) var(--comment-body-bottom) calc(var(--comment-pad) + var(--comment-indent))}
 .ui-comment-body .thread-meta{display:var(--comment-meta);flex-wrap:wrap;gap:2px 8px;margin:4px 0 16px;color:var(--comment-quiet);font-size:12.5px}
 .ui-comment-body .thread-meta i{font-style:normal;opacity:.6}
+/* What QA recorded for the comment reads as more of its words: the same width, not the card's. */
+.ui-comment-body .qa-journey{max-width:var(--comment-text-width)}
 .ui-comment-body .comment-discussion{max-width:var(--comment-text-width);margin:0;color:var(--ink-neutral-3);font-size:var(--comment-text-size);line-height:var(--comment-text-line)}
 .ui-comment>.thread-details>.thread-source{display:var(--comment-source);width:auto;margin:0 0 18px calc(var(--comment-pad) + var(--comment-indent))}
 .ui-comment>.dcr-thread{max-width:calc(var(--comment-text-width) + var(--comment-indent) + 2 * var(--comment-pad));margin:var(--comment-thread-top) 0 0;padding:var(--comment-thread-pad-top) var(--comment-pad) 0;border:0;background:transparent}

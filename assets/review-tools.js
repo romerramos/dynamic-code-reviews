@@ -234,10 +234,15 @@ globalThis.ReviewTools = (() => {
     const found = anchor(snapshot, comment);
     return found ? found.lines.map(line => `${line[comment.side]} | ${line.text}`).join('\n') : '';
   }
+  // What a recording expected, when it said: older recordings saved a stock line in its place.
+  function flowExpected(flow) {
+    const expected = String(flow?.expected || '').trim();
+    return expected === 'The change behaves as intended.' ? '' : expected;
+  }
   function commentBody(comment, qa) {
     const evidence = evidenceFlows(qa, comment).map(index => {
       const flow = qa.flows[index];
-      return `${flow.steps.map((step, i) => `${i + 1}. ${step}`).join('\n')}\n\nExpected: ${flow.expected}\nActual: ${flow.observed}`;
+      return `${flow.steps.map((step, i) => `${i + 1}. ${step}`).join('\n')}\n\n${flowExpected(flow) ? `Expected: ${flowExpected(flow)}\n` : ''}Actual: ${flow.observed}`;
     });
     return [comment.discussion, ...evidence].filter(Boolean).join('\n\n');
   }
@@ -611,5 +616,5 @@ globalThis.ReviewTools = (() => {
     return views.includes(savedView) ? savedView : 'overview';
   };
 
-  return {whenText, ledgerPlace, ledgerBy, pathParts, pathFit, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, where, scopeLabel, sha256, githubLink, evidenceFlows, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  return {whenText, ledgerPlace, ledgerBy, pathParts, pathFit, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, where, scopeLabel, sha256, githubLink, evidenceFlows, flowExpected, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();

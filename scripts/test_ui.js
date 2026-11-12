@@ -158,6 +158,10 @@ assert.match(post,/File: app\/example.rb \(after lines 11–12\)/);
 assert.match(post,/1\. Open the list\.\n2\. Reopen the conversation\./);
 assert.match(post,/Expected: Row returns\.\nActual: Row is missing\./);
 assert.ok(!post.includes('safe()') && !post.includes('Source:') && !post.includes('resolved locally'));
+for (const expected of ['', 'The change behaves as intended.']) {
+  const said = tools.postingText(snapshot,evidenceComment,{flows:[{...evidenceQA.flows[0],expected}]});
+  assert.ok(!said.includes('Expected:') && said.includes('Actual: Row is missing.'), 'a recording that said nothing it expected adds no Expected line');
+}
 assert.match(tools.commentText(snapshot,evidenceComment,evidenceQA),/11 \| safe\(\)/);
 assert.match(tools.commentText(snapshot,evidenceComment,evidenceQA),/2\. Reopen the conversation\./);
 const general = {id:'mine-general',general:true,personal:true,label:'question',decoration:'non-blocking',subject:'Check the empty list',discussion:'Can we clarify the empty state?',resolved:true};
