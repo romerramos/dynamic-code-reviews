@@ -556,6 +556,10 @@ html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;ma
 [data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-more button{color:var(--ink);font-size:13px;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:4px}
 [data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-more button:hover{text-decoration-color:currentColor}
 [data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-templates{display:none}
+/* While the agent still writes the review, QA and previews are not there yet: their rows wait unseen
+   rather than greyed, and with nothing else to try the band waits too. */
+html[data-theme^="minimal-"] body.review-in-progress .overview-reading .dcr-try :is(.dcr-try-app,.dcr-try-previews){display:none}
+html[data-theme^="minimal-"] body.review-in-progress .overview-reading .dcr-try:not(:has(:is(.dcr-try-line:not([hidden]),.dcr-try-none))){display:none}
 [data-theme^="minimal-"] .overview-reading .dcr-try-risk .risk-brief{display:none}
 [data-theme^="minimal-"] .overview-reading .dcr-try-risk.is-open .risk-brief{display:block;grid-column:2 / -1;margin:4px 0 4px}
 [data-theme^="minimal-"] .overview-reading .dcr-try-risk .risk-brief h2{display:none}
