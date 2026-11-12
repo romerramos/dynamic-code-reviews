@@ -35,7 +35,7 @@ ReviewChecks.fixture do |root, _commit|
     base = {'path' => png, 'title' => 'Value page', 'result' => 'failed', 'observed' => 'The value shows 2'}
 
     [[{'path' => ''}, 'no file'], [{'path' => '/etc/passwd'}, 'file outside the capture directory'],
-     [{'title' => ' '}, 'blank title'], [{'observed' => ''}, 'blank observation'], [{'result' => 'maybe'}, 'unknown result'],
+     [{'title' => ' '}, 'blank title'], [{'observed' => ''}, 'blank observation'], [{'result' => 'maybe'}, 'unknown result'], [{'expected' => 'The change behaves as intended.'}, 'a stock expectation'],
      [{'comment_id' => 'nope'}, 'unknown comment']].each do |change, label|
       rejected(label) { DCR::Evidence.attach(series_dir: series_dir, capture_dir: captures, input: base.merge(change)) }
     end
@@ -44,14 +44,14 @@ ReviewChecks.fixture do |root, _commit|
     File.symlink('/etc/hosts', File.join(captures, 'link.png'))
     rejected('symlink') { DCR::Evidence.attach(series_dir: series_dir, capture_dir: captures, input: base.merge('path' => File.join(captures, 'link.png'))) }
     assert(ReviewSeries.manifest(series_dir)['revisions'].last['saves'].nil?, 'A rejected attachment was saved')
-    puts 'PASS attaching refuses missing, foreign, symlinked and non-media files, blank text and unknown comments, saving nothing'
+    puts 'PASS attaching refuses missing, foreign, symlinked and non-media files, blank text, a stock expectation and unknown comments, saving nothing'
 
-    result = DCR::Evidence.attach(series_dir: series_dir, capture_dir: captures, input: base.merge('comment_id' => 'value-note'))
+    result = DCR::Evidence.attach(series_dir: series_dir, capture_dir: captures, input: base.merge('comment_id' => 'value-note', 'expected' => 'The value shows 3'))
     captured = DynamicReviews.extract(series)['snapshot']
     assert(result['revision'] == 1, 'A recording of the same code was not saved into its revision')
     saved = DynamicReviews.extract(File.join(series_dir, 'revisions', '001.html'))
     flow = saved['review']['qa']['flows'].last
-    assert(flow['result'] == 'failed' && flow['comment_id'] == 'value-note' && flow['assets'][0]['data_uri'].start_with?('data:image/png;base64,'), 'The recording is not embedded in the revision')
+    assert(flow['result'] == 'failed' && flow['comment_id'] == 'value-note' && flow['expected'] == 'The value shows 3' && flow['assets'][0]['data_uri'].start_with?('data:image/png;base64,'), 'The recording is not embedded in the revision')
     assert(saved['review']['qa']['status'] == 'partial' && saved['review']['qa']['environment'].include?('not verified'), 'Reviewer evidence must not claim a verified build')
     assert(saved['snapshot'] == captured, 'Attaching changed the captured code')
     assert(Dir.children(captures).none? { |name| name.start_with?('attach-') }, 'The temporary update file was left behind')

@@ -94,6 +94,7 @@ module DCR
       title = text(input['title'], 'A title')
       observed = text(input['observed'], 'What you saw')
       expected = input['expected'].to_s.strip[0, FIELD_LIMIT]
+      raise ArgumentError, 'Say what should happen instead of "works as intended"' if expected.match?(/\A(the change )?(behaves|works) as intended\.?\z/i)
       raise ArgumentError, 'Choose passed or failed' unless RESULTS.include?(input['result'])
       comment_id = input['comment_id'].to_s
       unless comment_id.empty? || Array(review['comments']).any? { |comment| comment['id'] == comment_id }
