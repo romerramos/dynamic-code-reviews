@@ -163,6 +163,19 @@ Dir.mktmpdir('dcr-opinions') do |series|
     assert(result['c1']['grok'] == 'failed: Grok stopped before giving its verdict', "A verdict-less answer is a failure: #{result}")
   end
   assert(state.read.dig('threads', key, 'c1', 'opinions', 'grok').values_at('body', 'error') == [nil, 'Grok stopped before giving its verdict'], 'Its narration is not shown as its opinion')
+  # One that stops halfway is asked once more, shown what it sent, and its second reply counts.
+  retried = Queue.new
+  late = lambda do |agent, question, dir:, model:, effort:, adversary:|
+    retried << [agent, question]
+    question.include?('Reply again') ? "Agree\nTen is the documented limit." : "I'll check the retry limit against the docs."
+  end
+  with_agents('codex' => 'exit 0', 'grok' => 'exit 0') do
+    result = DCR::SecondOpinion.run(series_dir: series, comment_ids: ['c1'], author: 'claude', ask: late)
+    assert(result['c1'] == {'codex' => 'agree', 'grok' => 'agree'}, "An agent that stopped halfway answers when asked again: #{result}")
+  end
+  tries = Array.new(retried.size) { retried.pop }
+  assert(tries.length == 4 && tries.all? { |_, question| question.include?('This is critical') }, 'Every prompt ends on the one rule a reply needs, and each agent is asked at most twice')
+  assert(tries.select { |_, question| question.include?('Reply again') }.all? { |_, question| question.include?("I'll check the retry limit") }, 'Asked again, an agent sees what it sent')
   state.add_opinion(key, 'c1', 'codex', 'Agreed after all.', verdict: 'agree', adversary: true)
   state.add_opinion(key, 'c1', 'grok', 'Fine.', verdict: 'agree')
   state.opinion_failed(key, 'c1', 'grok', 'Grok took longer than 5 minutes')
@@ -279,7 +292,7 @@ Dir.mktmpdir('dcr-question') do |series|
   assert(thread['messages'].none? { |message| message['role'] == 'adversary' } && thread['adversary'].nil?, 'On a question nobody takes the second reviewer\'s place in the conversation')
   assert(thread.dig('opinions', 'codex').values_at('body', 'short', 'verdict') == ['It is in the README.', 'It is in the README.', nil] && thread['waiting_on'] == [], 'Answers to a question sit beside the conversation, with no verdict')
   assert(thread.dig('opinions', 'opencode').values_at('body', 'error') == [nil, 'opencode stopped before giving its answer'], 'Its narration is not shown as its answer')
-  assert(questions.length == 2, "What the review's agent said before the question is not its answer, so nothing is compared")
+  assert(questions.length == 3 && questions.count { |agent, _| agent == 'opencode' } == 2, "One that stopped is asked once more; what the review's agent said before the question is not its answer, so nothing is compared")
 end
 puts 'PASS a question asked with adversaries ticked: each answers it beside the review\'s agent, knowing what it was sent'
 

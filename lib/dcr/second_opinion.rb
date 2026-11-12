@@ -318,23 +318,48 @@ module DCR
       end
     end
 
+    # Closes every prompt to an adversary: the one rule a reply cannot do without, said last, where
+    # an agent that reads the rules first and then works for a while still has it in mind.
+    CHECK_FIRST = <<~TEXT.strip
+      Before you send your reply, check it against "How to answer". Its first line must be exactly what
+      it asks for (the verdict, or `Answer:`). This is critical: a reply without it is thrown away,
+      however good the rest is. Finish checking before you write; your reply is your conclusion only.
+    TEXT
+
+    # The same question once more, for an agent whose reply stopped before its conclusion.
+    def again(prompt, answer)
+      <<~TEXT
+        #{prompt}
+
+        You already replied, but your reply did not start the way "How to answer" asks, so it could not be used. It may have stopped before your conclusion. Here it is:
+
+        #{answer.to_s.strip[-2000..] || answer.to_s.strip}
+
+        Reply again with your conclusion only, in the exact form "How to answer" asks for.
+      TEXT
+    end
+
     def consult(state, key, id, panel, repo, ask, on_comment: true, about: nil, parse: method(:verdict))
       panel.each_with_index.map do |adversary, index|
         agent, model, effort = adversary.values_at('agent', 'model', 'effort')
         adversarial = on_comment && index.zero?
         Thread.new do
-          prompt = yield(agent, adversarial)
-          answer = turn do
-            # The page counts the wait from when the agent starts, not from when it queued.
-            state.update { |data| data.dig('threads', key, id)&.store('asked_at', Time.now.utc.iso8601) }
-            ask.call(agent, prompt, dir: repo, model: model, effort: effort, adversary: true)
+          prompt = "#{yield(agent, adversarial)}\n\n#{CHECK_FIRST}"
+          asked = lambda do |text|
+            turn do
+              # The page counts the wait from when the agent starts, not from when it queued.
+              state.update { |data| data.dig('threads', key, id)&.store('asked_at', Time.now.utc.iso8601) }
+              ask.call(agent, text, dir: repo, model: model, effort: effort, adversary: true)
+            end
           end
-          word, body = on_comment ? parse.call(answer) : [nil, nil]
           # An answer without its word, or a question's without `Answer:`, stopped before it was given
-          # ("I'll check..."): not an answer.
-          raise ArgumentError, "#{Agents.name(agent)} stopped before giving its verdict" if on_comment && !word
-          short, body = structured(answer) unless on_comment
-          raise ArgumentError, "#{Agents.name(agent)} stopped before giving its answer" unless on_comment || short
+          # ("I'll check..."): not an answer. The agent is asked once more, shown what it sent.
+          read = ->(answer) { on_comment ? parse.call(answer) : structured(answer) }
+          answer = asked.call(prompt)
+          first, body = read.call(answer)
+          first, body = read.call(asked.call(again(prompt, answer))) unless first
+          raise ArgumentError, "#{Agents.name(agent)} stopped before giving its #{on_comment ? 'verdict' : 'answer'}" unless first
+          word, short = on_comment ? [first, nil] : [nil, first]
           state.add_opinion(key, id, agent, body, verdict: word, short: short, adversary: adversarial, model: model, effort: effort, about: about)
           AgentCatalog::Results.record(agent)
           [agent, word || 'answered']
