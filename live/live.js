@@ -1190,8 +1190,19 @@
   // Under the row, the replies in a line (who, how many, when last).
   // A comment whose code changed says what became of it, as its card does. What an agent thought
   // of the comment back then is not the news, and its chip beside today's outcome misleads.
-  const peekHTML = (thread, id, earlier) => {
+  // Something under way (the agent answering or fixing, the agents checking the outcome) says so in
+  // a few words with moving dots, beside the faces of who replied, so the row reads as working.
+  const busyHTML = text => `<span class="dcr-peek-now">${tools.escape(text)}<span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span></span>`;
+  const facesOf = thread => {
+    const replies = [...(thread?.messages || []), ...tools.opinionMessages(thread)];
+    const people = new Map(replies.filter(reply => reply.author === 'person').map(reply => [`@${reply.person?.login}`, reply.person]));
+    const voices = [...new Set(replies.map(reply => reply.author === 'agent' ? reply.agent || listener || 'agent' : reply.author === 'person' ? `@${reply.person?.login}` : 'you'))].slice(-3);
+    return voices.map(voice => voice === 'you' ? UI.Avatar({you: me || null, size: 'xs'}) : people.has(voice) ? UI.Avatar({person: people.get(voice), size: 'xs'}) : UI.Avatar({agent: voice === 'agent' ? null : voice, size: 'xs'})).join('');
+  };
+  const peekHTML = (thread, id, earlier, busy) => {
     const closing = tools.closure(thread);
+    if (busy) return `<span class="dcr-peek-who"><span class="dcr-peek-faces">${facesOf(thread)}</span>${busyHTML(busy)}<span class="dcr-peek-end">${chevron}</span></span>`;
+    if (closing?.state === 'waiting') return `<span class="dcr-peek-who"><span class="dcr-peek-faces">${facesOf(thread)}</span>${busyHTML('Being checked')}<span class="dcr-peek-end">${chevron}</span></span>`;
     if (earlier || closing) {
       const {label, state} = closing?.state === 'differ' ? {label: 'Not settled', state: 'differ'} : becameOf(id);
       const against = (closing?.rows || []).slice(1).filter(row => closing.state === 'differ' && tools.outcomeSide(row.word) && tools.outcomeSide(row.word) !== closing.side);
@@ -1202,19 +1213,16 @@
     // themselves are in the conversation it opens; the row does not repeat any of them.
     const replies = [...(thread.messages || []), ...tools.opinionMessages(thread)].sort((a, b) => (Date.parse(a.at) || 0) - (Date.parse(b.at) || 0));
     if (!replies.length) return `<span class="dcr-peek-who"><span class="dcr-peek-note">Open conversation</span><span class="dcr-peek-end">${chevron}</span></span>`;
-    const people = new Map(replies.filter(reply => reply.author === 'person').map(reply => [`@${reply.person?.login}`, reply.person]));
-    const voices = [...new Set(replies.map(reply => reply.author === 'agent' ? reply.agent || listener || 'agent' : reply.author === 'person' ? `@${reply.person?.login}` : 'you'))].slice(-3);
-    const faces = voices.map(voice => voice === 'you' ? UI.Avatar({you: me || null, size: 'xs'}) : people.has(voice) ? UI.Avatar({person: people.get(voice), size: 'xs'}) : UI.Avatar({agent: voice === 'agent' ? null : voice, size: 'xs'})).join('');
     const last = replies.at(-1);
-    return `<span class="dcr-peek-who"><span class="dcr-peek-faces">${faces}</span><b>${replies.length} ${replies.length === 1 ? 'reply' : 'replies'}</b><span class="dcr-peek-when">last <time data-at="${tools.escape(last.at || '')}">${tools.escape(tools.relativeTime(last.at))}</time></span><span class="dcr-peek-end">${chevron}</span></span>`;
+    return `<span class="dcr-peek-who"><span class="dcr-peek-faces">${facesOf(thread)}</span><b>${replies.length} ${replies.length === 1 ? 'reply' : 'replies'}</b><span class="dcr-peek-when">last <time data-at="${tools.escape(last.at || '')}">${tools.escape(tools.relativeTime(last.at))}</time></span><span class="dcr-peek-end">${chevron}</span></span>`;
   };
-  const decoratePeek = (item, comment, thread) => {
+  const decoratePeek = (item, comment, thread, busy = null) => {
     // Your own comment goes by its short title, once it has one.
     const subject = item.querySelector(':scope > .ledger-msg > .ledger-subject');
     if (thread?.title && subject && subject.dataset.title !== thread.title) { subject.innerHTML = titleHTML(thread.title); subject.dataset.title = thread.title; }
     let peek = item.querySelector(':scope > .ledger-msg > .dcr-peek');
     // A resolved comment is its struck title alone: nothing under it says Resolved again.
-    if ((!hasConversation(thread) && !item.dataset.earlier) || resolved().includes(item.dataset.ledger)) { peek?.remove(); return; }
+    if ((!busy && !hasConversation(thread) && !item.dataset.earlier) || resolved().includes(item.dataset.ledger)) { peek?.remove(); return; }
     if (!peek) {
       peek = Object.assign(document.createElement('button'), {type: 'button', className: 'dcr-peek'});
       peek.dataset.dcrOpen = item.dataset.ledger;
@@ -1222,7 +1230,7 @@
       // Who answered sits under the title, in the title's column of the row's grid.
       item.querySelector(':scope > .ledger-msg').append(peek);
     }
-    const html = peekHTML(thread, item.dataset.ledger, !!item.dataset.earlier);
+    const html = peekHTML(thread, item.dataset.ledger, !!item.dataset.earlier, busy);
     if (peek.dataset.html !== html) { peek.innerHTML = html; peek.dataset.html = html; }
   };
   // Your own comments are listed by a short title an agent writes from the whole message, as the
@@ -1378,7 +1386,8 @@
       // An unsent comment shows its Send button instead of saying it is unsent.
       const model = online ? tools.statusModel(thread, heard()) : null;
       // An answer shows itself in the preview below, so the row does not also say "Replied".
-      const text = state === 'resolved' || forPR || (state === 'draft' && online) || (model?.tone === 'done' && hasConversation(thread)) ? '' : model?.text || 'Not sent';
+      const working = state !== 'resolved' && model?.tone === 'work';
+      const text = working || state === 'resolved' || forPR || (state === 'draft' && online) || (model?.tone === 'done' && hasConversation(thread)) ? '' : model?.text || 'Not sent';
       const tone = model?.tone || 'off';
       // A narrow row says it in a few words; the whole sentence is its tooltip.
       const short = !model ? text : {done: 'Replied', work: 'Agent is answering', wait: 'Sent', idle: thread?.delivery === 'delivered' ? 'No answer yet' : 'Sent · no agent listening'}[tone] || text;
@@ -1401,7 +1410,9 @@
       // With the server connected the agent is one click away, so Copy for LLMs stays in the card's ⋯ menu.
       const copy = meta.querySelector('[data-copy]');
       if (copy) set(copy, 'hidden', online);
-      decoratePeek(item, byId.get(item.dataset.ledger), thread);
+      // Under way, it says so on the line under the title, in the words a narrow row has room for.
+      const busy = working ? model.agent ? `${tools.agentInfo(model.agent).name} is checking` : thread?.fix?.state === 'requested' ? 'Agent is fixing it' : 'Agent is answering' : null;
+      decoratePeek(item, byId.get(item.dataset.ledger), thread, busy);
     });
     if (badged) window.ReviewGitHub?.refresh();
   };

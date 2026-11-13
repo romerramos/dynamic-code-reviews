@@ -152,6 +152,7 @@ body.qa-live .evidence-strip:not(:has(button:not(.visual-qa-option))){display:no
 .dcr-peek-who b{color:var(--ink);font-size:12.5px;font-weight:600}
 .dcr-peek-who .dcr-verdict{padding:0 6px 0 5px;font-size:11px;line-height:16px}
 .dcr-peek-note{color:var(--accent);font-weight:550}
+.dcr-peek-now{display:inline-flex;align-items:center;gap:4px;color:var(--muted)}
 .dcr-peek-end{display:inline-flex;align-items:center;gap:6px;margin-left:auto}
 .dcr-peek-chevron{flex:none;color:var(--muted);transition:transform .12s,color .12s}
 .dcr-peek-faces{display:inline-flex}.dcr-peek-faces>*{width:16px;height:16px;font-size:9px;margin-right:-3px;box-shadow:0 0 0 1.5px var(--surface)}
