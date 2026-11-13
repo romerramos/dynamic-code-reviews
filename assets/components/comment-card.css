@@ -29,8 +29,8 @@
 .ui-comment>.dcr-thread{max-width:calc(var(--comment-text-width) + var(--comment-indent) + 2 * var(--comment-pad));margin:var(--comment-thread-top) 0 0;padding:var(--comment-thread-pad-top) var(--comment-pad) 0;border:0;background:transparent}
 .ui-comment>.thread-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin:var(--comment-footer-top) 0 0;padding:var(--comment-footer-pad-top) var(--comment-pad) var(--comment-footer-pad-bottom) calc(var(--comment-pad) + var(--comment-footer-indent));border-top:var(--comment-footer-rule);background:transparent}
 .ui-comment>.thread-footer .comment-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0}
-/* Resolved and earlier comments are the same card; closed, an earlier one's title is quieter. */
-.ui-comment.is-earlier:has(>.thread-details:not([open])) .ui-comment-title{color:var(--comment-earlier-ink)}
+/* Resolved and earlier comments are the same card; closed and resolved, an earlier one's title is quieter. */
+.ui-comment.is-earlier.is-resolved:has(>.thread-details:not([open])) .ui-comment-title{color:var(--comment-earlier-ink)}
 /* The lists a comment sits in reach past the reading column by the inset, so an open card can take
    it: the column is wider by the inset on each side, and everything else in it keeps to the reading
    width with a margin of the inset (block flow, so vertical margins still collapse as before). */

@@ -427,41 +427,18 @@
     });
     document.querySelectorAll('.dcr-thread').forEach(refreshBlock);
     todoHook?.();
-    // From earlier revisions holds what is settled. A comment the agents differ on is the
-    // reader's to close, so it goes back up, first in the list. Each folded card says what
-    // became of it, and the section adds them up and closes the settled ones in one click.
-    const section = document.querySelector('#content details.overview-earlier');
-    if (!section) return;
-    const said = {};
-    section.querySelectorAll('article.review-thread.is-earlier').forEach(card => {
+    // A comment written on an earlier revision says, on its row, the revision it was written on
+    // and what became of it. A resolved one is in Resolved, which says so already.
+    document.querySelectorAll('#content article.review-thread.is-earlier').forEach(card => {
       const id = card.dataset.threadId;
-      if (undecided(id)) {
-        card.classList.remove('is-earlier');
-        card.classList.add('is-undecided');
-        (section.parentElement.querySelector(':scope > article.review-thread:not(.is-undecided), :scope > details.overview-resolved') || section).before(card);
-        return;
-      }
-      const {label, state} = becameOf(id);
-      said[label] = (said[label] || 0) + 1;
-      const head = card.querySelector('.thread-range');
-      let chip = head?.querySelector('.dcr-earlier-outcome');
-      if (head && !chip) { chip = document.createElement('span'); head.prepend(chip); }
-      if (chip && chip.textContent !== label) { chip.className = `dcr-earlier-outcome dcr-c-${state}`; chip.textContent = label; }
+      const done = resolved().includes(id);
+      const {label} = becameOf(id);
+      // Its row: the revision it was written on, then what became of it.
       const at = card.querySelector('.ui-comment-place');
-      if (at && at.dataset.state !== label.toLowerCase()) at.dataset.state = label.toLowerCase();
+      const revision = comments().find(comment => comment.id === id)?.outdated?.revision;
+      const word = [revision ? `revision ${revision}` : '', done ? '' : label.toLowerCase()].filter(Boolean).join('  ·  ');
+      if (at && word && at.dataset.state !== word) at.dataset.state = word;
     });
-    // One the reader has to close went back up: then something is waiting.
-    const quiet = section.parentElement.querySelector('[data-overview-status]');
-    if (quiet) set(quiet, 'hidden', !!section.parentElement.querySelector(':scope > article.is-undecided'));
-    const left = section.querySelectorAll('article.review-thread.is-earlier').length;
-    set(section, 'hidden', !left);
-    const badge = section.querySelector('summary .badge');
-    if (badge && badge.textContent !== String(left)) badge.textContent = left;
-    const sum = section.querySelector('[data-earlier-outcomes]');
-    const text = Object.entries(said).map(([label, count]) => `${count} ${label.toLowerCase()}`).join(' · ');
-    const open = settledIds().length;
-    const html = `${tools.escape(text)}${open ? `<button type="button" class="btn btn-xs" data-dcr-settle>Resolve ${open === 1 ? 'it' : `those ${open}`}</button>` : ''}`;
-    if (sum && sum.dataset.html !== html) { sum.innerHTML = html; sum.dataset.html = html; }
   };
   // A comment on changed code that every agent agrees is dealt with resolves itself, once: the
   // reader who reopens it keeps it open.
@@ -475,8 +452,6 @@
     try { localStorage.setItem(autoKey, JSON.stringify([...autoResolved])); } catch { /* this session only */ }
     due.forEach(comment => window.ReviewLive.resolve(comment.id));
   };
-  // The outdated comments every agent says are dealt with, and the reader has not resolved yet.
-  const settledIds = () => comments().filter(comment => comment.outdated && !comment.personal && !resolved().includes(comment.id) && tools.closure(threads[comment.id])?.state === 'settled').map(comment => comment.id);
 
   // --- marking what you have read -------------------------------------------------------------------
   // An agent message counts as read once it has been on screen for a moment.
@@ -548,12 +523,6 @@
         decorate();
         return;
       }
-    }
-    const settle = event.target.closest('[data-dcr-settle]');
-    if (settle) {
-      event.preventDefault();
-      settledIds().forEach(id => window.ReviewLive.resolve(id));
-      return;
     }
     // The card's own Resolve closes it on the side the agents took.
     const closed = event.target.closest('.thread-footer > [data-resolve].btn-soft');

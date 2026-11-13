@@ -366,7 +366,6 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 .dcr-stage>summary svg{align-self:center;width:15px;height:15px;color:var(--muted);transition:transform .15s}.dcr-stage[open]>summary svg{transform:rotate(180deg)}
 .dcr-stage>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .dcr-earlier-outcome.dcr-c-differ{color:var(--dcr-partly)}.dcr-earlier-outcome.dcr-c-settled{color:var(--dcr-agree)}.dcr-earlier-outcome.dcr-c-applies{color:var(--dcr-disagree)}
-[data-earlier-outcomes] .btn{margin-left:10px}
 
 .dcr-outcome{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;margin:0 0 8px;font-size:12.5px;color:var(--muted)}
 .dcr-outcome strong{font-weight:600}.dcr-outcome-resolve{margin-left:2px}
