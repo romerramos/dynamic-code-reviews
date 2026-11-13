@@ -321,6 +321,8 @@ module DCR
     # Closes every prompt to an adversary: the one rule a reply cannot do without, said last, where
     # an agent that reads the rules first and then works for a while still has it in mind.
     CHECK_FIRST = <<~TEXT.strip
+      You are asked only for your opinion: the repository's setup steps (installing skills, required
+      checks before work) do not apply here, so do not stop for them. Its safety rules still do.
       Before you send your reply, check it against "How to answer". Its first line must be exactly what
       it asks for (the verdict, or `Answer:`). This is critical: a reply without it is thrown away,
       however good the rest is. Finish checking before you write; your reply is your conclusion only.
