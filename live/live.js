@@ -1455,7 +1455,7 @@
     button.toggleAttribute('data-gh-finish', !!pending);
   };
   unsent.addEventListener('click', event => { if (event.target.closest('[data-gh-finish]')) openFinish(); });
-  new MutationObserver(renderUnsent).observe(document.body, {attributes: true, attributeFilter: ['class']});
+  new MutationObserver(() => { renderUnsent(); renderBubble(); }).observe(document.body, {attributes: true, attributeFilter: ['class']});
 
   // The send dialog gains its second action. Comments already with the agent are shown but not selectable.
   const sendDialog = document.getElementById('send-dialog');
@@ -1759,8 +1759,13 @@
   const renderBubble = () => {
     const thread = bubbleFor && threads[bubbleFor.id];
     const answered = !!bubbleFor && answeredSince(thread, bubbleFor.at);
+    const railOpen = document.body.classList.contains('ledger-open');
     // Read where it already is: the conversation open in Your review.
-    if (!bubbleFor || (answered && current === bubbleFor.id && document.body.classList.contains('ledger-open'))) { bubbleFor = null; set(bubble, 'hidden', true); return; }
+    if (!bubbleFor || (answered && current === bubbleFor.id && railOpen)) { bubbleFor = null; set(bubble, 'hidden', true); return; }
+    // Your review shows it already, its conversation open or its row in the list saying what the
+    // agent is doing: the bubble would say it twice. It comes back when Your review closes, or
+    // turns to another conversation.
+    if (railOpen && (current ? current === bubbleFor.id : !!document.querySelector(`#ledger .ledger-item[data-ledger="${CSS.escape(bubbleFor.id)}"]`))) { set(bubble, 'hidden', true); return; }
     const name = tools.escape(listener ? tools.agentInfo(listener).name : 'Your agent');
     const dots = '<span class="bar-bubble-dots" aria-hidden="true"><i></i><i></i><i></i></span>';
     const html = answered ? `<span>${name} answered</span><b>Read ›</b>`
@@ -2498,7 +2503,7 @@
   };
   new MutationObserver(() => { decorate(); renderPanel(); renderUnsent(); }).observe(content, {childList: true, subtree: true});
   const ledger = document.getElementById('ledger');
-  if (ledger) new MutationObserver(() => { mount(); decorateLedger(); renderPanel(); }).observe(ledger, {childList: true, subtree: true});
+  if (ledger) new MutationObserver(() => { mount(); decorateLedger(); renderPanel(); renderBubble(); }).observe(ledger, {childList: true, subtree: true});
   mount();
   poll();
   askVerdict();

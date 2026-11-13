@@ -387,8 +387,10 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 .dcr-differ{margin:0 0 6px;color:var(--muted);font-size:12.5px;line-height:1.45;overflow-wrap:anywhere}
 .dcr-ops{display:grid;grid-template-columns:minmax(0,1fr);gap:2px;margin:0;padding:0;list-style:none}
 .dcr-op{border-radius:calc(8px * var(--round))}
-.dcr-op-toggle,.dcr-op.is-waiting,.dcr-op.is-failed{display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:center;column-gap:9px;width:calc(100% + 12px);margin:0 -6px;padding:6px;border:0;border-radius:calc(8px * var(--round));background:none;color:var(--ink);font:inherit;text-align:left}
-.dcr-op.is-waiting,.dcr-op.is-failed{grid-template-columns:20px minmax(0,1fr)}
+/* An agent's row takes the conversation's columns: its face over the messages' faces, its words on their words. */
+.dcr-op-toggle,.dcr-op.is-waiting,.dcr-op.is-failed{display:grid;grid-template-columns:var(--message-face-col,32px) minmax(0,1fr) auto;align-items:center;column-gap:var(--message-gap,10px);width:100%;margin:0;padding:6px 0;border:0;border-radius:calc(8px * var(--round));background:none;color:var(--ink);font:inherit;text-align:left}
+.dcr-op.is-waiting,.dcr-op.is-failed{grid-template-columns:var(--message-face-col,32px) minmax(0,1fr)}
+.dcr-op>.ui-avatar,.dcr-op-toggle>.ui-avatar{justify-self:start}
 .dcr-op-toggle{cursor:pointer;transition:background-color .12s}
 .dcr-op-toggle:hover{background:color-mix(in oklab,var(--ink) 5%,transparent)}
 .dcr-op-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:0}

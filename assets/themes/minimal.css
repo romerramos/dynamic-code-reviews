@@ -537,7 +537,7 @@ html[data-theme^="minimal-"]{--nav-groups:current}
 [data-theme^="minimal-"] #ledger .dcr-detail{--message-you-name:inline;--message-text-size:13.5px;--message-text-line:1.6;--message-text-top:3px}
 /* An adversary that did not answer: its mark, faint, and the words, in line with the answers. */
 [data-theme^="minimal-"] #ledger .dcr-detail :is(.dcr-opinions,.dcr-ops,ul:has(>.dcr-op)){margin:16px 0 0;padding:0;border:0;list-style:none}
-[data-theme^="minimal-"] #ledger .dcr-detail .dcr-op{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;align-items:center;padding:6px 0 0;border:0;background:none}
+[data-theme^="minimal-"] #ledger .dcr-detail .dcr-op{display:grid;grid-template-columns:var(--message-face-col,18px) minmax(0,1fr);gap:0 var(--message-gap,12px);align-items:center;padding:6px 0 0;border:0;background:none}
 [data-theme^="minimal-"] #ledger .dcr-detail .dcr-op-line{color:var(--minimal-faint);font-size:12px}
 [data-theme^="minimal-"] #ledger .dcr-detail .dcr-op-line strong{color:inherit;font-weight:400}
 
@@ -615,7 +615,7 @@ html[data-theme^="minimal-"] body.review-in-progress .overview-reading .dcr-try:
 [data-theme^="minimal-"] :is(.dcr-card,.dcr-popover) .dcr-actions{--button-height:28px;--button-min-height:28px;--button-radius:8px;--button-primary-pad:0 12px;--button-primary-border:transparent;--button-primary-bg:var(--ink);--button-primary-hover-bg:color-mix(in srgb,var(--ink) 86%,var(--surface));--button-primary-ink:var(--surface);--button-primary-weight:600}
 /* An adversary that did not answer, in the popover and on the Overview as in Your review: a faint line. */
 [data-theme^="minimal-"] :is(.dcr-popover,.dcr-card) :is(.dcr-opinions,.dcr-ops,ul:has(>.dcr-op)){margin:14px 0 0;padding:0;border:0;list-style:none}
-[data-theme^="minimal-"] :is(.dcr-popover,.dcr-card) .dcr-op{display:grid;grid-template-columns:18px minmax(0,1fr);gap:0 12px;align-items:center;padding:4px 0 0;border:0;background:none}
+[data-theme^="minimal-"] :is(.dcr-popover,.dcr-card) .dcr-op{display:grid;grid-template-columns:var(--message-face-col,18px) minmax(0,1fr);gap:0 var(--message-gap,12px);align-items:center;padding:4px 0 0;border:0;background:none}
 [data-theme^="minimal-"] :is(.dcr-popover,.dcr-card) .dcr-op-line{color:var(--minimal-faint);font-size:12px}
 [data-theme^="minimal-"] :is(.dcr-popover,.dcr-card) .dcr-op-line strong{color:inherit;font-weight:400}
 
