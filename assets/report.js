@@ -950,7 +950,7 @@
     }
     // Where to read next: the first step with files left. A theme may point at it.
     const nextLayer = layers.find(layer => { const done = progress(layer.items); return done.total && done.viewed < done.total; });
-    const stepNext = '<span class="step-next">start here</span>';
+    const stepNext = '<span class="step-next">up next</span>'; // the first step to read, or the next: right whether you started or not
     // A title in the list folds what is under it; only a file opens something. Where you are always
     // starts open: arriving at another step forgets the folds set on it and on its group.
     if (state.view !== navFoldView) {
