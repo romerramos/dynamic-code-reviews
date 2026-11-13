@@ -143,9 +143,10 @@
       persist(); refreshComments(); render();
     }
   };
+  let adopting = false; // drawing another tab's save: writing it back would start the two tabs answering each other
   function persist() {
     let stored = true;
-    try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch { stored = false; }
+    if (!adopting) try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch { stored = false; }
     queueBar();
     $('progress').textContent = progressText({viewed:state.viewedFiles.length, total:files.size});
     document.body.dataset.progress = $('progress').textContent; // for a theme that draws a status line
@@ -153,6 +154,16 @@
     $('progress-bar').value = state.viewedFiles.length;
     return stored;
   }
+  // Another tab of this review saved: this one takes what was read, resolved and written there,
+  // or its next save (a scroll is enough) would put back the older copy. Its own place stays.
+  window.addEventListener('storage', event => {
+    if (event.key !== storageKey || !event.newValue) return;
+    let next;
+    try { next = JSON.parse(event.newValue); } catch { return; }
+    ['viewedFiles', 'autoReviewed', 'resolvedComments', 'personalComments', 'notes'].forEach(part => { if (part in next) state[part] = next[part]; });
+    adopting = true;
+    try { refreshComments(); render(); } finally { adopting = false; }
+  });
   const bulletList = items => items?.length ? `<ul>${items.map(item => `<li>${escape(item)}</li>`).join('')}</ul>` : '';
   const flow = steps => steps?.length ? `<div class="flow" role="img" aria-label="${escape(steps.join(' → '))}">${steps.map((step, index) => `${index ? '<b aria-hidden="true">→</b>' : ''}<span>${escape(step)}</span>`).join('')}</div>` : '';
   const hunkIDs = layer => layer.items.flatMap(item => Object.keys(item.summaries || {}));
@@ -1882,7 +1893,8 @@
     render(); $('content').scrollTop = scroll;
     return added;
   }
-  window.ReviewLive = {addComments: addLiveComments, inProgress};
+  // resolve: closes a comment from wherever the reader is, its card on screen or not.
+  window.ReviewLive = {addComments: addLiveComments, inProgress, resolve: id => { if (!comments.find(comment => comment.id === id)?.resolved) toggleResolved(id); }};
   // Until the review is finished, QA and template previews wait: they build on its comments and
   // would compete with it for the agent. The controls stay visible, greyed, and say why.
   const LOCKED = '[data-open-previews], [data-copy-qa], [data-request-preview], [data-preview-toggle], [data-try="qa"], [data-try-preview], [data-try-all], [data-start-qa], [data-empty-qa], [data-view="previews"], #qa-connect';

@@ -473,7 +473,7 @@
     if (!due.length) return;
     due.forEach(comment => autoResolved.add(comment.id));
     try { localStorage.setItem(autoKey, JSON.stringify([...autoResolved])); } catch { /* this session only */ }
-    due.forEach(comment => document.querySelector(`#content .thread-footer > [data-resolve="${CSS.escape(comment.id)}"]`)?.click());
+    due.forEach(comment => window.ReviewLive.resolve(comment.id));
   };
   // The outdated comments every agent says are dealt with, and the reader has not resolved yet.
   const settledIds = () => comments().filter(comment => comment.outdated && !comment.personal && !resolved().includes(comment.id) && tools.closure(threads[comment.id])?.state === 'settled').map(comment => comment.id);
@@ -552,7 +552,7 @@
     const settle = event.target.closest('[data-dcr-settle]');
     if (settle) {
       event.preventDefault();
-      settledIds().forEach(id => document.querySelector(`#content .thread-footer > [data-resolve="${CSS.escape(id)}"]`)?.click());
+      settledIds().forEach(id => window.ReviewLive.resolve(id));
       return;
     }
     // The card's own Resolve closes it on the side the agents took.
