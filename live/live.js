@@ -1192,8 +1192,7 @@
   // of the comment back then is not the news, and its chip beside today's outcome misleads.
   const peekHTML = (thread, id, earlier) => {
     const closing = tools.closure(thread);
-    // Once the reader resolved it, its strike says so: the row shows its replies, as every other does.
-    if ((earlier || closing) && !resolved().includes(id)) {
+    if (earlier || closing) {
       const {label, state} = closing?.state === 'differ' ? {label: 'Not settled', state: 'differ'} : becameOf(id);
       const against = (closing?.rows || []).slice(1).filter(row => closing.state === 'differ' && tools.outcomeSide(row.word) && tools.outcomeSide(row.word) !== closing.side);
       const note = against.length ? `${tools.names(against.map(row => tools.agentInfo(row.agent).name))} ${against.length === 1 ? 'says' : 'say'} ${closing.side === 'dealt' ? 'it still applies' : 'it is dealt with'}. You decide.` : '';
@@ -1214,7 +1213,8 @@
     const subject = item.querySelector(':scope > .ledger-msg > .ledger-subject');
     if (thread?.title && subject && subject.dataset.title !== thread.title) { subject.innerHTML = titleHTML(thread.title); subject.dataset.title = thread.title; }
     let peek = item.querySelector(':scope > .ledger-msg > .dcr-peek');
-    if (!hasConversation(thread) && !item.dataset.earlier) { peek?.remove(); return; }
+    // A resolved comment is its struck title alone: nothing under it says Resolved again.
+    if ((!hasConversation(thread) && !item.dataset.earlier) || resolved().includes(item.dataset.ledger)) { peek?.remove(); return; }
     if (!peek) {
       peek = Object.assign(document.createElement('button'), {type: 'button', className: 'dcr-peek'});
       peek.dataset.dcrOpen = item.dataset.ledger;
