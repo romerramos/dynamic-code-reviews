@@ -50,7 +50,7 @@ end
 CEILING = {
   'assets/report.css' => {'negative offsets' => 10, '!important' => 21, 'absolute or fixed' => 47, 'repeated selectors' => 97},
   'live/live.css' => {'negative offsets' => 11, '!important' => 3, 'absolute or fixed' => 10, 'repeated selectors' => 16},
-  'assets/themes/minimal.css' => {'negative offsets' => 0, '!important' => 0, 'absolute or fixed' => 9, 'repeated selectors' => 36},
+  'assets/themes/minimal.css' => {'negative offsets' => 0, '!important' => 0, 'absolute or fixed' => 9, 'repeated selectors' => 34},
   'assets/themes/terminal.css' => {'negative offsets' => 3, '!important' => 0, 'absolute or fixed' => 6, 'repeated selectors' => 2},
   'assets/components/comment-card.css' => {'negative offsets' => 0, '!important' => 0, 'absolute or fixed' => 0, 'repeated selectors' => 2},
   'assets/components/comment-popover.css' => {'negative offsets' => 0, '!important' => 0, 'absolute or fixed' => 0, 'repeated selectors' => 2}

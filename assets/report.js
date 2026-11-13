@@ -957,7 +957,7 @@
       const groupKey = `group:${matching[0].id}`;
       const titled = group.layers.length > 1;
       const groupOpen = !titled || (navFolds[groupKey] ?? (groupsStart !== 'current' || matching.some(layer => layer.id === state.view)));
-      html += `<section class="nav-section">${titled ? `<h3 class="nav-group-title"><button type="button" class="nav-group-toggle" data-nav-fold="${groupKey}" aria-expanded="${groupOpen}" aria-controls="nav-steps-${matching[0].id}">${escape(titleWithoutNumber(group.title))}${startsHere ? stepNext : ''}</button></h3>` : ''}`;
+      html += `<section class="nav-section">${titled ? `<h3 class="nav-group-title"><button type="button" class="nav-group-toggle" data-nav-fold="${groupKey}" aria-expanded="${groupOpen}" aria-controls="nav-steps-${matching[0].id}">${stepTitle(titleWithoutNumber(group.title), matching.every(layer => { const done = progress(layer.items); return done.total && done.viewed === done.total; }))}${startsHere ? stepNext : ''}</button></h3>` : ''}`;
       if (!groupOpen) { html += `<ul id="nav-steps-${matching[0].id}" hidden></ul></section>`; return; }
       html += `<ul id="nav-steps-${matching[0].id}" class="menu">`;
       matching.forEach(layer => {

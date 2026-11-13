@@ -220,6 +220,8 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 /* A group of one step is its own title: it reads as a title, and opens like a step. */
 [data-theme^="minimal-"] #navigation .nav-section:not(:has(>.nav-group-title)) button[data-view] .step-body strong{color:var(--ink);font-weight:600}
 [data-theme^="minimal-"] #navigation .nav-section:not(:has(>.nav-group-title)) button[data-view]{padding:0 8px}
+/* Its files sit on the same rule, at the same inset, as a titled group's steps. */
+[data-theme^="minimal-"] #navigation .nav-section:not(:has(>.nav-group-title)) li>.nav-files{margin:6px 0 8px 9px;padding:0 0 0 4px;border-left:1px solid var(--line)}
 
 /* --- The Overview as designed: a title, a paragraph, and plain lists ---------------------------------
    One column of 640px. What waits on the reader and what to read first are lists of single lines:
@@ -363,7 +365,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
    ink; its files hang under it in the steps' grey, the one being read in ink. No counts, no rule in
    black: the tree's thin grey rule and the ink say where you are. */
 [data-theme^="minimal-"] #navigation button[aria-expanded="true"] .step-body small{display:none}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-body strong,[data-theme^="minimal-"] #navigation .nav-section button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]) .step-body strong{font-weight:400}
+[data-theme^="minimal-"] #navigation .nav-section:has(>.nav-group-title) button[data-view] .step-body strong,[data-theme^="minimal-"] #navigation .nav-section:has(>.nav-group-title) button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]) .step-body strong{font-weight:400}
 [data-theme^="minimal-"] .sidebar nav .nav-section:has(>.nav-group-title) li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"]))>button{box-shadow:inset 1px 0 var(--line-neutral-4)}
 [data-theme^="minimal-"] .sidebar nav button.nav-file{min-height:0;gap:8px;padding:3px 8px;border:0;background:transparent;color:var(--muted);font:12px/1.5 var(--mono)}
 [data-theme^="minimal-"] .sidebar nav button.nav-file .nav-file-name{font-weight:400;color:inherit}
@@ -401,13 +403,13 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number{grid-column:1;min-width:0;color:var(--minimal-faint);order:2;flex:none;position:static;width:auto;margin:0 0 0 6px;visibility:visible}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number:not(:has(svg)){display:none}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view] .step-number .review-icon{width:12px;height:12px;vertical-align:-1px;color:var(--minimal-faint)}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view]:has(.step-number svg) .step-body strong{color:var(--minimal-faint)}
-[data-theme^="minimal-"] #navigation .nav-section button[data-view]:not(:has(.step-number svg)) .step-body strong{color:var(--ink-neutral-3)}
+[data-theme^="minimal-"] #navigation .nav-section:has(>.nav-group-title) button[data-view]:has(.step-number svg) .step-body strong{color:var(--minimal-faint)}
+[data-theme^="minimal-"] #navigation .nav-section:has(>.nav-group-title) button[data-view]:not(:has(.step-number svg)) .step-body strong{color:var(--ink-neutral-3)}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view]:is([aria-current="page"],[aria-expanded="true"]) .step-body strong{color:var(--ink)}
 [data-theme^="minimal-"] .sidebar nav .file-status{flex:0 0 14px;width:14px;height:14px;margin:0;border:1.5px solid var(--line-neutral-5);border-radius:4px;background:var(--surface);cursor:pointer}
 [data-theme^="minimal-"] .sidebar nav .file-status:hover{border-color:var(--ink)}
-[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status{display:grid;place-items:center;border-color:var(--ink-neutral-3);background:var(--ink-neutral-3);color:var(--surface)}
-[data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status .review-icon{width:10px;height:10px;stroke-width:3}
+[data-theme^="minimal-"] .sidebar nav :is(.nav-file.is-viewed .file-status,.file-status.is-viewed){display:grid;place-items:center;border-color:var(--ink-neutral-3);background:var(--ink-neutral-3);color:var(--surface)}
+[data-theme^="minimal-"] .sidebar nav :is(.nav-file.is-viewed .file-status,.file-status.is-viewed) .review-icon{width:10px;height:10px;stroke-width:3}
 [data-theme^="minimal-"] .sidebar nav .nav-file.is-viewed .file-status:hover{border-color:var(--ink);background:var(--ink);color:var(--surface)}
 
 /* --- Round 6, built from the canvas's Proposed boards ---------------------------------------------------
@@ -444,6 +446,17 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .sidebar nav button.nav-file .nav-file-name{display:flex;min-width:0;white-space:nowrap;overflow-wrap:normal}
 [data-theme^="minimal-"] .sidebar nav button.nav-file .name-head{min-width:0;overflow:hidden;text-overflow:ellipsis}
 [data-theme^="minimal-"] .sidebar nav button.nav-file .name-tail{flex:none}
+/* A component is not something you read: its name is a quiet label with its count where a file's risk
+   goes, and its Ruby and its template are the rows you read, with the files' box, a step in under it. */
+[data-theme^="minimal-"] .sidebar nav :is(.nav-component,.nav-component.is-current){margin:0;border:0;border-radius:0;background:transparent}
+[data-theme^="minimal-"] .sidebar nav .nav-component-title{display:flex;align-items:baseline;gap:8px;width:100%;min-height:0;margin:0;padding:3px 8px 1px;border-radius:0;background:transparent;color:var(--minimal-faint);font-family:inherit;font-size:11.5px;font-weight:400;line-height:1.5}
+[data-theme^="minimal-"] .sidebar nav .nav-component-title:is(:hover,[aria-current="location"]){background:transparent;color:var(--ink)}
+[data-theme^="minimal-"] .sidebar nav .nav-component strong{font:inherit;color:inherit}
+[data-theme^="minimal-"] .sidebar nav .nav-component-count{margin-left:auto;padding:0;color:var(--minimal-faint);font:10.5px var(--mono)}
+[data-theme^="minimal-"] .sidebar nav .nav-component-files{display:grid;grid-auto-flow:row;grid-template-columns:minmax(0,1fr);gap:0;padding:0 0 0 14px}
+[data-theme^="minimal-"] .sidebar nav .nav-component-files button{display:flex;align-items:center;gap:8px;width:100%;min-height:0;padding:3px 8px;border:0;background:transparent;color:var(--muted);font:12px/1.5 var(--mono)}
+[data-theme^="minimal-"] .sidebar nav .nav-component-files button:has(.file-status.is-viewed){color:var(--minimal-faint)}
+[data-theme^="minimal-"] .sidebar nav .nav-component-files button:is(:hover,[aria-current="location"]){border:0;background:transparent;color:var(--ink)}
 
 /* The list's own close beside the finder, and the same icon, opened, where it was once the list is hidden. */
 [data-theme^="minimal-"] .sidebar .sidebar-top{display:flex;align-items:center;gap:6px;margin-bottom:18px}
