@@ -1192,11 +1192,10 @@
   // of the comment back then is not the news, and its chip beside today's outcome misleads.
   const peekHTML = (thread, id, earlier) => {
     const closing = tools.closure(thread);
-    if (earlier || closing) {
-      // Once the reader resolved it, Resolved is the last word, whatever the agents still differ on.
-      const settledByYou = resolved().includes(id);
-      const {label, state} = settledByYou ? {label: 'Resolved', state: 'settled'} : closing?.state === 'differ' ? {label: 'Not settled', state: 'differ'} : becameOf(id);
-      const against = (closing?.rows || []).slice(1).filter(row => !settledByYou && closing.state === 'differ' && tools.outcomeSide(row.word) && tools.outcomeSide(row.word) !== closing.side);
+    // Once the reader resolved it, its strike says so: the row shows its replies, as every other does.
+    if ((earlier || closing) && !resolved().includes(id)) {
+      const {label, state} = closing?.state === 'differ' ? {label: 'Not settled', state: 'differ'} : becameOf(id);
+      const against = (closing?.rows || []).slice(1).filter(row => closing.state === 'differ' && tools.outcomeSide(row.word) && tools.outcomeSide(row.word) !== closing.side);
       const note = against.length ? `${tools.names(against.map(row => tools.agentInfo(row.agent).name))} ${against.length === 1 ? 'says' : 'say'} ${closing.side === 'dealt' ? 'it still applies' : 'it is dealt with'}. You decide.` : '';
       return `<span class="dcr-peek-who"><span class="dcr-earlier-outcome dcr-c-${state}">${tools.escape(label)}</span><span class="dcr-peek-end">${chevron}</span></span>${note ? `<span class="dcr-peek-text">${tools.escape(note)}</span>` : ''}`;
     }
