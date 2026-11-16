@@ -294,6 +294,31 @@ assert.equal(resumed.navFile, 'f2');
 assert.equal(resumed.focusIndex, 2);
 console.log('PASS a report opens on Overview the first time, resumes the step and file the reader stopped on, and honors explicit deep links');
 
+// In the reading area J and K only scroll: at the end of Overview they stay on it. L opens the
+// first file from Overview or All changes, and H there does nothing.
+{
+  get('data').textContent = JSON.stringify(data);
+  sandbox.location.hash = '';
+  sandbox.localStorage.getItem = () => null;
+  vm.runInContext(source.replace(/  render\(\);\n\}\)\(\);\s*$/, '  globalThis.readingKeys = {scrollReading, stepFile, state, focusOrder};\n})();'), sandbox);
+  const keys = sandbox.readingKeys;
+  keys.state.view = 'overview'; // Overview's page itself is not drawn here
+  Object.assign(get('content'), {scrollTop:200, clientHeight:400, scrollHeight:600});
+  keys.scrollReading(1, false);
+  assert.equal(keys.state.view, 'overview', 'J at the end of Overview stays on Overview');
+  assert.equal(get('content').scrollTop, 200, 'J at the end does not move the page');
+  keys.stepFile(-1, true);
+  assert.equal(keys.state.view, 'overview', 'H on Overview does nothing');
+  keys.stepFile(1, true);
+  assert.deepEqual([keys.state.view, keys.state.navFile], [keys.focusOrder[0].layer.id, keys.focusOrder[0].file], 'L on Overview opens the first file');
+  keys.state.view = 'files';
+  keys.stepFile(-1, true);
+  assert.equal(keys.state.view, 'files', 'H on All changes does nothing');
+  keys.stepFile(1, true);
+  assert.deepEqual([keys.state.view, keys.state.navFile], [keys.focusOrder[0].layer.id, keys.focusOrder[0].file], 'L on All changes opens the first file');
+  console.log('PASS in the reading area J and K only scroll, and L opens the first file from Overview or All changes');
+}
+
 // Since revision reads like file by file: one file at a time, whole, with no range headings to
 // work out, and the sidebar lists its files under it.
 {

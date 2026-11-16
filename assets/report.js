@@ -314,7 +314,7 @@
   const readingFile = () => state.view === 'since' ? filesByPath.get(sinceView.files[sinceIndex]?.path) : files.get(fileReadingActive() ? focusOrder[focusIndex]?.file : state.navFile);
   // The next or previous stop in the sidebar, from the top: Overview, All changes, then every file
   // in reading order across the steps, each opened where it is read. onlyFiles: from file to file,
-  // never on to Overview or All changes, and nothing from there.
+  // never on to Overview or All changes; from there the next is the first file and the previous nothing.
   function stepFile(delta, onlyFiles = false) {
     const OVERVIEW = -2, ALL = -1;
     if (state.view === 'since') { if (sinceView.files[sinceIndex + delta]) sinceFile(sinceIndex + delta); return; }
@@ -323,7 +323,7 @@
     // On a step with no file reached yet, J opens its first and K the one before it.
     const from = state.view === 'overview' ? OVERVIEW : state.view === 'files' ? ALL
       : fileReadingActive() ? focusIndex : at >= 0 ? at : first - (delta > 0 ? 1 : 0);
-    if (onlyFiles && (state.view === 'overview' || state.view === 'files')) return;
+    if (onlyFiles && from < 0 && (delta < 0 || !focusOrder.length)) return;
     const to = Math.max(onlyFiles ? 0 : OVERVIEW, Math.min(focusOrder.length - 1, from + delta));
     if (to === from && (at >= 0 || from < 0 || fileReadingActive())) return;
     if (to === OVERVIEW) select('overview');
@@ -470,12 +470,10 @@
   }
   ['wheel', 'touchstart', 'pointerdown'].forEach(type => document.addEventListener(type, () => [...glides.keys()].forEach(stopGlide), {passive:true, capture:true}));
   const keyStep = (element, held) => held ? 64 : Math.round(element.clientHeight * 0.5);
-  // A tap moves half a screen and holding the key scrolls steadily. A tap at the very end goes on
-  // to the next file or step, and one at the very top back to the previous.
+  // A tap moves half a screen and holding the key scrolls steadily. At the very end or the very
+  // top it stops there: H and L are what change the file.
   function scrollReading(direction, held) {
     const content = $('content');
-    const atEdge = direction > 0 ? content.scrollTop + content.clientHeight >= content.scrollHeight - 4 : content.scrollTop <= 0;
-    if (atEdge) { if (!held) { stopGlide(content); step(direction); $('content').focus({preventScroll:true}); } return; }
     glide(content, direction * keyStep(content, held));
   }
   // --- The line cursor ---------------------------------------------------------------------------
@@ -4088,7 +4086,8 @@
       else if (pane !== 'ledger' && event.shiftKey) { const at = pane; stepUnviewed(key === 'l' ? 1 : -1); setPane(at); if (at === 'nav') currentNavRow()?.scrollIntoView({block:'nearest'}); }
       // In focus mode there is one thing on the page, so from it H and L are the file before and the next.
       else if (pane !== 'ledger' && document.body.classList.contains('zen')) { const by = key === 'l' ? 1 : -1; if (pane !== 'main') setPane('main'); if (!fileReadingActive() || focusOrder[focusIndex + by]) step(by); }
-      // From the reading area they are the file before and the next, never Overview or All changes.
+      // From the reading area they are the file before and the next, never Overview or All changes;
+      // from those L opens the first file.
       // In the sidebar they do nothing: J and K already open each row they reach.
       else if (pane === 'main') { stepFile(key === 'l' ? 1 : -1, true); setPane('main'); }
       return;
