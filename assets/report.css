@@ -1261,9 +1261,11 @@ button.risk-path:hover .path-name{text-decoration:underline}
 .definition-back kbd{font:10px var(--mono);color:var(--muted);margin-left:4px}
 
 /* The bar under what is being read: its field, the next step, and the way to every command. A theme
-   shows it (display:flex) when it does without the header and the toolbar. */
+   shows it (display:flex) when it does without the header and the toolbar. It sits 22px above the
+   foot of the reading area, which already ends above a theme's status line, so what floats over it
+   at --status-h + 84px clears it in every theme. */
 .review-area{position:relative}
-.review-bar{position:absolute;z-index:30;left:50%;bottom:calc(var(--status-h) + 22px);transform:translateX(-50%);width:min(640px,calc(100% - 28px));min-height:46px;align-items:center;gap:8px;padding:7px 8px 7px 10px;border:1px solid var(--line);border-radius:calc(14px * var(--round));background:var(--surface);color:var(--ink);box-shadow:0 8px 28px color-mix(in srgb,var(--shade) 9%,transparent);font:13px/1.4 var(--review-font-family)}
+.review-bar{position:absolute;z-index:30;left:50%;bottom:22px;transform:translateX(-50%);width:min(640px,calc(100% - 28px));min-height:46px;align-items:center;gap:8px;padding:7px 8px 7px 10px;border:1px solid var(--line);border-radius:calc(14px * var(--round));background:var(--surface);color:var(--ink);box-shadow:0 8px 28px color-mix(in srgb,var(--shade) 9%,transparent);font:13px/1.4 var(--review-font-family)}
 .review-bar [hidden]{display:none}
 .review-bar form{flex:1;min-width:0;display:flex}
 /* The field is a prompt box: one line in the bar, and as the text wraps it grows upward to about nine
