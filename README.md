@@ -330,7 +330,7 @@ References: [review JSON](references/report-schema.md), [incremental reviews](re
   `assets/vendor/fonts/` and embedded in the page. AIda (`aida.css`) is the look the app was drawn
   with; Terminal (`terminal.css`) draws it as a terminal app in JetBrains Mono, in Catppuccin Mocha's
   colours in the dark and Rosé Pine Dawn's in the light, and asks for the matching syntax theme in each
-  (`@syntax`, and `@syntax-light` for the mode that differs, in its opening comment). Terminal is the default (`@default`). Minimal
+  (`@syntax`, and `@syntax-light` for the mode that differs, in its opening comment). Minimal is the default (`@default`), in the system's light or dark mode. Minimal
   (`minimal.css`) is black, white and grey and shows three things: the list of steps, what is being
   read, and the bar. It hides the header and the toolbar, whose controls are all behind ⌘K. A
   new file in that folder appears in the Theme list under Settings.

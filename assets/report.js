@@ -89,10 +89,8 @@
   const settingsKey = 'dynamic-review:settings';
   const settings = {colorMode:null, theme:null, syntaxTheme:null, ignoreWhitespace:false};
   try { Object.assign(settings, JSON.parse(localStorage.getItem(settingsKey) || '{}')); } catch { /* defaults apply */ }
-  // The look changed its defaults once, to Terminal in the dark with Catppuccin: a look saved
-  // before that starts from them, and whatever the reviewer picks from then on is kept.
-  const lookDefaults = 'terminal-dark';
-  if (settings.defaults !== lookDefaults) Object.assign(settings, {colorMode:null, theme:null, syntaxTheme:null, defaults:lookDefaults});
+  // A saved look is kept as it is, whatever the defaults were when it was saved: a change of
+  // defaults reaches only a reviewer who has never chosen one.
   // The themes this page was rendered with are the options of its Theme menu.
   const themes = [...($('theme')?.options || [])].map(option => option.value);
   if (!themes.includes(settings.theme)) settings.theme = themes[0] || 'aida';

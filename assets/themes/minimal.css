@@ -2,7 +2,8 @@
    accent, grey does the hierarchy, and the only colours left are the ones that carry meaning
    (added and removed code, an agent's verdict, recording). No fills, borders or shadows around
    the parts of the page; space groups them. See base.css for what each token is for.
-   @syntax classic @mode light */
+   It follows the system: light by day, dark by night.
+   @default @syntax classic */
 :root:has(input.theme-controller[value=minimal-light]:checked),[data-theme="minimal-light"]{
   color-scheme:light;
   --color-base-100:#fdfdfc;--color-base-200:#fdfdfc;--color-base-300:#ececea;--color-base-content:#1a1a1a;
