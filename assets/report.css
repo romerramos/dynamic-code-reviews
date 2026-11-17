@@ -1267,6 +1267,10 @@ button.risk-path:hover .path-name{text-decoration:underline}
 .review-area{position:relative}
 .review-bar{position:absolute;z-index:30;left:50%;bottom:22px;transform:translateX(-50%);width:min(640px,calc(100% - 28px));min-height:46px;align-items:center;gap:8px;padding:7px 8px 7px 10px;border:1px solid var(--line);border-radius:calc(14px * var(--round));background:var(--surface);color:var(--ink);box-shadow:0 8px 28px color-mix(in srgb,var(--shade) 9%,transparent);font:13px/1.4 var(--review-font-family)}
 .review-bar [hidden]{display:none}
+/* The bar's parts sit in .bar-card; a theme that draws the bar as a stack of two cards (Minimal) shows
+   .bar-strip, the strip of the card behind. Elsewhere the card is the bar itself and there is no strip. */
+.review-bar .bar-card{display:contents}
+.review-bar .bar-strip{display:none}
 .review-bar form{flex:1;min-width:0;display:flex}
 /* The field is a prompt box: one line in the bar, and as the text wraps it grows upward to about nine
    lines, then scrolls. Grown, the words take the whole width and the rest drops to a row under them. */
@@ -1441,7 +1445,7 @@ details.thread-was:not([open])>summary{margin-bottom:0}
 .review-bar{--button-height:30px;--button-min-height:30px;display:flex}
 body:has(#inline-composer) .review-bar{display:none}
 main#content{padding-bottom:104px}
-:is(#toast,.range-actions,.leader-menu){bottom:calc(var(--status-h) + 84px)}
+:is(#toast,.range-actions,.leader-menu){bottom:calc(var(--status-h) + var(--bar-rise) + 84px)}
 /* The header keeps the review's name, its Revision and Update. The app and the previews are in Try
    the change and ⌘K, Details in ⌘K, Publish in the bar. */
 .app-header :is(.dcr-views,#preview-list-toggle,#context-toggle,.header-more,#dcr-publish){display:none}

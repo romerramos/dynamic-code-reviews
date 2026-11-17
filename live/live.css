@@ -95,7 +95,7 @@
 .ledger-toggle.has-unread::after{content:"";position:absolute;top:3px;right:3px;width:9px;height:9px;border-radius:calc(50% * var(--round));background:var(--accent);box-shadow:0 0 0 2px var(--surface)}
 
 /* An answer arrived somewhere you are not looking. */
-#dcr-arrival{position:fixed;right:24px;bottom:calc(84px + var(--status-h));z-index:18;display:flex;align-items:center;gap:12px;max-width:min(430px,calc(100vw - 32px));padding:12px 10px 12px 14px;border:1px solid var(--line);border-radius:calc(12px * var(--round));background:var(--surface);color:var(--ink);font-size:13.5px;box-shadow:0 8px 30px color-mix(in srgb,var(--shade) 18.8%,transparent)}
+#dcr-arrival{position:fixed;right:24px;bottom:calc(84px + var(--status-h) + var(--bar-rise));z-index:18;display:flex;align-items:center;gap:12px;max-width:min(430px,calc(100vw - 32px));padding:12px 10px 12px 14px;border:1px solid var(--line);border-radius:calc(12px * var(--round));background:var(--surface);color:var(--ink);font-size:13.5px;box-shadow:0 8px 30px color-mix(in srgb,var(--shade) 18.8%,transparent)}
 #dcr-arrival[hidden]{display:none}
 #dcr-newer{color:var(--accent);font-weight:650;white-space:nowrap}
 #dcr-newer[hidden]{display:none}
@@ -258,7 +258,7 @@ body.dcr-no-app #qa-panel,body.dcr-no-app .visual-qa-option,body.dcr-no-app .evi
 /* GitHub work in progress, bottom right: a spinner while it runs, then what happened and its link.
    It floats above the bar, like the toast and the answer that arrived, so the bar never covers it. */
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-#dcr-gh-note{position:fixed;right:24px;bottom:calc(84px + var(--status-h));z-index:19;display:flex;align-items:center;gap:10px;max-width:min(460px,calc(100vw - 32px));padding:11px 10px 11px 14px;border:1px solid var(--line);border-radius:calc(12px * var(--round));background:var(--surface);color:var(--ink);font-size:13.5px;line-height:1.4;box-shadow:0 8px 30px color-mix(in srgb,var(--shade) 18.8%,transparent)}
+#dcr-gh-note{position:fixed;right:24px;bottom:calc(84px + var(--status-h) + var(--bar-rise));z-index:19;display:flex;align-items:center;gap:10px;max-width:min(460px,calc(100vw - 32px));padding:11px 10px 11px 14px;border:1px solid var(--line);border-radius:calc(12px * var(--round));background:var(--surface);color:var(--ink);font-size:13.5px;line-height:1.4;box-shadow:0 8px 30px color-mix(in srgb,var(--shade) 18.8%,transparent)}
 #dcr-gh-note[hidden]{display:none}
 #dcr-gh-note[data-tone="done"] .gh-mark{color:var(--ink-green-2)}
 #dcr-gh-note[data-tone="error"]{border-color:var(--line-red-1)}
@@ -269,7 +269,7 @@ body.dcr-no-app #qa-panel,body.dcr-no-app .visual-qa-option,body.dcr-no-app .evi
 .gh-note-link:hover{text-decoration:underline}
 .gh-note-link svg{width:13px;height:13px}
 @media(prefers-reduced-motion:no-preference){#dcr-gh-note{animation:dcr-unsent-in .18s ease-out}}
-.range-actions:not([hidden])~#dcr-gh-note{bottom:calc(150px + var(--status-h))}
+.range-actions:not([hidden])~#dcr-gh-note{bottom:calc(150px + var(--status-h) + var(--bar-rise))}
 @media(min-width:1500px){body.ledger-open #dcr-gh-note{right:calc(var(--ledger-w,380px) + 14px)}}
 @media(min-width:1650px){body.ledger-open #dcr-gh-note{right:calc(var(--ledger-w,420px) + 14px)}}
 #dcr-unsent.is-github{border-left-color:var(--line-amber-5)}
@@ -303,7 +303,7 @@ body.dcr-no-app #qa-panel,body.dcr-no-app .visual-qa-option,body.dcr-no-app .evi
 .dcr-gh-actions .act-gh{min-width:132px}
 .dcr-gh-actions a.act{text-decoration:none}
 /* The answer that arrived floats above the GitHub notice when both show. */
-#dcr-gh-note:not([hidden])~#dcr-arrival{bottom:calc(150px + var(--status-h))}
+#dcr-gh-note:not([hidden])~#dcr-arrival{bottom:calc(150px + var(--status-h) + var(--bar-rise))}
 .ledger-item[data-gh-row][data-state="pending"]::before{background:var(--bg-amber-6)}
 .ledger-item[data-gh-row][data-state="posted"]::before{background:var(--bg-green-5)}
 .dcr-gh-box [hidden]{display:none}

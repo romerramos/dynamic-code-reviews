@@ -47,6 +47,7 @@
       </div>
       <main id="content" tabindex="-1"></main>
       <div id="review-bar" class="review-bar" role="group" aria-label="This review">
+        <div class="bar-card">
         <button type="button" id="bar-nav" class="bar-quiet bar-nav" aria-label="Show the steps">☰</button>
         <button type="button" id="bar-agent" class="bar-agent" aria-haspopup="dialog" hidden><span aria-hidden="true"></span></button>
         <button type="button" id="bar-back" class="bar-soft" hidden></button>
@@ -56,6 +57,8 @@
         <button type="button" id="bar-action" class="btn btn-sm btn-primary bar-primary" data-ui="Button" hidden></button>
         <button type="button" id="bar-commands" class="bar-keys" aria-label="Every command" title="Every command"><kbd id="bar-keys"></kbd></button>
         <button type="button" id="bar-review" class="bar-review" aria-label="Show your review"></button>
+        </div>
+        <div class="bar-strip"><span id="bar-who"></span><button type="button" id="bar-left" class="bar-left" hidden></button></div>
       </div>
     </div>
     <aside id="ledger" class="ledger" aria-label="Your review" hidden>

@@ -4249,6 +4249,12 @@
     const left = !next.meta && todo && !todo.hidden && !/^0\b/.test(todo.textContent.trim()) && todo.textContent.trim() !== next.label ? todo.textContent.trim() : '';
     $('bar-meta').textContent = next.meta || left;
     $('bar-meta').classList.toggle('is-link', !!left);
+    // The stacked bar's strip: who answers and on what, and the same note.
+    const who = chip?.dataset.ran || '';
+    if ($('bar-who').textContent !== who) $('bar-who').textContent = who;
+    $('bar-left').hidden = !$('bar-meta').textContent;
+    if ($('bar-left').textContent !== $('bar-meta').textContent) $('bar-left').textContent = $('bar-meta').textContent;
+    $('bar-left').disabled = !left;
     $('bar-action').hidden = !next.run;
     $('bar-action').textContent = next.label;
   }
@@ -4258,6 +4264,7 @@
   $('bar-action').addEventListener('click', () => { barRun?.(); queueBar(); });
   $('bar-back').addEventListener('click', () => definitionBack());
   $('bar-meta').addEventListener('click', () => { if ($('bar-meta').classList.contains('is-link')) document.querySelector('.dcr-todo-link')?.click(); });
+  $('bar-left').addEventListener('click', () => $('bar-meta').click());
   // The agent's card opens from its chip, which the dot presses.
   $('bar-agent').addEventListener('click', () => {
     // Where Settings has an Agents tab, the agent and its adversaries are there.

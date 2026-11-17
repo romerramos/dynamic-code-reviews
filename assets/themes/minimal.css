@@ -80,7 +80,7 @@
 [data-theme^="minimal-"] .diff-table tr.code-row>td.gutter.del:first-child{box-shadow:inset 2px 0 var(--minimal-removed)}
 
 /* --- a list, a page and one bar: the header and the toolbar give way to the bar and to ⌘K ---------- */
-html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
+html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px;--bar-rise:16px;--bar-card-bg:var(--surface);--bar-card-line:var(--line);--bar-card-shadow:0 8px 28px color-mix(in srgb,var(--shade) 9%,transparent)}
 /* What the bar says and does is not said again above the file: where it sits in the walkthrough is
    the list's to show, and marking it reviewed and moving on is the bar's button. */
 [data-theme^="minimal-"] .focus-file-header :is(.focus-group,.focus-progress-actions){display:none}
@@ -90,8 +90,33 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] body:not(.reading-focus) main#content{padding-top:22px}
 [data-theme^="minimal-"] :is(.app-header,.review-toolbar,.definition-back){display:none}
 [data-theme^="minimal-"] .review-bar{display:flex}
+/* --- The bar is a stack of two cards. The top card (.bar-card) holds the bar's parts; the card behind
+   it is the bar's ::before. The bar is a grid of two rows: the top card's, and the strip's (16px). The
+   card behind spans both and starts 16px down, so it shows exactly the strip's row under the top
+   card, and the strip's words, in that row, are centred in what shows. They line up with the top
+   card: who answers under the input's words, what is left to settle ending at the button's edge.
+   Its sizes and colours (--bar-rise, --bar-card-*) are set with the theme's other sizes above. --- */
+html[data-theme="minimal-dark"]{--bar-card-bg:color-mix(in srgb,var(--ink) 9%,var(--surface));--bar-card-line:color-mix(in srgb,var(--ink) 26%,transparent);--bar-card-shadow:0 0 0 6px color-mix(in srgb,var(--surface) 85%,black),0 16px 40px rgba(0,0,0,.6)}
+[data-theme^="minimal-"] #review-bar{display:grid;grid-template:auto var(--bar-rise)/minmax(0,1fr);gap:0;align-items:stretch;min-height:0;padding:0;border:0;background:none;box-shadow:none}
+[data-theme^="minimal-"] #review-bar::before{content:"";grid-area:1/1/3/2;margin:var(--bar-rise) 10px 0;border:1px solid var(--bar-card-line);border-radius:calc(14px * var(--round));background:var(--bar-card-bg);box-shadow:var(--bar-card-shadow)}
+[data-theme^="minimal-"] #review-bar .bar-card{grid-area:1/1;display:flex;align-items:center;gap:8px;min-width:0;min-height:46px;padding:7px 8px 7px 10px;border:1px solid var(--bar-card-line);border-radius:calc(14px * var(--round));background:var(--bar-card-bg);box-shadow:var(--bar-card-shadow);box-sizing:border-box}
+[data-theme^="minimal-"] #review-bar.is-tall .bar-card{flex-wrap:wrap;padding-top:8px;row-gap:4px}
+[data-theme^="minimal-"] #review-bar .bar-strip{grid-area:2/1;display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:0 var(--bar-strip-end,54px) 0 var(--bar-strip-start,41px);color:var(--minimal-faint);font:10.5px/12px var(--review-font-family);white-space:nowrap}
+[data-theme^="minimal-"] #review-bar.is-tall .bar-strip{--bar-strip-start:11px}
+[data-theme^="minimal-"] #review-bar #bar-meta{display:none}
+[data-theme^="minimal-"] #review-bar .bar-strip>*{min-width:0;overflow:hidden;text-overflow:ellipsis}
+[data-theme^="minimal-"] #review-bar .bar-left{flex:none;height:auto;padding:0;border:0;background:none;color:inherit;font:inherit}
+[data-theme^="minimal-"] #review-bar .bar-left:not(:disabled){cursor:pointer}
+[data-theme^="minimal-"] #review-bar .bar-left:not(:disabled):hover{color:var(--ink)}
+@media(max-width:740px){
+  [data-theme^="minimal-"] #review-bar .bar-card{min-height:40px;padding:5px 7px 5px 9px;gap:7px;--button-height:26px;--button-min-height:26px}
+  [data-theme^="minimal-"] #review-bar #bar-nav{width:28px;padding:0}
+  [data-theme^="minimal-"] #review-bar{--bar-strip-start:68px}
+  [data-theme^="minimal-"] #review-bar.is-tall .bar-strip{--bar-strip-start:10px}
+  [data-theme^="minimal-"] #review-bar .bar-left{display:none}
+}
 [data-theme^="minimal-"] main#content{padding-bottom:104px}
-[data-theme^="minimal-"] :is(#toast,.range-actions,.leader-menu){bottom:84px}
+[data-theme^="minimal-"] :is(#toast,.range-actions,.leader-menu){bottom:calc(84px + var(--bar-rise))}
 
 /* --- the Overview: prose and plain rows -------------------------------------------------------------- */
 [data-theme^="minimal-"] .overview-reading :is(.risk-rank,.dcr-try-app){border:0;background:transparent;box-shadow:none}
@@ -138,7 +163,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px}
 [data-theme^="minimal-"] .badge{border-color:transparent}
 
 /* The agent's card opens over its dot in the bar, since its chip went with the toolbar. */
-[data-theme^="minimal-"] #dcr-presence-card{left:var(--bar-agent-left,12px);top:auto;bottom:84px;max-height:calc(100dvh - 108px);overflow-y:auto;border-color:var(--line);box-shadow:0 16px 40px color-mix(in srgb,var(--shade) 10%,transparent)}
+[data-theme^="minimal-"] #dcr-presence-card{left:var(--bar-agent-left,12px);top:auto;bottom:calc(84px + var(--bar-rise));max-height:calc(100dvh - 108px - var(--bar-rise));overflow-y:auto;border-color:var(--line);box-shadow:0 16px 40px color-mix(in srgb,var(--shade) 10%,transparent)}
 
 /* --- the app: it fills the window, and its controls are one bar at the bottom, where the review's
    bar is. During a QA review that bar says what the agent is doing, and its notes sit just above. --- */

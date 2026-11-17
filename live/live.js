@@ -1678,6 +1678,9 @@
     settingsDialog?.classList.toggle('has-agents', !!model);
     if (!model) { presenceCard.hidden = true; return; }
     presence.dataset.tone = model.tone;
+    // Who answers and on what, for the bar to say (Claude · Opus 5.5 · high).
+    const ran = listenerModel ? globalThis.ReviewTools.modelText(listenerModel.model, listenerModel.effort) : '';
+    presence.dataset.ran = model.face ? `${tools.agentInfo(model.face).name}${ran ? ` · ${ran}` : ''}` : '';
     const face = `<span class="ui-presence">${UI.Avatar({agent: model.face, size: 'sm'})}${UI.PresenceDot(model.tone)}</span>`;
     const faceSlot = presence.querySelector('.dcr-presence-face');
     if (faceSlot.dataset.html !== face) { faceSlot.innerHTML = face; faceSlot.dataset.html = face; }
