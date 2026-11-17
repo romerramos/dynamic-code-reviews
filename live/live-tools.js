@@ -409,7 +409,8 @@ globalThis.LiveTools = (() => {
     if (!models.length) return optionHTML('', 'Its default model', current);
     const pick = current ? '' : optionHTML('', 'Pick a model', '');
     const fallback = agent.default_model || models.find(model => model.default)?.id;
-    const label = model => `${model.label || model.id}${model.id === fallback ? ' · default' : ''}`;
+    // Claude names no models itself, so its ids read as their names (Fable 5.2), an old alias too.
+    const label = model => `${model.label || (agent.slug === 'claude' && globalThis.ReviewTools?.modelName(model.id)) || model.id}${model.id === fallback ? ' · default' : ''}`;
     const free = models.filter(model => model.free);
     const rest = models.filter(model => !model.free);
     const list = items => items.map(model => optionHTML(model.id, label(model), current)).join('');

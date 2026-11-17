@@ -291,6 +291,7 @@ const rereading = tools.opinionsHTML(reasked, {now: noon});
 const grokAgent = {slug:'grok', efforts:['low', 'medium', 'high'], models:[{id:'grok-4.6'}, {id:'grok-4.7', default:true}], default_model:'grok-4.7'};
 assert.deepEqual(tools.settle(grokAgent, {agent:'grok', model:null, effort:null}), {agent:'grok', model:'grok-4.7', effort:'medium'});
 assert.match(tools.modelOptionsHTML(grokAgent, 'grok-4.7'), /grok-4\.7 · default/, 'the CLI default is marked');
+assert.match(tools.modelOptionsHTML({slug: 'claude', models: [{id: 'claude-fable-5-2'}]}, 'fable'), /value="claude-fable-5-2"[^>]*>Fable 5\.2<.*value="fable"|value="fable"[^>]*>Fable<.*>Fable 5\.2</s, "Claude's menu names its models, and an alias saved earlier");
 const codexAgent = {slug:'codex', efforts:[], default_model:'gpt-b', default_effort:'xhigh', models:[{id:'gpt-a', efforts:['low', 'high']}, {id:'gpt-b', efforts:['medium', 'xhigh']}]};
 assert.deepEqual(tools.settle(codexAgent, {agent:'codex', model:null, effort:null}), {agent:'codex', model:'gpt-b', effort:'xhigh'}, "Codex's own config decides");
 assert.deepEqual(tools.settle(codexAgent, {agent:'codex', model:'gpt-a', effort:'xhigh'}), {agent:'codex', model:'gpt-a', effort:'low'}, 'an effort the model does not take becomes one it does');
@@ -314,6 +315,8 @@ console.log('PASS the introduction to adversaries explains them, lists the agent
 assert.equal(globalThis.ReviewTools.modelText('opencode/big-pickle', null), 'big-pickle', 'a provider path is dropped');
 assert.equal(globalThis.ReviewTools.modelText('grok-4.7', 'high'), 'grok-4.7 · high');
 assert.equal(globalThis.ReviewTools.modelText(null, 'high'), '', 'no model, no label');
+assert.equal(globalThis.ReviewTools.modelText('claude-fable-5-2', 'max'), 'Fable 5.2 · max', "Claude's models read as their names");
+assert.equal(globalThis.ReviewTools.modelText('opus', null), 'Opus', 'an alias reads as its name, without a version it does not know');
 assert.match(tools.messagesHTML({messages:[{id:'m', author:'agent', agent:'grok', model:'grok-4.7', effort:'high', body:'ok'}]}), /<strong>Grok<\/strong><span class="dcr-model"[^>]*>grok-4\.7 · high<\/span>/);
 assert.doesNotMatch(tools.messagesHTML({messages:[{id:'m', author:'agent', agent:'grok', body:'ok'}]}), /dcr-model/, 'an agent that did not say shows no label');
 assert.match(tools.messagesHTML({adversary:'codex', opinions:{opencode:{id:'o', body:'Fine.', verdict:'agree', model:'opencode/big-pickle'}}}), /<strong>opencode<\/strong><span class="dcr-model"[^>]*>big-pickle<\/span>/);

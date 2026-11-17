@@ -18,8 +18,9 @@ module DCR
     LIST_TIMEOUT = 15
     # What the page fills in when an agent is turned on; the reviewer can change it.
     SUGGESTED = {'opencode' => 'opencode/big-pickle'}.freeze
-    # `claude --model` takes these names (or a full model name); Claude lists none.
-    CLAUDE_MODELS = %w[fable opus sonnet].freeze
+    # Claude lists no models, and `claude --model` takes a full model name, so these are named here,
+    # newest first; the page shows each by its name (Fable 5.2). An alias saved earlier still runs.
+    CLAUDE_MODELS = %w[claude-fable-5-2 claude-opus-5-5 claude-sonnet-5-5 claude-haiku-5-5].freeze
     FREE = %r{-free\z|\Aopencode/big-pickle\z}
 
     @cache = nil

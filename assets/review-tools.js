@@ -578,9 +578,17 @@ globalThis.ReviewTools = (() => {
   }
 
   // Whose judgement it is: an agent's model and effort as a short label ("grok-4.7 · high",
-  // "big-pickle"), without a provider path; '' when the agent did not say.
-  function modelText(model, effort) {
+  // "big-pickle"), without a provider path; '' when the agent did not say. Claude's models read
+  // as their names ("claude-fable-5-2" is "Fable 5.2", the alias "opus" is "Opus").
+  function modelName(model) {
     const name = String(model || '').trim().split('/').pop();
+    const claude = name.match(/^(?:claude-)?(fable|opus|sonnet|haiku)(?:-(\d+)-(\d+))?(?:-\d{8})?$/i);
+    if (!claude) return name;
+    const family = claude[1].charAt(0).toUpperCase() + claude[1].slice(1).toLowerCase();
+    return claude[2] ? `${family} ${claude[2]}.${claude[3]}` : family;
+  }
+  function modelText(model, effort) {
+    const name = modelName(model);
     return name ? `${name}${effort ? ` · ${effort}` : ''}` : '';
   }
 
@@ -621,5 +629,5 @@ globalThis.ReviewTools = (() => {
     return views.includes(savedView) ? savedView : 'overview';
   };
 
-  return {whenText, ledgerPlace, ledgerBy, pathParts, pathFit, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, where, scopeLabel, sha256, githubLink, evidenceFlows, flowLines, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  return {whenText, ledgerPlace, ledgerBy, pathParts, pathFit, modelName, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, where, scopeLabel, sha256, githubLink, evidenceFlows, flowLines, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();
