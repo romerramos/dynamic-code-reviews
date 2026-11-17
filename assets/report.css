@@ -1524,8 +1524,9 @@ body:not(.navigation-open) .sidebar{position:relative}
 #ledger .ledger-list{display:flex;flex-direction:column}
 #ledger .dcr-detail-code{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #dcr-panel .dcr-foot-status{display:none}
-/* An adversary that did not answer keeps its mark beside the words, on the Overview too. */
-:is(.dcr-popover,.dcr-card,#ledger) .dcr-op>.ui-avatar{--avatar-size:18px;opacity:var(--op-face-opacity,1)}
+/* An adversary that did not answer keeps its mark beside the words, on the Overview too; an agent at
+   work on the thread's status line wears the same mark, so the two lines read as one kind. */
+:is(.dcr-popover,.dcr-card,#ledger) :is(.dcr-op,.dcr-state-face)>.ui-avatar{--avatar-size:18px;opacity:var(--op-face-opacity,1)}
 :is(.dcr-popover,.dcr-card,#ledger) .dcr-op-line{display:flex;gap:6px;white-space:nowrap}
 #ledger-footer{display:none}
 .ledger-head h2{display:flex;align-items:center}

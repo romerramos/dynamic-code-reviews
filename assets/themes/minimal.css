@@ -617,7 +617,7 @@ html[data-theme^="minimal-"] body.review-in-progress .overview-reading .dcr-try:
 /* An adversary that did not answer, in the popover and on the Overview as in Your review: a faint line. */
 [data-theme^="minimal-"] :is(.dcr-popover,.dcr-card) :is(.dcr-opinions,.dcr-ops,ul:has(>.dcr-op)){margin:14px 0 0;padding:0;border:0;list-style:none}
 [data-theme^="minimal-"] :is(.dcr-popover,.dcr-card) .dcr-op{display:grid;grid-template-columns:var(--message-face-col,18px) minmax(0,1fr);gap:0 var(--message-gap,12px);align-items:center;padding:4px 0 0;border:0;background:none}
-[data-theme^="minimal-"] :is(.dcr-popover,.dcr-card) .dcr-op-line{color:var(--minimal-faint);font-size:12px}
+[data-theme^="minimal-"] :is(.dcr-popover,.dcr-card) :is(.dcr-op-line,.dcr-state-line){color:var(--minimal-faint);font-size:12px}
 [data-theme^="minimal-"] :is(.dcr-popover,.dcr-card) .dcr-op-line strong{color:inherit;font-weight:400}
 
 /* --- A QA review says one thing at a time. While the agent gets the app ready, the app blurs and one
