@@ -1349,6 +1349,9 @@
       // Resolved is the row's last word, whoever wrote the comment: it is struck through as on the Overview.
       const state = resolved().includes(item.dataset.ledger) || (item.dataset.state === 'resolved' && own) ? 'resolved' : forPR ? ghRow : STATE[thread?.delivery] || 'draft';
       set(item.dataset, 'state', state);
+      // Every agent agrees it is no longer a problem and it is not resolved yet: it leads Your review, as Ready to resolve.
+      const ready = state !== 'resolved' && !own && tools.closure(thread)?.state === 'settled';
+      if (ready !== ('settled' in item.dataset)) ready ? item.dataset.settled = '1' : delete item.dataset.settled;
       const meta = item.querySelector('.ledger-meta');
       let status = meta.querySelector('.ledger-status');
       if (!status) { status = document.createElement('span'); status.className = 'ledger-status'; meta.prepend(status); }

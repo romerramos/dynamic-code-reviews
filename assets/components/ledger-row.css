@@ -10,7 +10,7 @@
 .ui-ledger-row>.ledger-msg>.ui-avatar{grid-row:auto;align-self:start;--avatar-size:var(--ledger-face-col,18px);margin-top:1px}
 .ui-ledger-row .ledger-subject{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:14px;line-height:1.45}
 .ui-ledger-row .ledger-subject code{padding:0;border:0;background:none;font-family:var(--mono);font-size:.92em}
-.ui-ledger-row[data-state="resolved"] .ledger-subject{color:var(--muted);text-decoration:line-through}
+.ui-ledger-row[data-state="resolved"] .ledger-subject{color:var(--muted)}
 .ui-ledger-row .ledger-at{display:grid;place-items:center;align-self:start;width:24px;height:20px;padding:0;border:0;border-radius:calc(6px * var(--round));background:none;color:var(--comment-quiet);cursor:pointer}
 .ui-ledger-row .ledger-at:hover{background:var(--bg-neutral-2);color:var(--ink)}
 .ui-ledger-row .ledger-at svg{width:14px;height:14px;stroke-width:1.8}
@@ -20,11 +20,16 @@
 .ui-ledger-row .dcr-peek-faces>.ui-avatar{--avatar-size:var(--peek-face,18px);margin:0;box-shadow:none;filter:none;opacity:1}
 .ui-ledger-row .ledger-meta{display:flex;align-items:center;gap:6px;margin:5px 0 0 8px;padding:0}
 .ui-ledger-row .ledger-meta .gh-slot,.ui-ledger-row:not([data-conversation]) .ledger-meta :is([data-resolve],[data-copy]),.ui-ledger-row .dcr-new{display:none}
-/* The list: the agent's comments, then yours, then GitHub's, each group under its heading. */
+/* The list: what is ready to resolve first (every agent agrees it is no longer a problem), then the
+   agent's comments, yours, GitHub's, and last what is resolved, each group under its heading. */
 .ui-ledger-row[data-by="agent"]{order:0}
 .ui-ledger-row:not([data-conversation]){order:1}
 .ui-ledger-row[data-by="person"]{order:2}
-.ui-ledger-row:is(:nth-child(1 of [data-by="agent"]),:nth-child(1 of [data-ledger]:not([data-conversation])),:nth-child(1 of [data-by="person"]))::before{position:static;display:block;flex:1 0 100%;width:auto;height:auto;padding:16px 22px 2px;background:none;color:var(--comment-quiet);font-size:12px}
-.ui-ledger-row:nth-child(1 of [data-by="agent"])::before{content:var(--ledger-group-prefix,"") "Agent comments"}
-.ui-ledger-row:nth-child(1 of [data-ledger]:not([data-conversation]))::before{content:var(--ledger-group-prefix,"") "Your comments"}
-.ui-ledger-row:nth-child(1 of [data-by="person"])::before{content:var(--ledger-group-prefix,"") "From GitHub"}
+.ui-ledger-row[data-settled]{order:-1}
+.ui-ledger-row[data-state="resolved"]{order:3}
+.ui-ledger-row:is(:nth-child(1 of [data-settled]),:nth-child(1 of [data-by="agent"]:not([data-settled],[data-state="resolved"])),:nth-child(1 of [data-ledger]:not([data-conversation],[data-state="resolved"])),:nth-child(1 of [data-by="person"]:not([data-state="resolved"])),:nth-child(1 of [data-state="resolved"]))::before{position:static;display:block;flex:1 0 100%;width:auto;height:auto;padding:16px 22px 2px;background:none;color:var(--comment-quiet);font-size:12px}
+.ui-ledger-row:nth-child(1 of [data-settled])::before{content:var(--ledger-group-prefix,"") "Ready to resolve"}
+.ui-ledger-row:nth-child(1 of [data-by="agent"]:not([data-settled],[data-state="resolved"]))::before{content:var(--ledger-group-prefix,"") "Agent comments"}
+.ui-ledger-row:nth-child(1 of [data-ledger]:not([data-conversation],[data-state="resolved"]))::before{content:var(--ledger-group-prefix,"") "Your comments"}
+.ui-ledger-row:nth-child(1 of [data-by="person"]:not([data-state="resolved"]))::before{content:var(--ledger-group-prefix,"") "From GitHub"}
+.ui-ledger-row:nth-child(1 of [data-state="resolved"])::before{content:var(--ledger-group-prefix,"") "Resolved"}

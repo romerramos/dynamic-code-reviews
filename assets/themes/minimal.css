@@ -314,18 +314,30 @@ html[data-theme="minimal-dark"]{--bar-card-bg:color-mix(in srgb,var(--ink) 9%,va
 [data-theme^="minimal-"] .overview-reading :is(.thread-was,.thread-follows)>summary{color:var(--muted);font-size:13px}
 [data-theme^="minimal-"] .overview-reading .thread-was pre{border:0;background:var(--minimal-soft)}
 /* The conversation: names and words, no faces, no cards. */
-[data-theme^="minimal-"] .dcr-card .dcr-closure{padding:0;border:0;background:transparent}
-[data-theme^="minimal-"] .dcr-card .dcr-closure-head strong{color:var(--ink);font-size:13px;font-weight:600}
-[data-theme^="minimal-"] .dcr-card .dcr-closure-main{display:block;padding:0}
 [data-theme^="minimal-"] .dcr-card .dcr-closure-by{display:none}
-[data-theme^="minimal-"] .dcr-card{--message-space:14px;--message-text-size:14px;--message-text-line:1.65;--message-text-ink:var(--ink-neutral-3)}
+/* What became of the comment is a message like the others, in the comment's two columns: the agent's
+   mark in the marks' column, beside "No longer a problem · revision 2"; under it, on the text's edge,
+   what it said and who agrees. Earlier discussion starts on the same edge. */
+[data-theme^="minimal-"] .dcr-card .dcr-closure{display:grid;grid-template-columns:var(--message-face-col,18px) minmax(0,1fr);column-gap:var(--message-gap,12px);align-items:center;margin-top:18px;padding:0;border:0;background:transparent}
+[data-theme^="minimal-"] .dcr-card :is(.dcr-closure-main,.dcr-closure-told){display:contents}
+[data-theme^="minimal-"] .dcr-card .dcr-closure-main>.ui-avatar{grid-area:1/1;--avatar-size:var(--message-face-col,18px);margin:0}
+[data-theme^="minimal-"] .dcr-card .dcr-closure>:not(.dcr-closure-main),[data-theme^="minimal-"] .dcr-card .dcr-closure-told>*{grid-column:2}
+[data-theme^="minimal-"] .dcr-card .dcr-closure-head{grid-row:1;display:flex;flex-wrap:wrap;gap:0 6px;align-items:baseline;margin:0;font-size:12.5px;color:var(--minimal-faint)}
+[data-theme^="minimal-"] .dcr-card .dcr-closure-head strong{font-size:12.5px;font-weight:600}
+[data-theme^="minimal-"] .dcr-card .dcr-closure-rev{margin:0;font-size:12.5px}
+[data-theme^="minimal-"] .dcr-card .dcr-closure-rev::before{content:"·";margin-right:6px}
+[data-theme^="minimal-"] .dcr-card .dcr-closure .dcr-body{margin-top:4px}
 [data-theme^="minimal-"] .dcr-card .dcr-checks{display:flex;gap:14px;margin-top:6px}
+[data-theme^="minimal-"] .dcr-card .dcr-stage>summary{margin-left:calc(var(--message-face-col,18px) + var(--message-gap,12px));font-weight:400}
+/* Everyone agrees it is no longer a problem: Resolve is what is left, so it leads, in ink. */
+[data-theme^="minimal-"] .ui-comment:has(.dcr-closure.dcr-c-settled)>.thread-footer{justify-content:flex-start}
+[data-theme^="minimal-"] .ui-comment:has(.dcr-closure.dcr-c-settled)>.thread-footer>[data-resolve].btn-soft{order:-1;--comment-action-bg:var(--ink);--comment-action-ink:var(--surface);--comment-action-border:1px solid transparent}
+[data-theme^="minimal-"] .dcr-card{--message-space:14px;--message-text-size:14px;--message-text-line:1.65;--message-text-ink:var(--ink-neutral-3)}
 [data-theme^="minimal-"] .dcr-card .dcr-check strong{color:var(--ink-neutral-3);font-weight:500}
 [data-theme^="minimal-"] .dcr-card .dcr-stage{margin-top:18px;border:0;background:transparent}
 [data-theme^="minimal-"] .dcr-card .dcr-stage-head{padding:0;color:var(--muted);font-size:13px}
 [data-theme^="minimal-"] .dcr-card .dcr-reply{margin-top:16px;border-color:var(--line);background:transparent}
 [data-theme^="minimal-"] .overview-reading .overview-settled{display:flex;flex-direction:column;gap:30px}
-[data-theme^="minimal-"] .dcr-card .dcr-closure-head{display:flex;gap:8px;align-items:baseline;margin:0 0 4px;font-size:12.5px;color:var(--minimal-faint);justify-content:flex-start}
 [data-theme^="minimal-"] #navigation .nav-section button[data-view],[data-theme^="minimal-"] #navigation>ul button[data-view]{padding-right:30px}
 /* A reply: who, then what they concluded, on one line; then what they said. */
 
