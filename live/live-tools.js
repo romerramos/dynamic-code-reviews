@@ -14,7 +14,7 @@ globalThis.LiveTools = (() => {
   // agents were named stay "Agent".
   const UI = globalThis.UI;
   const agentInfo = UI.agentInfo;
-  const face = (slug, size = 'md', className = '') => UI.Avatar({agent: slug, size, className});
+  const face = (slug, size = 'md', className = '', ran = null) => UI.Avatar({agent: slug, size, className, model: ran?.model, effort: ran?.effort});
   // The reader by their GitHub handle, else You when the server could not tell.
   const youName = me => me?.login || 'You';
   const personName = person => `@${person?.login || 'someone'}`;
@@ -126,16 +126,16 @@ globalThis.LiveTools = (() => {
     const isOpen = row => String(row.body || '').trim() && (against.includes(row) ? !toggled.has(row.agent) : toggled.has(row.agent));
     const chips = checks.map(row => {
       const tone = row.failed || !SIDES[row.word] ? 'none' : SIDES[row.word] === closing.side ? 'agree' : 'disagree';
-      const chip = `${face(row.agent, 'sm')}<strong>${escape(name(row))}</strong><span class="dcr-check-said dcr-v-${tone}">${said(row)}</span>`;
+      const chip = `${face(row.agent, 'sm', '', row)}<strong>${escape(name(row))}</strong><span class="dcr-check-said dcr-v-${tone}">${said(row)}</span>`;
       return String(row.body || '').trim() ? `<button type="button" class="dcr-check${isOpen(row) ? ' is-open' : ''}" data-dcr-opinion="${escape(row.agent)}" aria-expanded="${!!isOpen(row)}" title="${escape(modelText(row))}">${chip}${chevron}</button>` : `<span class="dcr-check">${chip}</span>`;
     }).join('') + closing.waiting.map(agent => `<span class="dcr-check is-waiting">${face(agent, 'sm')}<strong>${escape(agentInfo(agent).name)}</strong><span class="dcr-check-said dcr-v-none">is checking</span><span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span></span>`).join('');
-    const opened = checks.filter(isOpen).map(row => `<div class="dcr-check-body">${face(row.agent, 'sm')}<div><p class="dcr-check-by"><strong>${escape(name(row))}</strong> ${said(row)}${modelHTML(row)}</p><div class="dcr-body">${markdown(row.body)}</div></div></div>`).join('');
+    const opened = checks.filter(isOpen).map(row => `<div class="dcr-check-body">${face(row.agent, 'sm', '', row)}<div><p class="dcr-check-by"><strong>${escape(name(row))}</strong> ${said(row)}${modelHTML(row)}</p><div class="dcr-body">${markdown(row.body)}</div></div></div>`).join('');
     const id = resolve && escape(resolve);
     const buttons = !id ? '' : differ
       ? `${UI.Button({label: 'No longer a problem · Resolve', variant: 'primary', attrs: {'data-resolve': resolve, 'data-dcr-side': 'dealt'}})}${still ? UI.Button({label: 'Still a problem · Fix this', variant: null, attrs: {'data-dcr-still': resolve, 'data-dcr-side': 'applies'}}) : ''}`
       : plain ? UI.Button({label: 'Resolve', variant: closing.state === 'settled' ? 'primary' : null, attrs: {'data-resolve': resolve, 'data-dcr-side': closing.side}}) : '';
     return `<section class="dcr-closure dcr-c-${resolved ? 'settled' : closing.state}" aria-label="What became of this comment"><header class="dcr-closure-head"><strong>${head}</strong>${note ? `<span>${escape(note)}</span>` : ''}<span class="dcr-closure-rev">revision ${escape(closing.revision)}</span></header>`
-      + `<div class="dcr-closure-main">${face(main.agent, 'sm')}<div class="dcr-closure-told"><p class="dcr-closure-by"><strong>${escape(name(main))}</strong>${did ? ` ${did}` : ''}${modelHTML(main)}</p>${String(main.body || '').trim() ? `<div class="dcr-body">${markdown(main.body)}</div>` : ''}`
+      + `<div class="dcr-closure-main">${face(main.agent, 'sm', '', main)}<div class="dcr-closure-told"><p class="dcr-closure-by"><strong>${escape(name(main))}</strong>${did ? ` ${did}` : ''}${modelHTML(main)}</p>${String(main.body || '').trim() ? `<div class="dcr-body">${markdown(main.body)}</div>` : ''}`
       + `${chips ? `<div class="dcr-checks" aria-label="Checked by">${chips}</div>` : ''}${opened}</div></div>${buttons ? `<div class="dcr-closure-actions">${buttons}</div>` : ''}</section>`;
   }
   const modelText = item => globalThis.ReviewTools?.modelText(item?.model, item?.effort) || '';
@@ -263,7 +263,7 @@ globalThis.LiveTools = (() => {
       const model = agent ? modelHTML(message) : '';
       const role = adversary ? `<span class="dcr-role">second reviewer${message.about === 'outcome' || message.about === 'earlier-outcome' ? ', on what became of it' : ''}</span>` : '';
       const outcome = OUTCOMES[message.outcome] ? `<span class="dcr-verdict dcr-o-${escape(message.outcome)}">${OUTCOMES[message.outcome]}</span>` : '';
-      const avatar = agent ? UI.Avatar({agent: slug}) : person ? UI.Avatar({person}) : UI.Avatar({you: me || null});
+      const avatar = agent ? UI.Avatar({agent: slug, model: message.model, effort: message.effort}) : person ? UI.Avatar({person}) : UI.Avatar({you: me || null});
       return UI.ThreadMessage({id: message.id, from: agent ? 'agent' : person ? 'person' : 'you', face: avatar, who, body: markdown(message.body),
         classes: adversary ? `dcr-adversary dcr-v-${escape(message.verdict || 'none')}` : '',
         head: `${model}${adversary || message.opinion ? verdictHTML(message.verdict) : outcome}${role}<time datetime="${escape(message.at || '')}" data-at="${escape(message.at || '')}">${escape(relativeTime(message.at, now))}</time>${fresh ? '<span class="dcr-new">New</span>' : ''}`});

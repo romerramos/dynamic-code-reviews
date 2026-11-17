@@ -2209,7 +2209,7 @@
     return Object.entries(count).sort((a, b) => b[1] - a[1])[0]?.[0] || 'claude';
   }
   // Who wrote a comment, as a small face (Avatar): the reader, a teammate on GitHub, or an agent.
-  const authorFace = comment => comment.personal ? youAvatar() : comment.author ? UI.Avatar({person: comment.author}) : UI.Avatar({agent: comment.agent || 'claude'});
+  const authorFace = comment => comment.personal ? youAvatar() : comment.author ? UI.Avatar({person: comment.author}) : UI.Avatar({agent: comment.agent || 'claude', model: comment.model, effort: comment.effort});
   function commentCard(comment, closed = false) {
     const found = ReviewTools.anchor(snapshot, comment);
     if (!found && !comment.general) return '';

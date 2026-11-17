@@ -165,6 +165,8 @@ assert.equal(tools.agentInfo('my-bot').name, 'My-bot', 'an unknown agent keeps i
 assert.equal(tools.agentInfo(null).name, 'Agent', 'older messages stay "Agent"');
 assert.match(UI.Avatar({agent:'codex'}), /data-mark="codex"/, 'a known agent shows its mark');
 assert.match(UI.Avatar({agent:'my-bot'}), /<b>M<\/b>/, 'an agent with no bundled mark shows its letter');
+assert.match(UI.Avatar({agent:'claude', model:'claude-fable-5-2', effort:'max'}), /data-tip="Claude · Fable 5\.2 · max"/, 'a face says the model it ran on in its tip');
+assert.doesNotMatch(UI.Avatar({agent:'claude'}), /data-tip/, 'no model, no tip');
 assert.equal(tools.agentInfo('antigravity').company, 'Google');
 
 const debated = {delivery:'draft', live:false, adversary:'codex', waiting_on:['gemini'],

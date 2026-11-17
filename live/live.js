@@ -156,7 +156,7 @@
   const writer = comment => comment.agent || listener || 'claude';
   const byName = comment => comment.author ? tools.personName(comment.author) : tools.agentInfo(writer(comment)).name;
   // Who wrote it, as a face (Avatar): the reader, a teammate on GitHub, or the agent.
-  const byFace = (comment, size = 'md') => comment.personal ? UI.Avatar({you: me || null, size}) : comment.author ? UI.Avatar({person: comment.author, size}) : UI.Avatar({agent: writer(comment), size});
+  const byFace = (comment, size = 'md') => comment.personal ? UI.Avatar({you: me || null, size}) : comment.author ? UI.Avatar({person: comment.author, size}) : UI.Avatar({agent: writer(comment), size, model: comment.model, effort: comment.effort});
   const advToggleHTML = '<button type="button" class="dcr-adv-toggle" data-dcr-adv hidden aria-pressed="false"></button>';
   const composeHTML = () => `<form class="dcr-reply dcr-compose" hidden><textarea rows="1" aria-label="Reply to your agent" placeholder="Reply to your agent"></textarea>${advToggleHTML}<button type="button" class="dcr-change dcr-gh" data-dcr-github hidden aria-label="Sum this conversation up for GitHub" title="Sum this conversation up as a comment for GitHub">${window.ReviewGitHub?.mark || ''}</button><button type="button" class="dcr-change" data-dcr-change hidden aria-label="Make this change">${ico('wrench')}</button><button type="submit" class="dcr-send" aria-label="Send reply" title="Send reply (⌘ Enter)">${ico('send')}</button></form>`;
   const cardBlock = (id, variant, comment) => {
