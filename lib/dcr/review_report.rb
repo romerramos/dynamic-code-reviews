@@ -30,7 +30,9 @@ module DCR
 
     # {files, verdict, agents, comments, conversations, revisions, left, open}: left, the files that still need
     # the reader; open, the comments nobody settled yet. Both are empty when the review is done.
-    def facts(snapshot, review, state, key)
+    # reviewer: the reader's GitHub login when the pull request is someone else's: what they said
+    # there waits on its author, so it stays in the open without holding their review back.
+    def facts(snapshot, review, state, key, reviewer: nil)
       progress = state.dig('blobs', key) || {}
       threads = state.dig('threads', key) || {}
       viewed = Array(progress['viewedFiles'])
@@ -46,7 +48,10 @@ module DCR
       actionable = reviews.reject { |comment| QUIET.include?(comment['label']) }
       # Open is what the Overview's All clear waits on: the review's own comments on the code as it is.
       # The reader's questions to the agent are not something to resolve.
-      waiting = comments.reject { |comment| comment['mine'] || comment['outdated'] || resolved.include?(comment['id']) || threads.dig(comment['id'], 'closed') }
+      waiting = comments.reject do |comment|
+        comment['mine'] || comment['outdated'] || resolved.include?(comment['id']) || threads.dig(comment['id'], 'closed') ||
+          (reviewer && comment.dig('author', 'login') == reviewer)
+      end
       settled = actionable - waiting
       fixed = settled.count { |comment| fixed?(threads[comment['id']]) }
       agents = (comments.map { |comment| comment['agent'] } + threads.values.flat_map { |thread| voices(thread) }).compact.uniq

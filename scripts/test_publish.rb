@@ -29,6 +29,7 @@ FAKE_GH = <<~'RUBY'
   case [method, path]
   when %w[GET user] then puts JSON.generate('login' => 'reviewer')
   when ['GET', 'repos/acme/web/pulls/7'] then puts JSON.generate('head' => {'sha' => ENV.fetch('GH_HEAD')}, 'user' => {'login' => 'author'}, 'state' => 'open')
+  when ['POST', 'repos/acme/web/pulls/7/reviews'] then puts JSON.generate('id' => 21, 'html_url' => 'https://github.com/acme/web/pull/7#pullrequestreview-21')
   when ['POST', 'repos/acme/web/issues/7/comments'] then puts JSON.generate('id' => 11, 'html_url' => 'https://github.com/acme/web/pull/7#issuecomment-11')
   when ['PATCH', 'repos/acme/web/issues/comments/11'] then puts JSON.generate('id' => 11, 'html_url' => 'https://github.com/acme/web/pull/7#issuecomment-11')
   when ['POST', "repos/acme/web/statuses/#{'b' * 40}"]
@@ -95,6 +96,17 @@ Dir.mktmpdir('dcr-publish-test') do |directory|
   assert(asked['open'].empty? && asked['comments']['total'] == 2 && asked['conversations'] == 2, "A question of the reader's is open, or counted as a comment: #{asked.slice('open', 'comments', 'conversations')}")
   puts 'PASS without a verdict every file needs the reader; unresolved comments are open, the reader\'s own questions never'
 
+  # On someone else's pull request, what the reader said there waits on its author; a teammate's comment still waits on the reader.
+  arrived = saved['comments'][KEY]
+  saved['comments'][KEY] = [{'id' => 'gh-1', 'label' => 'suggestion', 'subject' => 'Said by the reader', 'author' => {'login' => 'reviewer'}},
+                            {'id' => 'gh-2', 'label' => 'suggestion', 'subject' => 'Said by a teammate', 'author' => {'login' => 'teammate'}}]
+  reviewing = DCR::ReviewReport.facts(shot, said, saved, key, reviewer: 'reviewer')
+  owning = DCR::ReviewReport.facts(shot, said, saved, key)
+  assert(reviewing['open'] == %w[gh-2], "The reviewer's own GitHub comment holds the review back: #{reviewing['open']}")
+  assert(owning['open'] == %w[gh-1 gh-2], "On the reader's own pull request every comment waits on them: #{owning['open']}")
+  saved['comments'][KEY] = arrived
+  puts 'PASS a reviewer\'s own GitHub comments do not hold back publishing someone else\'s pull request'
+
   # A review whose only comment is a note: it asks nothing, but the adversaries who disagreed with it in part still count.
   noted = {'comments' => [{'id' => 'n1', 'label' => 'note', 'subject' => 'Safe for every caller', 'agent' => 'claude', 'hunk' => 'f1h1'}]}
   saved['threads'][KEY] = {'n1' => {'messages' => [{'author' => 'agent', 'agent' => 'codex', 'role' => 'adversary', 'verdict' => 'partly', 'body' => 'Mostly.'}],
@@ -150,6 +162,33 @@ Dir.mktmpdir('dcr-publish-test') do |directory|
   code, earlier = api.call('GET', '/api/publish?key=dynamic-review:old:feature:0', nil)
   assert(code == 400 && earlier['error'].include?('earlier revision'), 'Only the latest revision is published')
   puts 'PASS the server refuses a review that is not ready, and says what is left'
+
+  # Finishing the GitHub review of a review that is ready publishes it: one review on GitHub, its report inside.
+  review_url = 'https://github.com/acme/web/pull/7#pullrequestreview-21'
+  ready = {'ready' => true, 'published' => nil, 'markdown' => text, 'facts' => facts}
+  api.define_singleton_method(:publish_check) { |_key, fresh: false| ready }
+  File.delete(log) if File.file?(log)
+  code, finished = api.call('POST', '/api/github/review', -> { JSON.generate('key' => KEY, 'event' => 'APPROVE', 'body' => 'Looks good', 'items' => []) })
+  sent = calls.().select { |call| call['method'] != 'GET' }
+  assert(code == 200 && sent.map { |call| call['path'] } == ['repos/acme/web/pulls/7/reviews', "repos/acme/web/statuses/#{HEAD}"], "Finishing posts one review and marks the commit: #{sent}")
+  assert(sent.first['input']['event'] == 'APPROVE' && sent.first['input']['body'] == "Looks good\n\n---\n\n#{text}", "The report goes in the review's text: #{sent.first['input']}")
+  assert(sent.last['input']['target_url'] == review_url && finished['report']['url'] == review_url, "The commit's check links to the review: #{sent.last}")
+  assert(state.read.dig('github', KEY, 'report', 'body') == text, 'The report that went with the review counts as published')
+  # Already published, or not ready: the review goes alone. A newer push leaves the report out too.
+  [ready.merge('published' => {'body' => text}), ready.merge('ready' => false)].each do |check|
+    ready = check
+    File.delete(log)
+    _, alone = api.call('POST', '/api/github/review', -> { JSON.generate('key' => KEY, 'event' => 'COMMENT', 'body' => 'A note', 'items' => []) })
+    only = calls.().select { |call| call['method'] != 'GET' }
+    assert(!alone['report'] && only.length == 1 && only.first['input']['body'] == 'A note', "The report must not be repeated or sent early: #{only}")
+  end
+  ready = ready.merge('ready' => true, 'published' => nil)
+  ENV['GH_HEAD'] = 'c' * 40
+  File.delete(log)
+  _, moved = api.call('POST', '/api/github/review', -> { JSON.generate('key' => KEY, 'event' => 'COMMENT', 'body' => 'A note', 'items' => []) })
+  assert(!moved['report'] && calls.().select { |call| call['method'] != 'GET' }.first['input']['body'] == 'A note', 'A newer push keeps the report out of the review')
+  ENV['GH_HEAD'] = HEAD
+  puts 'PASS finishing the GitHub review publishes a ready review inside it, once'
 
   kept = state.github_report(KEY, first.merge('body' => text))
   assert(state.read.dig('github', KEY, 'report') == kept && kept['at'], 'The last publish is kept, to update it next time')

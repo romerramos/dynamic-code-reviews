@@ -854,12 +854,13 @@
     setPane('main', false);
     showBack();
   }
-  function showBack() {
+  function drawBack() {
     const last = definitionTrail.at(-1);
     backButton.hidden = !last;
-    queueBar();
     if (last) backButton.innerHTML = `${icon('arrow-left')} Back to ${escape(last.label)} <kbd>Ctrl O</kbd>`;
+    return last;
   }
+  function showBack() { drawBack(); queueBar(); }
   // Going from the Overview to a comment's code leaves a way back, as a definition jump does.
   function rememberOverview() {
     if (state.view !== 'overview') return;
@@ -1890,7 +1891,9 @@
     return added;
   }
   // resolve: closes a comment from wherever the reader is, its card on screen or not.
-  window.ReviewLive = {addComments: addLiveComments, inProgress, resolve: id => { if (!comments.find(comment => comment.id === id)?.resolved) toggleResolved(id); }};
+  window.ReviewLive = {addComments: addLiveComments, inProgress,
+    resolve: id => { if (comments.find(comment => comment.id === id)?.resolved === false) toggleResolved(id, true); },
+    reopen: id => { if (comments.find(comment => comment.id === id)?.resolved) toggleResolved(id, true); }};
   // Until the review is finished, QA and template previews wait: they build on its comments and
   // would compete with it for the agent. The controls stay visible, greyed, and say why.
   const LOCKED = '[data-open-previews], [data-copy-qa], [data-request-preview], [data-preview-toggle], [data-try="qa"], [data-try-preview], [data-try-all], [data-start-qa], [data-empty-qa], [data-view="previews"], #qa-connect';
@@ -2094,6 +2097,8 @@
   const ghLive = () => ['ready', 'checking', 'offline'].includes(ghStatus().phase);
   const ghWhere = posted => ({file: 'Posted as a comment on the file: these lines are not part of the pull request\'s diff.', review: 'Posted in your review\'s summary.', conversation: 'Posted in the pull request\'s conversation.'})[posted.where] || 'Posted on these lines.';
   function ghBadge(comment) {
+    const promotion = github.provider?.promotion?.(comment.id);
+    if (promotion) return `<button type="button" class="gh-tag gh-tag-link" data-dcr-show="${escape(promotion.show)}">${ghMark}${escape(promotion.label)}</button>`;
     if (!ghPostable(comment)) return '';
     const state = ghState(comment.id);
     if (state.state === 'pending') return `<span class="gh-tag gh-tag-pending" title="In your GitHub review, not posted yet. It posts with the others when you finish your review.">Pending review</span>`;
@@ -2143,6 +2148,7 @@
     document.querySelectorAll('[data-edit], [data-delete]').forEach(item => { item.hidden = ghState(item.dataset.edit || item.dataset.delete).state === 'posted'; });
     document.querySelectorAll('[data-gh-delete], [data-gh-remove]').forEach(item => { item.hidden = ghState(item.dataset.ghDelete || item.dataset.ghRemove).state !== 'posted'; });
     if (composer.node) syncComposerMode();
+    queueBar();
   }
   window.ReviewGitHub = {connect(provider) { github.provider = provider; refreshGitHub(); }, refresh: refreshGitHub, mark: ghMark};
   const menuItem = (attrs, label, symbol = '') => `<button type="button" class="more-item" ${attrs}>${symbol ? icon(symbol) : ''}${label}</button>`;
@@ -2198,7 +2204,7 @@
     const slug = comment.personal ? '' : comment.agent || '';
     const by = slug ? escape(UI.agentInfo(slug).name) : '';
     // Who wrote it is the face beside the title, and where it is is at the right of it: only what kind of comment it is is said.
-    return `<p class="thread-meta" title="${escape([by, path && range ? `${path}, ${range}` : ''].filter(Boolean).join(' · '))}">${[kind, comment.decoration && !comment.personal ? escape(comment.decoration) : ''].filter(Boolean).join('<i aria-hidden="true">·</i>')}</p>`;
+    return `<p class="thread-meta" title="${escape([by, path && range ? `${path}, ${range}` : ''].filter(Boolean).join(' · '))}">${[kind, comment.decoration && !comment.personal ? escape(comment.decoration) : ''].filter(Boolean).join('<i aria-hidden="true">·</i>')}${ghBadgeSlot(comment)}</p>`;
   };
   // The agent this review is with: the one listening, else the one that wrote its comments.
   function mainAgent() {
@@ -2231,14 +2237,15 @@
       : UI.Button({html: `View code · ${lines} ${icon('arrow-right')}`, variant: 'ghost', className: 'thread-source', attrs: {'data-open-code': comment.id, 'aria-haspopup': 'dialog', 'aria-label': `View code for ${found.file.path}, ${range}: ${comment.subject}`}});
     return UI.CommentCard({id: comment.id, open: threadsOpen.has(comment.id), resolved: comment.resolved, earlier: closed, own: comment.personal,
       row: {subject: comment.subject, title, face: authorFace(comment), go: found && comment.hunk ? {path: found.file.path, range} : null,
-        tags: comment.personal && comment.audience === 'agent' ? '' : UI.Tag(comment.label),
+        tags: `${comment.personal && comment.audience === 'agent' ? '' : UI.Tag(comment.label)}${ghBadgeSlot(comment)}`,
         place: place(found ? found.file.path : was?.path, found ? comment.start : comment.outdated?.start), state: stateWord(comment, closed), priority: comment.severity || ''},
       meta: threadMeta(comment, found?.file.path || was?.path, found ? range : was?.lines),
       body: `${told ? `<div class="comment-discussion">${ReviewTools.markdown(told)}</div>` : ''}${wasCode}${follows}${commentShots(comment)}${commentEvidence(comment)}`,
       source,
       footer: `<div class="comment-actions">${commentActions(comment)}</div>${UI.Button({html: comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`, variant: comment.resolved ? 'ghost' : 'soft', attrs: {'data-resolve': comment.id}})}`});
   }
-  function toggleResolved(id) {
+  // quiet: the app did it, so the reader's focus stays where it is and nothing is announced.
+  function toggleResolved(id, quiet = false) {
     const comment = comments.find(comment => comment.id === id);
     if (!comment) return;
     if (!comment.resolved) threadsOpen.delete(id);
@@ -2252,6 +2259,7 @@
     // A card resolved into the closed Resolved fold is not followed there: the reader stays where they were.
     const updated = [...document.querySelectorAll('[data-thread-id]')].find(card => card.dataset.threadId === id && !card.closest('details.overview-fold:not([open])'));
     if (updated && top !== undefined) $('content').scrollTop += updated.getBoundingClientRect().top - top;
+    if (quiet && stored) return;
     updated?.querySelector('[data-resolve]')?.focus({preventScroll:true});
     toast(stored ? (comment.resolved ? 'Conversation reopened.' : 'Conversation resolved locally.') : 'Browser storage is unavailable. Export local notes to keep your resolution state.');
   }
@@ -4184,16 +4192,22 @@
     return `${escape(title.slice(0, cut))}<span class="step-last">${escape(title.slice(cut))}<span class="step-done">${icon('check')}</span></span>`;
   }
   function barNext() {
+    // With nothing left to read, pending GitHub comments make finishing that review the next step.
+    const pending = ghStatus().phase === 'offline' ? 0 : ghPending();
+    const finishGitHub = pending ? {label: `Finish GitHub review (${pending})`, run: () => github.provider.finish()} : null;
     const reading = fileReadingActive() ? readingFile() : null;
     if (reading) {
       const viewed = fileViewed(reading), next = otherUnviewed(focusIndex);
-      return {meta: `${focusIndex + 1} of ${focusOrder.length}`, label: viewed ? (next >= 0 ? 'Next file' : 'Overview') : next >= 0 ? 'Reviewed, next' : 'Reviewed',
+      const meta = `${focusIndex + 1} of ${focusOrder.length}`;
+      if (viewed && next < 0 && finishGitHub) return {meta, ...finishGitHub};
+      return {meta, label: viewed ? (next >= 0 ? 'Next file' : 'Overview') : next >= 0 ? 'Reviewed, next' : 'Reviewed',
         run: () => { if (!viewed) markViewed(reading, true); if (next >= 0) focusFile(next); else select('overview'); }};
     }
     if (layers.some(layer => layer.id === state.view)) return {meta: $('position').textContent, label: 'Next step', run: () => $('next').click()};
     if (state.view === 'since') return {meta: '', label: '', run: null};
     const next = otherUnviewed(-1);
     if (next >= 0) return {meta: '', label: state.viewedFiles.length ? 'Continue reading' : 'Start reading', run: () => (focusMode ? focusFile(next) : select(focusOrder[next].layer.id))};
+    if (finishGitHub) return {meta: '', ...finishGitHub};
     const todo = document.querySelector('.dcr-todo-link');
     if (todo && !todo.hidden && !/^0\b/.test(todo.textContent.trim())) return {meta: '', label: todo.textContent.trim(), run: () => todo.click()};
     // Everything read and settled: what the served review would do next (publish it, or see it published).
@@ -4233,7 +4247,9 @@
       if ($('progress-need').title !== strip) $('progress-need').title = strip;
       if (!queueBar.watching) { queueBar.watching = true; new MutationObserver(queueBar).observe(document.getElementById('dcr-jev'), {subtree: true, childList: true, characterData: true}); }
     }
-    const last = definitionTrail.at(-1);
+    // On the Overview there is no way back to it, however the reader got here.
+    if (state.view === 'overview') while (definitionTrail.at(-1)?.view === 'overview') definitionTrail.pop();
+    const last = drawBack();
     $('bar-back').hidden = !last;
     if (last) $('bar-back').textContent = `← Back to ${last.label}`;
     const update = document.getElementById('dcr-update');

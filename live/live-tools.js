@@ -99,6 +99,12 @@ globalThis.LiveTools = (() => {
   function closesItself(comment, thread) {
     return !comment.personal && (!!comment.outdated || thread?.fix?.state === 'done') && confirmed(thread);
   }
+  // A comment sent to GitHub, or waiting in the reader's GitHub review, is done with here: what comes
+  // back from GitHub is the one to follow. A comment that came from GitHub stays open: answering it
+  // does not end that conversation.
+  function leftForGitHub(comment, github) {
+    return !comment.author && !!(github?.pending?.[comment.id] || github?.posted?.[comment.id]);
+  }
   // The closing block of a comment's thread. It tells it as it happened: what the review's agent
   // did or found, in its own words, then who checked that on their own, a few words each. A
   // check that confirms stays a name on one line (it opens to its reasons); one that does not
@@ -536,6 +542,6 @@ globalThis.LiveTools = (() => {
   }
 
   return {emojiToken, emojiMatches, escape, progressKey, allComments, sendText, drafts, statusText, statusModel, actionLabel, markdown, snippet, relativeTime, messagesHTML, unseen, agentModel, summary,
-    agentInfo, youName, personName, opinionMessages, modelHTML, verdictHTML, verdicts, closure, closureHTML, confirmed, closesItself, outcomeWord, outcomeSide: word => SIDES[word], OUTCOMES, commentAction, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
+    agentInfo, youName, personName, opinionMessages, modelHTML, verdictHTML, verdicts, closure, closureHTML, confirmed, closesItself, leftForGitHub, outcomeWord, outcomeSide: word => SIDES[word], OUTCOMES, commentAction, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
     activeAdversaries, agentStatus, modelOptionsHTML, effortLevels, effortOptionsHTML, chosenModel, chosenEffort, settle, adversaryPanelHTML, adversaryIntroHTML, jevBannerHTML};
 })();

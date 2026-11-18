@@ -532,6 +532,9 @@ module DCR
       update do |state|
         entry = github_entry(state, key)
         %w[posted pending bodies].each { |part| entry[part].delete(id) }
+        # What it became on GitHub is gone with it.
+        copy = entry['promoted'].delete(id)
+        state['comments'][key]&.reject! { |comment| comment['id'] == copy } if copy
         entry
       end
     end
@@ -543,6 +546,7 @@ module DCR
       state['github'][key]['reviews'] ||= []
       state['github'][key]['bodies'] ||= {}
       state['github'][key]['drafts'] ||= {}
+      state['github'][key]['promoted'] ||= {} # a review comment's id => the comment it became on GitHub
       state['github'][key]
     end
 
@@ -550,9 +554,10 @@ module DCR
     # join the review's, their replies the threads. The agent is handed each person's new comments
     # as one message, and a reply in a thread it is part of; nothing already here is added twice.
     # Returns the threads whose adversaries should hear the reply too.
-    def github_arrived(key, comments:, messages:, sends:)
+    def github_arrived(key, comments:, messages:, sends:, promoted: {})
       check_key(key)
       update do |state|
+        github_entry(state, key)['promoted'].merge!(promoted)
         posted = (state['comments'][key] ||= [])
         taken = posted.map { |comment| comment['id'] }
         fresh = comments.reject { |comment| taken.include?(comment['id']) }.last([200 - posted.length, 0].max)

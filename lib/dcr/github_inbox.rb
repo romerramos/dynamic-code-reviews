@@ -17,9 +17,11 @@ module DCR
     PREFIX = {'line' => '', 'issue' => 'i', 'review' => 'r'}.freeze
     ANCHOR = {'line' => /#discussion_r(\d+)\z/, 'issue' => /#issuecomment-(\d+)\z/, 'review' => /#pullrequestreview-(\d+)\z/}.freeze
 
-    # What is new since the last time: {comments:, messages:, sends:} for State#github_arrived.
+    # What is new since the last time: {comments:, messages:, sends:, promoted:} for State#github_arrived.
     # conversation: GitHub#conversation. known: ids of the review's comments, saved or posted.
     # state: the state as read. me: the reader's GitHub login. avatar: callable(url), a data: image or nil.
+    # A comment the reader sent from here comes back as its own comment, where the conversation goes
+    # on; promoted says which comment of the review each one started as.
     def plan(conversation, snapshot, key, state, known, me:, avatar:)
       github = state.dig('github', key) || {}
       heard = (state.dig('threads', key) || {}).values.flat_map { |thread| Array(thread['messages']).filter_map { |message| message['github'] } }.to_set
@@ -29,14 +31,19 @@ module DCR
         next if posted['where'] == 'reply'
         ANCHOR.each { |kind, pattern| (number = posted['url'].to_s[pattern, 1]) && all["#{kind}:#{number}"] = id }
       end
+      # Sent in a review but saved with only the review's link: known by that review and their text.
+      in_review = (github['posted'] || {}).each_with_object(Hash.new { |all, number| all[number] = [] }) do |(id, posted), all|
+        number = posted['url'].to_s[ANCHOR['review'], 1]
+        all[number] << id if number && github.dig('bodies', id)
+      end
       roots = known.grep(/\Agh-\d+\z/).to_h { |id| ["line:#{id.delete_prefix('gh-')}", id] }.merge(ours)
       report = github.dig('report', 'id')
       files = Array(conversation['files'])
-      comments, messages, by = [], [], {}
+      comments, messages, by, promoted = [], [], {}, {}
       conversation['items'].each do |item|
         next if item['bot'] || item['body'].include?(ReviewReport::MARK) || (item['kind'] == 'issue' && item['id'] == report)
         name = "#{item['kind']}:#{item['id']}"
-        next if ours.key?(name)
+        next if item['kind'] == 'review' && ours.key?(name) # comments that went into the review's own text
         who = {'login' => item['login'], 'avatar' => item['avatar_url'] && avatar.call(item['avatar_url'])}.compact
         if item['reply_to']
           thread = roots["line:#{item['reply_to']}"]
@@ -47,13 +54,17 @@ module DCR
         else
           id = "gh-#{PREFIX.fetch(item['kind'])}#{item['id']}"
           roots[name] = id
+          sent = in_review.key?(item['review'].to_s) ? in_review[item['review'].to_s] : []
+          from = ours[name] || (sent.find { |candidate| github.dig('bodies', candidate).strip == item['body'].strip } if item['login'] == me)
+          sent.delete(from)
+          promoted[from] = id if from
           next if known.include?(id) || item['body'].strip.empty?
           comment = comment(item, snapshot, conversation['commit'], files, who)
           comments << comment
           by[id] = [item, comment] unless item['login'] == me
         end
       end
-      {comments: comments, messages: messages, sends: sends(by.values, snapshot)}
+      {comments: comments, messages: messages, sends: sends(by.values, snapshot), promoted: promoted}
     end
 
     # One review comment from what someone wrote on GitHub. A Conventional Comments label they

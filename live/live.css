@@ -169,6 +169,9 @@ body.qa-live .evidence-strip:not(:has(button:not(.visual-qa-option))){display:no
 .ledger-item:has(.dcr-peek) .ledger-meta:not(:has(> :not(:empty):not([hidden]))){display:none}
 
 #ledger.dcr-in-convo>:is(.ledger-head,.ledger-body,.ledger-finish,.ledger-footer){display:none}
+/* A comment promoted to GitHub and the comment it became there: a quiet way from one to the other. */
+.gh-tag-link{border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer}
+.gh-tag-link:hover{color:var(--ink)}
 /* Finish GitHub review stands at the foot of Your review, on the line of the bar's card. */
 .ledger-finish{flex:none;display:flex;align-items:center;min-height:46px;margin-bottom:var(--ledger-finish-foot,calc(22px + var(--bar-rise)));padding:0 16px}
 .ledger-finish[hidden]{display:none}

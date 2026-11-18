@@ -440,17 +440,25 @@
       if (at && word && at.dataset.state !== word) at.dataset.state = word;
     });
   };
-  // A comment on changed code that every agent agrees is dealt with resolves itself, once: the
-  // reader who reopens it keeps it open.
+  // A comment on changed code that every agent agrees is dealt with resolves itself, once, and so
+  // does one sent to GitHub or added to the GitHub review: the reader who reopens it keeps it open.
   const autoKey = `dcr-auto:${key}`;
   let autoResolved = new Set();
   try { autoResolved = new Set(JSON.parse(localStorage.getItem(autoKey) || '[]')); } catch { /* resolved again at worst */ }
+  const saveAutoResolved = () => { try { localStorage.setItem(autoKey, JSON.stringify([...autoResolved])); } catch { /* this session only */ } };
   const autoResolve = () => {
-    const due = comments().filter(comment => !autoResolved.has(comment.id) && !resolved().includes(comment.id) && tools.closesItself(comment, threads[comment.id]));
+    // One already resolved is remembered too, so reopening it later keeps it open.
+    const due = comments().filter(comment => !autoResolved.has(comment.id) && (tools.closesItself(comment, threads[comment.id]) || tools.leftForGitHub(comment, ghData)));
     if (!due.length) return;
     due.forEach(comment => autoResolved.add(comment.id));
-    try { localStorage.setItem(autoKey, JSON.stringify([...autoResolved])); } catch { /* this session only */ }
-    due.forEach(comment => window.ReviewLive.resolve(comment.id));
+    saveAutoResolved();
+    due.filter(comment => !resolved().includes(comment.id)).forEach(comment => window.ReviewLive.resolve(comment.id));
+  };
+  // Taken back from GitHub, a comment that closed by itself is open again.
+  const undoAutoResolve = id => {
+    if (!autoResolved.delete(id)) return;
+    saveAutoResolved();
+    window.ReviewLive.reopen(id);
   };
 
   // --- marking what you have read -------------------------------------------------------------------
@@ -747,12 +755,22 @@
   const ghPosting = new Set();
   const ghFailed = new Map();
   const ghPendingIds = () => { const known = new Set(comments().map(comment => comment.id)); return Object.keys(ghData.pending || {}).filter(id => known.has(id) && !ghData.posted?.[id]); };
-  const ghRefresh = () => { decorateLedger(); document.querySelectorAll('.dcr-ledger').forEach(refreshBlock); window.ReviewGitHub?.refresh(); renderPanel(); renderUnsent(); };
+  const ghRefresh = () => { autoResolve(); decorateLedger(); document.querySelectorAll('.dcr-ledger').forEach(refreshBlock); window.ReviewGitHub?.refresh(); renderPanel(); renderUnsent(); };
   const ghProvider = {
     status: () => !online ? {phase: 'offline', text: 'The review server stopped. Restart `dcr serve` to post to GitHub.'} : ghStatus,
     stateOf: id => ghData.posted?.[id] ? {state: 'posted', ...ghData.posted[id]} : ghPosting.has(id) ? {state: 'posting'}
       : ghFailed.has(id) ? {state: 'failed', error: ghFailed.get(id)} : ghData.pending?.[id] ? {state: 'pending'} : {state: 'note'},
     pendingCount: () => ghPendingIds().length,
+    finish: () => openFinish(),
+    // A comment sent to GitHub and the one it became there, each a way to the other.
+    promotion(id) {
+      const promoted = ghData.promoted || {};
+      const known = other => comments().some(comment => comment.id === other);
+      if (known(promoted[id])) return {show: promoted[id], label: 'Promoted to GitHub'};
+      const from = Object.keys(promoted).find(source => promoted[source] === id);
+      const source = from && comments().find(comment => comment.id === from);
+      return source ? {show: from, label: `From ${source.personal ? 'your' : `${byName(source)}'s`} comment`} : null;
+    },
     // Your question to the agent becomes a comment for the PR once the agent has answered: the conversation is what it sums up.
     talked: id => !!threads[id] && ((threads[id].messages || []).some(message => message.author === 'agent') || tools.opinionMessages(threads[id]).length > 0),
     // What the agent wrote is read, in the reader's voice, before it goes: the preview. What the
@@ -766,7 +784,7 @@
       try {
         const result = await api('/api/github/delete', {key, id});
         ghData = {...ghData, pending: result.pending, posted: result.posted, bodies: result.bodies};
-        ghFailed.delete(id); ghRefresh();
+        undoAutoResolve(id); ghFailed.delete(id); ghRefresh();
         ghNotice('done', result.gone ? 'It was already gone from GitHub.' : 'Deleted on GitHub.');
         return true;
       } catch (error) {
@@ -778,7 +796,7 @@
       if (on) return own(id) ? ghSend.pend(id) : openPreview(id);
       try {
         const entry = await api('/api/github/pending', {key, id, pending: false});
-        ghData = {...ghData, ...entry}; ghFailed.delete(id); ghRefresh();
+        ghData = {...ghData, ...entry}; undoAutoResolve(id); ghFailed.delete(id); ghRefresh();
       } catch (error) { ghNotice('error', error.message); }
     }
   };
@@ -1029,6 +1047,7 @@
         return `<label class="gh-event${blocked ? ' is-off' : ''}"><input type="radio" name="event" value="${value}" ${index === 0 ? 'checked' : ''} ${blocked ? 'disabled' : ''}><span><b>${label}</b><small>${blocked ? 'Pull request authors can\'t approve or request changes on their own pull request.' : hint}</small></span></label>`;
       }).join('')}</fieldset>
       <details class="gh-pending-list" ${ids.length <= 4 ? 'open' : ''}><summary>${ids.length} pending comment${ids.length === 1 ? '' : 's'}</summary><ul class="send-list">${rows}</ul></details>
+      ${publishCheck?.ready && !publishCheck.published ? '<p class="muted">Your review report goes with it, so there is nothing left to publish.</p>' : ''}
       <p class="gh-finish-state" role="status" aria-live="polite" hidden></p>
       <footer class="dcr-gh-actions"><button type="button" class="act act-quiet" data-gh-close>Cancel</button><button type="button" class="act act-gh" data-gh-submit>Submit review</button></footer></form>`;
     const summary = finishDialog.querySelector('.gh-summary');
@@ -1072,8 +1091,10 @@
       finishDialog.querySelector('.gh-events').hidden = true;
       finishDialog.querySelector('.gh-summary').hidden = true;
       finishDialog.querySelector('.gh-pending-list').hidden = true;
+      finishDialog.querySelector('form > p.muted')?.remove();
       finishDialog.querySelector('header p').textContent = `Posted on ${ghStatus.repo} #${ghStatus.number} as @${ghStatus.login}.`;
-      finishState('done', `<span class="gh-mark">${ico('check')}</span><span><b>${label}.</b> ${items.length} comment${items.length === 1 ? '' : 's'} posted on GitHub${loose ? `; ${loose} in the review's summary because ${loose === 1 ? 'its lines are' : 'their lines are'} not in the diff` : ''}.</span>`);
+      if (result.report && publishCheck) { publishCheck = {...publishCheck, published: result.report}; renderPublish(); }
+      finishState('done', `<span class="gh-mark">${ico('check')}</span><span><b>${label}.</b> ${items.length} comment${items.length === 1 ? '' : 's'}${result.report ? ' and your review report' : ''} posted on GitHub${loose ? `; ${loose} in the review's summary because ${loose === 1 ? 'its lines are' : 'their lines are'} not in the diff` : ''}${result.report?.status_error ? `, but the check on the commit was not set: ${tools.escape(result.report.status_error)}` : ''}.</span>`);
       finishDialog.querySelector('.dcr-gh-actions').innerHTML = `<button type="button" class="act act-quiet" data-gh-close>Close</button><a class="act act-secondary" href="${tools.escape(result.review)}" target="_blank" rel="noopener noreferrer">View on GitHub ${ico('arrow-up-right')}</a>`;
     } catch (error) {
       form.querySelectorAll('button, textarea, input:not([data-off])').forEach(control => { control.disabled = false; });
@@ -2393,6 +2414,7 @@
   document.addEventListener('click', event => {
     const show = event.target.closest('[data-dcr-show]');
     if (!show?.dataset.dcrShow) return;
+    event.preventDefault(); // on a card's summary it goes to the comment, without folding this one
     const reveal = () => {
       const card = document.querySelector(`#content article.review-thread[data-thread-id="${CSS.escape(show.dataset.dcrShow)}"]`);
       if (!card) return false;
@@ -2483,8 +2505,8 @@
   const apply = data => {
     if (data.rev !== rev) laterPublish();
     threads = data.threads; rev = data.rev; latest = data.latest_revision; latestSave = data.latest_save || 0; listening = data.listening; listener = data.agent || listener; listenerModel = data.agent_model || (data.agent ? null : listenerModel); online = true; previews = data.previews || {};
-    const ghNext = {pending: data.github?.pending || {}, posted: data.github?.posted || {}, bodies: data.github?.bodies || {}, drafts: data.github?.drafts || {}, voice: data.github?.voice};
-    if (JSON.stringify(ghNext) !== JSON.stringify({pending: ghData.pending, posted: ghData.posted, bodies: ghData.bodies, drafts: ghData.drafts, voice: ghData.voice})) { ghData = ghNext; settleDraft(); }
+    const ghNext = {pending: data.github?.pending || {}, posted: data.github?.posted || {}, bodies: data.github?.bodies || {}, drafts: data.github?.drafts || {}, promoted: data.github?.promoted || {}, voice: data.github?.voice};
+    if (JSON.stringify(ghNext) !== JSON.stringify({pending: ghData.pending, posted: ghData.posted, bodies: ghData.bodies, drafts: ghData.drafts, promoted: ghData.promoted, voice: ghData.voice})) { ghData = ghNext; settleDraft(); }
     receiveComments(data.comments || []);
     receiveScreenshots(data.screenshots || [], data.no_screenshots);
     // The Risk ranking the agent posts while the reader is already on the diff; until then, a placeholder.

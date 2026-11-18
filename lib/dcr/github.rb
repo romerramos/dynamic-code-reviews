@@ -142,24 +142,29 @@ module DCR
 
     # A review with several comments, as GitHub's Finish your review does. Comments that cannot sit
     # on diff lines go into the review's own text under their file and lines, and say so.
-    def review(key, event, body, items)
+    # report: {'body', 'description'}, the review's report, to go in the review's text so finishing
+    # is publishing too; left out if the pull request has a newer push than was reviewed.
+    def review(key, event, body, items, report: nil)
       raise ArgumentError, "Choose #{EVENTS.join(', ')}" unless EVENTS.include?(event)
       # An approval, or a review's own text, may go with no comment on lines.
       raise ArgumentError, 'Nothing to submit' unless items.is_a?(Array) && items.length <= 100 && (items.any? || event != 'COMMENT' || !body.to_s.strip.empty?)
       target = target(key)
       items = items.map { |item| clean(item, target) }
       placed, loose = items.partition { |item| !item['general'] && in_diff?(target, item) }
+      report = nil unless report && pull_head(target) == target[:commit]
       begin
-        posted = post_review(target, event, body, placed, loose)
+        posted = post_review(target, event, body, placed, loose, report&.fetch('body'))
       rescue Rejected
         placed, loose = [], items # GitHub still refused a line; keep everything, in the text
-        posted = post_review(target, event, body, placed, loose)
+        posted = post_review(target, event, body, placed, loose, report&.fetch('body'))
       end
       urls = review_comment_urls(target, posted['id'], placed)
       result = items.to_h do |item|
         [item['id'], {'url' => urls[item['id']] || posted['html_url'], 'where' => placed.include?(item) ? 'lines' : 'review'}]
       end
-      {'url' => posted['html_url'], 'event' => event, 'comments' => result}
+      done = {'url' => posted['html_url'], 'event' => event, 'comments' => result}
+      done['report'] = {'url' => posted['html_url'], 'head' => target[:commit]}.merge(mark_reviewed(target, report['description'], posted['html_url'])) if report
+      done
     end
 
     # Takes back a comment this review posted: posted is what was kept of it ({'url', 'where'}).
@@ -230,24 +235,27 @@ module DCR
       target = target(key)
       raise ArgumentError, 'The report is limited to 65,000 characters' if body.length > BODY_LIMIT
       # A push since the review is code nobody reviewed yet.
-      head = api('GET', "repos/#{target[:repo]}/pulls/#{target[:number]}").dig('head', 'sha')
-      raise Error, 'The pull request has a newer push than this review. Update the review to it, then publish.' unless head == target[:commit]
+      raise Error, 'The pull request has a newer push than this review. Update the review to it, then publish.' unless pull_head(target) == target[:commit]
       posted = begin
         api('PATCH', "repos/#{target[:repo]}/issues/comments/#{Integer(earlier['id'])}", {'body' => body}) if earlier&.dig('id')
       rescue NotFound
         nil # deleted on GitHub: post it again
       end
       posted ||= api('POST', "repos/#{target[:repo]}/issues/#{target[:number]}/comments", {'body' => body})
-      result = {'id' => posted['id'], 'url' => posted['html_url'], 'head' => target[:commit]}
-      begin
-        api('POST', "repos/#{target[:repo]}/statuses/#{target[:commit]}", {'state' => 'success', 'context' => STATUS_CONTEXT, 'description' => description, 'target_url' => posted['html_url']})
-      rescue Error => error
-        result['status_error'] = error.message
-      end
-      result
+      {'id' => posted['id'], 'url' => posted['html_url'], 'head' => target[:commit]}.merge(mark_reviewed(target, description, posted['html_url']))
     end
 
     private
+
+    def pull_head(target) = api('GET', "repos/#{target[:repo]}/pulls/#{target[:number]}").dig('head', 'sha')
+
+    # The commit status that says the reviewed commit was reviewed, linking to the report.
+    def mark_reviewed(target, description, url)
+      api('POST', "repos/#{target[:repo]}/statuses/#{target[:commit]}", {'state' => 'success', 'context' => STATUS_CONTEXT, 'description' => description, 'target_url' => url})
+      {}
+    rescue Error => error
+      {'status_error' => error.message}
+    end
 
     Unplaceable = Class.new(StandardError)
     Rejected = Class.new(Error) # 422: usually a line that is not part of the diff
@@ -335,9 +343,9 @@ module DCR
       {'url' => posted['html_url'], 'where' => 'conversation'}
     end
 
-    def post_review(target, event, body, placed, loose)
+    def post_review(target, event, body, placed, loose, report = nil)
       intro = body.to_s.strip
-      text = [(intro unless intro.empty?), *loose.map { |item| item['general'] ? item['body'] : "#{lines_label(item)}\n\n#{item['body']}" }].compact.join("\n\n---\n\n")
+      text = [(intro unless intro.empty?), *loose.map { |item| item['general'] ? item['body'] : "#{lines_label(item)}\n\n#{item['body']}" }, report].compact.join("\n\n---\n\n")
       payload = {'commit_id' => target[:commit], 'event' => event,
                  'comments' => placed.map { |item| placement(item).merge('path' => item['path'], 'body' => item['body']) }}
       payload['body'] = text unless text.empty?
@@ -345,12 +353,17 @@ module DCR
       api('POST', "repos/#{target[:repo]}/pulls/#{target[:number]}/reviews", payload)
     end
 
-    # Each posted line comment's own link, matched by file, line and text; the review's link otherwise.
+    # Each posted line comment's own link, matched by file, text and line (GitHub may leave the line
+    # out of this list); the review's link otherwise.
     def review_comment_urls(target, review_id, placed)
       return {} if placed.empty? || !review_id
       remote = api('GET', "repos/#{target[:repo]}/pulls/#{target[:number]}/reviews/#{review_id}/comments?per_page=100")
       placed.to_h do |item|
-        found = remote.find { |comment| comment['path'] == item['path'] && comment['body'].to_s.strip == item['body'] && [comment['line'], comment['original_line']].include?(item['line']) }
+        found = remote.find do |comment|
+          lines = [comment['line'], comment['original_line']].compact
+          comment['path'] == item['path'] && comment['body'].to_s.strip == item['body'] && (lines.empty? || lines.include?(item['line']))
+        end
+        remote.delete(found)
         [item['id'], found&.dig('html_url')]
       end.compact
     rescue Error

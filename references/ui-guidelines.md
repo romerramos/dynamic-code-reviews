@@ -267,6 +267,9 @@ Design references: [CodeRabbit documentation index](https://docs.coderabbit.ai/l
   "N comments to settle" under the file count, and Review comments opens with "N comments
   wait on you. Resolve each, or have it fixed, before you publish." Each takes the reader to
   the first one. Never leave "16 of 16 files reviewed" as the only progress on the page.
+  On someone else's pull request, what the reader said there stays in From GitHub but is not
+  counted: it waits on the author, and must not hold back publishing the review. Finishing the
+  GitHub review of a review that is ready to publish publishes it: the report goes in that review.
 - **The Overview and Your review say the same thing about what is waiting.** With nothing open
   on the code as it is, both lead with "Nothing is waiting on you."; the Overview adds that
   the comments below were written on code that has changed since. Your review's footer does
@@ -283,7 +286,11 @@ Design references: [CodeRabbit documentation index](https://docs.coderabbit.ai/l
 - **A settled comment closes by itself.** When the review's agent says a comment on changed
   code is dealt with and every agent that checked on its own clearly agrees, it is resolved
   without the reader, once (reopened, it stays open). A check that failed or gave no clear
-  answer, or no check at all, leaves Resolve to the reader.
+  answer, or no check at all, leaves Resolve to the reader. A comment posted to GitHub or added to
+  the GitHub review closes the same way: it was promoted, and the comment it became on GitHub is
+  where the conversation goes on. Each says so and leads to the other (Promoted to GitHub, From
+  Claude's comment). Taken back from GitHub, it opens again. A comment that came from GitHub stays
+  open when answered.
 - **Your review is one list, in the order things were said**: your comments, the agent's
   comments you joined, what people wrote on GitHub and the agent's comments you put there,
   with no section titles. Every row is drawn the same: where it is (path and lines, or
@@ -364,7 +371,8 @@ thing: recording now (a red dot on **Record**, a red pill reading **Stop m:ss** 
   at a time. Status words in rows stay short (Replied, Sent, Agent is answering).
 - **GitHub follows GitHub.** Green (#1f883d) marks what commits to the PR: Start a review /
   Add review comment, Finish GitHub review (at the foot of Your review, only while comments are
-  pending, with their count; Minimal and Terminal draw it plainly) and Submit review. A single comment is neutral. Tags:
+  pending, with their count; Minimal and Terminal draw it plainly; the bar's button says it too once
+  nothing is left to read) and Submit review. A single comment is neutral. Tags:
   yellow Pending review, green On GitHub (a link), red Not posted (the reason in its title). One
   message per event: posting and failures get the notice; adding to or removing from the review does
   not, since the tag and the pending reminder already say it. Every wait

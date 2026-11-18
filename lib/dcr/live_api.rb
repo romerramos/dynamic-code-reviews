@@ -276,9 +276,21 @@ module DCR
       replies, items = items.partition { |item| item.is_a?(Hash) && reply_to(item['id']) }
       answered = replies.to_h { |item| [item['id'], @github.reply(key, reply_to(item['id']), item['body'])] }
       @state.github_posted(key, answered) if answered.any?
-      result = items.empty? && input['event'] == 'COMMENT' && input['body'].to_s.strip.empty? ? {'comments' => {}} : @github.review(key, input['event'].to_s, input['body'], items)
+      report = finish_report(key)
+      result = items.empty? && input['event'] == 'COMMENT' && input['body'].to_s.strip.empty? ? {'comments' => {}} : @github.review(key, input['event'].to_s, input['body'], items, report: report)
       entry = @state.github_posted(key, result['comments'], review: result['url'] && {'url' => result['url'], 'event' => result['event']})
-      [200, {'posted' => entry['posted'].slice(*result['comments'].keys, *answered.keys), 'review' => result['url'] || answered.values.first&.dig('url')}]
+      published = result['report'] && @state.github_report(key, result['report'].merge('body' => report['body']))
+      [200, {'posted' => entry['posted'].slice(*result['comments'].keys, *answered.keys), 'review' => result['url'] || answered.values.first&.dig('url'), 'report' => published}.compact]
+    end
+
+    # Finishing the GitHub review publishes too: the report goes in it when the review is ready to
+    # publish and none was published yet. Whatever stops that, the reader's review still goes.
+    def finish_report(key)
+      check = publish_check(key)
+      return unless check['ready'] && !check['published']
+      {'body' => check['markdown'], 'description' => ReviewReport.description(check['facts'])}
+    rescue StandardError
+      nil
     end
 
     # The GitHub comment a thread answers on its lines: a teammate's comment the review took in (gh-<id>).
@@ -315,7 +327,9 @@ module DCR
       latest, snapshot, review, state = ReviewReport.latest(File.dirname(@state.path))
       raise ArgumentError, 'This page shows an earlier revision. Open the latest one to publish it.' unless latest == key
       state['verdicts'] = {} if @settings.jevmypr(manifest['repo'] || Dir.pwd) == false # turned off: every file needs the reader, as the page counts
-      facts = ReviewReport.facts(snapshot, review, state, key)
+      github = @github.status(key)
+      reviewer = github['login'] if github['ready'] && github['login'] != github['author']
+      facts = ReviewReport.facts(snapshot, review, state, key, reviewer: reviewer)
       steps = [{'id' => 'files', 'done' => facts['left'].empty?, 'left' => facts['left']},
                {'id' => 'comments', 'done' => facts['open'].empty?, 'open' => facts['open']},
                code_check(key, fresh).merge('id' => 'code')]

@@ -104,7 +104,8 @@ Dir.mktmpdir('dcr-inbox-test') do |directory|
   take.()
   saved = state.read
   comments = saved['comments'][KEY].to_h { |comment| [comment['id'], comment] }
-  assert(comments.keys.sort == %w[gh-101 gh-102 gh-i201 gh-r901], "Taken in are the people's comments, not the bot's, the report or the reader's own: #{comments.keys}")
+  assert(comments.keys.sort == %w[gh-101 gh-102 gh-106 gh-i201 gh-r901], "Taken in are what people said and what the reader promoted, not the bot's or the report: #{comments.keys}")
+  assert(saved.dig('github', KEY, 'promoted') == {'mine-1' => 'gh-106'}, "A comment sent from the review is linked to what it became: #{saved.dig('github', KEY, 'promoted')}")
   first = comments['gh-101']
   assert(first.slice('hunk', 'side', 'start', 'end', 'label', 'decoration', 'subject', 'discussion') ==
          {'hunk' => 'f1h1', 'side' => 'new', 'start' => 2, 'end' => 2, 'label' => 'issue', 'decoration' => 'blocking', 'subject' => 'This leaks the token', 'discussion' => 'It is logged on every request.'},
@@ -114,7 +115,19 @@ Dir.mktmpdir('dcr-inbox-test') do |directory|
   assert(outside['general'] && outside['label'] == 'question' && outside['discussion'] == 'On `app/b.rb`, line 50:', "Lines the diff does not have make a general comment that says where: #{outside}")
   assert(comments['gh-r901']['label'] == 'praise' && comments['gh-i201']['general'], 'An approval is praise; a conversation comment is general')
   DynamicReviews.validate_comment(outside, {}) # a saved review takes it
-  puts 'PASS people\'s comments join the review on their lines, as theirs; bots, the report and the reader\'s own posts stay out'
+  # One sent in a review but saved with only the review's link is still recognised, by its review and text.
+  known = saved['comments'][KEY].map { |comment| comment['id'] }
+  legacy = saved.merge('github' => {KEY => {'posted' => {'c1' => {'url' => 'https://github.com/acme/web/pull/7#pullrequestreview-980', 'where' => 'lines'}}, 'bodies' => {'c1' => 'My own, posted from the review.'}}})
+  items = [{'kind' => 'line', 'id' => 106, 'login' => 'reviewer', 'review' => 980, 'body' => 'My own, posted from the review.', 'path' => 'app/a.rb'}]
+  linked = DCR::GitHubInbox.plan({'items' => items}, snapshot, KEY, legacy, known, me: 'reviewer', avatar: ->(_url) {})
+  assert(linked[:promoted] == {'c1' => 'gh-106'} && linked[:comments].empty?, "A comment already taken in is linked, not added again: #{linked}")
+  state.github_unposted(KEY, 'mine-1')
+  gone = state.read
+  assert(!gone.dig('github', KEY, 'promoted').key?('mine-1') && gone['comments'][KEY].none? { |comment| comment['id'] == 'gh-106' }, 'Taken back from GitHub, what it became goes too')
+  state.github_posted(KEY, {'mine-1' => {'url' => 'https://github.com/acme/web/pull/7#discussion_r106', 'where' => 'lines'}})
+  take.()
+  saved = state.read
+  puts 'PASS people\'s comments join the review as theirs; a promoted comment comes back linked; bots and the report stay out'
 
   messages = saved.dig('threads', KEY, 'gh-101', 'messages')
   assert(messages.map { |message| [message['author'], message['body']] } == [['user', 'Good catch, looking.'], ['person', 'Agreed with Jane.']], "Replies join the thread, the reader's as theirs: #{messages}")
@@ -131,7 +144,7 @@ Dir.mktmpdir('dcr-inbox-test') do |directory|
   before = state.read
   take.()
   after = state.read
-  assert(after['outbox'].length == before['outbox'].length && after['comments'][KEY].length == 4 && after.dig('threads', KEY, 'gh-101', 'messages').length == 2, 'Nothing is taken in twice')
+  assert(after['outbox'].length == before['outbox'].length && after['comments'][KEY].length == 5 && after.dig('threads', KEY, 'gh-101', 'messages').length == 2, 'Nothing is taken in twice')
 
   # The reader answered Jane on GitHub from the review; her answer to that re-opens the box, and reaches the adversaries in the thread.
   state.github_posted(KEY, {'gh-101' => {'url' => 'https://github.com/acme/web/pull/7#discussion_r107', 'where' => 'reply'}})
