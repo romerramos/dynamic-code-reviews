@@ -1636,7 +1636,7 @@ dialog.modal>.modal-box{max-height:calc(100dvh - 32px)}
    the whole screen under the bar, with room at their foot so the bar never covers what they hold. */
 @media(max-width:740px){
   /* --drawer-foot: the room a drawer leaves at its foot for the bar; a theme that sets a drawer's padding reads it. */
-  :root{--bar-room:calc(76px + env(safe-area-inset-bottom));--drawer-foot:var(--bar-room)}
+  :root{--bar-room:calc(76px + env(safe-area-inset-bottom));--drawer-foot:var(--bar-room);--ledger-finish-foot:0px}
   .review-bar .bar-review{display:grid}
   .navigation-open .sidebar{inset:0;z-index:25;width:100vw;max-width:none;max-height:none;padding-bottom:var(--drawer-foot);border:0}
   .navigation-open .sidebar .sidebar-footer{display:grid}

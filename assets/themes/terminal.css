@@ -158,6 +158,12 @@
 [data-theme^="terminal-"] :is(#content,#comment-popover) .dcr-reply .dcr-actions>[type="submit"]:hover:not(:disabled){background:color-mix(in srgb,var(--terminal-fill) 82%,var(--ink));color:var(--terminal-on-fill)}
 [data-theme^="terminal-"] .act:disabled{color:var(--terminal-overlay0);background:transparent;opacity:1}
 [data-theme^="terminal-"] .ledger-count{background:var(--terminal-hot);color:var(--terminal-on-fill);font-weight:700}
+/* Finish GitHub review is a bracketed command, its count in parentheses. */
+[data-theme^="terminal-"] .ledger-finish .act-gh{width:auto;text-transform:lowercase}
+[data-theme^="terminal-"] .ledger-finish .act-gh svg{display:none}
+[data-theme^="terminal-"] .ledger-finish .act-count{min-width:0;height:auto;padding:0;background:none;font:inherit}
+[data-theme^="terminal-"] .ledger-finish .act-count::before{content:"("}
+[data-theme^="terminal-"] .ledger-finish .act-count::after{content:")"}
 [data-theme^="terminal-"] .pager{border:0;background:transparent;box-shadow:none;padding:0}
 
 /* Tabs and either/or switches: a filled track, the choice a solid block. */

@@ -363,7 +363,8 @@ thing: recording now (a red dot on **Record**, a red pill reading **Stop m:ss** 
   field pinned below it (grows, send icon, ⌘/Ctrl Enter). Only one conversation is open
   at a time. Status words in rows stay short (Replied, Sent, Agent is answering).
 - **GitHub follows GitHub.** Green (#1f883d) marks what commits to the PR: Start a review /
-  Add review comment, Finish your review and Submit review. A single comment is neutral. Tags:
+  Add review comment, Finish GitHub review (at the foot of Your review, only while comments are
+  pending, with their count; Minimal and Terminal draw it plainly) and Submit review. A single comment is neutral. Tags:
   yellow Pending review, green On GitHub (a link), red Not posted (the reason in its title). One
   message per event: posting and failures get the notice; adding to or removing from the review does
   not, since the tag and the pending reminder already say it. Every wait

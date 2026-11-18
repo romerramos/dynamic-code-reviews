@@ -758,6 +758,13 @@ html[data-theme^="minimal-"] body.review-in-progress .overview-reading .dcr-try:
 /* --- Your review has no footer: Export is a download icon by its title, and Finish with agent is in
    Settings, Agents, under This round. --- */
 [data-theme^="minimal-"] #ledger-footer{display:none}
+/* Finish GitHub review is a plain row: the mark under the comments' marks, the words under theirs. */
+[data-theme^="minimal-"] .ledger-finish{padding:0 11px}
+[data-theme^="minimal-"] .ledger-finish .act-gh{display:grid;grid-template-columns:25px auto 1fr;justify-content:stretch;justify-items:start;column-gap:4px;padding:0 11px;border-radius:7px;background:transparent;color:var(--ink);font-size:14px;font-weight:400}
+[data-theme^="minimal-"] .ledger-finish .act-gh:hover:not(:disabled){background:var(--minimal-soft)}
+[data-theme^="minimal-"] .ledger-finish .act-count{min-width:0;height:auto;padding:0;background:none;color:var(--minimal-faint);font:inherit}
+[data-theme^="minimal-"] .ledger-finish .act-count::before{content:"("}
+[data-theme^="minimal-"] .ledger-finish .act-count::after{content:")"}
 [data-theme^="minimal-"] .ledger-head h2{display:flex;align-items:center}
 [data-theme^="minimal-"] .ledger-head .ledger-export:not([hidden]){display:grid;place-items:center;width:26px;height:26px;margin:0 auto 0 6px;padding:0;border:0;border-radius:6px;background:none;color:var(--minimal-faint);cursor:pointer}
 [data-theme^="minimal-"] .ledger-head .ledger-export:hover{background:var(--minimal-soft);color:var(--ink)}

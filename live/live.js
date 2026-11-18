@@ -656,7 +656,6 @@
   panel.setAttribute('aria-label', 'Live review');
   const ico = name => (window.ReviewIcons?.[name] || '').replace('<svg', '<svg aria-hidden="true" focusable="false"');
   panel.innerHTML = `<p class="dcr-foot-status" role="status"><span class="dcr-dot" aria-hidden="true"></span><span class="dcr-summary"></span></p>
-    <button type="button" class="act act-gh act-block" data-gh-finish hidden>${ico('check')}<span>Finish your review</span><b class="act-count"></b></button>
     <button type="button" class="act act-primary act-block" data-open-send>${ico('send')}<span>Review and send</span><b class="act-count"></b></button>
     <div class="dcr-foot-row"><button type="button" class="act act-secondary" data-dcr-export title="Download one offline file with your comments, the replies and any recordings">${ico('download')}Export</button><button type="button" class="act act-secondary" data-dcr-finish title="Send anything unsent and tell your agent this round is done">${ico('check-check')}Finish with agent</button></div>
     <p class="dcr-note" aria-live="polite"></p>`;
@@ -665,6 +664,13 @@
   holder.hidden = true;
   holder.append(panel);
   document.body.append(holder);
+  // Pending GitHub comments are sent from the foot of Your review, and only while there are some.
+  const ledgerFinish = document.createElement('div');
+  ledgerFinish.className = 'ledger-finish';
+  ledgerFinish.hidden = true;
+  ledgerFinish.innerHTML = `<button type="button" class="act act-gh act-block" data-gh-finish>${window.ReviewGitHub?.mark || ''}<span>Finish GitHub review</span><b class="act-count"></b></button>`;
+  document.getElementById('ledger-footer')?.before(ledgerFinish);
+  ledgerFinish.addEventListener('click', () => openFinish());
   // The ledger rewrites its footer when it renders, so re-attach after every change to it.
   const mount = () => {
     const footer = document.getElementById('ledger-footer');
@@ -700,9 +706,9 @@
     set(send, 'disabled', !online);
     set(finish, 'disabled', !online);
     // Pending GitHub comments make finishing that review the main action, as on GitHub.
-    const ghFinish = panel.querySelector('[data-gh-finish]');
+    const ghFinish = ledgerFinish.querySelector('[data-gh-finish]');
     const pendingCount = ghPendingIds().length;
-    ghFinish.hidden = !pendingCount;
+    ledgerFinish.hidden = !pendingCount;
     set(ghFinish.querySelector('.act-count'), 'textContent', String(pendingCount));
     set(ghFinish, 'disabled', !online);
     finish.classList.toggle('act-primary', !summary.drafts && !pendingCount);
@@ -724,7 +730,6 @@
         flash('Exported. The file opens offline with your comments and your agent\'s replies.');
         return;
       }
-      if (event.target.closest('[data-gh-finish]')) { openFinish(); return; }
       if (event.target.closest('[data-dcr-finish]')) {
         await sendDrafts(); await api('/api/finish', {key}); await refresh();
         flash('Finished. Your agent will pick this round up and reply here.');

@@ -168,7 +168,10 @@ body.qa-live .evidence-strip:not(:has(button:not(.visual-qa-option))){display:no
 .ledger-item:is([data-state="sent"],[data-state="delivered"],[data-state="answered"])::before,.ledger-item[data-conversation]:not([data-state="pending"]):not([data-state="posted"])::before{display:none}
 .ledger-item:has(.dcr-peek) .ledger-meta:not(:has(> :not(:empty):not([hidden]))){display:none}
 
-#ledger.dcr-in-convo>:is(.ledger-head,.ledger-body,.ledger-footer){display:none}
+#ledger.dcr-in-convo>:is(.ledger-head,.ledger-body,.ledger-finish,.ledger-footer){display:none}
+/* Finish GitHub review stands at the foot of Your review, on the line of the bar's card. */
+.ledger-finish{flex:none;display:flex;align-items:center;min-height:46px;margin-bottom:var(--ledger-finish-foot,calc(22px + var(--bar-rise)));padding:0 16px}
+.ledger-finish[hidden]{display:none}
 .dcr-detail-mark,.dcr-detail-at{display:none}
 .dcr-detail{display:flex;flex:1;flex-direction:column;min-height:0}
 .dcr-detail[hidden]{display:none}
