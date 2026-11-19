@@ -22,13 +22,13 @@ html[data-mode="dark"]{--agent-claude:#ec9a7c;--agent-claude-bg:#3b2620;--agent-
 /* Plain marks: the logo in ink, as large as the face, nothing behind it; a filled button that holds one
    gives it its own text colour (--mono-mark-ink), so it shows on the fill. */
 html[data-avatar-style="mono"] .ui-avatar[data-kind="agent"]{--face-ink:var(--mono-mark-ink,var(--ink));--face-bg:transparent;--avatar-mark:var(--avatar-mono-mark,82%)}
-/* What an agent ran on, as a small card under its face: on hover where there is one, else a tap opens it
-   (avatar.js) and the next tap anywhere closes it. The card shares the face's one grid cell, which keeps
-   the face's size, and hangs below it by its top margin, so nothing around the face moves. */
+/* What an agent ran on, as a small card under its face where nothing hovers: a tap opens it (avatar.js)
+   and the next tap anywhere closes it. On hover the page's own tip says it (report.js). The card shares
+   the face's one grid cell, which keeps the face's size, and hangs below it by its top margin, so
+   nothing around the face moves. */
 .ui-avatar[data-tip]{grid-template:minmax(0,1fr)/minmax(0,1fr);cursor:default}
 .ui-avatar[data-tip]>*{grid-area:1/1}
-.ui-avatar[data-tip].is-tip-open::after,.ui-avatar[data-tip]:hover::after{content:attr(data-tip);grid-area:1/1;justify-self:start;align-self:start;z-index:40;width:max-content;margin-top:calc(var(--avatar-size,var(--avatar-default,28px)) + 6px);padding:5px 9px;border:1px solid var(--line);border-radius:calc(8px * var(--round));background:var(--surface);box-shadow:0 6px 18px color-mix(in srgb,var(--shade) 12%,transparent);color:var(--muted);font:400 12px/1.4 var(--review-font-family,inherit);letter-spacing:0;white-space:nowrap;pointer-events:none}
-@media (hover:none){.ui-avatar[data-tip]:hover:not(.is-tip-open)::after{content:none}}
+.ui-avatar[data-tip].is-tip-open::after{content:attr(data-tip);grid-area:1/1;justify-self:start;align-self:start;z-index:40;width:max-content;margin-top:calc(var(--avatar-size,var(--avatar-default,28px)) + 6px);padding:5px 9px;border:1px solid var(--line);border-radius:calc(8px * var(--round));background:var(--surface);box-shadow:0 6px 18px color-mix(in srgb,var(--shade) 12%,transparent);color:var(--muted);font:400 12px/1.4 var(--review-font-family,inherit);letter-spacing:0;white-space:nowrap;pointer-events:none}
 /* People: the photo, round, alone; else their initial on a quiet disc. */
 .ui-avatar:is([data-kind="you"],[data-kind="person"]){--face-ink:var(--ink-neutral-2);--face-bg:var(--bg-neutral-3)}
 .ui-avatar[data-photo]{background:none}
