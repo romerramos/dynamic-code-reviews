@@ -600,7 +600,6 @@ html[data-theme^="minimal-"] #content .overview-reading .overview-comments:not(.
 @media(min-width:1200px){
   html[data-theme^="minimal-"] body:not(.sidebar-collapsed):not(.zen) main#content{padding-left:52px}
   html[data-theme^="minimal-"] body.ledger-open:not(.zen) main#content{padding-right:52px}
-  html[data-theme^="minimal-"] body.ledger-open.dcr-has-try:not(.zen) main#content{padding-right:90px}
 }
 
 /* --- A comment's actions, in the code's popover and on the Overview: one split button whose halves
@@ -772,5 +771,3 @@ html[data-theme^="minimal-"]{--panel-icon-top:25px}
 @media(min-width:741px){html[data-theme^="minimal-"] body:not(.zen):not(.on-overview) .ledger-show{display:grid;position:fixed;top:var(--panel-icon-top);right:18px;z-index:45}}
 @media(min-width:741px){html[data-theme^="minimal-"] body.ledger-open:not(.zen) .ledger-show{right:calc(var(--ledger-size) + 8px)}}
 @media(min-width:741px){html[data-theme^="minimal-"] body:not(.zen) .try-show:not([hidden]){display:grid;position:fixed;top:var(--panel-icon-top);right:18px;z-index:45}}
-@media(min-width:741px){html[data-theme^="minimal-"] body:not(.zen):not(.on-overview) .try-show{right:56px}}
-@media(min-width:741px){html[data-theme^="minimal-"] body.ledger-open:not(.zen) .try-show{right:calc(var(--ledger-size) + 46px)}}

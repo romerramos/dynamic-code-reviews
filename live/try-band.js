@@ -33,7 +33,7 @@
   panel.popover = 'auto';
   panel.setAttribute('aria-label', 'Try the change');
   content.after(panel);
-  // Its way in, where each theme keeps such things: an icon on the top strip beside Your review's, a
+  // Its way in, on the Overview only, where each theme keeps such things: an icon on the top strip, a
   // labelled button in the header, and on a phone an icon in the bar. One state for all three.
   const trigger = (id, className, html, place) => {
     const button = Object.assign(document.createElement('button'), {type: 'button', id, className, innerHTML: html, hidden: true});
@@ -71,7 +71,8 @@
     document.body.classList.toggle('dcr-has-try', !!html);
     document.body.classList.toggle('dcr-try-hidden', hidden);
     const pinned = !!html && live.tryPinned({overview: overview(), room: room(), hidden});
-    if (pinned && panel.matches(':popover-open')) panel.hidePopover();
+    // It belongs to the Overview: reading code, its way in is not there, and leaving closes it.
+    if ((pinned || !overview()) && panel.matches(':popover-open')) panel.hidePopover();
     const shown = pinned || panel.matches(':popover-open');
     // Seen open, what is in it now is no longer news; closed, the icon has a dot while there is some.
     const now = marks();
@@ -80,7 +81,7 @@
     const news = !shown && live.tryNews(now, memory.seen());
     const label = shown ? 'Hide Try the change' : `Show Try the change${news ? ', something new' : ''}`;
     triggers.forEach(button => {
-      set(button, 'hidden', !html);
+      set(button, 'hidden', !html || !overview());
       button.classList.toggle('has-news', news);
       if (button.getAttribute('aria-expanded') !== String(shown)) button.setAttribute('aria-expanded', String(shown));
       if (button.title !== label) { button.title = label; button.setAttribute('aria-label', label); }

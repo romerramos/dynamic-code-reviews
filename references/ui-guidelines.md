@@ -330,10 +330,11 @@ thing: recording now (a red dot on **Record**, a red pill reading **Stop m:ss** 
   or why there is none. Rows that do not apply are left out. On the Overview, Your review is not
   shown and the panel is pinned on the right as part of the page (a bordered card, no shadow)
   while the review area has room for it beside the column (a container query); pressing its
-  icon then hides it, remembered per reader. Without room, and while reading, it waits in its
-  icon (flask) and opens as a popover under it; on a phone, as a sheet from the bottom. A dot
-  on the icon says new screenshots or built previews wait unseen. Minimal keeps the icon on the
-  top strip beside Your review's; AIDA a labelled button in the header beside Update; Terminal
+  icon then hides it, remembered per reader. Without room it waits in its icon (flask) and opens
+  as a popover under it; on a phone, as a sheet from the bottom. It belongs to the Overview:
+  while reading code its icon is not there. A dot on the icon says new screenshots or built
+  previews wait unseen. Minimal keeps the icon on the top strip; AIDA a labelled button in the
+  header beside Update; Terminal
   `[ try ]` there, with a double-ruled panel, ── headings, dotted leaders and block bars.
 - **QA review in progress**: from Start QA review until the agent replies in the QA thread,
   an accent banner takes the first line of the App view's bar: what is happening (waiting
