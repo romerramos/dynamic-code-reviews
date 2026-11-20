@@ -22,6 +22,8 @@ module DCR
       'opencode' => {'name' => 'opencode', 'company' => 'opencode', 'env' => %w[OPENCODE]}
     }.freeze
     TIMEOUT = 300
+    # The folder Antigravity finds the dcr-reader agent in, added to its workspace for the question.
+    ANTIGRAVITY_AGENTS = File.expand_path('antigravity', __dir__)
 
     # Left by Claude Code for the commands it runs; a nested `claude -p` refuses to start under them.
     NESTED = %w[CLAUDECODE CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_SESSION_ID CLAUDE_CODE_CHILD_SESSION CLAUDE_CODE_MESSAGING_SOCKET CLAUDE_CODE_MESSAGING_TOKEN CLAUDE_PID].freeze
@@ -29,7 +31,6 @@ module DCR
     # How to ask each one a single question, read-only, with nothing on its screen to answer, on the
     # model and effort the reviewer chose (nil: the CLI's own setting).
     # Each returns [command, stdin]; the answer is stdout, or the file named by `out`.
-    # Antigravity is not here: headless, it is refused even reading a file, so it never answers.
     RUNNERS = {
       'claude' => ->(prompt, _out, model, effort) { [%w[claude -p --tools Read,Grep,Glob,WebSearch,WebFetch --allowedTools WebSearch,WebFetch] + flag('--model', model) + flag('--effort', effort), prompt] },
       'codex' => lambda do |prompt, out, model, effort|
@@ -37,6 +38,10 @@ module DCR
       end,
       'gemini' => ->(prompt, _out, model, _effort) { [['gemini', '-p', prompt, '--approval-mode', 'plan', '-o', 'text'] + flag('-m', model), nil] },
       'grok' => ->(prompt, _out, model, effort) { [['grok', '-p', prompt, '--permission-mode', 'plan'] + flag('-m', model) + flag('--reasoning-effort', effort), nil] },
+      # Antigravity's own agent searches with the shell, which a headless run denies, ending its turn
+      # with no answer; its dcr-reader agent (ANTIGRAVITY_AGENTS) has only its file and web tools.
+      # Its model names carry the effort (gemini-4-neon-high); it refuses --effort beside one.
+      'antigravity' => ->(prompt, _out, model, _effort) { [['agy', '-p', prompt, '--mode', 'plan', '--agent', 'dcr-reader', '--add-dir', ANTIGRAVITY_AGENTS] + flag('--model', model), nil] },
       # opencode's built-in plan agent cannot edit, and a headless run denies anything it would ask for.
       'opencode' => ->(prompt, _out, model, _effort) { [['opencode', 'run', '--agent', 'plan'] + flag('-m', model) + [prompt], nil] }
     }.freeze
@@ -52,7 +57,7 @@ module DCR
     ANSWERED_ANYWAY = {'opencode' => 1}.freeze
 
     # The efforts an agent's CLI takes, where they are not listed per model (Codex lists them per
-    # model; opencode builds them into the model's name).
+    # model; Antigravity and opencode build them into the model's name).
     EFFORTS = {
       'claude' => %w[low medium high xhigh max],
       'grok' => %w[low medium high]

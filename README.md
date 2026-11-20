@@ -298,8 +298,8 @@ References: [review JSON](references/report-schema.md), [incremental reviews](re
   own question asks them too only when its **+** is ticked: each answers on its own, a short answer
   and then details, and once the review's agent has answered, the first adversary compares the
   answers by letter, not by name, and says how far each agrees with it. Claude, Codex, Grok,
-  Gemini and opencode CLIs are asked headless and read-only, and may look things up on the web (Antigravity
-  is not asked: headless, it is refused even reading a file); an agent checks the review it runs only
+  Gemini, Antigravity (`agy`, through a reading-only agent of its own) and opencode CLIs are asked
+  headless and read-only, and may look things up on the web; an agent checks the review it runs only
   on a model the reviewer named.
 - **Review lenses** (`lib/dcr/lenses.rb`, `lenses/`) say what the agent looks for. `lenses/lenses.json`
   lists them; each is a folder with its own adapter, `LENS.md`, which says what to take from the lens and how
