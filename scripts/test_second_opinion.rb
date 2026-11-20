@@ -73,6 +73,33 @@ assert(prompt.include?("Stop the job from running forever.\n") && prompt.include
 assert(prompt.length < 2000, "The question stays compact (#{prompt.length} characters)")
 puts 'PASS the question is compact: what the change is for, the marked code, the comment, then simple rules'
 
+# A review's kept read of its pull request (`dcr context --name`), as PRContext.gather leaves it.
+person = ->(login) { {'login' => login, '__typename' => 'User'} }
+pull_read = {
+  'repo' => 'acme/web', 'number' => 7, 'title' => 'Bound the job', 'state' => 'OPEN', 'author' => person.('ada-author'),
+  'body' => "Asked in [a session](https://claude.ai/code/session_0123abcd).\n\n## What?\n\nBounds the job. Retrying forever is left for #8.",
+  'comments' => {'nodes' => [{'author' => person.('ada-author'), 'body' => 'The limit is in the README now.'}]},
+  'reviewThreads' => {'nodes' => [
+    {'path' => 'app/other.rb', 'line' => 3, 'isResolved' => false, 'comments' => {'nodes' => [{'author' => person.('rae-reviewer'), 'body' => 'Rename this?'}]}},
+    {'path' => 'app/job.rb', 'line' => 2, 'isResolved' => true, 'comments' => {'nodes' => [
+      {'author' => person.('rae-reviewer'), 'body' => 'Why ten? Asked in https://chatgpt.com/share/6f1e-77aa'},
+      {'author' => person.('ada-author'), 'body' => 'Retrying is deferred to https://github.com/acme/web/pull/8'}
+    ]}}
+  ]},
+  'above' => [{'number' => 8, 'title' => 'Retry the job later', 'state' => 'OPEN'}], 'below' => [], 'references' => []
+}
+said = DCR::PRContext.brief({'revision' => 1, 'context' => pull_read}, path: 'app/job.rb', lines: 2..2)
+expected = ["(acme/web#7 by @ada-author, read at revision 1; threads on app/job.rb only)", "- A thread on line 2 (resolved):\n  @rae-reviewer: Why ten? Asked in [private link removed]\n  @ada-author: Retrying is deferred to #8",
+            '- Stacked on this: #8 Retry the job later (open)', '- The description says: Retrying forever is left for #8.', '- @ada-author in the conversation: The limit is in the README now.']
+expected.each { |text| assert(said.include?(text), "What was already said must carry #{text}:\n#{said}") }
+assert(!said.include?('claude.ai') && !said.include?('chatgpt.com') && !said.include?('Rename this'), "Session links and threads on other files stay out:\n#{said}")
+with_said = DCR::SecondOpinion.prompt(asked: 'codex', author: 'claude', context: 'Stop the job from running forever.', code: code, comment: comment, adversary: true, said: said)
+# What was already said is capped at PRContext::BRIEF (1200) characters: the threads on the
+# comment's file, the stack and the author's plans are what it needs, and the rest stays out.
+assert(with_said.include?(said) && with_said.length < 2000 + DCR::PRContext::BRIEF + 300, "The question with what was already said stays compact (#{with_said.length} characters)")
+assert(DCR::PRContext.brief(nil, path: 'app/job.rb') == nil && DCR::SecondOpinion.prompt(asked: 'codex', author: 'claude', context: 'Stop the job from running forever.', code: code, comment: comment, adversary: true, said: nil) == prompt, 'Without a kept read the question is as before')
+puts 'PASS an adversary reads what was already said near the comment: its threads, the stack, the plan, without private links'
+
 Dir.mktmpdir('dcr-ask') do |dir|
   with_agents('grok' => 'echo "Agree"; echo "Fine as is."', 'codex' => 'while [ $# -gt 0 ]; do [ "$1" = -o ] && out=$2; shift; done; cat > /dev/null; printf "Disagree\\nNo." > "$out"; echo noise',
               'claude' => 'sleep 5', 'gemini' => 'echo "Opening authentication page in your browser"; exit 1') do
@@ -159,6 +186,13 @@ Dir.mktmpdir('dcr-opinions') do |series|
   assert(thread['messages'].length == 1 && message.values_at('author', 'agent', 'role', 'verdict', 'body') == ['agent', 'codex', 'adversary', 'disagree', 'Ten is the documented retry limit.'], "The second reviewer answers in the conversation: #{message}")
   assert(thread['delivery'] == 'draft' && !thread['live'], 'A second opinion is not an answer to the reviewer and sends nothing')
   assert(thread['adversary'] == 'codex' && thread['waiting_on'] == [] && thread.dig('opinions', 'grok', 'error').include?('did not answer'), 'Nobody is left waiting, and a failure is kept beside the conversation')
+  assert(questions.none? { |_, question| question.include?('already said') }, 'With no kept read of a pull request, the question is as it was')
+  # Once `dcr context --name` kept a read, every adversary reads from it, with no fetch of its own.
+  DCR::PRContext.store(series, pull_read)
+  with_agents('codex' => 'exit 0', 'grok' => 'exit 0') { DCR::SecondOpinion.run(series_dir: series, comment_ids: ['c1'], author: 'claude', ask: ask) }
+  questions = Array.new(asked.size) { asked.pop }
+  assert(questions.length == 2 && questions.all? { |_, question| question.include?("@ada-author: Retrying is deferred to #8") && question.include?('read at revision 1') && !question.include?('claude.ai') && !question.include?('chatgpt.com') },
+         "Each adversary reads what was already said near the comment, without private links:\n#{questions.first&.at(1)}")
   # An agent whose turn ended before its verdict ("I'll check...") has not answered.
   halfway = ->(agent, _question, dir:, model:, effort:, adversary:) { "I'll check the retry limit against the docs." }
   with_agents('codex' => 'exit 0', 'grok' => 'exit 0') do
@@ -297,6 +331,13 @@ Dir.mktmpdir('dcr-question') do |series|
   assert(thread.dig('opinions', 'codex').values_at('body', 'short', 'verdict') == ['It is in the README.', 'It is in the README.', nil] && thread['waiting_on'] == [], 'Answers to a question sit beside the conversation, with no verdict')
   assert(thread.dig('opinions', 'opencode').values_at('body', 'error') == [nil, 'opencode stopped before giving its answer'], 'Its narration is not shown as its answer')
   assert(questions.length == 3 && questions.count { |agent, _| agent == 'opencode' } == 2, "One that stopped is asked once more; what the review's agent said before the question is not its answer, so nothing is compared")
+  # With a kept read, a question on no posted comment carries what was said on the pull request, no thread.
+  DCR::PRContext.store(series, pull_read)
+  with_agents('codex' => 'exit 0') do
+    DCR::SecondOpinion.question(state: state, key: key, id: 'mine-1', text: text, author: 'claude', repo: series, ask: ask, patience: 0, adversaries: [{'agent' => 'codex'}])
+  end
+  question = asked.pop[1]
+  assert(question.include?('- Stacked on this: #8 Retry the job later (open)') && question.include?('no file') && !question.include?('Why ten? Asked'), "A question carries what was already said on the pull request:\n#{question}")
 end
 puts 'PASS a question asked with adversaries ticked: each answers it beside the review\'s agent, knowing what it was sent'
 

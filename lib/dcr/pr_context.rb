@@ -205,6 +205,43 @@ module DCR
       [head, out.empty? ? 'Nothing changed on the pull request or around it.' : out.join("\n")].join("\n")
     end
 
+    BRIEF = 1200 # characters of what was already said, in an adversary's question
+    SAID = 240   # characters of each thing said, there
+    PLANNED = /\b(?:defer\w*|follow(?:s|ing|[- ]?ups?)?|later|next|stacked|separate(?:ly)?|out of scope|not in this|step \d+|todo|will be)\b|#\d+/i
+
+    # What was already said on the pull request that bears on a comment, for an adversary checking it:
+    # the threads on its file, nearest first, the stack, what the description says is planned or
+    # deferred, and the author's own words in the conversation. Short, one line each, cut at BRIEF,
+    # with agent session links and secrets removed: it goes to another company's agent. kept: a
+    # stored read; path and lines: the comment's (nil for none). nil when there is nothing to say.
+    def brief(kept, path: nil, lines: nil)
+      context = kept&.dig('context') or return
+      repo_url = %r{https://github\.com/#{Regexp.escape(context['repo'].to_s)}/(?:pull|issues)/(\d+)\S*}
+      say = lambda do |text|
+        text = scrub(text, sessions: true).gsub(/\[([^\]\n]+)\]\([^)\s]+\)/, '\\1').gsub(repo_url, '#\\1')
+        short(text, SAID).gsub(/\s*\n\s*/, ' ')
+      end
+      items = []
+      near = ->(thread) { !(line = thread['line'] || thread['originalLine']) || !lines || lines.cover?(line) ? 0 : [(lines.first - line).abs, (line - lines.last).abs].min }
+      threads = Array(context.dig('reviewThreads', 'nodes')).select { |thread| path && thread['path'] == path && Array(thread.dig('comments', 'nodes')).any? { |c| said(c) } }
+      threads.sort_by(&near).first(3).each do |thread|
+        words = Array(thread.dig('comments', 'nodes')).select { |c| said(c) }.first(4).map { |c| "  @#{c.dig('author', 'login')}: #{say.(c['body'])}" }
+        items << ["- A thread on line #{thread['line'] || thread['originalLine']} (#{thread_marks(thread)}):", *words].join("\n")
+      end
+      context['above'].each { |node| items << "- Stacked on this: ##{node['number']} #{node['title']} (#{state(node)})" }
+      context['below'].each { |node| items << "- This is stacked on: ##{node['number']} #{node['title']} (#{state(node)})" }
+      planned = clean(context['body']).lines.reject { |line| line.match?(/\A\s*(?:#|```|\|)/) }.flat_map { |line| line.split(/(?<=[.!?])\s+/) }.grep(PLANNED).first(3)
+      items << "- The description says: #{planned.map { |sentence| say.(sentence) }.join(' … ')}" if planned.any?
+      author = context.dig('author', 'login')
+      Array(context.dig('comments', 'nodes')).select { |c| said(c) && c.dig('author', 'login') == author }.last(2).each { |c| items << "- @#{author} in the conversation: #{say.(c['body'])}" }
+      return if items.empty?
+      shown = []
+      items.each { |item| shown.sum(&:length) + item.length <= BRIEF ? shown << item : break }
+      read = kept['revision'] ? "read at revision #{kept['revision']}" : 'read before the review'
+      "What was already said on the pull request (#{context['repo']}##{context['number']} by @#{author}, #{read}; " \
+        "#{path ? "threads on #{path} only" : 'no file'}):\n#{shown.join("\n")}"
+    end
+
     def thread_marks(thread) = [thread['isResolved'] ? 'resolved' : 'unresolved', ('outdated' if thread['isOutdated'])].compact.join(', ')
 
     def reference_line(context, ref)

@@ -2,13 +2,16 @@
 
 require_relative 'agent_catalog'
 require_relative 'agents'
+require_relative 'pr_context'
 require_relative 'settings'
 require_relative 'state'
 
 module DCR
   # The reviewer's adversaries (Settings#adversaries) at work. On a comment the review's agent posted,
   # the first checks it and answers in the comment's conversation, the others give a short opinion
-  # beside it; each gets the same compact question: what the change is for, the code, the comment.
+  # beside it; each gets the same compact question: what the change is for, the code, the comment,
+  # and what was already said near it on the pull request, from the review's kept read (`dcr context
+  # --name`, never fetched per question), with agent session links and secrets removed.
   # On a question the reviewer asks with adversaries ticked, every one answers it beside the
   # review's agent, on its own: a short answer, then details. Once the review's agent has answered
   # too, one of them (the judge) says how far each answer agrees with it, without knowing whose is whose.
@@ -23,7 +26,7 @@ module DCR
     PATIENCE = 600 # seconds the judge waits for the review's agent to answer the question
     JUDGED = 1500 # characters of an answer the judge reads
 
-    def prompt(asked:, author:, context:, code:, comment:, adversary:)
+    def prompt(asked:, author:, context:, code:, comment:, adversary:, said: nil)
       role = adversary ? 'You are the second reviewer. Check whether this comment is right, and say what it gets wrong or misses. Be fair: agree when it is right.' : 'Give a quick second opinion on this comment.'
       <<~TEXT
         #{role}
@@ -42,7 +45,7 @@ module DCR
 
         What the change is about:
         #{context.to_s.strip.empty? ? '(not given)' : context.strip}
-
+        #{"\n#{said}\nWhat the author answered, deferred to another pull request or left for a later step is part of the plan: do not count it against this change, but say so when the comment misses it.\n" if said}
         The code (#{code[:where]}):
         ```#{code[:language]}
         #{code[:lines]}
@@ -68,6 +71,17 @@ module DCR
       lines = shown.map { |row| "#{row[side].to_s.rjust(width)} #{marks[row['kind']]}#{row[side].between?(first, last) ? '>' : ' '} #{row['text']}" }.join("\n")
       range = first == last ? "line #{first}" : "lines #{first}-#{last}"
       {where: "#{file['path']}, #{side == 'new' ? 'after' : 'before'} the change, #{range}; > marks the commented lines", language: language(file['path']), lines: lines}
+    end
+
+    # What was already said near a comment on its pull request (PRContext.brief), from the review's
+    # kept read, or nil: no read kept, no pull request, or anything else that fails stays silent.
+    def already_said(series_dir, snapshot, comment)
+      kept = PRContext.stored(series_dir) or return
+      where = comment && (comment['outdated'] || comment)
+      path = comment && (comment.dig('outdated', 'path') || snapshot && snapshot['files'].find { |file| file['hunks'].any? { |hunk| hunk['id'] == comment['hunk'] } }&.fetch('path'))
+      PRContext.brief(kept, path: path, lines: where && where['start'] && (where['start']..(where['end'] || where['start'])))
+    rescue StandardError
+      nil
     end
 
     def language(path) = {'.rb' => 'ruby', '.erb' => 'erb', '.js' => 'javascript', '.ts' => 'typescript', '.py' => 'python', '.go' => 'go', '.css' => 'css', '.sql' => 'sql', '.yml' => 'yaml', '.yaml' => 'yaml'}.fetch(File.extname(path.to_s), '')
@@ -105,9 +119,10 @@ module DCR
       comment_ids.to_h do |id|
         comment = posted.find { |candidate| candidate['id'] == id } or raise ArgumentError, "No comment #{id} in this review"
         excerpt = code(payload['snapshot'], comment)
+        said = already_said(series_dir, payload['snapshot'], comment)
         state.await_opinions(key, id, panel.first['agent'], panel.drop(1).map { |adversary| adversary['agent'] })
         results = consult(state, key, id, panel, repo, ask) do |agent, adversarial|
-          prompt(asked: agent, author: author, context: context, code: excerpt, comment: comment, adversary: adversarial)
+          prompt(asked: agent, author: author, context: context, code: excerpt, comment: comment, adversary: adversarial, said: said)
         end
         [id, results]
       end
@@ -137,7 +152,7 @@ module DCR
       said = kept.dig('threads', key, id, 'outcome', 'verdict') or raise ArgumentError, "Nobody said what became of #{id} yet"
       known = Array(kept.dig('comments', key)) + Array(payload.dig('review', 'comments')) + Array(kept.dig('blobs', key, 'personalComments'))
       comment = known.find { |candidate| candidate['id'] == id } or raise ArgumentError, "No comment #{id} in this review"
-      text = outcome_prompt(author: comment['agent'], comment: comment, payload: payload)
+      text = outcome_prompt(author: comment['agent'], comment: comment, payload: payload, said: already_said(series_dir, payload['snapshot'], comment))
       state.await_opinions(key, id, panel.first['agent'], panel.drop(1).map { |adversary| adversary['agent'] })
       found = lambda do |answer|
         word, body = outcome_word(answer)
@@ -154,7 +169,7 @@ module DCR
       [word == 'addressed' ? 'addressed' : word == 'still applies' ? 'still-applies' : 'not-relevant', text[match.end(0)..].strip]
     end
 
-    def outcome_prompt(author:, comment:, payload:)
+    def outcome_prompt(author:, comment:, payload:, said: nil)
       was = comment['outdated']
       since = payload.dig('review', 'history', 'since') || {'files' => []}
       path = was ? was['path'] : payload['snapshot']['files'].find { |file| file['hunks'].any? { |hunk| hunk['id'] == comment['hunk'] } }&.fetch('path')
@@ -185,7 +200,7 @@ module DCR
         What changed since#{" revision #{since['revision']}" if since['revision']}:
         ```diff
         #{changed.empty? ? '(nothing recorded)' : changed.first(CHANGED_LINES).join.chomp}
-        ```
+        ```#{"\n\n#{said}\nWhat the author answered, deferred or left for a later step is part of the plan: a comment it settles is no longer relevant to this change." if said}
       TEXT
     end
 
@@ -197,9 +212,24 @@ module DCR
       return {} if panel.empty?
       heard = state.answers(key, id).map { |message| message['id'] }
       asked_at = state.await_opinions(key, id, nil, panel.map { |adversary| adversary['agent'] })
-      results = consult(state, key, id, panel, repo, ask, on_comment: false) { |agent, _| question_prompt(asked: agent, author: author, text: text) }
+      said = said_on_thread(state, key, id)
+      results = consult(state, key, id, panel, repo, ask, on_comment: false) { |agent, _| question_prompt(asked: agent, author: author, text: text, said: said) }
       judge(state: state, key: key, id: id, text: text, asked_at: asked_at, heard: heard, judge: panel.first, repo: repo, ask: ask, patience: patience, pause: pause)
       results
+    end
+
+    # What was already said near a question's comment (or on the pull request, for a question on no
+    # comment), from the review's kept read; nil without one.
+    def said_on_thread(state, key, id)
+      dir = File.dirname(state.path)
+      return unless PRContext.stored(dir)
+      require_relative '../../scripts/series'
+      payload = ReviewSeries.latest(dir, ReviewSeries.manifest(dir))
+      kept = state.read
+      comment = (Array(kept.dig('comments', key)) + Array(payload.dig('review', 'comments')) + Array(kept.dig('blobs', key, 'personalComments'))).find { |candidate| candidate['id'] == id }
+      already_said(dir, payload['snapshot'], comment)
+    rescue StandardError
+      already_said(dir, nil, nil)
     end
 
     # [short answer, the whole answer without its markers]. short is nil when the agent did not mark one.
@@ -272,7 +302,7 @@ module DCR
       [verdicts, differ.empty? || differ.match?(/\Anothing\W*\z/i) ? nil : differ[0, 300]]
     end
 
-    def question_prompt(asked:, author:, text:)
+    def question_prompt(asked:, author:, text:, said: nil)
       <<~TEXT
         You are #{Agents.name(asked)}. A reviewer is going through a code change with #{author ? Agents.name(author) : 'their agent'}, the agent running the review, and asked what follows. Give your own, independent answer; the reviewer reads it beside theirs.
 
@@ -286,7 +316,7 @@ module DCR
 
         ---
 
-        #{text.to_s.strip}
+        #{text.to_s.strip}#{"\n\n---\n\n#{said}\nWhat the author answered, deferred or left for a later step is part of the plan; say so when it bears on the answer." if said}
       TEXT
     end
 

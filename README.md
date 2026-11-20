@@ -301,7 +301,10 @@ References: [review JSON](references/report-schema.md), [incremental reviews](re
   answers by letter, not by name, and says how far each agrees with it. Claude, Codex, Grok,
   Gemini, Antigravity (`agy`, through a reading-only agent of its own) and opencode CLIs are asked
   headless and read-only, and may look things up on the web; an agent checks the review it runs only
-  on a model the reviewer named.
+  on a model the reviewer named. When the review kept a read of its pull request (`dcr context
+  --name`), each question also says, in a few lines, what was already said near the comment: its
+  file's threads, the stack and what the author planned or deferred, with agent session links and
+  secrets removed, since it goes to another company's agent.
 - **Review lenses** (`lib/dcr/lenses.rb`, `lenses/`) say what the agent looks for. `lenses/lenses.json`
   lists them; each is a folder with its own adapter, `LENS.md`, which says what to take from the lens and how
   its labels become Conventional Comments. A lens taken from another author keeps that author's files
