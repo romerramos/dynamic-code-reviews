@@ -2231,8 +2231,11 @@
     // It takes up an outdated comment on the new lines: the earlier one, and its code, are a click away.
     const earlier = comment.follows && comments.find(other => other.id === comment.follows);
     const earlierWas = earlier && ReviewTools.outdatedWhere(earlier);
-    // Your own comment is titled by a summary, so its body is the whole of what you wrote.
-    const told = comment.personal ? [comment.subject, comment.discussion].filter(Boolean).join('\n\n') : comment.discussion;
+    // Your own comment is titled by a summary, so its body is the whole of what you wrote. So is one
+    // from GitHub whose first line the title had to cut: opened, it reads whole (a first line the
+    // server already cut, ending in …, has its whole text in the discussion).
+    const cut = !!comment.author && !String(comment.subject).endsWith('…') && shortTitle(comment.subject, 90).length < String(comment.subject).length;
+    const told = comment.personal || cut ? [comment.subject, comment.discussion].filter(Boolean).join('\n\n') : comment.discussion;
     const follows = earlier ? `<details class="thread-follows"><summary>Follows up on “${escape(earlier.subject)}”${earlierWas?.revision ? `, from revision ${escape(earlierWas.revision)}` : ''}</summary>${earlier.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(earlier.discussion)}</div>` : ''}${earlierWas?.code ? `<details class="thread-was"><summary>The code it was written on</summary><pre><code>${escape(earlierWas.code)}</code></pre></details>` : ''}</details>` : '';
     const title = prose(comment.personal ? comment.title || shortTitle(comment.subject, 64) : comment.author ? shortTitle(comment.subject, 90) : comment.subject);
     const lines = found ? `${found.lines.length} line${found.lines.length === 1 ? '' : 's'}` : '';
