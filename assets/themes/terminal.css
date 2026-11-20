@@ -189,8 +189,7 @@
 [data-theme^="terminal-"] .toggle{border-color:var(--terminal-overlay0);color:var(--terminal-overlay1)}
 [data-theme^="terminal-"] .toggle:checked{background:var(--terminal-fill);border-color:var(--terminal-fill);color:var(--terminal-on-fill)}
 [data-theme^="terminal-"] .checkbox{border-color:var(--terminal-overlay0)}
-[data-theme^="terminal-"] kbd{background:var(--terminal-hover);border:0;box-shadow:none}
-[data-theme^="terminal-"] kbd{color:var(--ink)}
+[data-theme^="terminal-"] kbd{background:var(--terminal-hover);border:0;box-shadow:none;color:var(--ink)}
 
 /* --- the walkthrough: a list with a solid cursor bar ------------------------------------------- */
 [data-theme^="terminal-"] .sidebar{background:var(--canvas)}
