@@ -200,6 +200,13 @@ assert(!sampleHtml.includes('range-heading'), 'Notes must not insert rows into t
 assert(sampleHtml.includes('class="code-row change-anchor" id="test-hunk"><td class="gutter del'));
 assert(sampleHtml.includes('popover="auto"'));
 assert(sampleHtml.includes('Read review note for this change'));
+// A note reads as the page's Markdown, escaped, and says nothing of line ranges.
+const noteHtml = sandbox.focusTest.renderHunk(sampleHunk,'Adds `price_inclusion_configurations`, **one row per site**. <script>x</script>','file.txt','unified');
+const note = noteHtml.match(/<aside[^>]*review-note-popover[^]*?<\/aside>/)[0];
+assert(note.includes('<code>price_inclusion_configurations</code>'), 'Inline code is code');
+assert(note.includes('<strong>one row per site</strong>'), 'Bold is bold');
+assert(note.includes('&lt;script&gt;x&lt;/script&gt;') && !note.includes('<script>'), 'HTML in a note stays text');
+assert(!/Before|After/.test(note), 'No range line under the note');
 console.log('PASS one-click hunk navigation with sticky header, sidebar-only file selection and on-demand notes');
 
 // Reaching the scroll limit must retain the clicked block, not infer another one.
