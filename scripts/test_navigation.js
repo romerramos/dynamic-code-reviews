@@ -146,6 +146,7 @@ assert(get('content').innerHTML.includes('focus-reader'));
 assert(get('content').innerHTML.includes('Group 1 of 2'));
 assert(get('content').innerHTML.includes('data-file-viewed="f0"'));
 assert(!get('content').innerHTML.includes('Viewed & next'));
+assert(!/file-about|Why this file/.test(get('content').innerHTML), 'The file header has no Why this file: the step says what the file is for');
 const headings = [100, 400, 700].map((top,i) => ({id:`anchor-${i}`,classList:{contains:name=>name==='code-row',add(){},remove(){}},querySelector:()=>({}),getBoundingClientRect:()=>({top})}));
 content.querySelectorAll = selector => selector === '.change-anchor' ? headings : [];
 const previous = node('previous section'), next = node('next section');

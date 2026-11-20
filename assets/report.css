@@ -378,8 +378,6 @@ body.reading-focus main#content{padding-top:0}
 .current-file .copy-file-path{margin:0;--_icon-button-pad:4px 6px;flex:none;width:auto;height:28px;min-height:28px;padding:4px 6px;font-size:11px;display:inline-flex;gap:4px}
 .copy-file-path svg{width:14px;height:14px}
 .focus-identity .focus-component{margin:0;flex:none}.focus-identity .focus-component>span{display:none}
-.file-about summary{width:fit-content;color:var(--muted);padding:4px 0}
-.focus-file-header .file-about[open]{flex-basis:100%}.file-about p{font-size:13px}
 @media(max-width:650px){
  .focus-meta{gap:6px 10px}
  .focus-meta .focus-file-actions{padding-left:8px}
@@ -390,8 +388,6 @@ body.reading-focus main#content{padding-top:0}
  .review-toolbar{flex-wrap:wrap}.toolbar-options{gap:6px}
  .toolbar-options fieldset button{padding:4px 8px}
 }
-
-@media(max-width:650px){.focus-identity> .file-about{min-width:95px}}
 
 .token.comment,.token.prolog,.token.doctype,.token.cdata{color:var(--tok-comment);font-style:italic}
 .token.punctuation{color:var(--tok-punct)}
@@ -564,13 +560,6 @@ html[data-mode="dark"] .revision-control .select:is(:focus,:open):not(:focus-vis
 .current-file{gap:4px}
 .current-file code{font:600 14px/1.5 var(--mono);color:var(--ink);letter-spacing:-.01em}
 .copy-file-path.icon-button{width:28px;height:28px}.copy-file-path .review-icon{width:14px;height:14px}
-.focus-file-header .file-about{flex:0 1 auto;min-width:0;font-size:12px}
-.file-about>summary{display:inline-flex;align-items:center;gap:5px;list-style:none;color:var(--ink-neutral-5);font-weight:550;padding:3px 7px;border-radius:calc(7px * var(--round))}
-.file-about>summary::-webkit-details-marker{display:none}
-.file-about>summary:hover{background:var(--bg-neutral-3);color:var(--ink)}
-.file-about>summary .review-icon{width:14px;height:14px}
-.file-about[open]>summary{color:var(--ink)}
-.file-about>p{max-width:80ch;color:var(--ink-neutral-3);line-height:1.6}
 .focus-progress-actions{display:flex;align-items:center;margin-left:auto;gap:6px}
 .focus-progress-actions .file-viewed{display:inline-flex;align-items:center;gap:7px;margin:0;height:32px;padding:0 11px;border:1px solid var(--line-neutral-3);border-radius:calc(9px * var(--round));background:var(--bg-neutral-1);color:var(--ink-neutral-3);font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap}
 .focus-progress-actions .file-viewed:hover{border-color:var(--line-neutral-4)}
@@ -1125,7 +1114,7 @@ button.risk-path:hover .path-name{text-decoration:underline}
      review, the path, then the component's two files and what a thumb needs (viewed, back, on).
      What is for a wide screen and a pointer stays there: the pager of changed sections (a swipe
      scrolls), copying the path, who should review the file, and the template's preview, which the
-     Previews tab at the top opens. Why this file is its icon; it opens under the header. */
+     Previews tab at the top opens. */
   .focus-file-header{position:relative;--header-pad-top:8px;padding-bottom:10px}
   .focus-meta{padding-right:9ch}
   .focus-meta .focus-file-actions,.focus-file-header :is(.copy-file-path,.need-set,.preview-toggle,.not-visual-note){display:none}
@@ -1142,8 +1131,6 @@ button.risk-path:hover .path-name{text-decoration:underline}
   .current-file .path-name{flex:none;max-width:calc(100% - 6ch);overflow:hidden;text-overflow:ellipsis;font-weight:700}
   .focus-file-header .current-file code.is-whole{display:block;white-space:normal;overflow-wrap:anywhere}
   .current-file code.is-whole .path-mid{direction:ltr;overflow:visible}
-  .focus-file-header .file-about{min-width:0}
-  .focus-file-header .file-about:not([open]) summary span{display:none}
   .focus-progress-actions{display:flex;flex:0 0 auto;flex-wrap:nowrap;align-items:center;gap:4px;margin-left:auto}
   .focus-file-header .focus-step-label{display:none}
   .focus-progress-actions .file-viewed span{text-transform:capitalize}
@@ -1153,7 +1140,7 @@ button.risk-path:hover .path-name{text-decoration:underline}
 }
 /* Tablets. There is room for the code or for the bars, and the code is what is read: the two bars
    are as thin as what is in them, and a file's header is two lines (the step, then the path with
-   the component's two files, why this file, viewed and next). As on a phone, what is for a wide
+   the component's two files, viewed and next). As on a phone, what is for a wide
    screen and a pointer stays there: the pager of changed sections, copying the path, who should
    review the file, and the template's preview, which the Previews tab opens. */
 @media(min-width:651px) and (max-width:1199px){
@@ -1173,8 +1160,7 @@ button.risk-path:hover .path-name{text-decoration:underline}
   .current-file .path-name{flex:none;max-width:calc(100% - 6ch);overflow:hidden;text-overflow:ellipsis}
   .focus-file-header .current-file code.is-whole{display:block;white-space:normal;overflow-wrap:anywhere}
   .current-file code.is-whole .path-mid{direction:ltr;overflow:visible}
-  .focus-file-header .file-about{min-width:0}
-  .focus-file-header .file-about:not([open]) summary span,.focus-file-header .focus-step-label{display:none}
+  .focus-file-header .focus-step-label{display:none}
   .focus-progress-actions{flex:0 0 auto;margin-left:0}
   .focus-progress-actions .file-viewed span{text-transform:capitalize}
 }
@@ -1661,9 +1647,8 @@ dialog.modal>.modal-box{max-height:calc(100dvh - 32px)}
   .navigation-open .sidebar{top:var(--chrome-h);bottom:var(--status-h);width:min(var(--list-w),85vw);max-width:none;z-index:40}
   .navigation-open .sidebar-scrim{z-index:35}
 }
-/* A file's name is as wide as it is, so Why this file sits right after it; the file's own actions keep the far end. */
+/* A file's name is as wide as it is; the file's own actions keep the far end. */
 .focus-identity>.current-file{flex:0 1 auto;min-width:0}
-.focus-identity>.file-about{margin-left:8px}
 .focus-identity>.focus-progress-actions{margin-left:auto}
 /* A group's title folds its steps: it reads as the title it is, with no button look. */
 .sidebar nav button.nav-group-toggle{display:inline;width:auto;min-height:0;padding:0;margin:0;border:0;border-radius:0;background:none;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit;line-height:inherit;cursor:pointer}
