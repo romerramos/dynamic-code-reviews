@@ -26,10 +26,13 @@ module DCR
       core markup clike javascript css scss ruby sql json yaml bash typescript jsx tsx c cpp csharp java kotlin go
       rust python toml swift markup-templating php markdown docker elixir graphql lua makefile ini
     ].freeze
-    OFFLINE_CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; media-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'"
+    # Images come only from the page itself, and from GitHub for those in a pull request's description
+    # (they show when the reader's browser may load them; otherwise the page links to them).
+    GITHUB_IMAGES = 'https://github.com https://*.githubusercontent.com'
+    OFFLINE_CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: #{GITHUB_IMAGES}; font-src data:; media-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'"
     # The served review keeps its own inline scripts and embedded media, and may also load
     # the QA panel and talk to the server. The saved HTML file keeps its stricter offline policy.
-    SERVED_CSP = "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    SERVED_CSP = "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src data: blob: #{GITHUB_IMAGES}; font-src data:; media-src data: blob:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 
     # What a served page needs from the server: its token, the browser progress to seed (the server's
     # copy wins over a stale browser one), the running app it may frame, if any, and otherwise why the

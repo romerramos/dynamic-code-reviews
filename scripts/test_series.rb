@@ -921,6 +921,19 @@ module SeriesChecks
         assert(saved.length == 1 && !saved.last.key?('saves'), 'Presentation refresh was recorded as a revision or a save')
       end
     end
+    checks["the review's page shows the pull request's description as last read, without comments or secrets"] = lambda do
+      ReviewChecks.fixture do |root, _commit|
+        first = ReviewSeries.start(repo: root, name: 'described', report: initial(root))
+        series = File.dirname(File.dirname(first))
+        url = 'https://github.com/acme/app/pull/7'
+        body = "## What?\nKeeps the value.\n<!-- workspace-pr:visual:start -->\nToken ghp_#{'a1' * 18}\nhttps://claude.ai/code/session_01AbC"
+        DCR::PRContext.store(series, 'url' => url, 'body' => body)
+        shown = DynamicReviews.extract(ReviewSeries.refresh(repo: root, name: 'described'))['review']['pull_request']
+        assert(shown['url'] == url && shown['body'].start_with?("## What?\nKeeps the value.") && shown['body'].include?('https://claude.ai/code/session_01AbC'), "The description is not on the page as written: #{shown}")
+        assert(!shown['body'].include?('workspace-pr') && !shown['body'].include?('ghp_'), "HTML comments and secrets reached the page: #{shown['body']}")
+        assert(!DynamicReviews.extract(first)['review'].key?('pull_request'), 'The saved revision was rewritten')
+      end
+    end
     checks.each { |description, check| check.call; puts "PASS #{description}" }
     puts "#{checks.length} series checks passed"
   end

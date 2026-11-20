@@ -6,6 +6,7 @@ require_relative 'review'
 require_relative '../lib/dcr/state'
 require_relative '../lib/dcr/anchors'
 require_relative '../lib/dcr/activity'
+require_relative '../lib/dcr/pr_context'
 require 'securerandom'
 
 module ReviewSeries
@@ -1025,11 +1026,14 @@ module ReviewSeries
     output
   end
 
-  # Browsing pages may refresh their navigation/UI; the saved revisions are not touched.
+  # Browsing pages may refresh their navigation/UI; the saved revisions are not touched. They show
+  # the pull request's description as the review last read it (`dcr context`).
   def refresh_views(path, history)
+    described = DCR::PRContext.description(path)
     history.fetch('revisions').each do |entry|
       payload = DynamicReviews.extract(revision_path(path, entry.fetch('number')))
       review = payload.fetch('review')
+      review['pull_request'] = described if described
       review['history']['preview'] = true
       review['history']['origin_mode'] = history['origin_mode']
       review['history']['entries'] = history['revisions']

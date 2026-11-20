@@ -15,8 +15,9 @@ module DCR
   # text mentions, with their titles. Read-only, two GraphQL calls through the signed-in `gh`, and
   # printed short: it shapes the agent's comments and is never posted or saved in the review.
   # With a series (--name), the last read is kept beside the review's own files (context.json,
-  # private: never on the page, exported or posted), for the adversaries checking comments and for
-  # --since-last, which says what changed on the pull request since that read.
+  # private: never posted, and only its description is on the page, as the pull request shows it),
+  # for the adversaries checking comments and for --since-last, which says what changed on the pull
+  # request since that read.
   # With no pull request, no GitHub remote or no `gh`, it says so in one line and that is all.
   module PRContext
     module_function
@@ -136,6 +137,13 @@ module DCR
       File.file?(path) && !File.symlink?(path) ? JSON.parse(File.read(path)) : nil
     rescue JSON::ParserError, SystemCallError
       nil
+    end
+
+    # The pull request's description from the kept read, for the review's Overview: {'url', 'body'}
+    # with its HTML comments and secrets removed, or nil without a read.
+    def description(series_dir)
+      kept = stored(series_dir)&.dig('context') or return
+      {'url' => kept['url'], 'body' => clean(kept['body'])} if kept['url'].is_a?(String)
     end
 
     # Keeps this read beside the review, with the revision it was read at.
