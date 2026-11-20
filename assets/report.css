@@ -1326,8 +1326,8 @@ body.zen.ledger-open .review-bar{left:calc(50% - min(var(--ledger-w,420px),92vw)
 
 /* The Overview opens with what the change does, said once and large enough to read; the rest of
    the summary follows more quietly, and the facts about the review are one small line. */
-.overview-intro .lead{max-width:62ch;margin:0 0 12px;color:var(--ink);font-size:19px;line-height:1.5;letter-spacing:-.005em}
-.overview-intro .lead-rest{max-width:68ch;margin:0 0 20px;color:var(--ink-neutral-4);font-size:15px;line-height:1.7}
+.overview-intro .lead{margin:0 0 12px;color:var(--ink);font-size:19px;line-height:1.5;letter-spacing:-.005em}
+.overview-intro .lead-rest{margin:0 0 20px;color:var(--ink-neutral-4);font-size:15px;line-height:1.7}
 .overview-facts{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 18px;color:var(--muted);font-size:12.5px}
 .overview-facts :is(p,nav){margin:0;font-size:inherit;color:inherit}
 .overview-facts .overview-history{display:flex;gap:14px}
@@ -1369,7 +1369,7 @@ main#content:has(>.overview-reading>.overview-shows){padding-top:calc(var(--pane
 .overview-shows .segmented button{height:24px;padding:0 12px;border-radius:calc(6px * var(--round));font-size:12px;font-weight:550}
 /* The description as GitHub shows it, at most half the window tall until it is opened, fading out
    over its last lines. One shorter than that shows whole, with no fade and no button. */
-.pr-description{max-width:720px;max-height:50vh;overflow:hidden;color:var(--ink-neutral-3);font-size:15px;line-height:1.7;-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 96px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 96px),transparent)}
+.pr-description{max-height:50vh;overflow:hidden;color:var(--ink-neutral-3);font-size:15px;line-height:1.7;-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 96px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 96px),transparent)}
 .pr-description:is(.is-open,.is-whole){max-height:none;-webkit-mask-image:none;mask-image:none}
 .pr-description :is(h2,h3,h4,h5,h6){margin:22px 0 6px;color:var(--ink);font-size:15px;font-weight:600;line-height:22px;letter-spacing:0}
 .pr-description>:first-child{margin-top:0}

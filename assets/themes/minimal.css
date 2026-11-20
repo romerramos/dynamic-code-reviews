@@ -338,7 +338,7 @@ html[data-theme="minimal-dark"]{--bar-card-bg:color-mix(in srgb,var(--ink) 9%,va
 /* A reply: who, then what they concluded, on one line; then what they said. */
 
 /* --- the summary: the lead on its own line, then short paragraphs with air between them ------------- */
-[data-theme^="minimal-"] .overview-intro .lead{max-width:none;display:block;margin:0 0 14px;color:var(--ink);font-size:17px;line-height:1.55}
+[data-theme^="minimal-"] .overview-intro .lead{display:block;margin:0 0 14px;color:var(--ink);font-size:17px;line-height:1.55}
 [data-theme^="minimal-"] .overview-intro .lead::after{content:none}
 [data-theme^="minimal-"] .overview-intro :is(.lead,.lead-rest) code{background:var(--minimal-soft)}
 
@@ -350,7 +350,7 @@ html[data-theme="minimal-dark"]{--bar-card-bg:color-mix(in srgb,var(--ink) 9%,va
 
 /* --- room: a wider list, so step names fit on a line, and a wider page for the lines ------------- */
 [data-theme^="minimal-"] .overview-reading{display:flex;flex-direction:column;max-width:880px}
-[data-theme^="minimal-"] .overview-intro .lead-rest{margin:0;display:block;color:var(--ink-neutral-3);font-size:15px;line-height:1.7;max-width:680px}
+[data-theme^="minimal-"] .overview-intro .lead-rest{margin:0;display:block;color:var(--ink-neutral-3);font-size:15px;line-height:1.7}
 
 /* --- Round five: the Overview's comments read as threads -------------------------------------------- */
 /* A fold's count sits on the label's baseline. */
