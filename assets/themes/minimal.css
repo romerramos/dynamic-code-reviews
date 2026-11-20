@@ -66,8 +66,6 @@
 [data-theme^="minimal-"] #navigation .step-number{order:2;margin-left:auto;width:auto;min-width:16px;height:auto;border:0;background:transparent;box-shadow:none;color:var(--minimal-faint);font-size:11px;font-weight:400}
 [data-theme^="minimal-"] #navigation .step-number .review-icon{width:13px;height:13px}
 [data-theme^="minimal-"] #navigation .step-body{order:1}
-[data-theme^="minimal-"] .sidebar-settings{padding:5px 8px;color:var(--muted);font-size:12px;font-weight:400}
-[data-theme^="minimal-"] .sidebar-settings:hover{background:transparent;color:var(--ink)}
 [data-theme^="minimal-"] .sidebar-footer{border-top:0;padding:10px 8px 0;color:var(--minimal-faint)}
 [data-theme^="minimal-"] .sidebar-footer progress{height:2px}
 
@@ -85,7 +83,7 @@ html[data-theme^="minimal-"]{--chrome-h:0px;--toolbar-h:0px;--bar-rise:16px;--ba
    the list's to show, and marking it reviewed and moving on is the bar's button. */
 [data-theme^="minimal-"] .focus-file-header :is(.focus-group,.focus-progress-actions){display:none}
 [data-theme^="minimal-"] .focus-file-header{border:0;background:var(--surface)}
-[data-theme^="minimal-"] .focus-file-actions{margin-left:auto;border:0;background:transparent;color:var(--minimal-faint)}
+[data-theme^="minimal-"] .focus-file-actions{margin-left:auto;border:1px solid var(--line);background:transparent;color:var(--minimal-faint)}
 [data-theme^="minimal-"]{--reader-top:22px}
 [data-theme^="minimal-"] body:not(.reading-focus) main#content{padding-top:22px}
 [data-theme^="minimal-"] :is(.app-header,.review-toolbar,.definition-back){display:none}
@@ -350,7 +348,6 @@ html[data-theme="minimal-dark"]{--bar-card-bg:color-mix(in srgb,var(--ink) 9%,va
 /* --- the foot of the list: one line, how far and how many need you, beside a small gear ------------ */
 [data-theme^="minimal-"] body:not(.navigation-open) .sidebar{position:relative}
 [data-theme^="minimal-"] .sidebar-footer #progress{color:var(--minimal-faint)}
-[data-theme^="minimal-"] .sidebar-footer .sidebar-settings{padding:2px;color:var(--minimal-faint)}
 
 /* --- who wrote it, in a glance: a small face before each comment's line --------------------------- */
 /* The lists line up with the faces: what to read first starts where the comments' words do. */

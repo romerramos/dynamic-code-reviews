@@ -31,7 +31,7 @@
     <aside class="sidebar" aria-label="Change groups">
       <div class="sidebar-top"><input id="search" class="input input-bordered" type="search" placeholder="Find a file or code…" aria-label="Find a file or a line of code"><button type="button" id="sidebar-hide" class="sidebar-hide" aria-label="Hide the list" title="Hide the list"></button></div>
       <nav id="navigation" aria-label="Review navigation"></nav>
-      <div class="sidebar-footer"><span id="progress" role="status"></span><button type="button" id="progress-need" class="progress-need" hidden></button><button type="button" id="settings-toggle" class="sidebar-settings" data-open-settings aria-haspopup="dialog"><span id="settings-icon" aria-hidden="true"></span><span>Settings</span></button><progress id="progress-bar" class="progress progress-primary" value="0" max="1" aria-label="Review progress"></progress></div>
+      <div class="sidebar-footer"><span id="progress" role="status"></span><button type="button" id="progress-need" class="progress-need" hidden></button><progress id="progress-bar" class="progress progress-primary" value="0" max="1" aria-label="Review progress"></progress></div>
     </aside>
     <div id="sidebar-scrim" class="sidebar-scrim" aria-hidden="true"></div>
     <button type="button" id="sidebar-show" class="sidebar-show" aria-label="Show the list" title="Show the list"></button>
@@ -41,21 +41,20 @@
         <div class="toolbar-navigation"><button id="nav-toggle" class="icon-button" aria-expanded="false" aria-label="Toggle review navigation">☰</button><div class="pager"><button id="prev" class="icon-button" aria-label="Previous step">←</button><span id="position"></span><button id="next" class="icon-button" aria-label="Next step">→</button></div></div>
         <div class="toolbar-options">
           <button id="zen-toggle" class="icon-button" aria-label="Focus on this file" title="Focus on this file (F)"></button>
-          <button id="view-toggle" class="view-toggle" popovertarget="view-menu" aria-haspopup="dialog" aria-expanded="false"><span id="view-icon" aria-hidden="true"></span><span class="view-label">View</span></button>
-          <button id="ledger-toggle" class="icon-button ledger-toggle" aria-expanded="false" aria-controls="ledger" aria-label="Show your review" title="Your review"></button>
+                    <button id="ledger-toggle" class="icon-button ledger-toggle" aria-expanded="false" aria-controls="ledger" aria-label="Show your review" title="Your review"></button>
         </div>
       </div>
       <main id="content" tabindex="-1"></main>
       <div id="review-bar" class="review-bar" role="group" aria-label="This review">
         <div class="bar-card">
         <button type="button" id="bar-nav" class="bar-quiet bar-nav" aria-label="Show the steps">☰</button>
-        <button type="button" id="bar-agent" class="bar-agent" aria-haspopup="dialog" hidden><span aria-hidden="true"></span></button>
+        <span id="bar-agent" class="bar-agent" role="img" hidden><span aria-hidden="true"></span></span>
         <button type="button" id="bar-back" class="bar-soft" hidden></button>
         <button type="button" id="bar-update" class="bar-soft" hidden></button>
         <form id="bar-form"><textarea id="bar-input" rows="1" autocomplete="off" enterkeyhint="send"></textarea></form><span id="bar-hint" aria-hidden="true">⇧↵ new line</span>
         <span id="bar-meta"></span>
         <button type="button" id="bar-action" class="btn btn-sm btn-primary bar-primary" data-ui="Button" hidden></button>
-        <button type="button" id="bar-commands" class="bar-keys" aria-label="Every command" title="Every command"><kbd id="bar-keys"></kbd></button>
+        <button type="button" id="bar-settings" class="bar-settings" aria-haspopup="dialog" aria-label="Settings" title="Settings"></button>
         <button type="button" id="bar-review" class="bar-review" aria-label="Show your review"></button>
         </div>
         <div class="bar-strip"><span id="bar-who"></span><button type="button" id="bar-left" class="bar-left" hidden></button></div>
@@ -68,13 +67,13 @@
       <footer id="ledger-footer" class="ledger-footer"></footer>
     </aside>
   </div>
-  <div id="view-menu" class="view-menu" popover="auto" role="dialog" aria-label="View">
+  <div id="view-menu" class="view-menu" hidden>
     <section data-view-switch><h2>Reading</h2><fieldset class="segmented reading-modes" aria-label="Reading mode"><button id="focus" aria-pressed="true">File by file</button><button id="walkthrough" aria-pressed="false">Walkthrough</button></fieldset><p id="reading-hint" class="view-hint"></p></section>
     <section data-view-switch><h2>Diff</h2><fieldset class="segmented" role="group" aria-label="Diff layout"><button id="unified">Unified</button><button id="split">Split</button></fieldset></section>
     <section data-view-switch class="view-row"><label class="view-switch"><input id="comments-toggle" class="toggle toggle-sm toggle-primary" type="checkbox" checked><span>Review comments in the code</span></label></section>
     <section data-view-switch class="view-row"><label class="view-switch"><input id="whitespace-toggle" class="toggle toggle-sm toggle-primary" type="checkbox"><span>Ignore whitespace changes</span></label></section>
-    <section class="view-row"><button type="button" class="link-button view-all" data-open-settings><span id="view-all-icon" aria-hidden="true"></span>All settings</button></section>
   </div>
+  <div id="file-menu" class="file-menu" popover="auto" role="menu" aria-label="Options for this file"></div>
   <dialog id="settings-dialog" class="modal" aria-labelledby="settings-title"><div class="modal-box settings-box"><header><h2 id="settings-title">Settings</h2><button type="button" class="btn btn-sm btn-circle btn-ghost" data-close aria-label="Close settings">✕</button></header><nav class="settings-tabs" role="tablist" aria-label="Settings"><button type="button" role="tab" data-settings-tab="general" aria-selected="true">General</button><button type="button" role="tab" data-settings-tab="agents" aria-selected="false">Agents</button></nav><div class="settings-body">
     <div id="settings-view"></div>
     <section><h2>Appearance</h2><fieldset class="segmented" role="group" aria-label="Colour mode"><button id="mode-system" data-color-mode="system">System</button><button id="mode-light" data-color-mode="light">Light</button><button id="mode-dark" data-color-mode="dark">Dark</button></fieldset><label class="view-select"><span>Theme</span><select id="theme" class="select select-sm select-bordered" aria-label="Theme"><%- themes.each do |name| -%><option value="<%= h name %>"<%- %w[light dark].each do |mode| -%><%- if (suited = theme_syntax(name, mode)) -%> data-syntax-<%= mode %>="<%= h suited %>"<%- end -%><%- end -%><%- if (best = theme_mode(name)) -%> data-mode="<%= h best %>"<%- end -%>><%= h(name == 'aida' ? 'AIda' : name.capitalize) %></option><%- end -%></select></label><label class="view-select"><span>Syntax theme</span><select id="syntax-theme" class="select select-sm select-bordered" aria-label="Syntax theme"><option value="classic">Classic</option><option value="catppuccin">Catppuccin</option><option value="rosepine">Rosé Pine</option><option value="github">GitHub</option><option value="one">One</option><option value="solarized">Solarized</option><option value="dracula">Dracula</option></select></label></section>

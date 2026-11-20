@@ -247,7 +247,7 @@
       {key:'d', label:'Review details', run: () => $('context-toggle').click()},
       agentChip() && {key:'g', label:'Agents and adversaries', run: openAgentCard},
       {key:'/', label:'Find a file or a line of code', run: findInSidebar},
-      {key:',', label:'Settings', run: () => $('settings-toggle').click()},
+      {key:',', label:'Settings', run: () => openSettings()},
       {key:'?', label:'Every key', run: () => $('keys-dialog').showModal()},
       {key:' ', label:'Mark the file reviewed, or not', run: markFile}
     ].filter(Boolean);
@@ -2826,7 +2826,7 @@
     const next = sinceView.files[sinceIndex + 1];
     const current = filesByPath.get(file.path);
     const reviewed = current ? `<label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${current.id}" ${fileViewed(current) ? 'checked' : ''}> <span>${viewedLabel(fileViewed(current))}</span></label>` : '';
-    return `<section class="focus-reader since-reader"><header class="focus-file-header"><div class="focus-meta"><span class="focus-group"><span class="crumb-number">${sinceIndex + 1}/${count}</span><span class="crumb-group">Since the previous revision (${escape(sinceView.revision)})</span></span><div class="focus-file-actions" role="group" aria-label="Changed sections"><button class="icon-button" data-change-step="-1" disabled aria-label="Previous changed section" title="Previous changed section">${icon('chevron-left')}</button><span id="change-position">${file.hunks.length} changes</span><button class="icon-button" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} aria-label="Next changed section" title="Next changed section">${icon('chevron-right')}</button></div></div><div class="focus-identity"><div class="current-file"><code data-path-toggle>${ReviewTools.pathParts(file.path)}</code>${words[file.state] ? `<span class="badge neutral">${words[file.state]}</span>` : ''}<span class="badge success">+${rows.filter(line => line.kind === 'add').length}</span><span class="badge blocking">−${rows.filter(line => line.kind === 'del').length}</span></div><div class="focus-progress-actions">${reviewed}<button class="btn btn-sm btn-ghost phone-only" data-focus-prev ${sinceIndex === 0 ? 'disabled' : ''} aria-label="Previous file">${icon('arrow-left')}<span class="focus-step-label"> Previous</span></button><button class="btn btn-sm btn-ghost" data-focus-next aria-label="Next file" ${next ? '' : 'disabled'}><span class="focus-step-label">Next file </span>${icon('arrow-right')}</button><span class="focus-count phone-only">${sinceIndex + 1} of ${count}</span></div></div></header>${!full && !file.note ? '<p class="focus-unavailable">This revision did not save the whole file. Showing only what changed.</p>' : ''}${code}${gone.length ? `<section class="since-outdated"><h3>${plural(gone.length, 'comment')} on lines this revision changed</h3>${gone.map(comment => commentCard(comment, true)).join('')}</section>` : ''}<footer class="focus-end"><span>${next ? `Next: ${escape(next.path)}` : `End of what changed since the previous revision (${escape(sinceView.revision)})`}</span><button class="btn btn-sm btn-ghost phone-only" data-focus-prev ${sinceIndex === 0 ? 'disabled' : ''}>← Previous</button><button class="btn btn-sm btn-primary" data-focus-next ${next ? '' : 'disabled'}>Next file →</button></footer></section>`;
+    return `<section class="focus-reader since-reader"><header class="focus-file-header"><div class="focus-meta"><span class="focus-group"><span class="crumb-number">${sinceIndex + 1}/${count}</span><span class="crumb-group">Since the previous revision (${escape(sinceView.revision)})</span></span><div class="focus-file-actions" role="group" aria-label="Changed sections"><button class="icon-button" data-change-step="-1" disabled aria-label="Previous changed section" title="Previous changed section">${icon('chevron-left')}</button><span id="change-position">${file.hunks.length} changes</span><button class="icon-button" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} aria-label="Next changed section" title="Next changed section">${icon('chevron-right')}</button><span class="file-actions-rule" aria-hidden="true"></span><button type="button" class="icon-button" data-file-menu="${escape(file.path)}" aria-haspopup="menu" aria-expanded="false" aria-label="Options for this file" title="Options for this file">${icon('ellipsis')}</button></div></div><div class="focus-identity"><div class="current-file"><code data-path-toggle>${ReviewTools.pathParts(file.path)}</code>${words[file.state] ? `<span class="badge neutral">${words[file.state]}</span>` : ''}<span class="badge success">+${rows.filter(line => line.kind === 'add').length}</span><span class="badge blocking">−${rows.filter(line => line.kind === 'del').length}</span></div><div class="focus-progress-actions">${reviewed}<button class="btn btn-sm btn-ghost phone-only" data-focus-prev ${sinceIndex === 0 ? 'disabled' : ''} aria-label="Previous file">${icon('arrow-left')}<span class="focus-step-label"> Previous</span></button><button class="btn btn-sm btn-ghost" data-focus-next aria-label="Next file" ${next ? '' : 'disabled'}><span class="focus-step-label">Next file </span>${icon('arrow-right')}</button><span class="focus-count phone-only">${sinceIndex + 1} of ${count}</span></div></div></header>${!full && !file.note ? '<p class="focus-unavailable">This revision did not save the whole file. Showing only what changed.</p>' : ''}${code}${gone.length ? `<section class="since-outdated"><h3>${plural(gone.length, 'comment')} on lines this revision changed</h3>${gone.map(comment => commentCard(comment, true)).join('')}</section>` : ''}<footer class="focus-end"><span>${next ? `Next: ${escape(next.path)}` : `End of what changed since the previous revision (${escape(sinceView.revision)})`}</span><button class="btn btn-sm btn-ghost phone-only" data-focus-prev ${sinceIndex === 0 ? 'disabled' : ''}>← Previous</button><button class="btn btn-sm btn-primary" data-focus-next ${next ? '' : 'disabled'}>Next file →</button></footer></section>`;
   }
   function sinceFile(index) {
     document.body.classList.remove('navigation-open'); $('nav-toggle').setAttribute('aria-expanded', 'false');
@@ -2886,7 +2886,7 @@
     const full = wholeFile(file);
     const groupNumber = review.groups.indexOf(entry.layer.group) + 1;
     const stepTitle = entry.layer.title === entry.layer.group.title ? '' : `<span class="crumb-sep" aria-hidden="true">›</span><span class="crumb-step">${escape(entry.layer.title)}</span>`;
-    return `<section class="focus-reader"><header class="focus-file-header"><div class="focus-meta"><span class="focus-group" title="${escape(`Group ${groupNumber} of ${review.groups.length}: ${entry.layer.group.title}`)}"><span class="crumb-number">${groupNumber}/${review.groups.length}</span><span class="crumb-group">${escape(titleWithoutNumber(entry.layer.group.title))}</span>${stepTitle}</span><div class="focus-file-actions" role="group" aria-label="Changed sections"><button class="icon-button" data-change-step="-1" disabled aria-label="Previous changed section" title="Previous changed section">${icon('chevron-left')}</button><span id="change-position">${file.hunks.length} changes</span><button class="icon-button" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} aria-label="Next changed section" title="Next changed section">${icon('chevron-right')}</button></div></div><div class="focus-identity"><div class="current-file"><code data-path-toggle>${ReviewTools.pathParts(file.path)}</code><button class="icon-button copy-file-path" data-copy-file title="Copy the full relative file path" aria-label="Copy file path">${icon('copy')}</button>${needMark(file, true)}</div>${componentLinks}${previewToggle(file)}${notVisualNote(file)}<details class="file-about"><summary>${icon('info')}<span>Why this file</span></summary><p>${escape(entry.layer.summary || entry.layer.group.summary)}</p>${items.map(item => item.summary ? `<p>${escape(item.summary)}</p>` : '').join('')}</details><div class="focus-progress-actions"><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" ${fileViewed(file) ? 'checked' : ''}> <span>${viewedLabel(fileViewed(file))}</span></label><button class="btn btn-sm btn-ghost phone-only" data-focus-prev ${focusIndex === 0 ? 'disabled' : ''} aria-label="Previous file">${icon('arrow-left')}<span class="focus-step-label"> Previous</span></button><button class="btn btn-sm btn-ghost" data-focus-next aria-label="Next file" ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}><span class="focus-step-label">Next file </span>${icon('arrow-right')}</button><span class="focus-count phone-only">${focusIndex + 1} of ${focusOrder.length}</span></div></div></header>${!full ? '<p class="focus-unavailable">Full source was not captured or exceeds the text limit. Showing the saved diff; no current working files have been substituted.</p>' : ''}${(() => { const code = file.hunks.length || full?.length ? renderDiffTable(file, full || file.hunks, summaries) : `<pre>${escape(file.note || file.patch || 'No text diff available.')}</pre>`; return code; })()}<footer class="focus-end"><span>${focusIndex + 1 === focusOrder.length ? 'End of the review' : `Next: ${escape(files.get(focusOrder[focusIndex + 1].file).path)}`}</span><button class="btn btn-sm btn-ghost phone-only" data-focus-prev ${focusIndex === 0 ? 'disabled' : ''}>← Previous</button><button class="btn btn-sm btn-primary" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></footer></section>`;
+    return `<section class="focus-reader"><header class="focus-file-header"><div class="focus-meta"><span class="focus-group" title="${escape(`Group ${groupNumber} of ${review.groups.length}: ${entry.layer.group.title}`)}"><span class="crumb-number">${groupNumber}/${review.groups.length}</span><span class="crumb-group">${escape(titleWithoutNumber(entry.layer.group.title))}</span>${stepTitle}</span><div class="focus-file-actions" role="group" aria-label="Changed sections"><button class="icon-button" data-change-step="-1" disabled aria-label="Previous changed section" title="Previous changed section">${icon('chevron-left')}</button><span id="change-position">${file.hunks.length} changes</span><button class="icon-button" data-change-step="1" ${file.hunks.length ? '' : 'disabled'} aria-label="Next changed section" title="Next changed section">${icon('chevron-right')}</button><span class="file-actions-rule" aria-hidden="true"></span><button type="button" class="icon-button" data-file-menu="${escape(file.path)}" aria-haspopup="menu" aria-expanded="false" aria-label="Options for this file" title="Options for this file">${icon('ellipsis')}</button></div></div><div class="focus-identity"><div class="current-file"><code data-path-toggle>${ReviewTools.pathParts(file.path)}</code><button class="icon-button copy-file-path" data-copy-file title="Copy the full relative file path" aria-label="Copy file path">${icon('copy')}</button>${needMark(file, true)}</div>${componentLinks}${previewToggle(file)}${notVisualNote(file)}<details class="file-about"><summary>${icon('info')}<span>Why this file</span></summary><p>${escape(entry.layer.summary || entry.layer.group.summary)}</p>${items.map(item => item.summary ? `<p>${escape(item.summary)}</p>` : '').join('')}</details><div class="focus-progress-actions"><label class="file-viewed"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" data-file-viewed="${file.id}" ${fileViewed(file) ? 'checked' : ''}> <span>${viewedLabel(fileViewed(file))}</span></label><button class="btn btn-sm btn-ghost phone-only" data-focus-prev ${focusIndex === 0 ? 'disabled' : ''} aria-label="Previous file">${icon('arrow-left')}<span class="focus-step-label"> Previous</span></button><button class="btn btn-sm btn-ghost" data-focus-next aria-label="Next file" ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}><span class="focus-step-label">Next file </span>${icon('arrow-right')}</button><span class="focus-count phone-only">${focusIndex + 1} of ${focusOrder.length}</span></div></div></header>${!full ? '<p class="focus-unavailable">Full source was not captured or exceeds the text limit. Showing the saved diff; no current working files have been substituted.</p>' : ''}${(() => { const code = file.hunks.length || full?.length ? renderDiffTable(file, full || file.hunks, summaries) : `<pre>${escape(file.note || file.patch || 'No text diff available.')}</pre>`; return code; })()}<footer class="focus-end"><span>${focusIndex + 1 === focusOrder.length ? 'End of the review' : `Next: ${escape(files.get(focusOrder[focusIndex + 1].file).path)}`}</span><button class="btn btn-sm btn-ghost phone-only" data-focus-prev ${focusIndex === 0 ? 'disabled' : ''}>← Previous</button><button class="btn btn-sm btn-primary" data-focus-next ${focusIndex + 1 === focusOrder.length ? 'disabled' : ''}>Next file →</button></footer></section>`;
   }
   function focusFile(index) {
     document.body.classList.remove('navigation-open'); $('nav-toggle').setAttribute('aria-expanded', 'false');
@@ -3262,8 +3262,6 @@
     $('prev').disabled = !layer;
     $('next').disabled = !!layer && layers.indexOf(layer) === layers.length - 1;
     ['unified','split'].forEach(mode => { $(mode).setAttribute('aria-pressed', layoutChoice === mode); });
-    // The View button is one word; its tip names the current setup, for whoever wants it without opening the menu.
-    $('view-toggle').title = [layoutChoice === 'split' ? 'Split' : 'Unified', focusMode ? 'File by file' : 'Walkthrough', !showComments && 'comments hidden', settings.ignoreWhitespace && 'whitespace hidden'].filter(Boolean).join(' · ');
     $('reading-hint').textContent = focusMode ? 'One file at a time, in walkthrough order. J and K move between files.' : 'Each step shows its files together under its explanation. J and K move between steps.';
     if (fileReadingActive()) {
       $('position').textContent = `File ${focusIndex + 1} of ${focusOrder.length}`;
@@ -3836,6 +3834,8 @@
     const stepBy = event.target.closest('[data-step-by]');
     if (stepBy) step(Number(stepBy.dataset.stepBy));
     if (event.target.closest('[data-copy-file]')) copyText(files.get(focusOrder[focusIndex].file).path);
+    const menu = event.target.closest('[data-file-menu]');
+    if (menu) openFileMenu(menu);
     const button = event.target.closest('[data-change-step]');
     if (button) {
       jumpSection(Number(button.dataset.changeStep));
@@ -3879,21 +3879,21 @@
   $('cancel-comment').onclick = () => $('comment-editor').close();
   $('close-copy').onclick = () => $('copy-dialog').close();
   $('keys-dialog').addEventListener('click', event => { if (event.target.closest('[data-close]')) $('keys-dialog').close(); });
-  // Settings is one dialog, opened by name from the sidebar. What is flipped while reading (the
-  // reading mode, the diff layout, comments, whitespace) is also in the toolbar's View menu:
-  // the same controls, moved into whichever of the two is open.
+  // Settings is one dialog, opened from the bar's gear. What is flipped while reading (the reading
+  // mode, the diff layout, comments, whitespace) lives in it; the file's ⋯ menu presses the same
+  // controls for you (openFileMenu).
   // A theme can split Settings in two tabs, General and Agents (your agent and its adversaries).
   const settingsTab = tab => {
     $('settings-dialog').dataset.tab = tab;
     $('settings-dialog').querySelectorAll('[data-settings-tab]').forEach(button => button.setAttribute('aria-selected', String(button.dataset.settingsTab === tab)));
   };
   const openSettings = (tab = 'general') => {
-    $('view-menu').hidePopover?.();
+    $('file-menu').hidePopover?.();
     $('settings-view').append(...document.querySelectorAll('#view-menu [data-view-switch]'));
     settingsTab(tab);
     $('settings-dialog').showModal();
   };
-  $('settings-toggle').onclick = () => openSettings();
+  $('bar-settings').onclick = () => openSettings();
   // On a phone the toolbar's tab is named Settings, so it opens them, with no menu in between.
   $('settings-dialog').addEventListener('close', () => $('view-menu').prepend(...document.querySelectorAll('#settings-view [data-view-switch]')));
   $('settings-dialog').addEventListener('click', event => {
@@ -3901,9 +3901,6 @@
     if (event.target.closest('[data-open-keys]')) { $('settings-dialog').close(); $('keys-dialog').showModal(); }
     const tab = event.target.closest('[data-settings-tab]');
     if (tab) settingsTab(tab.dataset.settingsTab);
-  });
-  $('view-menu').addEventListener('click', event => {
-    if (event.target.closest('[data-open-settings]')) openSettings();
   });
   $('close-previews').onclick = () => $('previews-dialog').close();
   // Toolbar icons come from the bundled Lucide set; the static glyphs are only fallbacks.
@@ -3940,23 +3937,63 @@
   ['sidebar-hide', 'sidebar-show'].forEach(id => $(id).addEventListener('click', () => $('nav-toggle').click()));
   $('prev').innerHTML = icon('chevron-left');
   $('next').innerHTML = icon('chevron-right');
-  $('view-icon').innerHTML = icon('sliders-horizontal');
-  $('settings-icon').innerHTML = $('view-all-icon').innerHTML = icon('settings');
+  $('bar-settings').innerHTML = icon('settings');
   $('ledger-toggle').innerHTML = `<span class="ledger-label">Your review</span><b id="ledger-count" class="ledger-count" hidden></b>${icon('panel-right')}`;
   $('ledger-close').innerHTML = icon('x');
   $('zen-toggle').innerHTML = icon('maximize-2');
   $('zen-exit').innerHTML = `${icon('minimize-2')}<span>Exit focus</span>`;
-  // The View menu is a native popover placed under its button, or over it when the button is at the
-  // bottom of the screen (as on a phone), clamped to the viewport.
-  $('view-menu').addEventListener('toggle', event => {
-    $('view-toggle').setAttribute('aria-expanded', event.newState === 'open');
-    if (event.newState !== 'open') return;
-    const anchor = $('view-toggle').getBoundingClientRect();
-    const menu = $('view-menu');
+  // The file's ⋯ menu: the reading switches, each pressing the control Settings shows (so both
+  // stay one state), then the file's links. Drawn as it opens, so its checks say what is on now.
+  let fileMenuTrigger = null;
+  let fileMenuClosed = 0;
+  function openFileMenu(trigger) {
+    // Its own button, pressed while it is open, only closes it (the popover closed on the press).
+    if (trigger === fileMenuTrigger && Date.now() - fileMenuClosed < 300) return;
+    const path = trigger.dataset.fileMenu;
+    const on = {split: layoutChoice === 'split', comments: $('comments-toggle').checked, whitespace: $('whitespace-toggle').checked};
+    const item = (action, glyph, label, end = '') => `<button type="button" role="menuitem" data-file-action="${action}">${glyph}<span>${label}</span>${end}</button>`;
+    const check = (action, glyph, label) => `<button type="button" role="menuitemcheckbox" aria-checked="${on[action]}" data-file-action="${action}">${glyph}<span>${label}</span>${on[action] ? `<span class="file-menu-end">${icon('check')}</span>` : ''}</button>`;
+    const github = ReviewTools.githubFileLink(snapshot, review, path);
+    $('file-menu').innerHTML = [
+      item('walkthrough', icon('book-open'), 'Read as a walkthrough', '<kbd class="file-menu-end">z</kbd>'),
+      check('split', icon('columns-2'), 'Side by side'),
+      check('comments', icon('message-square'), 'Comments in the code'),
+      check('whitespace', icon('space'), 'Ignore whitespace changes'),
+      '<hr>',
+      item('copy', icon('link'), 'Copy link to this step'),
+      github ? `<a role="menuitem" href="${escape(github)}" target="_blank" rel="noopener noreferrer">${ghMark}<span>Open this file on GitHub</span><span class="file-menu-end">${icon('arrow-up-right')}</span></a>` : ''
+    ].join('');
+    fileMenuTrigger = trigger;
+    $('file-menu').showPopover();
+  }
+  // Placed under its button, right edges aligned, or over it when the button is low on the screen.
+  $('file-menu').addEventListener('toggle', event => {
+    fileMenuTrigger?.setAttribute('aria-expanded', event.newState === 'open');
+    if (event.newState !== 'open') { fileMenuClosed = Date.now(); fileMenuTrigger?.focus({preventScroll: true}); return; }
+    const anchor = fileMenuTrigger.getBoundingClientRect();
+    const menu = $('file-menu');
     menu.style.maxHeight = `${innerHeight - 24}px`;
     const below = anchor.bottom + 8 + menu.offsetHeight <= innerHeight - 8;
-    menu.style.top = `${Math.round(below ? anchor.bottom + 8 : Math.max(8, anchor.top - 8 - menu.offsetHeight))}px`;
+    menu.style.top = `${Math.round(below ? anchor.bottom + 6 : Math.max(8, anchor.top - 6 - menu.offsetHeight))}px`;
     menu.style.left = `${Math.round(Math.max(12, Math.min(anchor.right - menu.offsetWidth, innerWidth - menu.offsetWidth - 12)))}px`;
+    menu.querySelector('button,a')?.focus({preventScroll: true});
+  });
+  $('file-menu').addEventListener('click', event => {
+    const action = event.target.closest('[data-file-action]')?.dataset.fileAction;
+    if (event.target.closest('a,[data-file-action]')) $('file-menu').hidePopover();
+    if (action === 'walkthrough') $('walkthrough').click();
+    if (action === 'split') $(layoutChoice === 'split' ? 'unified' : 'split').click();
+    if (action === 'comments') $('comments-toggle').click();
+    if (action === 'whitespace') $('whitespace-toggle').click();
+    if (action === 'copy') copyText(location.href, 'Link to this step copied.');
+  });
+  // Up and down move through it, as in any menu; Escape closes it (the popover's own).
+  $('file-menu').addEventListener('keydown', event => {
+    if (!['ArrowDown', 'ArrowUp', 'j', 'k'].includes(event.key)) return;
+    event.preventDefault(); event.stopPropagation();
+    const items = [...$('file-menu').querySelectorAll('button,a')];
+    const at = items.indexOf(document.activeElement);
+    items[(at + (['ArrowDown', 'j'].includes(event.key) ? 1 : items.length - 1)) % items.length]?.focus();
   });
   $('comment-form').addEventListener('input', () => {
     if (editingID || !editorRange) return;
@@ -4276,28 +4313,13 @@
   }
   // Declared as a function so what runs while the page is being built can already ask for it.
   function queueBar() { if (queueBar.pending) return; queueBar.pending = true; requestAnimationFrame(updateBar); }
-  $('bar-keys').textContent = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K';
   $('bar-action').addEventListener('click', () => { barRun?.(); queueBar(); });
   $('bar-back').addEventListener('click', () => definitionBack());
   $('bar-meta').addEventListener('click', () => { if ($('bar-meta').classList.contains('is-link')) document.querySelector('.dcr-todo-link')?.click(); });
   $('bar-left').addEventListener('click', () => $('bar-meta').click());
-  // The agent's card opens from its chip, which the dot presses.
-  $('bar-agent').addEventListener('click', () => {
-    // Where Settings has an Agents tab, the agent and its adversaries are there.
-    const tabs = document.querySelector('#settings-dialog .settings-tabs');
-    if (tabs && getComputedStyle(tabs).display !== 'none') { openSettings('agents'); return; }
-    const chip = document.getElementById('dcr-presence');
-    // After this click has run its course: the card closes on a click outside itself and its chip.
-    setTimeout(() => {
-      chip?.click();
-      // Where the dot is, for a theme that hides the chip and so places the card itself.
-      document.documentElement.style.setProperty('--bar-agent-left', `${Math.max(12, Math.round($('bar-agent').getBoundingClientRect().left) - 14)}px`);
-    });
-  });
   $('bar-update').addEventListener('click', () => document.getElementById('dcr-update')?.click());
   $('bar-nav').addEventListener('click', () => $('nav-toggle').click());
   $('progress-need').addEventListener('click', () => setTimeout(() => document.querySelector('#dcr-jev .dcr-jev-yours')?.click()));
-  $('bar-commands').addEventListener('click', () => openPalette());
   // The field grows with what is written, and the bar takes its tall shape once the text wraps.
   const fitBarInput = () => {
     const field = $('bar-input');
@@ -4343,7 +4365,7 @@
       next.run && {label: next.label, run: next.run},
       reading && {label: fileViewed(reading) ? 'Mark this file as not reviewed' : 'Mark this file reviewed', keys: 'm', run: () => markViewed(reading, !fileViewed(reading))},
       ...leaderCommands(markKeyboardFile).filter(command => command.key !== ' ').map(command => ({label: command.label, keys: `space ${command.key}`, run: command.run})),
-      document.getElementById('dcr-presence') && !agentChip() && {label: 'Agents and adversaries', run: () => $('bar-agent').click()},
+      document.getElementById('dcr-presence') && !agentChip() && {label: 'Agents and adversaries', run: () => openSettings('agents')},
       qa && {label: 'Start QA review', run: () => { select('overview'); qa.click(); }},
       document.getElementById('qa-panel') && {label: 'Record the app yourself', run: () => { select('overview'); document.body.classList.add('qa-recorder-shown'); requestAnimationFrame(() => document.getElementById('qa-panel')?.scrollIntoView({block: 'center'})); }},
       document.querySelector('.dcr-try [data-try-all]') && {label: 'Open previews of the changed templates', run: () => document.querySelector('.dcr-try [data-try-all]').click()},

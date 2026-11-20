@@ -503,10 +503,6 @@ html[data-mode="dark"] .revision-control .select:is(:focus,:open):not(:focus-vis
 .sidebar input{height:36px;min-height:36px;font-size:13px;margin-bottom:12px}
 .sidebar-footer{flex-direction:column;border-top:1px solid var(--line);font-size:12px;font-variant-numeric:tabular-nums}
 .sidebar-footer progress{height:4px;margin:0}
-.sidebar-settings{flex:none;display:flex;align-items:center;gap:10px;width:100%;margin-top:12px;padding:9px 10px;border:0;border-radius:calc(8px * var(--round));background:transparent;color:var(--ink-neutral-3);font-size:13px;font-weight:550;text-align:left}
-.sidebar-settings:hover,.sidebar-settings:focus-visible{background:var(--bg-neutral-2);color:var(--ink)}
-.sidebar-settings #settings-icon{color:var(--ink-neutral-5)}.sidebar-settings .review-icon,.view-all .review-icon{width:16px;height:16px}
-.view-all{display:inline-flex;align-items:center;gap:8px;font-size:13px}.view-all #view-all-icon{display:inline-grid}
 .settings-box{width:min(440px,calc(100vw - 24px));max-width:none}
 .settings-box header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}.settings-box header h2{margin:0;font-size:17px}
 .settings-body{margin:0 -10px}
@@ -527,10 +523,6 @@ html[data-mode="dark"] .revision-control .select:is(:focus,:open):not(:focus-vis
 .pager .icon-button{width:28px;height:28px;--_icon-button-radius:calc(7px * var(--round))}
 .pager .icon-button[hidden]{display:none}
 .toolbar-options{gap:8px;flex-wrap:nowrap}
-.view-toggle{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 12px 0 10px;border:1px solid var(--line);border-radius:calc(10px * var(--round));background:var(--bg-neutral-1);color:var(--ink-neutral-3);font-size:12.5px;font-weight:600}
-.view-toggle:hover,.view-toggle[aria-expanded="true"]{border-color:var(--line-neutral-3);background:var(--bg-neutral-2)}
-.view-toggle #view-icon{display:inline-grid;color:var(--ink-neutral-5)}.view-toggle .review-icon{width:16px;height:16px}
-.view-menu[popover]{position:fixed;inset:auto;margin:0;overflow-y:auto;width:300px;max-width:calc(100vw - 24px);padding:6px;border:1px solid var(--line-neutral-2);border-radius:calc(14px * var(--round));background:var(--bg-neutral-1);color:var(--ink);box-shadow:0 18px 50px color-mix(in srgb,var(--shade) 14.9%,transparent),0 2px 6px color-mix(in srgb,var(--shade) 5.9%,transparent)}
 :is(.view-menu,.settings-body) section{padding:10px 10px 12px}
 :is(.view-menu,.settings-body) section+section,#settings-view:not(:empty)+section{border-top:1px solid var(--line-neutral-2)}
 :is(.view-menu,.settings-body) h2{margin:0 0 8px;font-size:11px;font-weight:650;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
@@ -554,6 +546,19 @@ html[data-mode="dark"] .revision-control .select:is(:focus,:open):not(:focus-vis
 .focus-meta .focus-file-actions{width:auto;flex-wrap:nowrap;flex:none;border:1px solid var(--line);border-left:1px solid var(--line);border-radius:calc(9px * var(--round));padding:1px;gap:0;background:var(--bg-neutral-1)}
 .focus-file-actions .icon-button{width:26px;height:26px;--_icon-button-radius:calc(7px * var(--round))}
 .focus-file-actions .icon-button .review-icon{width:15px;height:15px}
+/* The section pager's rule before the file's ⋯, and the menu it opens: the reading switches with a
+   check when on, then the file's links. */
+.file-actions-rule{flex:none;width:1px;height:16px;margin:0 3px;background:var(--line)}
+.file-menu[popover]{position:fixed;inset:auto;margin:0;overflow-y:auto;width:280px;max-width:calc(100vw - 24px);padding:5px;border:1px solid var(--line-neutral-2);border-radius:calc(12px * var(--round));background:var(--surface);color:var(--ink);box-shadow:0 18px 50px color-mix(in srgb,var(--shade) 15%,transparent),0 2px 6px color-mix(in srgb,var(--shade) 6%,transparent)}
+.file-menu :is(button,a){display:flex;align-items:center;gap:10px;width:100%;height:32px;padding:0 10px;border:0;border-radius:calc(7px * var(--round));background:transparent;color:var(--ink);font:13px/1 var(--review-font-family);text-align:left;text-decoration:none}
+.file-menu :is(button,a):is(:hover,:focus-visible){background:var(--bg-neutral-3);outline:0}
+.file-menu :is(button,a)>svg{flex:none;width:15px;height:15px;color:var(--muted)}
+.file-menu .gh-mark{fill:currentColor}
+.file-menu .file-menu-end{display:inline-grid;margin-left:auto;color:var(--ink)}
+.file-menu .file-menu-end .review-icon{width:15px;height:15px}
+.file-menu a .file-menu-end{color:var(--muted)}.file-menu a .file-menu-end .review-icon{width:13px;height:13px}
+.file-menu kbd.file-menu-end{padding:0;border:0;background:none;box-shadow:none;color:var(--muted);font:12px/1 var(--review-font-family)}
+.file-menu hr{height:1px;margin:5px 10px;border:0;background:var(--line)}
 .focus-file-actions #change-position{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:center;min-width:92px;font-size:11.5px;color:var(--ink-neutral-3)}
 .focus-identity{display:flex;align-items:center;flex-wrap:wrap;min-width:0;gap:6px 10px;margin-top:10px}
 .current-file{gap:4px}
@@ -639,7 +644,6 @@ html[data-mode="dark"] .revision-control .select:is(:focus,:open):not(:focus-vis
   .revision-control{display:flex}
   .workspace{height:auto}
   .review-toolbar{position:sticky;top:0;z-index:6}
-  .view-toggle .view-label{display:none}
   .toolbar-navigation .pager span{min-width:0;padding:0 4px;font-size:12px}
   .focus-progress-actions{margin-left:0;flex-basis:100%}
   .evidence-request{grid-template-columns:20px minmax(0,1fr)}
@@ -1104,7 +1108,7 @@ button.risk-path:hover .path-name{text-decoration:underline}
      each, and by a swipe. Focus mode is for a wide screen. */
   :root{--toolbar-h:56px}
   .review-toolbar{align-content:center;position:fixed;top:auto;bottom:0;left:0;right:0;z-index:16;border-top:1px solid var(--line);border-bottom:0;display:flex;align-items:stretch;gap:0;height:calc(var(--toolbar-h) + env(safe-area-inset-bottom));min-height:0;padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
-  .review-toolbar :is(#zen-toggle,#view-toggle),.toolbar-navigation .pager{display:none}
+  .review-toolbar #zen-toggle,.toolbar-navigation .pager{display:none}
   .toolbar-navigation,.toolbar-options{display:contents}
   .review-toolbar :is(#nav-toggle,#ledger-toggle,#dcr-presence){position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;flex:1 1 0;width:auto;min-width:0;height:auto;min-height:0;margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none;color:var(--muted);font:500 10px/1 var(--review-font-family);letter-spacing:.01em}
   .review-toolbar :is(#nav-toggle,#ledger-toggle,#dcr-presence)::before{content:none}
@@ -1281,7 +1285,7 @@ button.risk-path:hover .path-name{text-decoration:underline}
 .review-bar.is-tall{flex-wrap:wrap;padding-top:8px;row-gap:4px}
 .review-bar.is-tall #bar-form{flex:1 0 100%;order:-1;padding-right:6px}
 .review-bar.is-tall #bar-hint{display:block;flex:1;min-width:0;color:var(--muted);font-size:12px;white-space:nowrap}
-.review-bar.is-tall :is(#bar-meta,#bar-update,.bar-keys){display:none}
+.review-bar.is-tall :is(#bar-meta,#bar-update,.bar-settings){display:none}
 /* What became of the question just sent: a speech bubble over the agent's mark, its tail pointing at it. */
 #bar-bubble{position:absolute;left:4px;bottom:calc(100% + 12px);display:inline-flex;align-items:center;gap:8px;height:32px;max-width:calc(100% - 8px);padding:0 12px;border:1px solid var(--line);border-radius:calc(12px * var(--round));background:var(--surface);color:var(--ink);font-size:12.5px;font-weight:400;box-shadow:0 6px 18px color-mix(in srgb,var(--shade) 7%,transparent);cursor:pointer}
 #bar-bubble:hover{color:var(--ink)}
@@ -1300,7 +1304,10 @@ button.risk-path:hover .path-name{text-decoration:underline}
 /* Its action is the theme's own primary Button, at the bar's height. */
 .review-bar .bar-primary{flex:none;white-space:nowrap}
 .review-bar .bar-soft{max-width:46%;overflow:hidden;text-overflow:ellipsis;background:var(--bg-neutral-3);color:var(--ink);font-weight:550}
-.review-bar .bar-keys{display:grid;place-items:center;padding:0 4px}
+/* Settings, beside the action: a button's size, its gear in the bar's quiet ink. */
+.review-bar .bar-settings{display:grid;place-items:center;width:30px;padding:0}
+.review-bar .bar-settings .review-icon{width:16px;height:16px}
+.review-bar .bar-settings:hover{background:var(--bg-neutral-3)}
 /* On a phone the bar is where Your review opens, as the list does from its ☰. */
 .review-bar .bar-review{display:none;place-items:center;padding:0 6px}
 .review-bar .bar-review .review-icon{width:18px;height:18px}
@@ -1308,7 +1315,7 @@ button.risk-path:hover .path-name{text-decoration:underline}
 .review-bar .bar-nav{display:none;margin-left:-6px;padding:0 8px}
 #bar-meta{flex:none;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
 #bar-meta:empty{display:none}
-@media(max-width:740px){.review-bar{position:fixed;bottom:calc(14px + env(safe-area-inset-bottom))}.review-bar .bar-nav{display:block}.review-bar #bar-meta,.review-bar .bar-keys{display:none}}
+@media(max-width:740px){.review-bar{position:fixed;bottom:calc(14px + env(safe-area-inset-bottom))}.review-bar .bar-nav{display:block}.review-bar #bar-meta{display:none}}
 @media print{.review-bar{display:none!important}}
 
 /* ⌘K: every command, the steps, the files and the code, in one list that narrows as you type. */
@@ -1412,7 +1419,7 @@ details.thread-was:not([open])>summary{margin-bottom:0}
 /* The agent's mark in ink, its PresenceDot on its corner (the mark's own grid cell, no offsets). */
 /* The agent's face as the theme draws faces (its brand colours, or its plain mark), with its dot. */
 /* The bar's mark of the agent: faint when none is listening, full when one is, breathing while it works. */
-.review-bar .bar-agent{width:22px;--presence-size:6px;--avatar-size:18px;color:var(--ink)}
+.review-bar .bar-agent{width:22px;height:30px;--presence-size:6px;--avatar-size:18px;color:var(--ink)}
 /* Going back from a definition is its own small card above the bar, so the bar keeps its room. */
 .review-bar #bar-back{position:absolute;left:0;bottom:calc(100% + 8px);max-width:100%;height:30px;padding:0 12px;border:1px solid var(--line);border-radius:calc(10px * var(--round));background:var(--surface);box-shadow:0 6px 18px color-mix(in srgb,var(--shade) 7%,transparent);color:var(--ink);font-weight:500}
 .composer-agent-mark svg,.review-bar .bar-agent-mark svg{fill:currentColor;stroke:none}
@@ -1453,16 +1460,12 @@ main#content{padding-bottom:104px}
 .progress-need{display:inline;padding:0;border:0;background:none;color:var(--ink);font:inherit;font-weight:600;text-align:left;cursor:pointer}
 #dcr-jev-list{left:22px!important;top:auto!important;bottom:118px!important}
 body:not(.navigation-open) .sidebar{position:relative}
-/* The list's foot: how far you are and what needs you on one line, the bar under it, Settings' gear in its own column beside both. */
-.sidebar-footer{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px 10px;margin:0;padding:10px 8px 0}
+/* The list's foot: how far you are and what needs you on one line, the bar under it. */
+.sidebar-footer{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 10px;margin:0;padding:10px 8px 0}
 .sidebar-footer #progress{grid-column:1;grid-row:1;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sidebar-footer .progress-need{grid-column:2;grid-row:1;font-size:12px}
 .sidebar-footer progress{grid-column:1 / 3;grid-row:2;width:100%}
 .sidebar-footer .dcr-todo-link{display:none}
-.sidebar-footer .sidebar-settings{grid-column:3;grid-row:1 / 3;width:auto;margin:0;padding:2px;gap:0;color:var(--muted)}
-.sidebar-settings>span:not(#settings-icon){position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
-.sidebar-settings #settings-icon{display:inline-grid}
-.sidebar-settings .review-icon{width:15px;height:15px}
 .sidebar .sidebar-top{display:flex;align-items:center;gap:6px;margin-bottom:18px}
 .sidebar .sidebar-top #search{flex:1;min-width:0;height:36px;min-height:36px;margin:0}
 :is(.sidebar-hide,.sidebar-show){place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--muted)}

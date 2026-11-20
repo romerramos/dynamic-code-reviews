@@ -144,6 +144,8 @@ console.log('PASS scope labels distinguish review modes and evidence links targe
   assert.equal(tools.githubLink({...pr, head:'moved'}, labels, {hunk:'h9', side:'new', start:40, end:40}), null, 'a PR URL bound to other endpoints is not used');
   assert.equal(tools.githubLink(pr, {comparison:{...labels.comparison, pr_url:'https://evil.test/acme/orion/pull/123'}}, {general:true}), null, 'only github.com pull request URLs');
   assert.equal(tools.githubLink({...pr, mode:'uncommitted'}, labels, {general:true}), null, 'only PR reviews have a PR to post to');
+  assert.equal(tools.githubFileLink(pr, labels, prFile.path), diff, 'a file opens in Files changed');
+  assert.equal(tools.githubFileLink({...pr, mode:'uncommitted'}, labels, prFile.path), null, 'without a pull request, no file link');
   const placed = {hunk:'h9', side:'new', start:40, end:41, label:'issue', decoration:'blocking', subject:'Broken', discussion:'Detail'};
   assert.match(tools.postingText(pr, placed), /File: app\/helpers\/site_helper\.rb/, 'pasted anywhere, the comment says where it belongs');
   assert.equal(tools.postingText(pr, placed, undefined, {placed:true}), 'issue (blocking): Broken\n\nDetail', 'pasted on its own lines, it does not repeat them');

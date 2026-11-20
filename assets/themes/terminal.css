@@ -140,12 +140,12 @@
 /* --- controls: brackets instead of boxes --------------------------------------------------------
    A control is its label between brackets; nothing in a toolbar or inside a box has a border of
    its own. Under the pointer it gets the palette's surface colour and its brackets light up. */
-[data-theme^="terminal-"] :is(.act,.header-button,.view-toggle,.ledger-toggle,[id="dcr-presence"],.file-viewed){border:0;border-radius:0;box-shadow:none;background:transparent}
-[data-theme^="terminal-"] :is(.act:not(.act-icon),.header-button,.view-toggle,.ledger-toggle,[id="dcr-presence"],.file-viewed){gap:.6ch;font-weight:500;height:auto;min-height:26px;padding:2px .5ch;color:var(--ink)}
-[data-theme^="terminal-"] :is(.act:not(.act-icon),.header-button,.view-toggle,.ledger-toggle,[id="dcr-presence"],.file-viewed)::before{content:"[";color:var(--terminal-overlay0);font-weight:400}
-[data-theme^="terminal-"] :is(.act:not(.act-icon),.header-button,.view-toggle,.ledger-toggle,[id="dcr-presence"],.file-viewed)::after{content:"]";position:static;width:auto;height:auto;background:none;box-shadow:none;color:var(--terminal-overlay0);font-weight:400}
-[data-theme^="terminal-"] :is(.act,.header-button,.view-toggle,.ledger-toggle,[id="dcr-presence"],.file-viewed):hover:not(:disabled){background:var(--terminal-hover);color:var(--ink);border-color:transparent}
-[data-theme^="terminal-"] :is(.act,.header-button,.view-toggle,.ledger-toggle,[id="dcr-presence"],.file-viewed):hover:not(:disabled)::before,[data-theme^="terminal-"] :is(.act,.header-button,.view-toggle,.ledger-toggle,[id="dcr-presence"],.file-viewed):hover:not(:disabled)::after{color:var(--terminal-fill)}
+[data-theme^="terminal-"] :is(.act,.header-button,.ledger-toggle,[id="dcr-presence"],.file-viewed){border:0;border-radius:0;box-shadow:none;background:transparent}
+[data-theme^="terminal-"] :is(.act:not(.act-icon),.header-button,.ledger-toggle,[id="dcr-presence"],.file-viewed){gap:.6ch;font-weight:500;height:auto;min-height:26px;padding:2px .5ch;color:var(--ink)}
+[data-theme^="terminal-"] :is(.act:not(.act-icon),.header-button,.ledger-toggle,[id="dcr-presence"],.file-viewed)::before{content:"[";color:var(--terminal-overlay0);font-weight:400}
+[data-theme^="terminal-"] :is(.act:not(.act-icon),.header-button,.ledger-toggle,[id="dcr-presence"],.file-viewed)::after{content:"]";position:static;width:auto;height:auto;background:none;box-shadow:none;color:var(--terminal-overlay0);font-weight:400}
+[data-theme^="terminal-"] :is(.act,.header-button,.ledger-toggle,[id="dcr-presence"],.file-viewed):hover:not(:disabled){background:var(--terminal-hover);color:var(--ink);border-color:transparent}
+[data-theme^="terminal-"] :is(.act,.header-button,.ledger-toggle,[id="dcr-presence"],.file-viewed):hover:not(:disabled)::before,[data-theme^="terminal-"] :is(.act,.header-button,.ledger-toggle,[id="dcr-presence"],.file-viewed):hover:not(:disabled)::after{color:var(--terminal-fill)}
 [data-theme^="terminal-"] #dcr-presence[aria-expanded="true"]{background:var(--terminal-hover)}
 /* Where Your review has no room for its words (a tablet held upright) it is an icon, as the sidebar's toggle at the other end is: no brackets. */
 @media(min-width:651px) and (max-width:900px){[data-theme^="terminal-"] #ledger-toggle{padding:0 .5ch;color:var(--muted)}[data-theme^="terminal-"] #ledger-toggle::before,[data-theme^="terminal-"] #ledger-toggle::after{content:none}[data-theme^="terminal-"] #ledger-toggle.has-unread::after{content:"";position:absolute;top:3px;right:0;width:8px;height:8px;background:var(--accent)}}
@@ -190,7 +190,7 @@
 [data-theme^="terminal-"] .toggle:checked{background:var(--terminal-fill);border-color:var(--terminal-fill);color:var(--terminal-on-fill)}
 [data-theme^="terminal-"] .checkbox{border-color:var(--terminal-overlay0)}
 [data-theme^="terminal-"] kbd{background:var(--terminal-hover);border:0;box-shadow:none}
-[data-theme^="terminal-"] kbd:not(#bar-keys){color:var(--ink)}
+[data-theme^="terminal-"] kbd{color:var(--ink)}
 
 /* --- the walkthrough: a list with a solid cursor bar ------------------------------------------- */
 [data-theme^="terminal-"] .sidebar{background:var(--canvas)}
@@ -262,7 +262,8 @@
 /* --- boxes: one line around what sits in the page, a double line around what floats over it,
    and never a second box inside either ------------------------------------------------------------- */
 [data-theme^="terminal-"] :is(.risk-rank,.file-card){box-shadow:none}
-[data-theme^="terminal-"] :is(.comment-popover[popover],.view-menu,.modal-box,#dcr-presence-card,#dcr-arrival,.dropdown-content,.leader-menu){border:3px double var(--terminal-overlay0);box-shadow:none;background:var(--surface)}
+[data-theme^="terminal-"] :is(.comment-popover[popover],.view-menu,.file-menu,.modal-box,#dcr-presence-card,#dcr-arrival,.dropdown-content,.leader-menu){border:3px double var(--terminal-overlay0);box-shadow:none;background:var(--surface)}
+[data-theme^="terminal-"] .file-menu a{text-decoration:none}
 [data-theme^="terminal-"] body.ledger-open .ledger{border-left:3px double var(--terminal-overlay0)}
 [data-theme^="terminal-"] .view-keys kbd{text-transform:none}
 [data-theme^="terminal-"] .review-note-popover[popover]{border-color:var(--accent)}

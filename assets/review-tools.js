@@ -426,13 +426,23 @@ globalThis.ReviewTools = (() => {
   // Where to paste a comment on the PR: its lines in GitHub's Files changed tab (a file's diff is
   // `diff-<sha256 of its path>`, its lines R<n> after and L<n> before), the file when the lines are
   // outside the diff, the conversation for a general comment. Null without a verified GitHub PR URL.
-  function githubLink(snapshot, review, comment) {
+  // The pull request's page on GitHub, when this review is of one.
+  function pullRequestUrl(snapshot, review) {
     const url = comparisonLabels(snapshot, review).pr_url;
-    if (!prReview(snapshot, review) || !/^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+$/.test(url || '')) return null;
+    return prReview(snapshot, review) && /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+$/.test(url || '') ? url : null;
+  }
+  // A file in the pull request's Files changed tab.
+  function githubFileLink(snapshot, review, path) {
+    const url = pullRequestUrl(snapshot, review);
+    return url && path ? `${url}/files#diff-${sha256(path)}` : null;
+  }
+  function githubLink(snapshot, review, comment) {
+    const url = pullRequestUrl(snapshot, review);
+    if (!url) return null;
     if (comment.general) return url;
     const found = anchor(snapshot, comment);
     if (!found) return null;
-    const file = `${url}/files#diff-${sha256(found.file.path)}`;
+    const file = githubFileLink(snapshot, review, found.file.path);
     if (found.fullFile) return file;
     const side = comment.side === 'new' ? 'R' : 'L';
     return `${file}${side}${comment.start}${comment.end !== comment.start ? `-${side}${comment.end}` : ''}`;
@@ -629,5 +639,5 @@ globalThis.ReviewTools = (() => {
     return views.includes(savedView) ? savedView : 'overview';
   };
 
-  return {whenText, ledgerPlace, ledgerBy, pathParts, pathFit, modelName, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, where, scopeLabel, sha256, githubLink, evidenceFlows, flowLines, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  return {whenText, ledgerPlace, ledgerBy, pathParts, pathFit, modelName, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, where, scopeLabel, sha256, githubLink, githubFileLink, evidenceFlows, flowLines, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();
