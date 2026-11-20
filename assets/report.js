@@ -2116,6 +2116,8 @@
     const state = ghState(comment.id);
     if (state.state === 'pending') return `<span class="gh-tag gh-tag-pending" title="In your GitHub review, not posted yet. It posts with the others when you finish your review.">Pending review</span>`;
     if (state.state === 'failed') return `<span class="gh-tag gh-tag-failed" title="${escape(state.error)}">${icon('circle-alert')}Not posted</span>`;
+    // One that came from GitHub is on GitHub already: a reply posted to it says nothing new there.
+    if (state.state === 'posted' && comment.author) return '';
     if (state.state === 'posted') return `<a class="gh-tag gh-tag-posted" href="${escape(state.url)}" target="_blank" rel="noopener noreferrer" title="${escape(ghWhere(state))} Open it on GitHub.">${icon('check')}On GitHub</a>`;
     return '';
   }
