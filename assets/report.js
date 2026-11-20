@@ -131,14 +131,16 @@
   }
   const highlightCache = new Map();
 
-  // The short title written for your own comment is kept on the comment, so every place draws it
-  // from the first paint. The served page's live script hands over titles as they arrive.
+  // The short title written for your own comment, or for one from GitHub, is kept on the comment, so
+  // every place draws it from the first paint. The served page's live script hands over titles as they arrive.
   window.ReviewOwnTitles = {
     set(id, title) {
-      const comment = state.personalComments.find(entry => entry.id === id);
+      const own = state.personalComments.find(entry => entry.id === id);
+      const comment = own || generatedComments.find(entry => entry.id === id && entry.author);
       if (!comment || !title || comment.title === title) return;
       comment.title = title;
-      persist(); refreshComments(); render();
+      if (own) persist();
+      refreshComments(); render();
     }
   };
   let adopting = false; // drawing another tab's save: writing it back would start the two tabs answering each other
@@ -2232,12 +2234,12 @@
     const earlier = comment.follows && comments.find(other => other.id === comment.follows);
     const earlierWas = earlier && ReviewTools.outdatedWhere(earlier);
     // Your own comment is titled by a summary, so its body is the whole of what you wrote. So is one
-    // from GitHub whose first line the title had to cut: opened, it reads whole (a first line the
-    // server already cut, ending in …, has its whole text in the discussion).
-    const cut = !!comment.author && !String(comment.subject).endsWith('…') && shortTitle(comment.subject, 90).length < String(comment.subject).length;
+    // from GitHub, titled by a summary or by its first line cut short: opened, it reads whole (a first
+    // line the server already cut, ending in …, has its whole text in the discussion).
+    const cut = !!comment.author && !String(comment.subject).endsWith('…') && (!!comment.title || shortTitle(comment.subject, 90).length < String(comment.subject).length);
     const told = comment.personal || cut ? [comment.subject, comment.discussion].filter(Boolean).join('\n\n') : comment.discussion;
     const follows = earlier ? `<details class="thread-follows"><summary>Follows up on “${escape(earlier.subject)}”${earlierWas?.revision ? `, from revision ${escape(earlierWas.revision)}` : ''}</summary>${earlier.discussion ? `<div class="comment-discussion">${ReviewTools.markdown(earlier.discussion)}</div>` : ''}${earlierWas?.code ? `<details class="thread-was"><summary>The code it was written on</summary><pre><code>${escape(earlierWas.code)}</code></pre></details>` : ''}</details>` : '';
-    const title = prose(comment.personal ? comment.title || shortTitle(comment.subject, 64) : comment.author ? shortTitle(comment.subject, 90) : comment.subject);
+    const title = prose(comment.personal ? comment.title || shortTitle(comment.subject, 64) : comment.author ? comment.title || shortTitle(comment.subject, 90) : comment.subject);
     const lines = found ? `${found.lines.length} line${found.lines.length === 1 ? '' : 's'}` : '';
     const source = !found ? '' : found.fullFile
       ? UI.Button({html: `View in file · ${lines} ${icon('arrow-right')}`, variant: 'ghost', className: 'thread-source', attrs: {'data-comment': comment.id}})

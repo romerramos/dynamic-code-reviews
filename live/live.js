@@ -1180,7 +1180,7 @@
     const go = comment.general && !comment.outdated || !path ? null : {path, where: placeLines(comment, earlier)};
     return UI.LedgerRow({id: comment.id, data: {conversation: '1', by: comment.author ? 'person' : 'agent', at, earlier: earlier ? '1' : null},
       place: globalThis.ReviewTools.ledgerPlace(comment.id, comment.general && !comment.outdated ? '' : path, placeLines(comment, earlier)),
-      face: byFace(comment), by: globalThis.ReviewTools.ledgerBy(tools.escape(byName(comment)), at), subject: titleHTML(comment.subject), go});
+      face: byFace(comment), by: globalThis.ReviewTools.ledgerBy(tools.escape(byName(comment)), at), subject: titleHTML(comment.author && threads[comment.id]?.title || comment.subject), go});
   };
   const chevron = '<svg class="dcr-peek-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
   // Under the row, the replies in a line (who, how many, when last).
@@ -1229,19 +1229,23 @@
     const html = peekHTML(thread, item.dataset.ledger, !!item.dataset.earlier, busy);
     if (peek.dataset.html !== html) { peek.innerHTML = html; peek.dataset.html = html; }
   };
-  // Your own comments are listed by a short title an agent writes from the whole message, as the
-  // agent's comments are by theirs. Asked once per comment; the title arrives with the state.
+  // Your own comments, and the comments people wrote on GitHub, are listed by a short title an agent
+  // writes from what was said (a GitHub comment's whole thread, its replies too), as the agent's
+  // comments are by theirs. Asked once per comment; the title arrives with the state.
+  const titled = comment => comment.personal || !!comment.author;
   const titleAsked = new Set();
   const askTitles = () => {
     if (!online) return;
-    comments().filter(comment => comment.personal && !threads[comment.id]?.title && !titleAsked.has(comment.id)).forEach(comment => {
+    comments().filter(comment => titled(comment) && !threads[comment.id]?.title && !titleAsked.has(comment.id)).forEach(comment => {
       titleAsked.add(comment.id);
-      const text = [comment.subject, comment.discussion].filter(Boolean).join('\n\n');
+      const replies = comment.author ? (threads[comment.id]?.messages || []).map(message => message.body).filter(Boolean) : [];
+      // Its replies follow the line the title writer knows (DCR::Titles::REPLIES), as context only.
+      const text = [comment.subject, comment.discussion, replies.length && '--- Replies ---', ...replies].filter(Boolean).join('\n\n');
       api('/api/title', {key, id: comment.id, text}).catch(() => { /* an older server, or no agent here: the first words stay */ });
     });
   };
   // A title that arrived is kept on the comment itself, so the page draws it from then on.
-  const titleOwnThreads = () => comments().filter(comment => comment.personal && threads[comment.id]?.title && comment.title !== threads[comment.id].title)
+  const titleOwnThreads = () => comments().filter(comment => titled(comment) && threads[comment.id]?.title && comment.title !== threads[comment.id].title)
     .forEach(comment => window.ReviewOwnTitles?.set(comment.id, threads[comment.id].title));
 
   // The open conversation: it takes the panel's place until Back (or Escape).

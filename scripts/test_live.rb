@@ -395,6 +395,8 @@ Dir.mktmpdir('dcr-titles-') do |series|
   assert(DCR::Titles.clean("Title: \"Why the migration changes `store_configurations`.\"\nmore") == 'Why the migration changes `store_configurations`', 'A title keeps its first line, without label, quotes or full stop')
   long = DCR::Titles.clean('word ' * 30)
   assert(long.length <= DCR::Titles::LIMIT && long.end_with?('…'), "A long title is cut on a word to fit: #{long}")
+  answers = ["Recommending `updated_at` bump plus `update_columns` skipping validations and callbacks", 'Bump `updated_at`, keep `update_columns`']
+  assert(DCR::Titles.make('a thread', agent: 'claude', ask: ->(*, **) { answers.shift }) == 'Bump `updated_at`, keep `update_columns`', 'A title that runs over is asked for again, shorter, rather than cut')
   asked = []
   api = DCR::LiveAPI.new(series, titler: ->(text) { asked << text; 'Why the migration changes store_configurations' })
   key = DCR::State.review_key('c' * 64, 'feat', 1)
