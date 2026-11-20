@@ -438,3 +438,13 @@ Dir.mktmpdir('dcr-titles-cli-') do |series|
   assert(out.include?('Wrote 1 title with Claude'), "The command says what it wrote: #{out}")
 end
 puts 'titles: dcr titles writes the missing ones for comments made before'
+
+# `dcr stop` on one checkout leaves the same series name served from another checkout running.
+Dir.mktmpdir('dcr-stop') do |root|
+  here, there = %w[here there].map { |name| File.join(root, name).tap { |dir| Dir.mkdir(dir) } }
+  same = ->(command, repo) { DCR::LiveCLI.send(:same_repo?, Process.pid, command, repo) }
+  assert(same.call("dcr serve --repo #{here} --name job", here) && !same.call("dcr serve --repo #{there} --name job", here), 'A server is this review only when its --repo is this repository')
+  Dir.chdir(here) { assert(same.call('dcr serve --repo . --name job', here) && !same.call('dcr serve --repo . --name job', there), 'A relative --repo is read from where the process runs') }
+  assert(!same.call('dcr serve --name job', here), 'A process whose repository cannot be told is not taken for this one')
+end
+puts 'PASS dcr stop stops only the review of this checkout, not one of the same name elsewhere'

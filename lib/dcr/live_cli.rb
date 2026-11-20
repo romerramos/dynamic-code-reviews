@@ -616,7 +616,8 @@ module DCR
       unless options[:all]
         directory = directory(options, parser)
         name = File.basename(directory)
-        found = found.select { |_, command| command.include?(directory) || command.match?(/--name #{Regexp.escape(name)}(?:\s|\z)/) }
+        # The same series name in another checkout (a scratch copy, another worktree) is another review.
+        found = found.select { |pid, command| command.include?(directory) || (command.match?(/--name #{Regexp.escape(name)}(?:\s|\z)/) && same_repo?(pid, command, File.dirname(File.dirname(directory)))) }
       end
       return puts(options[:all] ? 'No review is being served on this computer.' : "No server or wait is running for #{File.basename(directory)}.") if found.empty?
       found.each_key { |pid| Process.kill('TERM', pid) rescue nil }
@@ -624,6 +625,20 @@ module DCR
       sleep 0.2 while Time.now < deadline && found.keys.any? { |pid| (Process.kill(0, pid) rescue false) }
       servers = found.count { |_, command| serving?(command) }
       puts "Stopped #{servers} review server(s) and #{found.length - servers} wait(s)#{options[:all] ? ' on this computer' : " for #{File.basename(directory)}"}."
+    end
+
+    # Whether a process's --repo is this repository: a relative one (`--repo .`) is read from where the
+    # process runs. A process whose repository cannot be told is not taken for this one.
+    def same_repo?(pid, command, repo)
+      given = command[/--repo[ =](\S+)/, 1] or return false
+      unless given.start_with?('/')
+        out, = Open3.capture2('lsof', '-a', '-p', pid.to_s, '-d', 'cwd', '-Fn')
+        cwd = out.lines.find { |line| line.start_with?('n') }&.then { |line| line[1..].strip } or return false
+        given = File.join(cwd, given)
+      end
+      File.realpath(given) == File.realpath(repo)
+    rescue SystemCallError
+      false
     end
 
     # [pid => command] of review servers (`dcr serve`) and `dcr wait` listeners, from any installed copy.
