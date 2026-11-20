@@ -194,6 +194,7 @@ Dir.mktmpdir('dcr-github-draft-') do |root|
   assert(draft.values_at('status', 'agent') == %w[ready claude] && draft['body'].include?('what do you think?'), 'The page was not given the rewrite')
   assert(asked.first[:opinions] == [{'agent' => 'codex', 'body' => 'It only runs once per render.'}] && asked.first[:voice] == DCR::GitHubDraft::DEFAULT_VOICE, 'The writer was not given the voice and the other opinions')
   made = DCR::GitHubDraft.prompt(voice: 'Short and kind.', context: 'the comment', opinions: asked.first[:opinions])
+  assert(DCR::GitHubDraft.prompt(voice: 'v', context: 'c', opinions: [{'agent' => 'grok', 'body' => 'Mostly.', 'verdict' => 'partly'}]).include?('Grok (partly agrees): Mostly.'), 'An opinion keeps its verdict on the comment')
   assert(made.include?('Short and kind.') && made.include?('Codex: It only runs once per render.') && made.include?('Never mention AI') && made.include?('Say nothing about how the point was found or checked'), 'The prompt lost the voice, the opinions or its rules')
   tried = []
   answer = ->(agent, _prompt, **) { tried << agent; agent == 'codex' ? raise(ArgumentError, 'Codex did not answer') : 'Written.' }

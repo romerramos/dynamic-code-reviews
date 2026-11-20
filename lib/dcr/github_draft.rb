@@ -51,10 +51,12 @@ module DCR
     end
 
     # context: the comment with its code and conversation, as Copy for LLMs gives it.
-    # opinions: what other agents said beside the conversation, [{agent, body}].
+    # opinions: what other agents said beside the conversation, [{agent, body, verdict}].
     # reply_to: the GitHub login of the teammate whose comment it answers, when it is a reply.
     def prompt(voice:, context:, opinions: [], emojis: DEFAULT_EMOJIS, reply_to: nil)
-      others = opinions.map { |opinion| "#{Agents.name(opinion['agent'])}: #{opinion['body']}" }.join("\n\n")
+      # Each with its verdict on the comment, which was taken out of its answer when it was kept.
+      stance = {'agree' => 'agrees', 'partly' => 'partly agrees', 'disagree' => 'disagrees'}
+      others = opinions.map { |opinion| "#{Agents.name(opinion['agent'])}#{" (#{stance[opinion['verdict']]})" if stance[opinion['verdict']]}: #{opinion['body']}" }.join("\n\n")
       task = if reply_to
                "A teammate, @#{reply_to}, commented on a person's pull request on GitHub. Below is the comment, the code it is about, and what was said about it since: the teammate's and the person's messages, an AI review agent's answers and other agents' opinions.\n\n" \
                  "Write the reply this person will post under @#{reply_to}'s comment on GitHub, under their own name. Answer what the teammate asked or said; where the person said in the conversation what they think or will do, say that."

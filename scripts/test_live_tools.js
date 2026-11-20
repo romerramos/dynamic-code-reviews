@@ -49,6 +49,12 @@ assert.match(reviewTools.reviewText(withRepo, [comments[1]]), /Conversation with
 assert.ok(!reviewTools.commentText(withRepo, comments[0]).includes('Conversation with the agent'), 'a comment without messages copies as before');
 assert.ok(!tools.sendText(withRepo, review, comments[1]).includes('Conversation with the agent'), 'the first send does not repeat the conversation to the agent');
 assert.ok(!reviewTools.commentText(snapshot, comments[1]).includes('Latest messages'), 'without the repository path there is no command, only the thread id');
+// Who said what, so the GitHub rewrite follows the discussion: the second reviewer's stance, the review's agent by name, a teammate as themselves.
+convo['mine-1'].messages.push({id:'m3', author:'agent', agent:'codex', role:'adversary', verdict:'disagree', body:'It is not capped on retries.', at:'2026-10-08T10:03:00Z'},
+  {id:'m4', author:'person', person:{login:'rae-reviewer'}, body:'Agreed, retries skip it.', at:'2026-10-08T10:04:00Z'},
+  {id:'m5', author:'agent', agent:'claude', body:'You are right: retries bypass it.', at:'2026-10-08T10:05:00Z'});
+const talked = reviewTools.commentText(withRepo, comments[1]);
+assert.deepEqual([...talked.matchAll(/^(.+) · 2026-10-08 10:0\d UTC$/gm)].map(match => match[1]), ['Reviewer', 'Agent', 'Codex, checking the comment (disagrees)', '@rae-reviewer (a teammate, on GitHub)', "Claude (the review's agent)"], 'every message says who said it, in order');
 reviewTools.setConversationSource(null);
 assert.ok(!reviewTools.commentText(withRepo, comments[1]).includes('Conversation'), 'clearing the source restores the plain copy');
 console.log('PASS Copy for LLMs carries the conversation, the thread id and the dcr command; sending to the agent does not');

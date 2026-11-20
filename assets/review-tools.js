@@ -283,7 +283,16 @@ globalThis.ReviewTools = (() => {
     const messages = (found?.messages || []).filter(message => String(message.body || '').trim());
     if (!messages.length) return '';
     const when = at => { const date = new Date(at); return Number.isFinite(date.getTime()) ? ` · ${date.toISOString().slice(0, 16).replace('T', ' ')} UTC` : ''; };
-    const lines = messages.map(message => `${message.author === 'agent' ? 'Agent' : 'Reviewer'}${when(message.at)}\n${String(message.body).trim()}`);
+    // Who said each message, so a reader (the GitHub rewrite among them) can follow where it went: the
+    // second reviewer disagreeing, the review's agent changing its mind, a teammate's words not yours.
+    const name = slug => globalThis.UI?.agentInfo?.(slug)?.name || slug.charAt(0).toUpperCase() + slug.slice(1);
+    const stance = {agree: 'agrees', partly: 'partly agrees', disagree: 'disagrees'};
+    const who = message => message.author === 'user' ? 'Reviewer'
+      : message.author === 'person' ? `@${message.person?.login || 'someone'} (a teammate, on GitHub)`
+      : !message.agent ? 'Agent'
+      : message.role === 'adversary' ? `${name(message.agent)}, checking the comment${stance[message.verdict] ? ` (${stance[message.verdict]})` : ''}`
+      : `${name(message.agent)} (the review's agent)`;
+    const lines = messages.map(message => `${who(message)}${when(message.at)}\n${String(message.body).trim()}`);
     const where = found.series && snapshot.repo ? `\nLatest messages: dcr comments --repo ${shellWord(snapshot.repo)} --name ${shellWord(found.series)} --thread ${shellWord(comment.id)}` : '';
     return `\n\nConversation with the agent\n\n${lines.join('\n\n')}\n\nThread: ${comment.id}${where}`;
   }

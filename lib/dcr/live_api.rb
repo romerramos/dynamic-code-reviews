@@ -240,7 +240,7 @@ module DCR
       # A teammate's comment from GitHub: what is written is the reader's reply to them.
       reply_to = input['reply_to'].to_s[/\A[A-Za-z0-9-]{1,39}\z/]
       raise ArgumentError, 'Nothing to rewrite' unless context.is_a?(String) && !context.strip.empty? && context.length <= 200_000
-      opinions = (@state.read.dig('threads', key, id.to_s, 'opinions') || {}).filter_map { |agent, opinion| {'agent' => agent, 'body' => opinion['body']} if opinion['body'] }
+      opinions = (@state.read.dig('threads', key, id.to_s, 'opinions') || {}).filter_map { |agent, opinion| {'agent' => agent, 'body' => opinion['body'], 'verdict' => opinion['verdict']}.compact if opinion['body'] }
       voice, emojis = self.voice, self.emojis
       written_under = GitHubDraft.version(voice, emojis)
       started = @state.github_draft(key, id, {'status' => 'writing'})
