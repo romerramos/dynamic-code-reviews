@@ -221,7 +221,8 @@ globalThis.LiveTools = (() => {
     // A second reviewer checking the comment shows in the conversation, like someone typing.
     if (checkingComment(thread) && thread.delivery !== 'sent' && thread.delivery !== 'delivered') {
       if (lostOpinion(thread, now)) return {tone: 'idle', text: `${agentInfo(thread.adversary).name} was asked to check this comment ${relativeTime(thread.asked_at, now)} and has not answered. The check may have been interrupted; ask your agent to run it again.`};
-      return {tone: 'work', text: `${agentInfo(thread.adversary).name} is checking this comment`, typing: true, agent: thread.adversary};
+      // The list of who is still to answer says it, first (opinionsHTML); this is for where there is no list.
+      return {tone: 'work', text: `${agentInfo(thread.adversary).name} is checking this comment`, typing: true, agent: thread.adversary, checking: true};
     }
     if (thread.delivery === 'sent') {
       return listening === false
@@ -316,7 +317,10 @@ globalThis.LiveTools = (() => {
     // Once the comment has a closing block, what is said of the outcome, and who is still to say, is there.
     const closing = !!OUTCOMES[thread?.outcome?.verdict];
     const answered = Object.keys(opinions).filter(agent => (opinions[agent].role !== 'adversary' || opinions[agent].error) && !(closing && (opinions[agent].about === 'outcome' || opinions[agent].error)));
-    const waiting = closing ? [] : (thread?.waiting_on || []).filter(agent => agent !== adversary || !checkingComment(thread));
+    // The second reviewer checking the comment leads the list, so everyone still working reads as one list;
+    // one whose check was lost is said by the status line instead, with what to do.
+    const checking = checkingComment(thread) && !lostOpinion(thread, now);
+    const waiting = closing ? [] : (thread?.waiting_on || []).filter(agent => agent !== adversary || !checkingComment(thread) || checking).sort((a, b) => (b === adversary) - (a === adversary));
     const agents = [...new Set([...answered, ...waiting])];
     if (!agents.length) return '';
     // Verdicts a judge gave on answers to a question are counted apart from those on the comment.
@@ -329,7 +333,7 @@ globalThis.LiveTools = (() => {
       // Asked again, an agent shows as reading until its new answer replaces the old one.
       const asked = waiting.includes(agent);
       if (asked && lostOpinion(thread, now)) return `<li class="dcr-op is-failed" title="Asked ${escape(relativeTime(thread.asked_at, now))}; the check may have been interrupted">${face(agent, 'sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">did not answer</span></span></li>`;
-      if (asked || !opinion) return `<li class="dcr-op is-waiting">${face(agent, 'sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">is reading the code</span><span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span></span></li>`;
+      if (asked || !opinion) return `<li class="dcr-op is-waiting">${face(agent, 'sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">${agent === adversary && checking ? 'is checking this comment' : 'is reading the code'}</span><span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span></span></li>`;
       if (opinion.error) return `<li class="dcr-op is-failed" title="${escape(opinion.error)}">${face(agent, 'sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">did not answer</span></span></li>`;
       return '';
     }).join('');

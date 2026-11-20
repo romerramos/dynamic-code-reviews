@@ -223,7 +223,8 @@
     // A request that was not taken says why here, and stays until it is read: a toast is gone too soon.
     const refused = refusals.has(id) ? `<p class="dcr-refusal" role="alert">${ico('circle-alert')}<span>${tools.escape(refusals.get(id))}</span><button type="button" class="btn btn-xs btn-ghost" data-dcr-refusal="${tools.escape(id)}">Dismiss</button></p>` : '';
     // An answer is its own message, signed by who wrote it: no line above it says that it came.
-    const status = refused + (ledger ? '' : outcome) + (model?.tone === 'done' ? '' : stateHTML(model, ''));
+    // The second reviewer checking the comment is in the list of who is still working (opinions), not a line of its own.
+    const status = refused + (ledger ? '' : outcome) + (model?.tone === 'done' || (model?.checking && opinions) ? '' : stateHTML(model, ''));
     const statusSignature = status ? `${model?.tone}|${model?.text}|${outcome}|${refused}` : '';
     const form = block.querySelector('.dcr-reply');
     if (ledger) {

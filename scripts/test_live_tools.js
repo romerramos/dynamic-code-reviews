@@ -296,6 +296,11 @@ const reasked = {...debated, waiting_on:['codex', 'grok'], asked_at:'2026-10-09T
 assert.notEqual(tools.statusModel(reasked, true, noon)?.text, 'Codex is checking this comment', 'a second reviewer that already answered is not shown checking again');
 const rereading = tools.opinionsHTML(reasked, {now: noon});
 ['Codex', 'Grok'].forEach(name => assert.match(rereading, new RegExp(`is-waiting"><span[^>]*>.*?</span><span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">is reading the code`), `asked again, ${name} shows as reading until its new answer`));
+// The second reviewer still checking the comment leads the one list of who is working, beside the others reading.
+const checkingNow = {delivery:'draft', adversary:'codex', waiting_on:['grok', 'codex'], asked_at:'2026-10-09T11:59:00Z', messages:[], opinions:{}};
+const working = tools.opinionsHTML(checkingNow, {now: noon});
+assert.deepEqual([...working.matchAll(/<strong>(\w+)<\/strong><span class="dcr-op-note">([^<]+)/g)].map(match => `${match[1]} ${match[2]}`), ['Codex is checking this comment', 'Grok is reading the code'], 'one list: the second reviewer first, checking the comment, then who reads the code');
+assert.equal(tools.statusModel(checkingNow, true, noon)?.checking, true, 'the status says it is the checking line, which the list already says');
 // Real choices instead of "default": what the CLI says it runs, else the first it lists; medium effort when it does not say.
 const grokAgent = {slug:'grok', efforts:['low', 'medium', 'high'], models:[{id:'grok-4.6'}, {id:'grok-4.7', default:true}], default_model:'grok-4.7'};
 assert.deepEqual(tools.settle(grokAgent, {agent:'grok', model:null, effort:null}), {agent:'grok', model:'grok-4.7', effort:'medium'});
