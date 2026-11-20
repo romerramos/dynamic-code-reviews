@@ -253,6 +253,10 @@ html[data-theme="minimal-dark"]{--bar-card-bg:color-mix(in srgb,var(--ink) 9%,va
    what it says on the left, where it is on the right, in the code's face and the label's grey.
    The app, QA, previews, the ranking and the revisions are commands (⌘K), not rows on the page. */
 [data-theme^="minimal-"] main#content:has(>.overview-reading){padding-top:84px}
+/* The PR | TL;DR switch sits on the line of the panels' icons, the column under it. */
+[data-theme^="minimal-"] body:not(.reading-focus) main#content:has(>.overview-reading>.overview-shows){padding-top:calc(var(--panel-icon-top) + 2px)}
+[data-theme^="minimal-"] .overview-reading:has(>.overview-shows){margin-top:0}
+[data-theme^="minimal-"] .pr-description-more{margin-bottom:0}
 [data-theme^="minimal-"] .overview-where{margin-bottom:14px;color:var(--minimal-faint)}
 [data-theme^="minimal-"] .overview-intro h1{margin:0 0 20px;font-weight:600;line-height:1.25;letter-spacing:-.022em}
 [data-theme^="minimal-"] .overview-intro :is(.lead,.lead-rest){display:inline;margin:0;color:var(--ink-neutral-3);font-size:15px;line-height:1.75;letter-spacing:0}

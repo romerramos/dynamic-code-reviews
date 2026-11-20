@@ -53,12 +53,38 @@ console.log('PASS component pairs respect directory and layer boundaries without
 {
   // Where a review is working: the issue its branch names, its pull request, and checkout or pushed.
   const pushed = tools.where({mode:'pr',base:'a',head:'b'}, {comparison:{base:'a',head:'b',pr_number:123,head_label:'sam/cor-1653-consent-check',base_label:'main'}});
-  assert.deepEqual(pushed, {issue:'COR-1653', pr:123, place:'The pull request', head:'sam/cor-1653-consent-check', base:'main'});
+  assert.deepEqual(pushed, {issue:'COR-1653', pr:123, place:null, head:'sam/cor-1653-consent-check', base:'main'}, 'what was pushed needs no word: PR #123 says it');
   assert.equal(tools.where({mode:'series',working_tree:true,base:'a',head:'b',branch:'feat/COR-9/x'}, {history:{origin_mode:'pr'}}).place, 'Your checkout');
   assert.equal(tools.where({mode:'pr',base:'a',head:'b'}, {history:{local:true}}).place, 'Your checkout');
   assert.deepEqual(tools.where({mode:'uncommitted'}, {}), {issue:null, pr:null, place:'Your uncommitted changes', head:null, base:null});
   assert.equal(tools.where({mode:'pr',branch:'main'}, {}).issue, null, 'a branch that names no issue');
   console.log('PASS a review says where it is working: the issue, the pull request, and the checkout or what was pushed');
+}
+{
+  // A pull request's review opens with its description, or the agent's TL;DR, by the reader's choice.
+  const snapshot = {mode:'pr', base:'a', head:'b'};
+  const url = 'https://github.com/acme/shop/pull/42';
+  const comparison = {base:'a', head:'b', pr_number:42, pr_url:url, head_label:'feat/cor-1852/read-move-in-notified-at', base_label:'main'};
+  const body = '## What?\nClaims on `notified_at`. Part of [COR-1852](https://linear.app/acme/issue/COR-1852/claim-on-notified-at).';
+  const review = {comparison, pull_request:{url, body}};
+  assert.equal(tools.pullRequestDescription(snapshot, review), body);
+  assert.equal(tools.pullRequestDescription({mode:'uncommitted'}, {pull_request:{url, body}}), null, 'no pull request, no description: the Overview is as before, with no switch');
+  assert.equal(tools.pullRequestDescription(snapshot, {comparison, pull_request:{url:'https://github.com/acme/shop/pull/7', body}}), null, "another pull request's description is never shown");
+  assert.equal(tools.pullRequestDescription(snapshot, {comparison, pull_request:{url, body:'<!-- template -->\n'}}), null, 'a description of only comments says nothing');
+  assert.equal(tools.overviewShows(null, body), 'pr', 'the description by default');
+  assert.equal(tools.overviewShows('tldr', body), 'tldr', "the reader's choice is kept");
+  assert.equal(tools.overviewShows('pr', null), 'tldr', 'without a description, the TL;DR');
+  console.log('PASS the Overview shows the description by default, the remembered TL;DR when chosen, and only with a pull request');
+
+  // Above the title: the issue in Linear, and the pull request with its branches as one link to GitHub.
+  const line = tools.whereLine(snapshot, review, body);
+  assert.match(line, /<a class="where-issue" href="https:\/\/linear\.app\/acme\/issue\/COR-1852\/claim-on-notified-at"[^>]*><b>COR-1852<\/b><\/a>/);
+  assert.match(line, new RegExp(`<a class="where-pr" href="${url}"[^>]*>PR #42.*feat/cor-1852/read-move-in-notified-at.*main</span></span></a>`));
+  assert.doesNotMatch(line, /The pull request/);
+  assert.doesNotMatch(tools.whereLine(snapshot, review, 'No tracker link here.'), /linear\.app/, 'no issue address is guessed');
+  assert.match(tools.whereLine(snapshot, review, 'See https://linear.app/acme/issue/COR-18520.'), /<b>COR-1852<\/b>(?!<\/a>)/, 'a link to another issue is not this one');
+  assert.doesNotMatch(tools.whereLine({mode:'uncommitted'}, {}), /<a /, 'with no pull request the line has no links');
+  console.log('PASS the line above the title links the issue to Linear when known and the pull request to GitHub');
 }
 assert.equal(tools.category('app/views/rentals/show.html.erb'), 'Design / UI');
 assert.equal(tools.category('app/assets/stylesheets/rentals.scss'), 'Design / UI');

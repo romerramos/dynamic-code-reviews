@@ -1357,12 +1357,49 @@ body.zen.ledger-open .review-bar{left:calc(50% - min(var(--ledger-w,420px),92vw)
 .overview-comments{margin-top:30px}
 .overview-comments>h2{margin-bottom:6px}
 
-/* Above the title: where the review is working, in one small line. A long branch name is cut, not wrapped. */
-.overview-where{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;margin:0 0 10px;color:var(--muted);font-size:12.5px}
+/* Above the title: where the review is working, in one small line. A branch name is written out,
+   and only the line's last resort is to cut it: the head branch gives way first, with an ellipsis. */
+.overview-where{display:flex;align-items:baseline;gap:8px;min-width:0;margin:0 0 10px;color:var(--muted);font-size:12.5px;white-space:nowrap}
+.overview-where>*{flex:none}
 .overview-where b{color:var(--ink-neutral-3);font-weight:600}
 .overview-where i{font-style:normal;opacity:.6}
+.overview-where .where-pr{display:inline-flex;flex:0 1 auto;align-items:baseline;min-width:0}
+.overview-where .where-pr .where-branches{gap:0}
+.overview-where .where-pr>*{flex:none}
+.overview-where :is(.where-pr,.where-branches)>.where-branches,.overview-where>.where-branches{flex:0 1 auto}
 .where-branches{display:inline-flex;align-items:baseline;gap:6px;min-width:0;font:11.5px var(--mono)}
-.where-branch{max-width:24ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.where-branch{flex:none}
+.where-branch:first-child{flex:0 1 auto;min-width:4ch;padding-bottom:3px;overflow:hidden;text-overflow:ellipsis}
+/* Its links, and the description's, are underlined lightly; the line darkens to the ink on hover. */
+:is(.overview-where,.pr-description) a{color:inherit;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px;text-decoration-color:var(--line-neutral-3)}
+:is(.overview-where,.pr-description) a:hover{text-decoration-color:var(--ink)}
+
+/* A pull request's review opens with a switch between its description (PR) and the agent's TL;DR,
+   centred on the line of the panels' icons, above where the review is working. */
+main#content:has(>.overview-reading>.overview-shows){padding-top:calc(var(--panel-icon-top) - var(--chrome-h) + 2px)}
+.overview-reading:has(>.overview-shows){margin-top:0}
+.overview-shows{display:flex;justify-content:center;margin-bottom:21px}
+.overview-shows .segmented{grid-auto-columns:auto;padding:2px;border-radius:calc(8px * var(--round))}
+.overview-shows .segmented button{height:24px;padding:0 12px;border-radius:calc(6px * var(--round));font-size:12px;font-weight:550}
+/* The description as GitHub shows it, at most half the window tall until it is opened, fading out
+   over its last lines. One shorter than that shows whole, with no fade and no button. */
+.pr-description{max-width:720px;max-height:50vh;overflow:hidden;color:var(--ink-neutral-3);font-size:15px;line-height:1.7;-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 96px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 96px),transparent)}
+.pr-description:is(.is-open,.is-whole){max-height:none;-webkit-mask-image:none;mask-image:none}
+.pr-description :is(h2,h3,h4,h5,h6){margin:22px 0 6px;color:var(--ink);font-size:15px;font-weight:600;line-height:22px;letter-spacing:0}
+.pr-description>:first-child{margin-top:0}
+.pr-description :is(p,ul,ol,.md-table){margin:0 0 12px}
+.pr-description :is(ul,ol){padding-left:1.3em}
+.pr-description ul{list-style:disc}
+.pr-description ol{list-style:decimal}
+.pr-description li{margin:3px 0}
+.pr-description li>:is(ul,ol){margin:0}
+.pr-description pre{margin:4px 0 14px;padding:10px 12px;border-radius:calc(8px * var(--round));background:var(--bg-neutral-3);color:var(--ink);font:12.5px/1.6 var(--mono);white-space:pre-wrap}
+.pr-description :not(pre)>code{padding:1px 5px;border-radius:calc(5px * var(--round));background:var(--bg-neutral-3);color:var(--ink);font:.87em/1.4 var(--mono)}
+.pr-description pre code{padding:0;background:none;font:inherit}
+.pr-description img{max-width:100%;height:auto}
+.pr-description-more{display:flex;width:fit-content;align-items:center;gap:5px;margin:2px 0 24px;padding:0;border:0;background:none;color:var(--ink);font-size:13px;font-weight:550}
+.pr-description-more .review-icon{width:14px;height:14px}
+.pr-description.is-whole+.pr-description-more{display:none}
 /* What was seen in the app is said in the app's row when the review has one; alone, it is a row itself. */
 body.dcr-has-app .ui-changes{display:none}
 .ui-changes{margin:0}

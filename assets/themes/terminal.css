@@ -257,6 +257,16 @@
 [data-theme^="terminal-"] main h1::before{content:"# ";color:var(--terminal-hot)}
 [data-theme^="terminal-"] main h2::before{content:"## ";color:var(--terminal-overlay0)}
 [data-theme^="terminal-"] main .overview-fold-title::before{content:"### ";color:var(--terminal-overlay0)}
+/* A pull request's description keeps its author's marks: # is the description's own top heading. */
+[data-theme^="terminal-"] main .pr-description h2::before{content:"# ";color:var(--terminal-overlay0)}
+[data-theme^="terminal-"] main .pr-description h3::before{content:"## ";color:var(--terminal-overlay0)}
+[data-theme^="terminal-"] main .pr-description :is(h4,h5,h6)::before{content:"### ";color:var(--terminal-overlay0)}
+/* The PR | TL;DR switch on the line of the panels' icons: the reading pane starts 6px under the
+   bar, and the switch is 26px tall. */
+[data-theme^="terminal-"] main#content:has(>.overview-reading>.overview-shows){padding-top:calc(var(--panel-icon-top) - var(--chrome-h) - 3px)}
+/* Show the whole description is a button like the others: in brackets. */
+[data-theme^="terminal-"] .pr-description-more::before{content:"[";color:var(--button-bracket);font-weight:400}
+[data-theme^="terminal-"] .pr-description-more::after{content:"]";color:var(--button-bracket);font-weight:400}
 
 /* --- boxes: one line around what sits in the page, a double line around what floats over it,
    and never a second box inside either ------------------------------------------------------------- */

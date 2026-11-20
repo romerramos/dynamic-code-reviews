@@ -2713,16 +2713,32 @@
   }, true);
   const foldsClosed = new Set();
   const fold = (name, title, count, cards, note = '', start = false) => `<details class="overview-fold overview-${name}" data-fold="${name}" ${foldsOpen.has(name) || (start && !foldsClosed.has(name)) ? 'open' : ''}><summary><h3 class="overview-fold-title">${title} <span class="badge neutral">${count}</span></h3>${note}${icon('chevron-down')}</summary>${cards}</details>`;
-  // The summary reads in two steps: what the change does, in the reader's ink, then the rest of
-  // it, quieter. One block of equal text is the part people skip.
-  // Above the title, one small line: the issue, the pull request, whether this is the checkout or
-  // what was pushed, and the branch going into its base. The exact comparison is its tooltip.
-  function whereLine() {
-    const at = ReviewTools.where(snapshot, review);
-    const parts = [at.issue && `<b>${escape(at.issue)}</b>`, at.pr && `PR #${escape(at.pr)}`, escape(at.place), review.history?.revision > 1 && `Revision ${review.history.revision}`,
-      at.head && at.base && `<span class="where-branches"><span class="where-branch">${escape(at.head)}</span><span aria-label="into">→</span><span class="where-branch">${escape(at.base)}</span></span>`].filter(Boolean);
-    return `<p class="overview-where" title="${escape(ReviewTools.comparisonText(snapshot, review))}">${parts.join('<i aria-hidden="true">·</i>')}</p>`;
+  // A review of a pull request opens with what its author wrote, or the agent's TL;DR: the reader
+  // chooses with a switch at the top of the Overview, and the choice is remembered.
+  const description = ReviewTools.pullRequestDescription(snapshot, review);
+  const OVERVIEW_SHOWS = 'dynamic-review:overview-shows';
+  let overviewChoice = null;
+  try { overviewChoice = localStorage.getItem(OVERVIEW_SHOWS); } catch { /* the description, for this page */ }
+  let descriptionOpen = false;
+  function overviewSwitch(shows) {
+    const option = (value, label, name) => `<button type="button" data-overview-shows="${value}" aria-pressed="${shows === value}" aria-label="${name}">${label}</button>`;
+    return `<div class="overview-shows"><fieldset class="segmented" aria-label="The Overview shows">${option('pr', 'PR', "The pull request's description")}${option('tldr', 'TL;DR', "The agent's summary")}</fieldset></div>`;
   }
+  // The description is folded to half the window, fading out, with a way to open it whole; one
+  // shorter than that shows whole (fitDescription).
+  const descriptionBlock = () => `<div class="pr-description${descriptionOpen ? ' is-open' : ''}" id="pr-description">${ReviewTools.markdown(description, {headings: 1})}</div><button type="button" class="pr-description-more" data-description-more aria-controls="pr-description" aria-expanded="${descriptionOpen}">${descriptionOpen ? `Show less ${icon('chevron-up')}` : `Show the whole description ${icon('chevron-down')}`}</button>`;
+  function fitDescription() {
+    if (!description) return;
+    const body = document.querySelector('#content .pr-description');
+    if (body) body.classList.toggle('is-whole', !body.classList.contains('is-open') && body.scrollHeight <= body.clientHeight);
+  }
+  // An image in the description that does not load (GitHub's attachments need the reader signed
+  // in to GitHub) becomes a link to it; one that loads may change whether the description fits.
+  document.addEventListener('error', event => {
+    const image = event.target.closest?.('img.md-image');
+    if (image) image.outerHTML = ReviewTools.screenshotLink(image.getAttribute('src'));
+  }, true);
+  document.addEventListener('load', event => { if (event.target.matches?.('.pr-description img')) fitDescription(); }, true);
   // A title for a one-line list. Text written for a sentence is cut at its first clause, so it ends
   // where a thought ends rather than mid-word.
   function shortTitle(text, limit = 64) {
@@ -2799,7 +2815,8 @@
     const qa = review.qa;
     const empty = inProgress && !generated.length && !feedback.findings.length && !pending && !failed.length ? '<p class="review-empty">No comments yet. They appear here as your agent writes them.</p>' : '';
     const progressBox = inProgress ? `<div class="review-progress" role="status"><span class="review-progress-dot" aria-hidden="true"></span><div><h3>Your review is in progress</h3><p>Start reading now. Your agent's comments appear here and beside the code as it writes them, with a notice when one arrives, even on a file you already read. Explanations, test results and the finished walkthrough follow. Template previews and QA open once it is done.</p><p class="review-progress-count">${generated.length ? `${generated.length} comment${generated.length === 1 ? '' : 's'} so far` : 'No comments yet'}</p></div><button type="button" class="btn btn-sm btn-primary" data-start-reading>Start reading ${icon('arrow-right')}</button></div>` : '';
-    return `<div class="overview-reading"><header class="overview-intro">${whereLine()}<h1>${escape(review.title)}</h1>${summaryLead(review.summary)}${revisionLine}${renderUIChanges()}${progressBox}</header>${inProgress ? '' : renderVisualOptions()}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}${renderRiskRanking()}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${clear}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${current.filter(comment => !comment.resolved && !comment.author).map(comment => commentCard(comment)).join('')}${openEarlier.map(comment => commentCard(comment, true)).join('')}${failed.map(({flow,index}) => qaFlow(flow,index)).join('')}${pending ? `<p class="overview-status">${plural(pending, 'earlier finding')} ${pending === 1 ? 'was' : 'were'} not checked again after the code changed. Review details has ${pending === 1 ? 'it' : 'them'}.</p>` : ''}</section>${renderOtherChecks()}${renderMyReview()}${fromGitHub.length ? `<section class="overview-comments overview-github" aria-label="From GitHub"><h2>From GitHub</h2>${fromGitHub.map(comment => commentCard(comment)).join('')}</section>` : ''}${resolvedSection ? `<section class="overview-settled" aria-label="Settled comments">${resolvedSection}</section>` : ''}</div>`;
+    const shows = ReviewTools.overviewShows(overviewChoice, description);
+    return `<div class="overview-reading">${description ? overviewSwitch(shows) : ''}<header class="overview-intro">${ReviewTools.whereLine(snapshot, review, description || '')}<h1>${escape(review.title)}</h1>${shows === 'pr' ? descriptionBlock() : summaryLead(review.summary)}${revisionLine}${renderUIChanges()}${progressBox}</header>${inProgress ? '' : renderVisualOptions()}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}${renderRiskRanking()}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${clear}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${current.filter(comment => !comment.resolved && !comment.author).map(comment => commentCard(comment)).join('')}${openEarlier.map(comment => commentCard(comment, true)).join('')}${failed.map(({flow,index}) => qaFlow(flow,index)).join('')}${pending ? `<p class="overview-status">${plural(pending, 'earlier finding')} ${pending === 1 ? 'was' : 'were'} not checked again after the code changed. Review details has ${pending === 1 ? 'it' : 'them'}.</p>` : ''}</section>${renderOtherChecks()}${renderMyReview()}${fromGitHub.length ? `<section class="overview-comments overview-github" aria-label="From GitHub"><h2>From GitHub</h2>${fromGitHub.map(comment => commentCard(comment)).join('')}</section>` : ''}${resolvedSection ? `<section class="overview-settled" aria-label="Settled comments">${resolvedSection}</section>` : ''}</div>`;
   }
 
   // On a phone the bar at the bottom has no pager, so a step ends with the way to the next one.
@@ -3279,6 +3296,7 @@
     refreshVisualControls();
     renderLedger();
     hydratePreviews($('content'));
+    fitDescription();
     paintSelection();
     requestAnimationFrame(updateChangeNavigation);
     if (layer && !fileReadingActive()) {
@@ -3505,6 +3523,18 @@
     }
     if (event.target.closest('[data-open-previews]')) { openStage(); return; }
     if (event.target.closest('[data-start-reading]')) { select(layers[0]?.id || 'files'); return; }
+    const shows = event.target.closest('[data-overview-shows]');
+    if (shows) {
+      overviewChoice = shows.dataset.overviewShows;
+      try { localStorage.setItem(OVERVIEW_SHOWS, overviewChoice); } catch { /* this page only */ }
+      const scroll = $('content').scrollTop; render(); $('content').scrollTop = scroll;
+      return;
+    }
+    if (event.target.closest('[data-description-more]')) {
+      descriptionOpen = !descriptionOpen;
+      const scroll = $('content').scrollTop; render(); $('content').scrollTop = scroll;
+      return;
+    }
     const showLive = event.target.closest('[data-show-live-preview]');
     if (showLive) { $('previews-dialog').close(); showPreview(showLive.dataset.showLivePreview); return; }
     if (event.target.closest('[data-open-send]')) { openSendDialog(); return; }

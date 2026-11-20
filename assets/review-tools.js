@@ -392,7 +392,7 @@ globalThis.ReviewTools = (() => {
   // Labels belong to these exact endpoints; old labels must not describe new code.
   function comparisonLabels(snapshot, review = {}) {
     const supplied = review.comparison;
-    return supplied?.base === snapshot.base && supplied?.head === snapshot.head ? supplied : {};
+    return supplied && supplied.base === snapshot.base && supplied.head === snapshot.head ? supplied : {};
   }
   const prReview = (snapshot, review = {}) => snapshot.mode === 'pr' || (snapshot.mode === 'series' && review.history?.origin_mode === 'pr');
   // The header badge: a PR's number and title when known (its title names the issue), else the scope and head.
@@ -477,8 +477,45 @@ globalThis.ReviewTools = (() => {
     const head = labels.head_label || snapshot.branch || '';
     const issue = (String(head).match(/(?:^|[\/_-])([A-Za-z]{2,10}-\d{1,6})(?=$|[\/_-])/) || [])[1]?.toUpperCase() || null;
     const local = snapshot.mode === 'uncommitted' || !!snapshot.working_tree || !!review.history?.local;
-    const place = snapshot.paths ? 'Critical code' : snapshot.mode === 'uncommitted' ? 'Your uncommitted changes' : local ? 'Your checkout' : prReview(snapshot, review) ? 'The pull request' : snapshot.mode === 'commit' ? 'One commit' : 'Your branch';
+    // A pull request's review of what was pushed needs no word for it: PR #n says so.
+    const place = snapshot.paths ? 'Critical code' : snapshot.mode === 'uncommitted' ? 'Your uncommitted changes' : local ? 'Your checkout' : prReview(snapshot, review) ? null : snapshot.mode === 'commit' ? 'One commit' : 'Your branch';
     return {issue, pr: labels.pr_number || null, place, head: head || null, base: labels.base_label || null};
+  }
+  // The issue's page in Linear, when the text names it with a linear.app link (a pull request's
+  // description usually does); null otherwise, never a guessed address.
+  function issueUrl(issue, text) {
+    if (!/^[A-Za-z]{2,10}-\d{1,6}$/.test(String(issue || ''))) return null;
+    return String(text || '').match(new RegExp(`https://linear\\.app/[\\w-]+/issue/${issue}(?:/[\\w%-]+)?(?![\\w-])`, 'i'))?.[0] || null;
+  }
+  // The pull request's own description, as the review last read it (`dcr context`), when this
+  // review is of that pull request and it says something; null otherwise.
+  function pullRequestDescription(snapshot, review = {}) {
+    const url = pullRequestUrl(snapshot, review);
+    const said = review.pull_request;
+    return url && said?.url === url && typeof said.body === 'string' && said.body.replace(/<!--[\s\S]*?(?:-->|$)/g, '').trim() ? said.body : null;
+  }
+  // What the Overview opens with: the pull request's description (pr) or the agent's summary
+  // (tldr). The reader's last choice, and the description by default; tldr when there is none.
+  const overviewShows = (chosen, description) => description && chosen !== 'tldr' ? 'pr' : 'tldr';
+  // Above the title, one small line: the issue (a link to it in Linear when the description names
+  // its page), then the pull request and its branches as one link to it on GitHub, and whether
+  // this is the checkout. The exact comparison is its tooltip. A branch is written out, and cut
+  // with an ellipsis only where the line has no room for it.
+  function whereLine(snapshot, review = {}, description = '') {
+    const at = where(snapshot, review);
+    const pr = pullRequestUrl(snapshot, review);
+    const link = (url, title, html, name) => `<a class="${name}" href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer" title="${escapeHTML(title)}">${html}</a>`;
+    const tracker = at.issue && issueUrl(at.issue, description);
+    const issue = at.issue && (tracker ? link(tracker, `Open ${at.issue} in Linear`, `<b>${escapeHTML(at.issue)}</b>`, 'where-issue') : `<b>${escapeHTML(at.issue)}</b>`);
+    // In the link its parts are spaced with the text's own spaces, so its underline runs unbroken.
+    const branches = (into = '→') => at.head && at.base && `<span class="where-branches"><span class="where-branch">${escapeHTML(at.head)}</span><span aria-label="into">${into}</span><span class="where-branch">${escapeHTML(at.base)}</span></span>`;
+    const dot = '<i aria-hidden="true">·</i>';
+    const number = at.pr && `PR #${escapeHTML(at.pr)}`;
+    const revision = review.history?.revision > 1 && `Revision ${escapeHTML(review.history.revision)}`;
+    const parts = pr && number
+      ? [issue, link(pr, 'Open the pull request on GitHub', [number, branches('&nbsp;→&nbsp;')].filter(Boolean).join('<i aria-hidden="true">&nbsp;·&nbsp;</i>'), 'where-pr'), at.place && escapeHTML(at.place), revision]
+      : [issue, number, at.place && escapeHTML(at.place), revision, branches()];
+    return `<p class="overview-where" title="${escapeHTML(comparisonText(snapshot, review))}">${parts.filter(Boolean).join(dot)}</p>`;
   }
   function flowOwner(flow) { return flow.comment_id || (flow.assets || []).find(asset => asset.comment_id)?.comment_id; }
   function evidenceFlows(qa, comment) {
@@ -681,5 +718,5 @@ globalThis.ReviewTools = (() => {
     return views.includes(savedView) ? savedView : 'overview';
   };
 
-  return {whenText, ledgerPlace, screenshotLink, ledgerBy, pathParts, pathFit, modelName, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, where, scopeLabel, sha256, githubLink, githubFileLink, evidenceFlows, flowLines, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  return {whenText, ledgerPlace, screenshotLink, issueUrl, pullRequestDescription, overviewShows, whereLine, ledgerBy, pathParts, pathFit, modelName, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, where, scopeLabel, sha256, githubLink, githubFileLink, evidenceFlows, flowLines, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();
