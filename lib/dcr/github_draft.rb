@@ -86,6 +86,7 @@ module DCR
         - Never mention AI, agents, the review tool or this discussion.
         - Say nothing about how the point was found or checked: not that the code was only read, not that something was or was not tried, run or opened in a browser. The material describes what an agent did; what the person did is theirs to say, and they may well have checked it themselves. Hedge the point ("I think", "maybe"), never the method.
         - Write in the language of the review comment.
+        - Name an issue by its key alone (ENG-1183), never a link to it: links are added afterwards.
 
         Reply with the text of the comment and nothing else: no preamble, no quotes around it, no explanation.
 
@@ -122,6 +123,28 @@ module DCR
       text = text[1..-2].strip if text.length > 1 && text.start_with?('"') && text.end_with?('"') && text.count('"') == 2
       raise ArgumentError, 'The agent answered with nothing.' if text.empty?
       text
+    end
+
+    LINEAR_URL = %r{https://linear\.app/([\w-]+)/issue/([A-Za-z][A-Za-z0-9]{1,9})-\d+}
+    # What a key must not be linked inside: code, a Markdown link and a bare or bracketed URL.
+    NOT_LINKED = %r{```.*?```|`[^`\n]*`|\[[^\]\n]*\]\([^)\s]*\)|<https?://[^>\s]*>|https?://\S+}m
+    ISSUE_KEY = /(?<![\w\/-])([A-Z][A-Z0-9]{1,9})-(\d+)(?![\w-])/
+
+    # Each issue team's Linear workspace, {'ENG' => 'acme'}, from the Linear links in texts the review
+    # already has. Linear finds an issue by its key, so one link shows where its team's others are.
+    def linear_teams(*texts)
+      texts.flat_map { |text| text.to_s.scan(LINEAR_URL) }.each_with_object({}) { |(workspace, team), teams| teams[team.upcase] ||= workspace }
+    end
+
+    # The comment with every issue key of a known team made a link to it, once: a key in code, in a
+    # link or in a URL stays as it is, and one of an unknown team stays plain text.
+    def link_issues(text, teams)
+      return text if teams.empty?
+      text.gsub(/(#{NOT_LINKED})|#{ISSUE_KEY}/o) do
+        next Regexp.last_match(1) if Regexp.last_match(1)
+        key, workspace = Regexp.last_match(0), teams[Regexp.last_match(2)]
+        workspace ? "[#{key}](https://linear.app/#{workspace}/issue/#{key})" : key
+      end
     end
   end
 end

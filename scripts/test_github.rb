@@ -227,7 +227,8 @@ Dir.mktmpdir('dcr-github-draft-') do |root|
   puts 'PASS a comment is rewritten in the reviewer\'s voice in the background, and the text they approve is kept'
 end
 
-# On the reviewer's own pull request a new comment is a note.
+# On the reviewer's own pull request a new comment is a note, and a Linear issue it names is a link
+# where the review already knows the issue's workspace.
 Dir.mktmpdir('dcr-github-own-') do |root|
   series = File.join(root, 'series')
   FileUtils.mkdir_p(series)
@@ -235,7 +236,7 @@ Dir.mktmpdir('dcr-github-own-') do |root|
   kept = {'author' => {'login' => 'casey-dev'}, 'body' => 'Part of [ENG-7](https://linear.app/northwind/issue/ENG-7).', 'comments' => {'nodes' => []}}
   File.write(File.join(series, 'context.json'), JSON.generate('read_at' => '2026-01-01T00:00:00Z', 'revision' => 1, 'context' => kept))
   asked = []
-  writer = ->(**given) { asked << given; ['Noting this here.', 'claude'] }
+  writer = ->(**given) { asked << given; ['Noting ENG-1183 and OPS-4 here, as in `ENG-1183` and [ENG-7](https://linear.app/northwind/issue/ENG-7).', 'claude'] }
   signed_in = Struct.new(:login) do
     def status(_key) = {'ready' => false}
     def me = {'login' => login}
@@ -251,6 +252,7 @@ Dir.mktmpdir('dcr-github-own-') do |root|
   own = DCR::LiveAPI.new(series, settings: DCR::Settings.new(File.join(root, 'own')), github: signed_in.new('Casey-Dev'), draft: writer)
   note = draft.(own, 'c1')
   assert(asked.last[:own] == true, 'A new comment on the reviewer\'s own pull request was not written as a note')
+  assert(note['body'] == 'Noting [ENG-1183](https://linear.app/northwind/issue/ENG-1183) and OPS-4 here, as in `ENG-1183` and [ENG-7](https://linear.app/northwind/issue/ENG-7).', "Issue keys were not linked once from the known workspace: #{note['body']}")
   assert(note['voice'] == DCR::GitHubDraft.version(voice, emojis, own: true) && own.call('GET', "/api/state?key=#{KEY}", nil)[1].dig('github', 'voice') == note['voice'], 'The page does not take a note as written for its own pull request')
   draft.(own, 'c2', 'reply_to' => 'pat-teammate')
   assert(asked.last[:own] == false && asked.last[:reply_to] == 'pat-teammate', 'A reply to a teammate on one\'s own pull request stopped answering them')
@@ -266,7 +268,13 @@ Dir.mktmpdir('dcr-github-own-') do |root|
   made = DCR::GitHubDraft.prompt(voice: voice, context: 'c', own: true)
   assert(made.include?('their own pull request') && made.include?('never ask the author for their view') && !DCR::GitHubDraft.prompt(voice: voice, context: 'c').include?('their own pull request'), 'The own pull request\'s prompt does not make the comment a note')
   assert(DCR::GitHubDraft.prompt(voice: voice, context: 'c', own: true, reply_to: 'pat-teammate') == DCR::GitHubDraft.prompt(voice: voice, context: 'c', reply_to: 'pat-teammate'), 'A reply changed on one\'s own pull request')
-  puts 'PASS on one\'s own pull request a new comment is a note, and a reply still answers the teammate'
+  assert(DCR::GitHubDraft.link_issues('See ENG-1183.', {}) == 'See ENG-1183.', 'A key was linked without a known workspace')
+  teams = DCR::GitHubDraft.linear_teams('https://linear.app/northwind/issue/ENG-7')
+  fenced = "ENG-2\n\n```\nENG-3 https://linear.app/northwind/issue/ENG-4\n```"
+  assert(DCR::GitHubDraft.link_issues(fenced, teams) == "[ENG-2](https://linear.app/northwind/issue/ENG-2)\n\n```\nENG-3 https://linear.app/northwind/issue/ENG-4\n```", 'A key in a code block or a URL was linked')
+  linked = DCR::GitHubDraft.link_issues('ENG-5 and eng-6', teams)
+  assert(DCR::GitHubDraft.link_issues(linked, teams) == linked && linked == '[ENG-5](https://linear.app/northwind/issue/ENG-5) and eng-6', 'A linked key was linked again')
+  puts 'PASS on one\'s own pull request a new comment is a note, and Linear issues are linked from the workspace the review knows'
 end
 
 Dir.mktmpdir('dcr-github-pull-') do |directory|

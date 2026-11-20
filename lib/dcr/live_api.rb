@@ -255,6 +255,7 @@ module DCR
       opinions = (@state.read.dig('threads', key, id.to_s, 'opinions') || {}).filter_map { |agent, opinion| {'agent' => agent, 'body' => opinion['body'], 'verdict' => opinion['verdict']}.compact if opinion['body'] }
       voice, emojis, own = self.voice, self.emojis, own_pull?(key)
       written_under = GitHubDraft.version(voice, emojis, own: own)
+      kept = PRContext.stored(File.dirname(@state.path))
       started = @state.github_draft(key, id, {'status' => 'writing'})
       # The agent that ran the review: the one listening now, else the one the comment is credited to.
       author = @state.listener || (input['author'].to_s if input['author'].to_s.match?(Agents::SLUG))
@@ -262,6 +263,7 @@ module DCR
       Thread.new do
         # A reply on their own pull request still answers the teammate; only a new comment is a note.
         text, agent = @draft.call(context: context, opinions: opinions, voice: voice, emojis: emojis, author: author, adversaries: adversaries, repo: repo, reply_to: reply_to, own: own && !reply_to)
+        text = GitHubDraft.link_issues(text, GitHubDraft.linear_teams(context, kept && JSON.generate(kept)))
         @state.github_draft(key, id, {'status' => 'ready', 'body' => text, 'agent' => agent, 'voice' => written_under})
       rescue StandardError => error
         @state.github_draft(key, id, {'status' => 'failed', 'error' => error.message[0, 300]})
