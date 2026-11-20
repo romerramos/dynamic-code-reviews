@@ -759,9 +759,11 @@ html[data-theme^="minimal-"] #content .overview-reading .overview-comments:not(.
 /* The way to a comment's code follows its title's last word. */
 /* One line between two comments, open or closed: only the line under each. */
 
-/* Minimal's list is wider, and each panel's icon sits just outside the panel's edge in every tier:
-   at the page's corner when the panel is closed, beside its edge when it is open. */
-html[data-theme^="minimal-"]{--list-w:384px}
+/* Minimal's list is wider on a large display, and each panel's icon sits just outside the panel's
+   edge in every tier: at the page's corner when the panel is closed, beside its edge when it is open.
+   On a laptop it is narrower, so the Overview keeps room for Try the change beside its column. */
+html[data-theme^="minimal-"]{--list-w:300px}
+@media(min-width:1800px){html[data-theme^="minimal-"]{--list-w:384px}}
 html[data-theme^="minimal-"] :is(.sidebar-hide,.ledger-hide){display:none}
 /* Its icons' line is the file name's line when reading a file. */
 html[data-theme^="minimal-"]{--panel-icon-top:25px}

@@ -245,7 +245,7 @@ body.dcr-has-try .overview-reading :is(.risk-fold,.risk-rank,.ui-changes){displa
   body.on-overview .review-area{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:minmax(0,1fr);container:try-room / inline-size}
   body.on-overview .review-area>:is(#content,.review-bar){grid-area:1 / 1 / 2 / 2}
 }
-@container try-room (min-width:1240px){
+@container try-room (min-width:1100px){
   body.on-overview .dcr-try{--try-room:1}
   body.on-overview:not(.dcr-try-hidden) .dcr-try:not(:popover-open){display:block;position:relative;z-index:1;grid-row:1;grid-column:2;align-self:start;max-height:calc(100% - var(--panel-icon-top) + var(--chrome-h) - 75px);margin:calc(var(--panel-icon-top) - var(--chrome-h) + 51px) 50px 0 0;overflow-y:auto;box-shadow:none}
   /* The page scrolls under both, so its scrollbar is the window's own, at its edge, and never a line
