@@ -10,6 +10,7 @@ require_relative 'github_draft'
 require_relative 'github_inbox'
 require_relative 'jevmypr'
 require_relative 'page'
+require_relative 'pr_context'
 require_relative 'progress_archive'
 require_relative 'review_report'
 require_relative 'second_opinion'
@@ -231,6 +232,17 @@ module DCR
 
     def emojis = @settings.github_emojis || GitHubDraft::DEFAULT_EMOJIS
 
+    # Whether the review is of the reviewer's own pull request: its author (from the kept read of it,
+    # else the posting check) is who the GitHub CLI is signed in as. Kept once both are known; while
+    # either is unknown it is not, and comments are written to the author as before.
+    def own_pull?(key)
+      (@own_pulls ||= {}).fetch(key) do
+        author = PRContext.stored(File.dirname(@state.path))&.dig('context', 'author', 'login') || @github.status(key)['author'] or return false
+        login = @github.me['login'] or return false
+        @own_pulls[key] = login.casecmp?(author)
+      end
+    end
+
     # The preview asks for a comment in the reviewer's voice: an agent writes it in the background,
     # from what the page sends (the comment with its code and conversation) and the opinions kept
     # beside the thread. Every open page sees it arrive through the poll.
@@ -241,14 +253,15 @@ module DCR
       reply_to = input['reply_to'].to_s[/\A[A-Za-z0-9-]{1,39}\z/]
       raise ArgumentError, 'Nothing to rewrite' unless context.is_a?(String) && !context.strip.empty? && context.length <= 200_000
       opinions = (@state.read.dig('threads', key, id.to_s, 'opinions') || {}).filter_map { |agent, opinion| {'agent' => agent, 'body' => opinion['body'], 'verdict' => opinion['verdict']}.compact if opinion['body'] }
-      voice, emojis = self.voice, self.emojis
-      written_under = GitHubDraft.version(voice, emojis)
+      voice, emojis, own = self.voice, self.emojis, own_pull?(key)
+      written_under = GitHubDraft.version(voice, emojis, own: own)
       started = @state.github_draft(key, id, {'status' => 'writing'})
       # The agent that ran the review: the one listening now, else the one the comment is credited to.
       author = @state.listener || (input['author'].to_s if input['author'].to_s.match?(Agents::SLUG))
       adversaries, repo = @settings.adversaries, manifest['repo'] || Dir.pwd
       Thread.new do
-        text, agent = @draft.call(context: context, opinions: opinions, voice: voice, emojis: emojis, author: author, adversaries: adversaries, repo: repo, reply_to: reply_to)
+        # A reply on their own pull request still answers the teammate; only a new comment is a note.
+        text, agent = @draft.call(context: context, opinions: opinions, voice: voice, emojis: emojis, author: author, adversaries: adversaries, repo: repo, reply_to: reply_to, own: own && !reply_to)
         @state.github_draft(key, id, {'status' => 'ready', 'body' => text, 'agent' => agent, 'voice' => written_under})
       rescue StandardError => error
         @state.github_draft(key, id, {'status' => 'failed', 'error' => error.message[0, 300]})
@@ -562,7 +575,7 @@ module DCR
     def snapshot(key)
       raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
       state = @state.read
-      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'github' => (state['github'][key] || {}).merge('voice' => GitHubDraft.version(voice, emojis)), 'comments' => state['comments'][key] || [], 'screenshots' => Array(state['screenshots'][key]).map { |shot| shot.except('file') }, 'no_screenshots' => state['no_screenshots'][key], 'risk_ranking' => state['risk_rankings'][key], 'verdict' => state['verdicts'][key.split(':')[1].to_s],'previews' => preview_status(state['previews'][key]), 'latest_revision' => latest_revision, 'latest_save' => latest_save, 'listening' => @state.listening?, 'agent' => @state.listener, 'agent_model' => @state.listener_model,
+      {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'github' => (state['github'][key] || {}).merge('voice' => GitHubDraft.version(voice, emojis, own: own_pull?(key))), 'comments' => state['comments'][key] || [], 'screenshots' => Array(state['screenshots'][key]).map { |shot| shot.except('file') }, 'no_screenshots' => state['no_screenshots'][key], 'risk_ranking' => state['risk_rankings'][key], 'verdict' => state['verdicts'][key.split(':')[1].to_s],'previews' => preview_status(state['previews'][key]), 'latest_revision' => latest_revision, 'latest_save' => latest_save, 'listening' => @state.listening?, 'agent' => @state.listener, 'agent_model' => @state.listener_model,
        'pending' => state['outbox'].count { |entry| entry['seq'] > state['acked'] && entry['key'] == key }}
     end
 

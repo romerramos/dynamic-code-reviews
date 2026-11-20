@@ -39,7 +39,8 @@ module DCR
     end
 
     # Names the instructions a rewrite was written under, so one written under others is not reused.
-    def version(voice, emojis) = Digest::SHA256.hexdigest(prompt(voice: voice, context: '', emojis: emojis))[0, 12]
+    # own: the review is of the reviewer's own pull request, whose comments are notes (see prompt).
+    def version(voice, emojis, own: false) = Digest::SHA256.hexdigest(prompt(voice: voice, context: '', emojis: emojis, own: own))[0, 12]
 
     # The emojis they use, until they list their own; an empty list means they use none.
     DEFAULT_EMOJIS = '🤔 🙃 😅 🙋‍♂️'
@@ -53,13 +54,19 @@ module DCR
     # context: the comment with its code and conversation, as Copy for LLMs gives it.
     # opinions: what other agents said beside the conversation, [{agent, body, verdict}].
     # reply_to: the GitHub login of the teammate whose comment it answers, when it is a reply.
-    def prompt(voice:, context:, opinions: [], emojis: DEFAULT_EMOJIS, reply_to: nil)
+    # own: the pull request is the person's own, so a new comment is a note addressed to no one.
+    def prompt(voice:, context:, opinions: [], emojis: DEFAULT_EMOJIS, reply_to: nil, own: false)
       # Each with its verdict on the comment, which was taken out of its answer when it was kept.
       stance = {'agree' => 'agrees', 'partly' => 'partly agrees', 'disagree' => 'disagrees'}
       others = opinions.map { |opinion| "#{Agents.name(opinion['agent'])}#{" (#{stance[opinion['verdict']]})" if stance[opinion['verdict']]}: #{opinion['body']}" }.join("\n\n")
       task = if reply_to
                "A teammate, @#{reply_to}, commented on a person's pull request on GitHub. Below is the comment, the code it is about, and what was said about it since: the teammate's and the person's messages, an AI review agent's answers and other agents' opinions.\n\n" \
                  "Write the reply this person will post under @#{reply_to}'s comment on GitHub, under their own name. Answer what the teammate asked or said; where the person said in the conversation what they think or will do, say that."
+             elsif own
+               "A person reviewed their own pull request with an AI review tool. Below is one of its review comments, the code it is about, and what was said about it: the person's questions, the review agent's answers and other agents' opinions.\n\n" \
+                 'Write the comment this person will post on their own pull request on GitHub, under their own name. Nobody else wrote this code, so it is addressed to no one: it is a note that writes down a concern or a decision, for their future self and for whoever reads the pull request later, and shows it was considered. ' \
+                 'For example "Noting that…", "I kept X because…", "Follow-up: …", "Worth revisiting once …". Keep their label and the way they write below, but this comes first: never ask the author for their view, end with no question to anyone, and never say "you". ' \
+                 'A question the review comment asks becomes an open point written down ("Not sure yet whether…"), with `**thought:**` for a `**question:**` label.'
              else
                "A person reviewed a code change with an AI review tool. Below is one of its review comments, the code it is about, and what was said about it: the person's questions, the review agent's answers and other agents' opinions.\n\n" \
                  'Write the comment this person will post on the GitHub pull request under their own name, to the teammate who wrote the code.'
@@ -97,10 +104,10 @@ module DCR
 
     # Returns [text, agent]. One that cannot answer (signed out, a model its account does not have)
     # hands over to the next; when none can, raises ArgumentError with the last one's sentence.
-    def write(context:, opinions:, voice:, author:, adversaries:, repo:, emojis: DEFAULT_EMOJIS, reply_to: nil, ask: Agents.method(:ask), installed: Agents.method(:installed?))
+    def write(context:, opinions:, voice:, author:, adversaries:, repo:, emojis: DEFAULT_EMOJIS, reply_to: nil, own: false, ask: Agents.method(:ask), installed: Agents.method(:installed?))
       candidates = writers(author, adversaries, installed: installed)
       raise ArgumentError, 'No agent on this computer can write it: the review\'s agent is not installed here and no adversary is set up.' if candidates.empty?
-      text = prompt(voice: voice, context: context, opinions: opinions, emojis: emojis, reply_to: reply_to)
+      text = prompt(voice: voice, context: context, opinions: opinions, emojis: emojis, reply_to: reply_to, own: own)
       candidates.each_with_index do |chosen, index|
         return [tidy(ask.call(chosen['agent'], text, dir: repo, model: chosen['model'], effort: chosen['effort'], timeout: TIMEOUT)), chosen['agent']]
       rescue ArgumentError

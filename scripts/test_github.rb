@@ -227,6 +227,48 @@ Dir.mktmpdir('dcr-github-draft-') do |root|
   puts 'PASS a comment is rewritten in the reviewer\'s voice in the background, and the text they approve is kept'
 end
 
+# On the reviewer's own pull request a new comment is a note.
+Dir.mktmpdir('dcr-github-own-') do |root|
+  series = File.join(root, 'series')
+  FileUtils.mkdir_p(series)
+  body = ->(value) { -> { JSON.generate(value) } }
+  kept = {'author' => {'login' => 'casey-dev'}, 'body' => 'Part of [ENG-7](https://linear.app/northwind/issue/ENG-7).', 'comments' => {'nodes' => []}}
+  File.write(File.join(series, 'context.json'), JSON.generate('read_at' => '2026-01-01T00:00:00Z', 'revision' => 1, 'context' => kept))
+  asked = []
+  writer = ->(**given) { asked << given; ['Noting this here.', 'claude'] }
+  signed_in = Struct.new(:login) do
+    def status(_key) = {'ready' => false}
+    def me = {'login' => login}
+  end
+  draft = lambda do |api, id, extra = {}|
+    api.call('POST', '/api/github/draft', body.({'key' => KEY, 'id' => id, 'context' => 'thought: worth a note'}.merge(extra)))
+    sleep 0.05 until DCR::State.new(series).read.dig('github', KEY, 'drafts', id, 'status') != 'writing'
+    DCR::State.new(series).read.dig('github', KEY, 'drafts', id)
+  end
+  voice = DCR::GitHubDraft::DEFAULT_VOICE
+  emojis = DCR::GitHubDraft::DEFAULT_EMOJIS
+
+  own = DCR::LiveAPI.new(series, settings: DCR::Settings.new(File.join(root, 'own')), github: signed_in.new('Casey-Dev'), draft: writer)
+  note = draft.(own, 'c1')
+  assert(asked.last[:own] == true, 'A new comment on the reviewer\'s own pull request was not written as a note')
+  assert(note['voice'] == DCR::GitHubDraft.version(voice, emojis, own: true) && own.call('GET', "/api/state?key=#{KEY}", nil)[1].dig('github', 'voice') == note['voice'], 'The page does not take a note as written for its own pull request')
+  draft.(own, 'c2', 'reply_to' => 'pat-teammate')
+  assert(asked.last[:own] == false && asked.last[:reply_to] == 'pat-teammate', 'A reply to a teammate on one\'s own pull request stopped answering them')
+
+  theirs = DCR::LiveAPI.new(series, settings: DCR::Settings.new(File.join(root, 'theirs')), github: signed_in.new('robin-reviewer'), draft: writer)
+  draft.(theirs, 'c3')
+  assert(asked.last[:own] == false && theirs.call('GET', "/api/state?key=#{KEY}", nil)[1].dig('github', 'voice') == DCR::GitHubDraft.version(voice, emojis), 'A comment on someone else\'s pull request was written as a note')
+  unknown = DCR::LiveAPI.new(series, settings: DCR::Settings.new(File.join(root, 'unknown')), github: signed_in.new(nil), draft: writer)
+  draft.(unknown, 'c4')
+  assert(asked.last[:own] == false, 'An unknown reviewer was taken for the author')
+  assert(DCR::GitHubDraft.version(voice, emojis, own: true) != DCR::GitHubDraft.version(voice, emojis), 'A note and a comment to the author share a version')
+
+  made = DCR::GitHubDraft.prompt(voice: voice, context: 'c', own: true)
+  assert(made.include?('their own pull request') && made.include?('never ask the author for their view') && !DCR::GitHubDraft.prompt(voice: voice, context: 'c').include?('their own pull request'), 'The own pull request\'s prompt does not make the comment a note')
+  assert(DCR::GitHubDraft.prompt(voice: voice, context: 'c', own: true, reply_to: 'pat-teammate') == DCR::GitHubDraft.prompt(voice: voice, context: 'c', reply_to: 'pat-teammate'), 'A reply changed on one\'s own pull request')
+  puts 'PASS on one\'s own pull request a new comment is a note, and a reply still answers the teammate'
+end
+
 Dir.mktmpdir('dcr-github-pull-') do |directory|
   gh = File.join(directory, 'gh')
   File.write(gh, "#!#{RbConfig.ruby}\n#{FAKE_GH}")
