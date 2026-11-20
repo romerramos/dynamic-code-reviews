@@ -525,20 +525,36 @@ globalThis.ReviewTools = (() => {
   // and what was said. nameHTML is escaped already.
   const ledgerPlace = (id, path, where) => `<button type="button" class="ledger-place" data-ledger-jump="${escapeHTML(id)}" title="Show in the code">${path ? pathFit(path, ` · ${where}`) : escapeHTML(where)}${(globalThis.ReviewIcons?.['arrow-up-right'] || '').replace('<svg', '<svg aria-hidden="true" focusable="false"')}</button>`;
   const ledgerBy = (nameHTML, at, extra = '') => `<span class="ledger-by"><b class="ledger-name ${extra}">${nameHTML}</b><time class="ledger-when" data-when="${escapeHTML(at || '')}">${escapeHTML(whenText(at))}</time></span>`;
-  // Agent-written text (comments, findings, answers) as a small, safe subset of Markdown: paragraphs,
-  // headings, lists, tables, fenced code, `code`, **bold**, *italic* and https links. Everything is escaped first, so
-  // nothing a message contains can become markup.
-  // Code is set aside first, so **bold**, *italic* and links can hold it, and then put back as it was.
+  // Agent-written text (comments, findings, answers) and a pull request's description as a small,
+  // safe subset of Markdown: paragraphs, headings, lists (nested by indent), tables, fenced code,
+  // `code`, **bold**, *italic*, https links (written or bare) and https images. Everything is
+  // escaped first, so nothing a message contains can become markup. HTML comments are not shown.
+  // Code and images are set aside first, so **bold**, *italic* and links can hold them, and then
+  // put back as they were. An image is the page's own <img> with only its https address and its
+  // alt text, written as Markdown or as GitHub's <img> tag.
+  const image = (src, alt) => `<img class="md-image" src="${escapeHTML(src)}" alt="${escapeHTML(alt)}" loading="lazy">`;
+  const URL_TEXT = '(?:[^\\s<&]|&amp;)*(?:[^\\s<&.,;:!?)\\]*_]|&amp;)';
+  const BARE_URL = new RegExp(`(^|\\s)(https:\\/\\/${URL_TEXT})`, 'g');
   const inline = text => {
-    const codes = [];
-    const held = String(text).replace(/\u0000/g, '').replace(/`([^`]+)`/g, (match, code) => `\u0000${codes.push(code) - 1}\u0000`);
+    const codes = [], images = [];
+    const held = String(text).replace(/[\u0000\u0001]/g, '').replace(/`([^`]+)`/g, (match, code) => `\u0000${codes.push(code) - 1}\u0000`)
+      .replace(/!\[([^\]\n]*)\]\((https:\/\/[^\s)\u0000]+)\)/g, (match, alt, src) => `\u0001${images.push(image(src, alt)) - 1}\u0001`)
+      .replace(/<img\b[^>]*>/gi, tag => {
+        const src = tag.match(/\ssrc\s*=\s*["']?(https:\/\/[^"'\s>]+)/i)?.[1];
+        return src ? `\u0001${images.push(image(src, tag.match(/\salt\s*=\s*"([^"]*)"|\salt\s*=\s*'([^']*)'/i)?.slice(1).find(Boolean) || '')) - 1}\u0001` : tag;
+      });
     return escapeHTML(held)
       .replace(/\*\*((?:[^*\n]|\*(?!\*))+)\*\*/g, '<strong>$1</strong>') // a bold line may hold *italic*
       .replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,;:!?]|$)/g, '$1<em>$2</em>')
       .replace(/\[([^\]\n]+)\]\((https:\/\/[^\s)\u0000]+)\)/g, (match, label, url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`)
+      .replace(BARE_URL, (match, before, url) => `${before}<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`)
       .replace(/\n/g, '<br>')
+      .replace(/\u0001(\d+)\u0001/g, (match, index) => images[index])
       .replace(/\u0000(\d+)\u0000/g, (match, index) => `<code>${escapeHTML(codes[index].replace(/\s*\n\s*/g, ' '))}</code>`);
   };
+  // An image the reader's browser could not load (GitHub's attachments need its sign-in): a link to
+  // it instead, never a broken image.
+  const screenshotLink = src => /^https:\/\//.test(String(src || '')) ? `<a class="md-image-link" href="${escapeHTML(src)}" target="_blank" rel="noopener noreferrer">Screenshot ↗</a>` : '';
   // A table row's cells. A pipe inside `code` or written as \| belongs to the cell.
   const tableCells = line => {
     const cells = [''];
@@ -555,15 +571,34 @@ globalThis.ReviewTools = (() => {
   const HEADING = /^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/;
   const TABLE_RULE = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
   const tableStart = (lines, i) => lines[i].includes('|') && i + 1 < lines.length && TABLE_RULE.test(lines[i + 1]) && lines[i + 1].includes('|');
-  function markdown(text) {
-    const lines = String(text ?? '').replace(/\r\n?/g, '\n').split('\n');
+  const LIST_ITEM = /^(\s*)([-*]|\d+[.)]) +(\S.*)$/;
+  // A list and the lists indented under its items, from line i: [html, the line after it].
+  const list = (lines, i) => {
+    const [, lead, mark] = lines[i].match(LIST_ITEM);
+    const ordered = /\d/.test(mark);
+    const items = [];
+    while (i < lines.length) {
+      const item = lines[i].match(LIST_ITEM);
+      if (!item || item[1].length < lead.length) break;
+      if (item[1].length > lead.length && items.length) { const [nested, next] = list(lines, i); items[items.length - 1] += nested; i = next; continue; }
+      if (/\d/.test(item[2]) !== ordered) break;
+      items.push(inline(item[3]));
+      i++;
+    }
+    return [`<${ordered ? 'ol' : 'ul'}>${items.map(item => `<li>${item}</li>`).join('')}</${ordered ? 'ol' : 'ul'}>`, i];
+  };
+  // HTML comments are hidden, as GitHub hides them, except inside fenced code.
+  const withoutComments = text => text.split(/(^\s*```[^\n]*\n[\s\S]*?^\s*```[^\n]*$)/m).map((part, index) => index % 2 ? part : part.replace(/<!--[\s\S]*?(?:-->|$)/g, '')).join('');
+  // headings: how far below the page's own headings a # is (a comment's # is h3; a pull request's
+  // description, read under the review's title, starts at h2).
+  function markdown(text, {headings = 2} = {}) {
+    const lines = withoutComments(String(text ?? '').replace(/\r\n?/g, '\n')).split('\n');
     const out = [];
     for (let i = 0; i < lines.length;) {
       const line = lines[i];
       if (HEADING.test(line)) {
-        // Headings sit inside a comment, so they start below the page's own: # is h3.
         const [, marks, title] = line.match(HEADING);
-        const level = Math.min(6, marks.length + 2);
+        const level = Math.min(6, marks.length + headings);
         out.push(`<h${level}>${inline(title)}</h${level}>`);
         i++;
       } else if (tableStart(lines, i)) {
@@ -579,17 +614,15 @@ globalThis.ReviewTools = (() => {
         while (i < lines.length && !/^\s*```/.test(lines[i])) code.push(lines[i++]);
         i++;
         out.push(`<pre><code>${escapeHTML(code.join('\n'))}</code></pre>`);
-      } else if (/^\s*[-*] +\S/.test(line) || /^\s*\d+[.)] +\S/.test(line)) {
-        const ordered = /^\s*\d+[.)] /.test(line);
-        const marker = ordered ? /^\s*\d+[.)] +/ : /^\s*[-*] +/;
-        const items = [];
-        while (i < lines.length && marker.test(lines[i])) items.push(`<li>${inline(lines[i++].replace(marker, ''))}</li>`);
-        out.push(`<${ordered ? 'ol' : 'ul'}>${items.join('')}</${ordered ? 'ol' : 'ul'}>`);
+      } else if (LIST_ITEM.test(line)) {
+        const [html, next] = list(lines, i);
+        out.push(html);
+        i = next;
       } else if (!line.trim()) {
         i++;
       } else {
         const para = [];
-        while (i < lines.length && lines[i].trim() && !/^\s*```/.test(lines[i]) && !/^\s*[-*] +\S/.test(lines[i]) && !/^\s*\d+[.)] +\S/.test(lines[i]) && !HEADING.test(lines[i]) && !tableStart(lines, i)) para.push(lines[i++]);
+        while (i < lines.length && lines[i].trim() && !/^\s*```/.test(lines[i]) && !LIST_ITEM.test(lines[i]) && !HEADING.test(lines[i]) && !tableStart(lines, i)) para.push(lines[i++]);
         out.push(`<p>${inline(para.join('\n'))}</p>`);
       }
     }
@@ -648,5 +681,5 @@ globalThis.ReviewTools = (() => {
     return views.includes(savedView) ? savedView : 'overview';
   };
 
-  return {whenText, ledgerPlace, ledgerBy, pathParts, pathFit, modelName, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, where, scopeLabel, sha256, githubLink, githubFileLink, evidenceFlows, flowLines, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  return {whenText, ledgerPlace, screenshotLink, ledgerBy, pathParts, pathFit, modelName, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, where, scopeLabel, sha256, githubLink, githubFileLink, evidenceFlows, flowLines, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();

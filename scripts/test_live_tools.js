@@ -106,6 +106,22 @@ assert.equal(tools.markdown('a | b\nc'), '<p>a | b<br>c</p>', 'a pipe without a 
 assert.equal(tools.markdown('| <b> |\n|---|\n| <img onerror=x> |'), '<div class="md-table"><table><thead><tr><th>&lt;b&gt;</th></tr></thead><tbody><tr><td>&lt;img onerror=x&gt;</td></tr></tbody></table></div>', 'table cells are escaped');
 console.log('PASS answers render paragraphs, headings, tables, lists, code and links, and hostile text stays inert');
 
+// A pull request's description, as GitHub shows it.
+const description = globalThis.ReviewTools.markdown('# Summary\n<!-- workspace-pr:visual:start -->\nVisual QA: pending.\n<!--\nhidden\n-->\n- **Table:** one row\n  - `insurance_setup`\n  - `own_insurance`\n- Pricing card\n\n```\n<!-- kept in code -->\n```\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\nhttps://claude.ai/code/session_01AbC', {headings: 1});
+assert.match(description, /^<h2>Summary<\/h2>/, "the description's # is the heading under the review's title");
+assert.doesNotMatch(description, /workspace-pr|hidden/, 'HTML comments are not shown');
+assert.match(description, /<pre><code>&lt;!-- kept in code --&gt;<\/code><\/pre>/, 'except inside code');
+assert.match(description, /<ul><li><strong>Table:<\/strong> one row<ul><li><code>insurance_setup<\/code><\/li><li><code>own_insurance<\/code><\/li><\/ul><\/li><li>Pricing card<\/li><\/ul>/, 'a list indented under an item is nested in it');
+assert.match(description, /Generated with <a href="https:\/\/claude\.com\/claude-code"[^>]*>Claude Code<\/a>/);
+assert.match(description, /<a href="https:\/\/claude\.ai\/code\/session_01AbC"[^>]*>https:\/\/claude\.ai\/code\/session_01AbC<\/a>/, 'a bare address is a link');
+const shot = 'https://github.com/user-attachments/assets/0f1e2d3c';
+assert.equal(tools.markdown(`<img width="600" alt="Pricing card" src="${shot}" onerror="alert(1)">`), `<p><img class="md-image" src="${shot}" alt="Pricing card" loading="lazy"></p>`, "GitHub's <img> is the page's own image, with only its address and alt");
+assert.equal(tools.markdown(`![Card](${shot})`), `<p><img class="md-image" src="${shot}" alt="Card" loading="lazy"></p>`);
+assert.equal(tools.markdown('![x](http://plain.test/a.png)'), '<p>![x](http://plain.test/a.png)</p>', 'only https images');
+assert.equal(globalThis.ReviewTools.screenshotLink(shot), `<a class="md-image-link" href="${shot}" target="_blank" rel="noopener noreferrer">Screenshot ↗</a>`, 'an image that fails to load becomes a link to it');
+assert.equal(globalThis.ReviewTools.screenshotLink('javascript:alert(1)'), '');
+console.log("PASS a pull request's description renders as on GitHub: nested lists, links, images, and no HTML comments");
+
 assert.equal(tools.snippet('I would keep `Data`. **Observed:** `to_params` uses `with` and `to_h`; see [the docs](https://x.test).\n\nSecond paragraph.'), 'I would keep Data. Observed: to_params uses with and to_h; see the docs.', 'only the first paragraph, marks removed, identifiers intact');
 assert.equal(tools.snippet('```ruby\nx = 1\n```\n\nAfter the code'), 'After the code', 'a leading code block is skipped');
 assert.equal(tools.snippet('- first point\n- second point'), 'first point second point', 'list markers are dropped');
