@@ -143,7 +143,7 @@ module DCR
     # with its HTML comments and secrets removed, or nil without a read.
     def description(series_dir)
       kept = stored(series_dir)&.dig('context') or return
-      {'url' => kept['url'], 'body' => clean(kept['body'])} if kept['url'].is_a?(String)
+      {'url' => kept['url'], 'title' => kept['title'], 'body' => clean(kept['body'])} if kept['url'].is_a?(String)
     end
 
     # Keeps this read beside the review, with the revision it was read at.

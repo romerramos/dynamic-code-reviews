@@ -247,7 +247,10 @@ body.dcr-has-try .overview-reading :is(.risk-fold,.risk-rank,.ui-changes){displa
 }
 @container try-room (min-width:1240px){
   body.on-overview .dcr-try{--try-room:1}
-  body.on-overview:not(.dcr-try-hidden) .dcr-try:not(:popover-open){display:block;position:static;grid-row:1;grid-column:2;align-self:start;max-height:calc(100% - var(--panel-icon-top) + var(--chrome-h) - 75px);margin:calc(var(--panel-icon-top) - var(--chrome-h) + 51px) 50px 0 0;overflow-y:auto;box-shadow:none}
+  body.on-overview:not(.dcr-try-hidden) .dcr-try:not(:popover-open){display:block;position:relative;z-index:1;grid-row:1;grid-column:2;align-self:start;max-height:calc(100% - var(--panel-icon-top) + var(--chrome-h) - 75px);margin:calc(var(--panel-icon-top) - var(--chrome-h) + 51px) 50px 0 0;overflow-y:auto;box-shadow:none}
+  /* The page scrolls under both, so its scrollbar is the window's own, at its edge, and never a line
+     between the column and the panel; the page keeps the panel's place (320px and its 50px) clear. */
+  body.on-overview.dcr-has-try:not(.dcr-try-hidden) .review-area>#content{grid-column:1 / 3;--panel-place:370px}
 }
 /* On a phone it is a sheet from the bottom. */
 @media(max-width:740px){

@@ -5,6 +5,7 @@ require 'json'
 require 'open3'
 require 'rbconfig'
 require 'tmpdir'
+require_relative '../lib/dcr/pr_context'
 
 def assert(condition, message)
   raise message unless condition
@@ -155,6 +156,7 @@ Dir.mktmpdir('dcr-pr-context-test') do |directory|
   kept = File.join(repo, '.reviews', 'acme-42', 'context.json')
   out, _, status = dcr.('--repo', repo, '--name', 'acme-42', '--pr', '#7')
   assert(status.success? && out.include?('## Review threads') && File.file?(kept), "With a series the read is printed in full and kept: #{out}")
+  assert(DCR::PRContext.description(File.dirname(kept))&.fetch('title') == 'feat(ACME-42): keep the value', 'The Overview gets the pull request\'s own title with its description')
   assert(File.stat(kept).mode & 0o777 == 0o600 && system('git', '-C', repo, 'check-ignore', '-q', kept), 'The kept read is private and git-ignored')
   File.write(File.join(repo, '.reviews', 'acme-42', 'manifest.json'), JSON.generate('revisions' => [{'number' => 1}, {'number' => 2}]))
   out, _, status = dcr.('--repo', repo, '--name', 'acme-42', '--since-last', extra: {'GH_LATER' => '1'})
@@ -176,7 +178,6 @@ Dir.mktmpdir('dcr-pr-context-test') do |directory|
   puts 'PASS a review keeps its last read privately, and --since-last says only what changed on the pull request since'
 end
 
-require_relative '../lib/dcr/pr_context'
 private_text = {
   'https://claude.ai/code/session_01AbC' => '[private link removed]',
   'https://chatgpt.com/share/6f1e-77aa' => '[private link removed]',
