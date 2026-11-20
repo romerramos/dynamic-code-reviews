@@ -96,16 +96,14 @@ Dir.mktmpdir('dcr-publish-test') do |directory|
   assert(asked['open'].empty? && asked['comments']['total'] == 2 && asked['conversations'] == 2, "A question of the reader's is open, or counted as a comment: #{asked.slice('open', 'comments', 'conversations')}")
   puts 'PASS without a verdict every file needs the reader; unresolved comments are open, the reader\'s own questions never'
 
-  # On someone else's pull request, what the reader said there waits on its author; a teammate's comment still waits on the reader.
+  # A comment from GitHub, the reader's or a teammate's, never holds back publishing: it is settled on GitHub.
   arrived = saved['comments'][KEY]
   saved['comments'][KEY] = [{'id' => 'gh-1', 'label' => 'suggestion', 'subject' => 'Said by the reader', 'author' => {'login' => 'reviewer'}},
-                            {'id' => 'gh-2', 'label' => 'suggestion', 'subject' => 'Said by a teammate', 'author' => {'login' => 'teammate'}}]
-  reviewing = DCR::ReviewReport.facts(shot, said, saved, key, reviewer: 'reviewer')
-  owning = DCR::ReviewReport.facts(shot, said, saved, key)
-  assert(reviewing['open'] == %w[gh-2], "The reviewer's own GitHub comment holds the review back: #{reviewing['open']}")
-  assert(owning['open'] == %w[gh-1 gh-2], "On the reader's own pull request every comment waits on them: #{owning['open']}")
+                            {'id' => 'gh-2', 'label' => 'issue', 'decoration' => 'blocking', 'subject' => 'Said by a teammate', 'author' => {'login' => 'teammate'}}]
+  from_github = DCR::ReviewReport.facts(shot, said, saved, key)
+  assert(from_github['open'].empty? && from_github['comments']['total'] == 2, "A comment from GitHub holds the review back, or is counted as the review's: #{from_github.slice('open', 'comments')}")
   saved['comments'][KEY] = arrived
-  puts 'PASS a reviewer\'s own GitHub comments do not hold back publishing someone else\'s pull request'
+  puts 'PASS no comment from GitHub, a teammate\'s or the reader\'s, holds back publishing'
 
   # A review whose only comment is a note: it asks nothing, but the adversaries who disagreed with it in part still count.
   noted = {'comments' => [{'id' => 'n1', 'label' => 'note', 'subject' => 'Safe for every caller', 'agent' => 'claude', 'hunk' => 'f1h1'}]}

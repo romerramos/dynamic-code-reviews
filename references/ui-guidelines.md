@@ -268,8 +268,8 @@ Design references: [CodeRabbit documentation index](https://docs.coderabbit.ai/l
   "N comments to settle" under the file count, and Review comments opens with "N comments
   wait on you. Resolve each, or have it fixed, before you publish." Each takes the reader to
   the first one. Never leave "16 of 16 files reviewed" as the only progress on the page.
-  On someone else's pull request, what the reader said there stays in From GitHub but is not
-  counted: it waits on the author, and must not hold back publishing the review. Finishing the
+  A comment from GitHub, a teammate's or the reader's own, stays in From GitHub while open but
+  is not counted: it is settled on GitHub, and never holds back All clear or publishing. Finishing the
   GitHub review of a review that is ready to publish publishes it: the report goes in that review.
 - **The Overview and Your review say the same thing about what is waiting.** With nothing open
   on the code as it is, both lead with "Nothing is waiting on you."; the Overview adds that
@@ -291,7 +291,10 @@ Design references: [CodeRabbit documentation index](https://docs.coderabbit.ai/l
   the GitHub review closes the same way: it was promoted, and the comment it became on GitHub is
   where the conversation goes on. Each says so and leads to the other (Promoted to GitHub, From
   Claude's comment). Taken back from GitHub, it opens again. A comment that came from GitHub stays
-  open when answered.
+  open when answered, and follows its thread there: resolved on GitHub, by anyone, it moves to
+  Resolved and says "Resolved on GitHub by @login" (in its card, with no Resolve or Reopen, and
+  under its row in Your review); reopened there, it is open again. Resolving it here stays here
+  and never reaches GitHub.
 - **Your review is one list, in the order things were said**: your comments, the agent's
   comments you joined, what people wrote on GitHub and the agent's comments you put there,
   with no section titles. Every row is drawn the same: where it is (path and lines, or

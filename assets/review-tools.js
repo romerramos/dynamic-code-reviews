@@ -522,6 +522,15 @@ globalThis.ReviewTools = (() => {
     if (comment.personal) return [];
     return (qa?.flows || []).flatMap((flow, index) => flowOwner(flow) === comment.id ? [index] : []);
   }
+  // The comments whose thread is resolved on GitHub, whoever resolved it, as the review's threads
+  // have it ({id: {by, at}}): settled here too, until it is reopened there.
+  function githubResolved(threads) {
+    return Object.fromEntries(Object.entries(threads || {}).filter(([, thread]) => thread?.github_resolved).map(([id, thread]) => [id, thread.github_resolved]));
+  }
+  function resolvedOnGitHub(resolution) { return resolution ? `Resolved on GitHub${resolution.by ? ` by @${resolution.by}` : ''}` : ''; }
+  // A comment the review waits on: its own, not resolved. One from GitHub is settled there, so it
+  // never holds back All clear or publishing (ReviewReport.facts), open or not.
+  function waitsOnReader(comment) { return !comment.resolved && !comment.author; }
   // Show each issue once, but never hide findings behind an ambiguous comment match.
   function overviewFeedback(review) {
     const comments = (review.comments || []).map(comment => ({...comment}));
@@ -733,5 +742,5 @@ globalThis.ReviewTools = (() => {
     return views.includes(savedView) ? savedView : 'overview';
   };
 
-  return {whenText, ledgerPlace, screenshotLink, issueUrl, pullRequestDescription, overviewShows, whereLine, ledgerBy, pathParts, pathFit, modelName, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, ledgerOpen, popoverPlace, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, where, scopeLabel, sha256, githubLink, githubFileLink, evidenceFlows, flowLines, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  return {githubResolved, resolvedOnGitHub, waitsOnReader, whenText, ledgerPlace, screenshotLink, issueUrl, pullRequestDescription, overviewShows, whereLine, ledgerBy, pathParts, pathFit, modelName, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, ledgerOpen, popoverPlace, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, where, scopeLabel, sha256, githubLink, githubFileLink, evidenceFlows, flowLines, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();

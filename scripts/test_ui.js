@@ -24,6 +24,19 @@ assert.equal(tools.componentGroups([componentItems[0]], componentFiles).length, 
 assert.deepEqual(componentItems.map(item => item.file), ['erb','other','ruby','view']);
 console.log('PASS component pairs respect directory and layer boundaries without changing source order');
 {
+  // A thread resolved on GitHub is resolved in the review, saying by whom; a comment from GitHub never waits on the reader.
+  const threads = {'gh-1': {github_resolved: {by: 'teammate', at: '2026-10-20T10:00:00Z'}}, 'gh-2': {messages: []}, c1: {closed: {side: 'dealt'}}};
+  assert.deepEqual(tools.githubResolved(threads), {'gh-1': {by: 'teammate', at: '2026-10-20T10:00:00Z'}}, 'only a thread resolved on GitHub counts');
+  assert.deepEqual(tools.githubResolved(undefined), {});
+  assert.equal(tools.resolvedOnGitHub(threads['gh-1'].github_resolved), 'Resolved on GitHub by @teammate');
+  assert.equal(tools.resolvedOnGitHub({by: null}), 'Resolved on GitHub', 'a resolver GitHub no longer names is not made up');
+  assert.equal(tools.resolvedOnGitHub(null), '');
+  assert.equal(tools.waitsOnReader({id: 'c1', resolved: false}), true, "the review's open comment waits on the reader");
+  assert.equal(tools.waitsOnReader({id: 'c1', resolved: true}), false);
+  assert.equal(tools.waitsOnReader({id: 'gh-2', resolved: false, author: {login: 'teammate'}}), false, "a teammate's open GitHub comment does not hold back All clear");
+  console.log('PASS a thread resolved on GitHub is resolved here and says by whom; a GitHub comment never holds back All clear');
+}
+{
   // Every row of Your review names where it is and when it was said, whoever wrote it.
   const place = tools.ledgerPlace('c1', 'app/models/order.rb', 'After L4');
   assert.match(place, /data-ledger-jump="c1"/);

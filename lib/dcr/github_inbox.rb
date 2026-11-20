@@ -17,7 +17,8 @@ module DCR
     PREFIX = {'line' => '', 'issue' => 'i', 'review' => 'r'}.freeze
     ANCHOR = {'line' => /#discussion_r(\d+)\z/, 'issue' => /#issuecomment-(\d+)\z/, 'review' => /#pullrequestreview-(\d+)\z/}.freeze
 
-    # What is new since the last time: {comments:, messages:, sends:, promoted:} for State#github_arrived.
+    # What is new since the last time: {comments:, messages:, sends:, promoted:, resolved:} for State#github_arrived.
+    # resolved: each thread on the lines the review has, as GitHub has it now ({'by' => login}, or nil when open).
     # conversation: GitHub#conversation. known: ids of the review's comments, saved or posted.
     # state: the state as read. me: the reader's GitHub login. avatar: callable(url), a data: image or nil.
     # A comment the reader sent from here comes back as its own comment, where the conversation goes
@@ -64,7 +65,9 @@ module DCR
           by[id] = [item, comment] unless item['login'] == me
         end
       end
-      {comments: comments, messages: messages, sends: sends(by.values, snapshot), promoted: promoted}
+      ids = known + comments.map { |comment| comment['id'] }
+      resolved = (conversation['resolved'] || {}).to_h { |number, by| ["gh-#{number}", by] }.select { |id, _| ids.include?(id) }
+      {comments: comments, messages: messages, sends: sends(by.values, snapshot), promoted: promoted, resolved: resolved}
     end
 
     # One review comment from what someone wrote on GitHub. A Conventional Comments label they

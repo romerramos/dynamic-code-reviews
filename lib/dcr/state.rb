@@ -563,7 +563,9 @@ module DCR
     # join the review's, their replies the threads. The agent is handed each person's new comments
     # as one message, and a reply in a thread it is part of; nothing already here is added twice.
     # Returns the threads whose adversaries should hear the reply too.
-    def github_arrived(key, comments:, messages:, sends:, promoted: {})
+    # resolved: a thread resolved on GitHub is settled here, whoever resolved it, and open again
+    # when reopened there ({id => {'by' => login} or nil}). The reader's own Resolve stays theirs.
+    def github_arrived(key, comments:, messages:, sends:, promoted: {}, resolved: {})
       check_key(key)
       update do |state|
         github_entry(state, key)['promoted'].merge!(promoted)
@@ -577,6 +579,14 @@ module DCR
           next if ids.empty?
           ids.each { |id| thread(state, key, id).merge!('delivery' => 'sent', 'live' => true) }
           enqueue(state, 'send', key, ids, text)
+        end
+        resolved.each do |id, by|
+          if by
+            was = state.dig('threads', key, id, 'github_resolved')
+            thread(state, key, id)['github_resolved'] = was && was['by'] == by['by'] ? was : {'by' => by['by'], 'at' => Time.now.utc.iso8601}
+          else
+            state.dig('threads', key, id)&.delete('github_resolved')
+          end
         end
         asked = []
         messages.each do |id, said|

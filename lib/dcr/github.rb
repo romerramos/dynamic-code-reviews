@@ -188,7 +188,8 @@ module DCR
     # What people said on the pull request, oldest first: comments on lines (kind 'line', with
     # reply_to when they answer one), in the conversation ('issue') and the text of a submitted
     # review ('review'). commit: the commit lines are placed on; files: those whose diff is the
-    # pull request's in the revision.
+    # pull request's in the revision. resolved: whether each thread on the lines is resolved, by
+    # its first comment's id: {'by' => who resolved it}, or nil while it is open.
     def conversation(key)
       target = target(key)
       pull = "repos/#{target[:repo]}/pulls/#{target[:number]}"
@@ -205,7 +206,39 @@ module DCR
       reviews = pages("#{pull}/reviews").reject { |raw| raw['state'] == 'PENDING' || raw['body'].to_s.strip.empty? }.map do |raw|
         person.(raw).merge('kind' => 'review', 'id' => raw['id'], 'body' => raw['body'].to_s, 'at' => raw['submitted_at'], 'url' => raw['html_url'], 'state' => raw['state'])
       end
-      {'commit' => target[:commit], 'files' => target[:hunks].keys, 'items' => (lines + talk + reviews).sort_by { |item| item['at'].to_s }}
+      {'commit' => target[:commit], 'files' => target[:hunks].keys, 'items' => (lines + talk + reviews).sort_by { |item| item['at'].to_s }, 'resolved' => resolutions(target)}
+    end
+
+    THREADS = <<~GRAPHQL
+      query($owner: String!, $name: String!, $number: Int!, $after: String) {
+        repository(owner: $owner, name: $name) {
+          pullRequest(number: $number) {
+            reviewThreads(first: 100, after: $after) {
+              pageInfo { hasNextPage endCursor }
+              nodes { isResolved resolvedBy { login } comments(first: 1) { nodes { databaseId } } }
+            }
+          }
+        }
+      }
+    GRAPHQL
+
+    # The review threads GitHub could read, up to PAGES of them. One it could not is left out, so
+    # what the review knows of it stays as it was.
+    def resolutions(target)
+      owner, name = target[:repo].split('/', 2)
+      all, after = {}, nil
+      PAGES.times do
+        threads = graphql(THREADS, 'owner' => owner, 'name' => name, 'number' => target[:number], 'after' => after).dig('repository', 'pullRequest', 'reviewThreads')
+        break unless threads
+        Array(threads['nodes']).each do |thread|
+          id = thread&.dig('comments', 'nodes', 0, 'databaseId') or next
+          all[id] = thread['isResolved'] ? {'by' => thread.dig('resolvedBy', 'login')} : nil
+        end
+        break unless threads.dig('pageInfo', 'hasNextPage') && (after = threads.dig('pageInfo', 'endCursor'))
+      end
+      all
+    rescue Error
+      all
     end
 
     # A person's avatar as a data: image the page can show, or nil. Kept once found.

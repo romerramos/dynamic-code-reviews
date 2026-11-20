@@ -61,7 +61,10 @@
   const progressText = value => `${value.viewed} of ${value.total} files reviewed`;
   state.resolvedComments = Array.isArray(state.resolvedComments) ? state.resolvedComments.filter(id => typeof id === 'string') : [];
   state.personalComments = Array.isArray(state.personalComments) ? state.personalComments.filter(comment => typeof comment.id === 'string' && comment.id.startsWith('mine-') && typeof comment.subject === 'string' && (comment.general === true || ReviewTools.anchor(snapshot, comment))) : [];
-  function refreshComments() { comments = [...generatedComments.map(comment => ({...comment, personal:false})), ...state.personalComments.map(comment => ({...comment, personal:true}))].map(comment => ({...comment, resolved:state.resolvedComments.includes(comment.id)})); }
+  // A thread resolved on GitHub is resolved here too (the served page hands it over); the reader's
+  // own Resolve is theirs, kept apart from it.
+  let githubResolved = {};
+  function refreshComments() { comments = [...generatedComments.map(comment => ({...comment, personal:false})), ...state.personalComments.map(comment => ({...comment, personal:true}))].map(comment => ({...comment, resolved:state.resolvedComments.includes(comment.id) || !!githubResolved[comment.id], githubResolved:githubResolved[comment.id] || null})); }
   refreshComments();
   const tabletLayout = matchMedia('(max-width: 1199px)');
   let layoutChoice = 'unified';
@@ -1896,7 +1899,14 @@
   // resolve: closes a comment from wherever the reader is, its card on screen or not.
   window.ReviewLive = {addComments: addLiveComments, inProgress,
     resolve: id => { if (comments.find(comment => comment.id === id)?.resolved === false) toggleResolved(id, true); },
-    reopen: id => { if (comments.find(comment => comment.id === id)?.resolved) toggleResolved(id, true); }};
+    reopen: id => { if (comments.find(comment => comment.id === id)?.resolved) toggleResolved(id, true); },
+    githubResolved: map => {
+      if (JSON.stringify(map) === JSON.stringify(githubResolved)) return;
+      githubResolved = map;
+      refreshComments();
+      const scroll = $('content').scrollTop;
+      render(); $('content').scrollTop = scroll;
+    }};
   // Until the review is finished, QA and template previews wait: they build on its comments and
   // would compete with it for the agent. The controls stay visible, greyed, and say why.
   const LOCKED = '[data-open-previews], [data-copy-qa], [data-request-preview], [data-preview-toggle], [data-try="qa"], [data-start-qa], [data-empty-qa], [data-view="previews"], #qa-connect';
@@ -2210,7 +2220,7 @@
     const by = slug ? escape(UI.agentInfo(slug).name) : '';
     // Who wrote it is the face beside the title, and where it is is at the right of it: only what kind of comment it is is said.
     const file = go ? `<button type="button" class="thread-file" data-comment="${escape(comment.id)}" title="${escape(`${go.path} · ${go.range}`)}" aria-label="${escape(`Show in the code: ${go.path}, ${go.range}`)}">${escape(go.path.split('/').pop())}${icon('arrow-up-right')}</button>` : '';
-    return `<p class="thread-meta" title="${escape([by, path && range ? `${path}, ${range}` : ''].filter(Boolean).join(' · '))}">${[kind, comment.decoration && !comment.personal ? escape(comment.decoration) : '', file].filter(Boolean).join('<i aria-hidden="true">·</i>')}${ghBadgeSlot(comment)}</p>`;
+    return `<p class="thread-meta" title="${escape([by, path && range ? `${path}, ${range}` : ''].filter(Boolean).join(' · '))}">${[kind, comment.decoration && !comment.personal ? escape(comment.decoration) : '', escape(ReviewTools.resolvedOnGitHub(comment.githubResolved)), file].filter(Boolean).join('<i aria-hidden="true">·</i>')}${ghBadgeSlot(comment)}</p>`;
   };
   // The agent this review is with: the one listening, else the one that wrote its comments.
   function mainAgent() {
@@ -2252,7 +2262,8 @@
       meta: threadMeta(comment, found?.file.path || was?.path, found ? range : was?.lines, go),
       body: `${told ? `<div class="comment-discussion">${ReviewTools.markdown(told)}</div>` : ''}${wasCode}${follows}${commentShots(comment)}${commentEvidence(comment)}`,
       source,
-      footer: `<div class="comment-actions">${commentActions(comment)}</div>${UI.Button({html: comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`, variant: comment.resolved ? 'ghost' : 'soft', attrs: {'data-resolve': comment.id}})}`});
+      // Resolved on GitHub, it is reopened there, not here.
+      footer: `<div class="comment-actions">${commentActions(comment)}</div>${comment.githubResolved ? '' : UI.Button({html: comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`, variant: comment.resolved ? 'ghost' : 'soft', attrs: {'data-resolve': comment.id}})}`});
   }
   // quiet: the app did it, so the reader's focus stays where it is and nothing is announced.
   function toggleResolved(id, quiet = false) {
@@ -2829,7 +2840,7 @@
     // With nothing left to do, one message says so, whether there never was anything or the
     // reader settled it all. What is settled stays folded below it.
     const folded = settledAll.length;
-    const clear = !inProgress && !feedback.findings.length && !failed.length && !pending && !openEarlier.length && !current.some(comment => !comment.resolved)
+    const clear = !inProgress && !feedback.findings.length && !failed.length && !pending && !openEarlier.length && !current.some(ReviewTools.waitsOnReader)
       ? `<div class="overview-clear" data-overview-status>${icon('check-check')}<div><strong>All clear</strong><p>Nothing waits on you.${folded ? ` ${folded === 1 ? 'The comment is' : `The ${folded} comments are`} settled.` : ''}</p></div></div>` : '';
     const qa = review.qa;
     const empty = inProgress && !generated.length && !feedback.findings.length && !pending && !failed.length ? '<p class="review-empty">No comments yet. They appear here as your agent writes them.</p>' : '';

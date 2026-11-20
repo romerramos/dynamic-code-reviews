@@ -23,7 +23,7 @@ FAKE_GH = <<~'RUBY'
   require 'json'
   args = ARGV.dup
   method = args[args.index('--method') + 1]
-  path = args.find { |arg| arg.start_with?('repos/', 'user') }
+  path = args.find { |arg| arg.start_with?('repos/', 'user', 'graphql') }
   input = args.include?('--input') ? JSON.parse($stdin.read) : nil
   File.open(ENV.fetch('GH_LOG'), 'a') { |log| log.puts(JSON.generate('method' => method, 'path' => path, 'input' => input)) }
   fixture = JSON.parse(File.read(ENV.fetch('GH_FIXTURE')))
@@ -160,6 +160,26 @@ Dir.mktmpdir('dcr-inbox-test') do |directory|
   assert(asked.length == 1 && asked[0][1] == 'gh-101' && asked[0][2].include?('@jane (a teammate, on GitHub) now says:'), "The thread's adversaries hear her too: #{asked}")
   puts 'PASS looking again adds nothing twice; a teammate\'s answer reaches the agent and the thread\'s adversaries, and lets the reader reply again'
 
+  # --- a thread resolved on GitHub is settled here, whoever resolved it; reopened, it is open ---
+  threads = ->(*nodes) { {'data' => {'repository' => {'pullRequest' => {'reviewThreads' => {'pageInfo' => {'hasNextPage' => false}, 'nodes' => nodes}}}}} }
+  node = ->(id, by = nil) { {'isResolved' => !by.nil?, 'resolvedBy' => by && {'login' => by}, 'comments' => {'nodes' => [{'databaseId' => id}]}} }
+  fixture['POST graphql'] = threads.(node.(101, 'sam'), node.(102), node.(104, 'helper'))
+  File.write(fixture_path, JSON.generate(fixture))
+  state.save_blob(KEY, {'resolvedComments' => ['gh-102']})
+  take.()
+  marks = ->(data) { (data.dig('threads', KEY) || {}).select { |_, thread| thread['github_resolved'] }.transform_values { |thread| thread['github_resolved']['by'] } }
+  resolved = state.read
+  assert(marks.(resolved) == {'gh-101' => 'sam'}, "Resolved on GitHub by a teammate is resolved here, and says who; an open thread or a bot's stays as it was: #{marks.(resolved)}")
+  assert(resolved.dig('threads', KEY, 'gh-101', 'github_resolved', 'at'), 'It says when the review saw it resolved')
+  fixture['POST graphql'] = threads.(node.(101), node.(102))
+  File.write(fixture_path, JSON.generate(fixture))
+  take.()
+  reopened = state.read
+  assert(marks.(reopened).empty? && reopened.dig('blobs', KEY, 'resolvedComments') == ['gh-102'], "Reopened on GitHub is open again here, and the reader's own Resolve stays theirs: #{marks.(reopened)}")
+  fixture.delete('POST graphql')
+  File.write(fixture_path, JSON.generate(fixture))
+  puts 'PASS a thread resolved on GitHub is settled in the review whoever resolved it, reopened is open again; a local Resolve stays local'
+
   # --- the reader's answer goes under the teammate's comment ------------------------------------
   File.delete(log)
   code, result = api.call('POST', '/api/github/comment', -> { JSON.generate('key' => KEY, 'item' => {'id' => 'gh-101', 'body' => 'Yes, adding one.', 'general' => false, 'path' => 'app/a.rb', 'side' => 'RIGHT', 'line' => 2, 'start_line' => 2}) })
@@ -173,9 +193,9 @@ Dir.mktmpdir('dcr-inbox-test') do |directory|
   assert(posts.last['input']['comments'] == [] && posts.last['input']['event'] == 'APPROVE' && result['posted'].key?('gh-102'), 'The review holds no copy of the reply')
   puts 'PASS the reader\'s answer to a teammate goes under their comment on GitHub, also with Finish your review'
 
-  # --- the report counts the agents' comments; a teammate's must still be settled ---------------
+  # --- the report counts the agents' comments; a teammate's never holds the review back --------
   key, shot, kept, data = DCR::ReviewReport.latest(series)
   facts = DCR::ReviewReport.facts(shot, kept, data, key)
-  assert(facts['comments']['total'] == 1 && facts['open'].include?('gh-101'), "Teammates' comments are not the review's, but are open until resolved: #{facts.slice('comments', 'open')}")
-  puts 'PASS the report counts the review\'s own comments, and a teammate\'s waits to be settled'
+  assert(facts['comments']['total'] == 1 && facts['open'] == %w[c1], "Teammates' comments are not the review's, and never open for publishing: #{facts.slice('comments', 'open')}")
+  puts 'PASS the report counts the review\'s own comments; a teammate\'s open one does not hold publishing back'
 end

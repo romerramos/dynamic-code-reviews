@@ -21,12 +21,19 @@ FAKE_GH = <<~'RUBY'
   args = ARGV.dup
   args.shift # api
   method = args[args.index('--method') + 1]
-  path = args.find { |arg| arg.start_with?('repos/', 'user') }
+  path = args.find { |arg| arg.start_with?('repos/', 'user', 'graphql') }
   input = args.include?('--input') ? JSON.parse($stdin.read) : nil
   File.open(ENV.fetch('GH_LOG'), 'a') { |log| log.puts(JSON.generate('method' => method, 'path' => path, 'input' => input)) }
   fail_with = ->(code, message) { puts JSON.generate('message' => message); warn "gh: #{message} (HTTP #{code})"; exit 1 }
   fail_with.(401, 'Bad credentials') if ENV['GH_SIGNED_OUT']
+  # The review threads, two to a page: the first resolved by a teammate, the second open.
+  thread = ->(id, by) { {'isResolved' => !by.nil?, 'resolvedBy' => by && {'login' => by}, 'comments' => {'nodes' => [{'databaseId' => id}]}} }
   case [method, path]
+  when %w[POST graphql]
+    after = input.dig('variables', 'after')
+    page = after ? {'pageInfo' => {'hasNextPage' => false}, 'nodes' => [thread.(31, nil)]} : {'pageInfo' => {'hasNextPage' => true, 'endCursor' => 'next'}, 'nodes' => [thread.(30, 'teammate')]}
+    puts JSON.generate('data' => {'repository' => {'pullRequest' => {'reviewThreads' => page}}})
+  when ['GET', 'repos/acme/web/pulls/7/comments?per_page=100&page=1'], ['GET', 'repos/acme/web/issues/7/comments?per_page=100&page=1'], ['GET', 'repos/acme/web/pulls/7/reviews?per_page=100&page=1'] then puts '[]'
   when %w[GET user] then puts JSON.generate('login' => 'reviewer', 'name' => 'Rae Viewer', 'avatar_url' => 'https://avatars.githubusercontent.com/u/1?v=4')
   when ['GET', 'repos/acme/web/pulls/7'] then puts JSON.generate('user' => {'login' => 'author'}, 'state' => 'open', 'merged_at' => nil)
   when ['POST', 'repos/acme/web/pulls/7/comments']
@@ -72,6 +79,10 @@ Dir.mktmpdir('dcr-github-test') do |directory|
   github.status(KEY)
   assert(calls.().length == 2, 'Status must be cached, not asked again at once')
   puts 'PASS status says who posts where, read from the saved revision and cached'
+
+  resolved = github.conversation(KEY)['resolved']
+  assert(resolved == {30 => {'by' => 'teammate'}, 31 => nil}, "Every page of review threads says whether it is resolved, and by whom: #{resolved}")
+  puts 'PASS the conversation reads each review thread\'s resolution, page after page'
 
   asked = []
   faces = DCR::GitHub.new(File.join(directory, 'no-review'), gh: gh, avatar: ->(url) { asked << url; ['image/png', 'PNG'] })

@@ -342,9 +342,7 @@ module DCR
       latest, snapshot, review, state = ReviewReport.latest(File.dirname(@state.path))
       raise ArgumentError, 'This page shows an earlier revision. Open the latest one to publish it.' unless latest == key
       state['verdicts'] = {} if @settings.jevmypr(manifest['repo'] || Dir.pwd) == false # turned off: every file needs the reader, as the page counts
-      github = @github.status(key)
-      reviewer = github['login'] if github['ready'] && github['login'] != github['author']
-      facts = ReviewReport.facts(snapshot, review, state, key, reviewer: reviewer)
+      facts = ReviewReport.facts(snapshot, review, state, key)
       steps = [{'id' => 'files', 'done' => facts['left'].empty?, 'left' => facts['left']},
                {'id' => 'comments', 'done' => facts['open'].empty?, 'open' => facts['open']},
                code_check(key, fresh).merge('id' => 'code')]

@@ -62,7 +62,8 @@
   };
   const saved = () => { try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch { return {}; } };
   const comments = () => tools.allComments(review, saved());
-  const resolved = () => saved().resolvedComments || [];
+  // Resolved by the reader here, or its thread resolved on GitHub by anyone.
+  const resolved = () => [...(saved().resolvedComments || []), ...Object.keys(globalThis.ReviewTools.githubResolved(threads))];
 
   // --- progress is kept by the server, so it survives a restart and a cleared browser -----
   // Display settings belong to the reviewer, not to this review, so they have their own route.
@@ -1197,6 +1198,7 @@
   };
   const peekHTML = (thread, id, earlier, busy) => {
     const closing = tools.closure(thread);
+    if (thread?.github_resolved && !busy) return `<span class="dcr-peek-who"><span class="dcr-peek-note">${tools.escape(globalThis.ReviewTools.resolvedOnGitHub(thread.github_resolved))}</span><span class="dcr-peek-end">${chevron}</span></span>`;
     if (busy) return `<span class="dcr-peek-who"><span class="dcr-peek-faces">${facesOf(thread)}</span>${busyHTML(busy)}<span class="dcr-peek-end">${chevron}</span></span>`;
     if (closing?.state === 'waiting') return `<span class="dcr-peek-who"><span class="dcr-peek-faces">${facesOf(thread)}</span>${busyHTML('Being checked')}<span class="dcr-peek-end">${chevron}</span></span>`;
     if (earlier || closing) {
@@ -1217,8 +1219,9 @@
     const subject = item.querySelector(':scope > .ledger-msg > .ledger-subject');
     if (thread?.title && subject && subject.dataset.title !== thread.title) { subject.innerHTML = titleHTML(thread.title); subject.dataset.title = thread.title; }
     let peek = item.querySelector(':scope > .ledger-msg > .dcr-peek');
-    // A resolved comment is its struck title alone: nothing under it says Resolved again.
-    if ((!busy && !hasConversation(thread) && !item.dataset.earlier) || resolved().includes(item.dataset.ledger)) { peek?.remove(); return; }
+    // A resolved comment is its struck title alone: nothing under it says Resolved again, unless
+    // it was resolved on GitHub, which says by whom.
+    if (!thread?.github_resolved && ((!busy && !hasConversation(thread) && !item.dataset.earlier) || resolved().includes(item.dataset.ledger))) { peek?.remove(); return; }
     if (!peek) {
       peek = Object.assign(document.createElement('button'), {type: 'button', className: 'dcr-peek'});
       peek.dataset.dcrOpen = item.dataset.ledger;
@@ -2527,6 +2530,7 @@
     const ghNext = {pending: data.github?.pending || {}, posted: data.github?.posted || {}, bodies: data.github?.bodies || {}, drafts: data.github?.drafts || {}, promoted: data.github?.promoted || {}, voice: data.github?.voice};
     if (JSON.stringify(ghNext) !== JSON.stringify({pending: ghData.pending, posted: ghData.posted, bodies: ghData.bodies, drafts: ghData.drafts, promoted: ghData.promoted, voice: ghData.voice})) { ghData = ghNext; settleDraft(); }
     receiveComments(data.comments || []);
+    window.ReviewLive?.githubResolved?.(globalThis.ReviewTools.githubResolved(threads));
     receiveScreenshots(data.screenshots || [], data.no_screenshots);
     // The Risk ranking the agent posts while the reader is already on the diff; until then, a placeholder.
     if ('risk_ranking' in data) window.ReviewRisk?.set(data.risk_ranking);
