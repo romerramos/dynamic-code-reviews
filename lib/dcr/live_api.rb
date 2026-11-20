@@ -449,10 +449,20 @@ module DCR
       repo, name = manifest.fetch('repo'), manifest.fetch('name')
       pull = @github.pushed(repo)
       newer = ReviewSeries.pushed(repo: repo, name: name, head: pull['head'], base: pull['base'])
+      newer = nil if newer && adopt_push(newer, pull)
       value = newer ? {'remote' => newer.merge('base' => pull['base'])} : {'remote_head' => pull.slice('head', 'base')}
       @remote_lock.synchronize { @remote = {at: Time.now, value: value} }
     rescue StandardError => error
       @remote_lock.synchronize { @remote = {at: Time.now, value: {'remote_error' => error.message}} }
+    end
+
+    # The reader pushed the code the review shows, which followed the checkout (a fix applied from
+    # the page, then pushed): the review takes that push as its own, in the same revision, so it
+    # is on the pull request again with nothing to update. A push with other code is still offered.
+    def adopt_push(newer, pull)
+      return false unless newer['changed'].to_i.zero? && manifest['follows'] == 'checkout'
+      update_review(false, head: pull['head'], base: pull['base'])
+      true
     end
 
     # Fix this, Apply this or Act on this on a comment: the agent is handed it as a task that changes code. The fix is to

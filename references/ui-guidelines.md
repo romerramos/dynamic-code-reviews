@@ -416,7 +416,8 @@ these; do not add a third row or a floating toolbar.
   selector and Details. Header buttons are ghost buttons; counts are small pills.
   A served review puts **Update** before the revision selector: a refresh icon and
   one word, quiet while the review shows the code as it is; the accent colour and
-  "Update · N files" once the code moved on; the icon turns while it updates; icon
+  "Update · N files" once the code moved on, or "New push · N files" when the pull
+  request has a newer push (the Publish button then stays "Publish" rather than saying it again); the icon turns while it updates; icon
   only at 740px and below. It is hidden while a newer save of the review is offered.
   **Update takes what the review shows, and its arrow holds only the other source.** On a pull
   request's review Update asks GitHub: the count is what a newer push changes, and the arrow

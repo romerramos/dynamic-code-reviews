@@ -2069,7 +2069,8 @@
     set(other, 'disabled', !!stale.pinned && !!stale.behind);
     set(other, 'title', face[2]);
     const files = `${count} ${count === 1 ? 'file' : 'files'}`;
-    const html = `${ico('refresh-cw')}<span>${updating ? 'Updating…' : count ? `Update · ${files}` : 'Update'}</span>`;
+    // A newer push says what it is: someone else's code is waiting, and pressing takes it.
+    const html = `${ico('refresh-cw')}<span>${updating ? 'Updating…' : pushed ? `New push${count ? ` · ${files}` : ''}` : count ? `Update · ${files}` : 'Update'}</span>`;
     if (updateButton.innerHTML !== html) updateButton.innerHTML = html;
     const hint = pushed && !updating ? `The pull request has a newer push${count ? `: ${files} changed` : ''}. Update the review to it: your comments and progress are kept.` : stale.pinned && !updating ? 'Ask GitHub whether the pull request has a newer push, and update this review to it' : updating ? 'Updating this review to the code as it is now' : count ? `${files} changed since this review. Update it: your comments and progress are kept.` : 'Check the code again and update this review';
     set(updateButton, 'title', hint);
@@ -2359,7 +2360,7 @@
     return {yours, left: yours.filter(path => !viewed.includes(path)), verdict: !!said};
   };
   const stepOf = id => publishCheck?.steps?.find(step => step.id === id);
-  const PUBLISH_NEXT = {switch: 'Switch to the PR', open: 'Open a PR', update: 'Update first', push: 'Push to publish', error: 'Publish'};
+  const PUBLISH_NEXT = {switch: 'Switch to the PR', open: 'Open a PR', push: 'Push to publish', error: 'Publish'};
   const publishFace = () => {
     const need = filesNeed();
     const plural = (number, one) => `${number} ${one}${number === 1 ? '' : 's'}`;
@@ -2369,6 +2370,7 @@
     const open = stepOf('comments')?.open?.length || 0;
     if (open) return {tone: 'todo', icon: ico('message-square'), text: `${plural(open, 'comment')} open`, hint: `Resolve ${open === 1 ? 'it' : 'them'}, or have ${open === 1 ? 'it' : 'them'} fixed, then publish your review to GitHub.`};
     const code = stepOf('code');
+    // A newer push already has its own button beside this one (New push): this one does not say it again.
     if (code && !code.done) return {tone: 'todo', icon: ico('git-pull-request'), text: PUBLISH_NEXT[code.kind] || 'Publish', hint: code.text};
     const published = publishCheck?.published;
     if (published && published.body === publishCheck.markdown) return {tone: 'done', icon: ico('check'), text: 'Published', hint: 'Your review is on the pull request. Open to see it.'};
