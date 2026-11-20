@@ -186,10 +186,19 @@ module DCR
     def rekey(from, to)
       check_key(to)
       update do |state|
-        state.each_value { |part| part[to] = part.delete(from) if part.is_a?(Hash) && part.key?(from) }
+        moved = state['moved'] ||= {}
+        state.each_value { |part| part[to] = part.delete(from) if part.is_a?(Hash) && !part.equal?(moved) && part.key?(from) }
         state['outbox'].each { |entry| entry['key'] = to if entry['key'] == from }
+        # Agents asked before the move still answer under the old key: it points here, one hop, so
+        # their answers reach the thread the page reads instead of a copy nobody sees.
+        moved.delete(to)
+        moved.transform_values! { |key| key == from ? to : key }
+        moved[from] = to
       end
     end
+
+    # Where a key's review is now, after any rekey since it was handed out.
+    def current(state, key) = state.dig('moved', key) || key
 
     # The reviewer updated the review from the page: the agent is handed what changed, to comment on it.
     def code_updated(key, text)
@@ -415,7 +424,7 @@ module DCR
     def add_opinion(key, id, agent, body, verdict: nil, short: nil, adversary: false, model: nil, effort: nil, about: nil)
       agent = Agents.check(agent)
       update do |state|
-        awaiting(state, key, id, agent).each do |copy|
+        awaiting(state, current(state, key), id, agent).each do |copy|
           thread = thread(state, copy, id)
           thread['waiting_on'] = Array(thread['waiting_on']) - [agent]
           # Asked again, an agent's newer answer replaces its earlier one.
@@ -432,7 +441,7 @@ module DCR
     def opinion_failed(key, id, agent, reason, adversary: false)
       agent = Agents.check(agent)
       update do |state|
-        awaiting(state, key, id, agent).each do |copy|
+        awaiting(state, current(state, key), id, agent).each do |copy|
           thread = thread(state, copy, id)
           thread['waiting_on'] = Array(thread['waiting_on']) - [agent]
           # A failed retry keeps the earlier answer; only a first failure is shown.

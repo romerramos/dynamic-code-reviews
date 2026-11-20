@@ -380,7 +380,7 @@ module DCR
           asked = lambda do |text|
             turn do
               # The page counts the wait from when the agent starts, not from when it queued.
-              state.update { |data| data.dig('threads', key, id)&.store('asked_at', Time.now.utc.iso8601) }
+              state.update { |data| data.dig('threads', state.current(data, key), id)&.store('asked_at', Time.now.utc.iso8601) }
               ask.call(agent, text, dir: repo, model: model, effort: effort, adversary: true)
             end
           end

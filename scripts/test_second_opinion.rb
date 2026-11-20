@@ -420,3 +420,21 @@ running, most, lock = 0, 0, Mutex.new
 end.each(&:join)
 assert(most == DCR::SecondOpinion::AT_ONCE, "At most #{DCR::SecondOpinion::AT_ONCE} adversaries run at once, the rest wait: #{most}")
 puts 'PASS adversaries take turns, a few at a time'
+
+# The review saved again on the same code under another fingerprint while agents were still checking a
+# comment: their answers, asked under the old key, reach the thread the page reads.
+Dir.mktmpdir('dcr-rekey') do |series|
+  state = DCR::State.new(series)
+  before, after = %w[f00d beef].map { |fingerprint| DCR::State.review_key(fingerprint, 'job', 1) }
+  state.await_opinions(before, 'c1', 'codex', ['grok'])
+  state.rekey(before, after)
+  state.add_opinion(before, 'c1', 'codex', 'Mostly right.', verdict: 'partly', adversary: true)
+  state.opinion_failed(before, 'c1', 'grok', 'Grok took longer than 5 minutes')
+  kept = state.read['threads']
+  assert(kept.keys == [after], "No copy is left under the old key: #{kept.keys}")
+  thread = kept[after]['c1']
+  assert(thread['waiting_on'] == [] && thread['messages'].map { |message| message['agent'] } == ['codex'] && thread.dig('opinions', 'grok', 'error'), 'The answer and the failure land on the moved thread, which waits on nobody')
+  state.rekey(after, before)
+  assert(state.read['moved'] == {after => before}, 'Moved back, the old key is live again and the newer one points to it')
+end
+puts 'PASS an answer on its way when the review is saved under another fingerprint reaches the thread the page reads'
