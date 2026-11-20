@@ -411,3 +411,79 @@ console.log('PASS a file row keeps who reads it apart from how risky it is');
   assert.deepEqual(tools.emojiMatches(emojis, 'zz'), []);
   console.log('PASS emoji names are read before the caret, never in code, and offered best match first');
 }
+
+// Try the change: one panel of what a reader can do with the change; rows that do not apply are left out.
+{
+  const icon = name => `<svg data-icon="${name}"></svg>`;
+  const risk = {state: 'files', redo: true, files: [
+    {file: 'f1', layer: 'g0l1', path: 'app/models/price_rule.rb', name: 'price_rule.rb', score: 45, level: 'medium', why: 'Included level can differ'},
+    {file: 'f2', layer: null, path: 'db/migrate/20260101_add.rb', name: 'migration', score: 35, level: 'medium', why: 'New column'}]};
+  const full = tools.tryPanelHTML({risk, app: {upstream: 'https://shop.example.test/'}, shots: 2, templates: 2, previewsShort: ''}, {icon});
+  assert.match(full, /Risk ranking<\/span><span class="dcr-try-end">45% · 2 files/, 'the ranking says its top score and how many files');
+  assert.match(full, /data-try-risk aria-expanded="false"/);
+  assert.match(full, /<ol class="dcr-try-risk" id="dcr-try-risk" hidden>/, 'its files wait folded');
+  assert.match(full, /data-file-link="f1" data-file-layer="g0l1" title="app\/models\/price_rule\.rb"><b>45%<\/b>/, 'a ranked file opens that file');
+  assert.match(full, /<span class="dcr-try-file" title="db\/migrate\/20260101_add\.rb">/, 'a file outside the walkthrough is named, not a link');
+  assert.match(full, /███░░░░░/, 'a score as a row of blocks, for a theme that draws it');
+  assert.match(full, /data-risk-redo>Rank again/);
+  assert.match(full, /data-try="qa"[^>]*>.*Start QA review/);
+  assert.match(full, /data-open-shots=""[^>]*>.*Screenshots<\/span><span class="dcr-try-end">2</);
+  assert.match(full, /data-open-previews[^>]*>.*Previews.*2 templates/);
+  assert.match(full, /Running app<\/p><button[^>]*data-try="browse"[^>]*>.*shop\.example\.test<\/span>/, 'the app by its address, opened inside the review');
+  assert.equal((full.match(/<hr>/g) || []).length, 2, 'a rule between the ranking, the ways to try it and the app');
+  assert.match(tools.tryPanelHTML({risk, app: null}, {icon, riskOpen: true}), /aria-expanded="true"[\s\S]*<ol class="dcr-try-risk" id="dcr-try-risk">/, 'unfolded, its files show');
+
+  const bare = tools.tryPanelHTML({risk: null, app: null, shots: 0, templates: 1, previewsShort: '1 ready'}, {icon});
+  assert.doesNotMatch(bare, /Risk ranking|Start QA review|Screenshots|Running app|<hr>/, 'no ranking, no app, no screenshots: those rows are left out');
+  assert.match(bare, /<span data-preview-short>1 ready<\/span><span class="dcr-try-count">1 template<\/span>/, 'previews say how they stand once some are built');
+  assert.equal(tools.tryPanelHTML({risk: null, app: null, shots: 0, templates: 0}, {icon}), '', 'with nothing to try there is no panel');
+  assert.match(tools.tryPanelHTML({app: null, noApp: 'no UI in this change.'}), /No UI in this change, so there is no QA review and no screenshots\./);
+  assert.match(tools.tryPanelHTML({app: null, recorder: true}), /Serve it with <code>--app<\/code>/);
+  assert.match(tools.tryPanelHTML({risk: {state: 'ranking'}}), /disabled[^>]*>.*Risk ranking.*Ranking…/, 'while ranking it says so and does not unfold');
+  assert.match(tools.tryPanelHTML({risk: {state: 'unranked', redo: true}}), /data-risk-redo[^>]*>.*Rank the files/);
+  assert.match(tools.tryPanelHTML({app: {upstream: 'http://localhost:3000'}, qaRunning: true}), /Start QA review<\/span><span class="dcr-try-end">Running/);
+  assert.match(tools.tryPanelHTML({risk: {state: 'files', files: [{file: 'x', layer: 'l', path: 'a.rb', name: 'a.rb', score: 1, level: 'low', why: '<b>'}]}}), /&lt;b&gt;/, 'what the agent wrote is escaped');
+  console.log('PASS Try the change shows each row the review has, and leaves out the rest');
+}
+{
+  // Pinned beside the Overview's column while there is room and the reader has not hidden it; else in its icon.
+  assert.equal(tools.tryPinned({overview: true, room: true, hidden: false}), true);
+  assert.equal(tools.tryPinned({overview: true, room: false, hidden: false}), false, 'a narrower window tucks it into its icon');
+  assert.equal(tools.tryPinned({overview: false, room: true, hidden: false}), false, 'reading, it is only a popover');
+  assert.equal(tools.tryPinned({overview: true, room: true, hidden: true}), false, 'hidden by the reader');
+  assert.equal(tools.tryPress({overview: true, room: true, hidden: false, open: false}), 'hide', 'pressed while pinned, it hides');
+  assert.equal(tools.tryPress({overview: true, room: true, hidden: true, open: false}), 'pin', 'pressed again, it is pinned again');
+  assert.equal(tools.tryPress({overview: true, room: false, hidden: false, open: false}), 'open', 'without room it opens over the page');
+  assert.equal(tools.tryPress({overview: false, room: true, hidden: true, open: true}), 'close');
+  console.log('PASS Try the change is pinned with room on the Overview, else a popover, and its icon hides or shows it');
+}
+{
+  // The reader's choice to hide it is kept in this browser; a refusing storage keeps it for the visit.
+  const store = new Map();
+  const storage = {getItem: key => store.get(key) ?? null, setItem: (key, value) => store.set(key, String(value)), removeItem: key => store.delete(key)};
+  const memory = tools.tryMemory(storage, 'dynamic-review:abc:feature:2');
+  assert.equal(memory.hidden(), false, 'shown until the reader hides it');
+  memory.setHidden(true);
+  assert.equal(tools.tryMemory(storage, 'dynamic-review:other').hidden(), true, 'hidden for every review this reader opens');
+  memory.setHidden(false);
+  assert.equal(memory.hidden(), false);
+  const refusing = {getItem() { throw new Error('denied'); }, setItem() { throw new Error('denied'); }, removeItem() { throw new Error('denied'); }};
+  assert.doesNotThrow(() => tools.tryMemory(refusing, 'k').setHidden(true));
+  assert.equal(tools.tryMemory(refusing, 'k').hidden(), false);
+  assert.equal(tools.tryMemory(null, 'k').seen(), null);
+  console.log('PASS hiding Try the change is remembered per reader, and a refusing storage breaks nothing');
+}
+{
+  // The dot: screenshots or built previews the reader has not seen; seeing the panel clears it.
+  const store = new Map();
+  const storage = {getItem: key => store.get(key) ?? null, setItem: (key, value) => store.set(key, String(value)), removeItem: key => store.delete(key)};
+  const memory = tools.tryMemory(storage, 'dynamic-review:abc');
+  assert.equal(tools.tryNews({shots: 2, previews: 0}, memory.seen()), true, 'screenshots never seen are news');
+  memory.setSeen({shots: 2, previews: 0});
+  assert.equal(tools.tryNews({shots: 2, previews: 0}, memory.seen()), false, 'seen, the dot clears');
+  assert.equal(tools.tryNews({shots: 3, previews: 0}, memory.seen()), true, 'a new QA screenshot');
+  assert.equal(tools.tryNews({shots: 2, previews: 1}, memory.seen()), true, 'a preview built');
+  assert.equal(tools.tryNews({shots: 1, previews: 0}, memory.seen()), false, 'fewer than seen is nothing new');
+  assert.equal(tools.tryMemory(storage, 'dynamic-review:other').seen(), null, 'what was seen is per review');
+  console.log('PASS the dot shows what is new behind the icon and clears once the panel is seen');
+}

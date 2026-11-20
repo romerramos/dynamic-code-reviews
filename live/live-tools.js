@@ -545,7 +545,64 @@ globalThis.LiveTools = (() => {
       .sort((a, b) => rank(a) - rank(b) || a.length - b.length || a.localeCompare(b)).slice(0, limit).map(name => ({name, emoji: emojis[name]}));
   }
 
-  return {emojiToken, emojiMatches, escape, progressKey, allComments, sendText, drafts, statusText, statusModel, actionLabel, markdown, snippet, relativeTime, messagesHTML, unseen, agentModel, summary,
+  // --- Try the change ---------------------------------------------------------------------------
+  // What a reader can do with the change itself, as one panel: the risk ranking, which unfolds its
+  // files; QA, the screenshots and the template previews; then the running app. A row that does not
+  // apply is left out, and with none the panel is not there at all (an empty string).
+  //   data: {risk: ReviewRisk.brief(), app: {upstream}, noApp: why, recorder, shots, templates,
+  //          previewsShort, qaRunning}
+  //   options: {icon(name), riskOpen}
+  const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
+  const riskBar = score => { const full = Math.max(1, Math.min(8, Math.floor(score / 12.5))); return '█'.repeat(full) + '░'.repeat(8 - full); };
+  function tryPanelHTML(data, {icon = () => '', riskOpen = false} = {}) {
+    const {risk = null, app = null, noApp = null, recorder = false, shots = 0, templates = 0, previewsShort = '', qaRunning = false} = data || {};
+    const item = (attrs, glyph, label, end = '', extra = '') => `<button type="button" class="dcr-try-item"${extra} ${attrs}>${icon(glyph)}<span class="dcr-try-label">${label}</span><span class="dcr-try-end">${end}</span></button>`;
+    const groups = [];
+    if (risk) {
+      const files = risk.files || [];
+      if (risk.state === 'unranked') groups.push(item('data-risk-redo', 'gauge', 'Risk ranking', 'Rank the files'));
+      else if (risk.state !== 'files' || !files.length) groups.push(item('disabled', 'gauge', 'Risk ranking', risk.state === 'ranking' ? 'Ranking…' : 'None stands out', risk.why ? ` title="${escape(risk.why)}"` : ''));
+      else {
+        const list = files.map(file => {
+          const inner = `<b>${file.score}%</b><i class="dcr-try-bar" aria-hidden="true">${riskBar(file.score)}</i><span class="dcr-try-why">${escape(file.why)}</span><code>${escape(file.name)}</code>`;
+          return `<li class="risk-${escape(file.level)}">${file.layer ? `<button type="button" class="dcr-try-file" data-file-link="${escape(file.file)}" data-file-layer="${escape(file.layer)}" title="${escape(file.path)}">${inner}</button>` : `<span class="dcr-try-file" title="${escape(file.path)}">${inner}</span>`}</li>`;
+        }).join('');
+        const redo = risk.redo ? '<li><button type="button" class="dcr-try-redo" data-risk-redo>Rank again</button></li>' : '';
+        groups.push(item(`data-try-risk aria-expanded="${riskOpen}" aria-controls="dcr-try-risk"`, 'gauge', 'Risk ranking', `${files[0].score}% · ${plural(files.length, 'file')}${icon('chevron-down')}`)
+          + `<ol class="dcr-try-risk" id="dcr-try-risk"${riskOpen ? '' : ' hidden'}>${list}${redo}</ol>`);
+      }
+    }
+    const actions = [
+      app && item('data-try="qa" title="Your agent records the flows behind the comments, in this tab"', 'video', 'Start QA review', qaRunning ? 'Running' : ''),
+      shots && item('data-open-shots="" aria-haspopup="dialog" title="The screenshots and recordings from the app"', 'image', 'Screenshots', String(shots)),
+      templates && item('data-open-previews title="The changed templates, rendered"', 'layout-template', 'Previews', `<span data-preview-short>${escape(previewsShort)}</span><span class="dcr-try-count">${plural(templates, 'template')}</span>`)
+    ].filter(Boolean).join('');
+    if (actions) groups.push(actions);
+    // The app: its address, to use it inside the review. Without one, why there is none.
+    const host = app ? String(app.upstream || '').replace(/^[a-z]+:\/\//i, '').replace(/\/$/, '') : '';
+    const running = app ? item(`data-try="browse" title="${escape(app.upstream || '')} (A). Comment on it from there."`, 'globe', escape(host || 'Open the app'), icon('arrow-up-right'))
+      : noApp ? `<p class="dcr-try-note">${escape(noApp.charAt(0).toUpperCase() + noApp.slice(1).replace(/[.\s]+$/, ''))}, so there is no QA review and no screenshots.</p>`
+      : recorder ? '<p class="dcr-try-note">Not in this review. Serve it with <code>--app</code> to start a QA review.</p>' : '';
+    if (running) groups.push(`<p class="dcr-try-head">Running app</p>${running}`);
+    return groups.length ? `<h2 class="dcr-try-title">Try the change</h2>${groups.join('<hr>')}` : '';
+  }
+  // Pinned beside the Overview's column while there is room and the reader has not hidden it; else
+  // it waits in its icon. A press hides or shows it where it can be pinned, else opens it over the page.
+  const tryPinned = ({overview, room, hidden}) => !!(overview && room && !hidden);
+  const tryPress = ({overview, room, hidden, open}) => overview && room ? (hidden ? 'pin' : 'hide') : open ? 'close' : 'open';
+  // Something new behind the icon: more screenshots or built previews than when the panel was last seen.
+  const tryNews = (now, seen) => (now.shots || 0) > (seen?.shots || 0) || (now.previews || 0) > (seen?.previews || 0);
+  // What the reader chose and saw, in this browser; storage may refuse (a private window), and then it
+  // is this visit's only. Hidden is the reader's for every review, what was seen is per review.
+  const TRY_HIDDEN = 'dynamic-review:try-hidden';
+  const tryMemory = (storage, key) => ({
+    hidden: () => { try { return storage.getItem(TRY_HIDDEN) === '1'; } catch { return false; } },
+    setHidden: hidden => { try { if (hidden) storage.setItem(TRY_HIDDEN, '1'); else storage.removeItem(TRY_HIDDEN); } catch { /* this visit only */ } },
+    seen: () => { try { return JSON.parse(storage.getItem(`${key}:try-seen`) || 'null'); } catch { return null; } },
+    setSeen: marks => { try { storage.setItem(`${key}:try-seen`, JSON.stringify(marks)); } catch { /* this visit only */ } }
+  });
+
+  return {tryPanelHTML, tryPinned, tryPress, tryNews, tryMemory, emojiToken, emojiMatches, escape, progressKey, allComments, sendText, drafts, statusText, statusModel, actionLabel, markdown, snippet, relativeTime, messagesHTML, unseen, agentModel, summary,
     agentInfo, youName, personName, opinionMessages, modelHTML, verdictHTML, verdicts, closure, closureHTML, confirmed, closesItself, leftForGitHub, outcomeWord, outcomeSide: word => SIDES[word], OUTCOMES, commentAction, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
     activeAdversaries, agentStatus, modelOptionsHTML, effortLevels, effortOptionsHTML, chosenModel, chosenEffort, settle, adversaryPanelHTML, adversaryIntroHTML, jevBannerHTML};
 })();

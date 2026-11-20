@@ -70,7 +70,7 @@
 [data-theme^="minimal-"] .sidebar-footer progress{height:2px}
 
 /* --- the page: one column, no boxes ----------------------------------------------------------------- */
-[data-theme^="minimal-"] .overview-reading :is(.dcr-try,.risk-rank,.evidence-strip){border:0;background:transparent;box-shadow:none}
+[data-theme^="minimal-"] .overview-reading :is(.risk-rank,.evidence-strip){border:0;background:transparent;box-shadow:none}
 [data-theme^="minimal-"] :is(.app-header,.review-toolbar){background:var(--surface);border-color:transparent}
 
 /* --- code: a thin rule says added or removed; the line itself stays clean -------------------------- */
@@ -118,7 +118,6 @@ html[data-theme="minimal-dark"]{--bar-card-bg:color-mix(in srgb,var(--ink) 9%,va
 [data-theme^="minimal-"] :is(#toast,.range-actions,.leader-menu){bottom:calc(84px + var(--bar-rise))}
 
 /* --- the Overview: prose and plain rows -------------------------------------------------------------- */
-[data-theme^="minimal-"] .overview-reading :is(.risk-rank,.dcr-try-app){border:0;background:transparent;box-shadow:none}
 [data-theme^="minimal-"] .overview-reading h2{font-size:15px;font-weight:600;letter-spacing:0}
 [data-theme^="minimal-"] .overview-reading .eyebrow{color:var(--minimal-faint);font-weight:400;letter-spacing:.04em}
 /* Overview and All changes are places, not steps: no mark beside them. */
@@ -260,20 +259,15 @@ html[data-theme="minimal-dark"]{--bar-card-bg:color-mix(in srgb,var(--ink) 9%,va
 [data-theme^="minimal-"] .overview-where{margin-bottom:14px;color:var(--minimal-faint)}
 [data-theme^="minimal-"] .overview-intro h1{margin:0 0 20px;font-weight:600;line-height:1.25;letter-spacing:-.022em}
 [data-theme^="minimal-"] .overview-intro :is(.lead,.lead-rest){display:inline;margin:0;color:var(--ink-neutral-3);font-size:15px;line-height:1.75;letter-spacing:0}
-[data-theme^="minimal-"] .overview-reading :is(.dcr-try,.overview-revision,.risk-fold,.risk-rank.risk-none,.ui-changes){display:none}
+[data-theme^="minimal-"] .overview-reading :is(.overview-revision,.risk-fold,.risk-rank.risk-none,.ui-changes){display:none}
 /* A list's label: small, grey, with the page's 48px of air above it. */
-[data-theme^="minimal-"] .overview-reading :where(.overview-comments,.risk-brief,#my-review.review-section,.overview-settled){display:block;margin:48px 0 0;padding:0;border:0}
-[data-theme^="minimal-"] .overview-reading :is(.overview-comments>h2,.risk-brief h2,#my-review h2,.overview-fold-title){margin:0 0 6px;color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0}
+[data-theme^="minimal-"] .overview-reading :where(.overview-comments,#my-review.review-section,.overview-settled){display:block;margin:48px 0 0;padding:0;border:0}
+[data-theme^="minimal-"] .overview-reading :is(.overview-comments>h2,#my-review h2,.overview-fold-title){margin:0 0 6px;color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0}
 [data-theme^="minimal-"] .overview-comments:has(>.overview-todo)>h2{display:none}
 [data-theme^="minimal-"] .overview-reading .overview-todo{margin:0 0 6px;color:var(--minimal-faint);font-size:0}
 [data-theme^="minimal-"] .overview-reading .overview-todo strong{color:var(--minimal-faint);font-size:12px;font-weight:400}
 [data-theme^="minimal-"] .overview-reading .overview-todo button{display:none}
 /* A line of a list. */
-[data-theme^="minimal-"] .risk-brief ol{margin:0;padding:0;list-style:none}
-[data-theme^="minimal-"] .risk-brief button{display:flex;align-items:baseline;justify-content:space-between;gap:24px;width:100%;padding:7px 0;border:0;background:none;color:var(--ink);font:inherit;font-size:14px;text-align:left;cursor:pointer}
-[data-theme^="minimal-"] .risk-brief button>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-[data-theme^="minimal-"] .risk-brief code{flex:none;color:var(--minimal-faint);font:12px var(--mono);white-space:nowrap}
-[data-theme^="minimal-"] .risk-brief button:hover>span{text-decoration:underline;text-decoration-color:var(--line-neutral-4);text-underline-offset:4px}
 /* A closed comment is such a line: what it says, and where. Its kind, its author and the rest come when it opens. */
 /* Open, a comment is set apart by space and one rule above and below it. */
 /* Your comments: the same lines; its two actions are words beside the label. */
@@ -288,7 +282,6 @@ html[data-theme="minimal-dark"]{--bar-card-bg:color-mix(in srgb,var(--ink) 9%,va
 [data-theme^="minimal-"] .overview-reading #my-review.review-section:has(>.review-empty){display:none}
 [data-theme^="minimal-"] .overview-reading .overview-todo strong{white-space:nowrap}
 /* What waits on the reader comes before what to read first, as designed; your comments, then GitHub's. */
-[data-theme^="minimal-"] .overview-reading>.risk-brief{order:1}
 [data-theme^="minimal-"] .overview-reading>:is(#my-review,.overview-github){order:2}
 [data-theme^="minimal-"] .overview-reading>.overview-settled{order:3}
 
@@ -354,17 +347,12 @@ html[data-theme="minimal-dark"]{--bar-card-bg:color-mix(in srgb,var(--ink) 9%,va
 [data-theme^="minimal-"] .sidebar-footer #progress{color:var(--minimal-faint)}
 
 /* --- who wrote it, in a glance: a small face before each comment's line --------------------------- */
-/* The lists line up with the faces: what to read first starts where the comments' words do. */
-[data-theme^="minimal-"] .risk-brief button{padding-left:30px}
 
 /* --- room: a wider list, so step names fit on a line, and a wider page for the lines ------------- */
 [data-theme^="minimal-"] .overview-reading{display:flex;flex-direction:column;max-width:880px}
 [data-theme^="minimal-"] .overview-intro .lead-rest{margin:0;display:block;color:var(--ink-neutral-3);font-size:15px;line-height:1.7;max-width:680px}
 
-/* --- Round five: the Overview's comments read as threads --------------------------------------------
-   What to read first left the Overview: the walkthrough's order already says it, and the files that
-   stand out keep their risk mark in the list. */
-[data-theme^="minimal-"] .overview-reading .risk-brief{display:none}
+/* --- Round five: the Overview's comments read as threads -------------------------------------------- */
 /* A fold's count sits on the label's baseline. */
 [data-theme^="minimal-"] .overview-settled .overview-fold-title .badge{padding:0;margin-left:2px;border:0;background:none;color:inherit;font:inherit;display:inline;vertical-align:baseline;line-height:inherit;height:auto;min-height:0}
 /* A comment's body, its replies and its actions hang under its title, in from the face. */
@@ -594,49 +582,17 @@ html[data-theme^="minimal-"] #content .overview-reading .overview-comments:not(.
 /* Your review is a column of its own here, so the bar centres on what is left without taking it off twice. */
 [data-theme^="minimal-"] #ledger .dcr-detail-code{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-/* --- Try the change: the three things to do with the change as quiet rows, like the comments under
-   them: a faint icon, what it is, where it stands, the one way in. The risk ranking unfolds its files
-   under its row; the recorder row opens the recorder when the app is not in the page. --- */
-html[data-theme^="minimal-"] .overview-reading .dcr-try.dcr-try{display:block;margin:44px 0 0;padding:0}
-[data-theme^="minimal-"] .overview-reading .dcr-try>h2{position:static;width:auto;height:auto;overflow:visible;clip-path:none;margin:0 0 6px;color:var(--minimal-faint);font-size:12px;font-weight:400}
-[data-theme^="minimal-"] .overview-reading .dcr-try :is(.dcr-try-row,.dcr-try-line){display:grid;grid-template-columns:18px 120px minmax(0,1fr) auto;align-items:baseline;gap:0 12px;padding:8px 0;border:0;background:none;font-size:14px}
-[data-theme^="minimal-"] .overview-reading .dcr-try :is(.dcr-try-row,.dcr-try-line)[hidden]{display:none}
-[data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-icon{display:grid;align-self:center;place-items:center;color:var(--minimal-faint)}
-[data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-icon svg{width:15px;height:15px;stroke-width:1.8}
-[data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-do{grid-column:2;font-weight:400}
-[data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-about{min-width:0;color:var(--minimal-faint);font-size:13px}
-[data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-about button{color:var(--ink-neutral-3);font-size:13px}
-[data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-more button{color:var(--ink);font-size:13px;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:4px}
-[data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-more button:hover{text-decoration-color:currentColor}
-[data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-templates{display:none}
-/* While the agent still writes the review, QA and previews are not there yet: their rows wait unseen
-   rather than greyed, and with nothing else to try the band waits too. */
-html[data-theme^="minimal-"] body.review-in-progress .overview-reading .dcr-try :is(.dcr-try-app,.dcr-try-previews){display:none}
-html[data-theme^="minimal-"] body.review-in-progress .overview-reading .dcr-try:not(:has(:is(.dcr-try-line:not([hidden]),.dcr-try-none))){display:none}
-[data-theme^="minimal-"] .overview-reading .dcr-try-risk .risk-brief{display:none}
-[data-theme^="minimal-"] .overview-reading .dcr-try-risk.is-open .risk-brief{display:block;grid-column:2 / -1;margin:4px 0 4px}
-[data-theme^="minimal-"] .overview-reading .dcr-try-risk .risk-brief h2{display:none}
-[data-theme^="minimal-"] .overview-reading .dcr-try-risk .risk-brief button{padding:5px 0;font-size:13.5px}
+/* --- Try the change: its icon on the top strip, beside Your review's (alone on the Overview), pressed
+   while its panel is shown; a dot in the ink says something new is in it. --- */
+[data-theme^="minimal-"] .try-show{place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--minimal-faint)}
+[data-theme^="minimal-"] .try-show:is(:hover,[aria-expanded="true"]){background:var(--minimal-soft);color:var(--ink)}
+[data-theme^="minimal-"] .try-show svg{width:17px;height:17px;stroke-width:1.8}
+[data-theme^="minimal-"] :is(.try-show,.bar-try).has-news::after{background:var(--ink)}
 
 /* Your comments on the Overview: the short title, the file cut in its middle, no "yours" (the heading says it). */
 
 /* --- The way to the code is an icon, not the file's name: it takes you there, and the name is in its
    tooltip, so the title keeps the room. In Your review and on the Overview alike. --- */
-/* The risk ranking's files, under its row: the score first (a number and a short bar, darker the higher),
-   then why, then the file as a link; a migration is just "migration". */
-[data-theme^="minimal-"] .overview-reading .dcr-try-risk .risk-brief ol{display:grid;gap:0;margin:0;padding:0;list-style:none}
-[data-theme^="minimal-"] .overview-reading .dcr-try-risk .risk-brief li{display:grid;grid-template-columns:120px minmax(0,1fr) auto;align-items:center;gap:0 12px;padding:5px 0;font-size:13.5px}
-[data-theme^="minimal-"] .risk-brief-score{display:flex;align-items:center;gap:8px;color:var(--ink-neutral-3)}
-[data-theme^="minimal-"] .risk-brief-score b{width:34px;font:600 12px var(--mono)}
-[data-theme^="minimal-"] .risk-brief-score>i{display:block;width:52px;height:3px;border-radius:2px;background:var(--line)}
-[data-theme^="minimal-"] .risk-brief-score>i>i{display:block;height:3px;border-radius:2px;background:currentColor}
-[data-theme^="minimal-"] .risk-brief li:is(.risk-high,.risk-critical) .risk-brief-score{color:var(--ink)}
-[data-theme^="minimal-"] .risk-brief li.risk-low .risk-brief-score{color:var(--minimal-faint)}
-[data-theme^="minimal-"] .risk-brief-why{min-width:0}
-[data-theme^="minimal-"] .overview-reading .risk-brief .risk-brief-go{display:inline-flex;align-items:center;gap:4px;width:auto;padding:0;border:0;background:none;color:var(--minimal-faint);font:12px var(--mono);white-space:nowrap;cursor:pointer}
-[data-theme^="minimal-"] .overview-reading .risk-brief button.risk-brief-go:hover{color:var(--ink)}
-[data-theme^="minimal-"] .risk-brief-go svg{width:12px;height:12px;stroke-width:1.8}
-[data-theme^="minimal-"] .overview-reading .dcr-try .dcr-try-about code{padding:0 3px;border-radius:4px;background:var(--minimal-soft);font:12px var(--mono)}
 /* Your own comment, opened: its words line up under its title, like the agent's, with no label over them. */
 
 /* The panels' icons sit outside the panels, over the page's edge: the page keeps a gutter for each, so
@@ -644,6 +600,7 @@ html[data-theme^="minimal-"] body.review-in-progress .overview-reading .dcr-try:
 @media(min-width:1200px){
   html[data-theme^="minimal-"] body:not(.sidebar-collapsed):not(.zen) main#content{padding-left:52px}
   html[data-theme^="minimal-"] body.ledger-open:not(.zen) main#content{padding-right:52px}
+  html[data-theme^="minimal-"] body.ledger-open.dcr-has-try:not(.zen) main#content{padding-right:90px}
 }
 
 /* --- A comment's actions, in the code's popover and on the Overview: one split button whose halves
@@ -814,3 +771,6 @@ html[data-theme^="minimal-"]{--panel-icon-top:25px}
 @media(min-width:741px){html[data-theme^="minimal-"] body.list-open:not(.zen) .sidebar-show{left:calc(min(var(--list-w),85vw) + 8px)}}
 @media(min-width:741px){html[data-theme^="minimal-"] body:not(.zen):not(.on-overview) .ledger-show{display:grid;position:fixed;top:var(--panel-icon-top);right:18px;z-index:45}}
 @media(min-width:741px){html[data-theme^="minimal-"] body.ledger-open:not(.zen) .ledger-show{right:calc(var(--ledger-size) + 8px)}}
+@media(min-width:741px){html[data-theme^="minimal-"] body:not(.zen) .try-show:not([hidden]){display:grid;position:fixed;top:var(--panel-icon-top);right:18px;z-index:45}}
+@media(min-width:741px){html[data-theme^="minimal-"] body:not(.zen):not(.on-overview) .try-show{right:56px}}
+@media(min-width:741px){html[data-theme^="minimal-"] body.ledger-open:not(.zen) .try-show{right:calc(var(--ledger-size) + 46px)}}

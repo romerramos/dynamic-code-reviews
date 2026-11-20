@@ -185,7 +185,7 @@ function measure(context) {
   });
   add('no-overlap', !overlaps.length, overlaps.slice(0, 4).join(' | '));
   // The panel icons that float at the page's corners keep the page's words out from under them.
-  const icons = ['sidebar-show', 'ledger-show'].map(id => document.getElementById(id)).filter(node => node && visible(node) && getComputedStyle(node).position === 'fixed');
+  const icons = ['sidebar-show', 'ledger-show', 'try-show'].map(id => document.getElementById(id)).filter(node => node && visible(node) && getComputedStyle(node).position === 'fixed');
   const underIcons = content ? icons.flatMap(icon => { const box = icon.getBoundingClientRect(); return textRects(content).map(item => ({...item, r: shown(item.r, item.node)})).filter(item => item.r && inter(item.r, box) > 4).map(item => `${icon.id} × ${label(item.node)} "${item.node.textContent.trim().slice(0, 20)}"`); }) : [];
   add('icons-clear-of-text', !underIcons.length, underIcons.slice(0, 4).join(' | '));
 

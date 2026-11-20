@@ -1386,8 +1386,7 @@ main#content:has(>.overview-reading>.overview-shows){padding-top:calc(var(--pane
 .pr-description-more{display:flex;width:fit-content;align-items:center;gap:5px;margin:2px 0 24px;padding:0;border:0;background:none;color:var(--ink);font-size:13px;font-weight:550}
 .pr-description-more .review-icon{width:14px;height:14px}
 .pr-description.is-whole+.pr-description-more{display:none}
-/* What was seen in the app is said in the app's row when the review has one; alone, it is a row itself. */
-body.dcr-has-app .ui-changes{display:none}
+/* What was seen in the app is a row itself; a served review has it in Try the change. */
 .ui-changes{margin:0}
 .ui-changes .shot-stack{display:grid;grid-template-columns:150px minmax(0,1fr) auto;align-items:baseline;gap:4px 18px;padding:11px 0;border:0;border-top:1px solid var(--line);border-radius:0;background:transparent;box-shadow:none;font-size:14px}
 .ui-changes .shot-pile{display:none}
@@ -1397,30 +1396,23 @@ body.dcr-has-app .ui-changes{display:none}
 
 /* The Overview's rows are one component: a quiet label, what there is to say, and the ways on at the
    right, the first of them the one most likely wanted. Space sets them apart, not rules. */
-.overview-reading :is(.overview-row,.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary,.ui-changes .shot-stack){display:grid;grid-template-columns:128px minmax(0,1fr) auto;align-items:baseline;gap:2px 20px;margin:0;padding:6px 0;border:0;border-radius:0;background:transparent;box-shadow:none;color:var(--ink);font-size:14px;line-height:1.4}
-.overview-reading :is(.overview-row>strong,.dcr-try-do,.risk-rank.risk-none h2,.risk-fold-title,.ui-changes .shot-stack-text strong){margin:0;color:var(--muted);font-size:13px;font-weight:500}
-.overview-reading :is(.overview-row>span:not(.overview-row-actions),.dcr-try-about,.risk-rank.risk-none p,.risk-fold-line,.ui-changes .shot-stack-text span){margin:0;color:var(--ink)}
-.overview-reading :is(.overview-row-actions,.dcr-try-more){display:flex;align-items:baseline;gap:20px;justify-self:end}
-.overview-reading :is(.overview-row-actions,.dcr-try-more,.dcr-try-templates) :is(button,a),.overview-reading .risk-rank.risk-none .risk-redo{padding:0;border:0;background:none;box-shadow:none;color:var(--muted);font:inherit;font-size:13px;text-decoration:none;cursor:pointer}
-.overview-reading :is(.overview-row-actions,.dcr-try-more)>:is(button,a):first-child:not([hidden]),.overview-reading :is(.overview-row-actions,.dcr-try-more)>[hidden]+:is(button,a),.overview-reading .risk-rank.risk-none .risk-redo{color:var(--ink);font-weight:550}
-.overview-reading :is(.overview-row-actions,.dcr-try-more,.dcr-try-templates) :is(button,a):hover,.overview-reading .risk-rank.risk-none .risk-redo:hover{color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+.overview-reading :is(.overview-row,.risk-rank.risk-none,.risk-fold>summary,.ui-changes .shot-stack){display:grid;grid-template-columns:128px minmax(0,1fr) auto;align-items:baseline;gap:2px 20px;margin:0;padding:6px 0;border:0;border-radius:0;background:transparent;box-shadow:none;color:var(--ink);font-size:14px;line-height:1.4}
+.overview-reading :is(.overview-row>strong,.risk-rank.risk-none h2,.risk-fold-title,.ui-changes .shot-stack-text strong){margin:0;color:var(--muted);font-size:13px;font-weight:500}
+.overview-reading :is(.overview-row>span:not(.overview-row-actions),.risk-rank.risk-none p,.risk-fold-line,.ui-changes .shot-stack-text span){margin:0;color:var(--ink)}
+.overview-reading .overview-row-actions{display:flex;align-items:baseline;gap:20px;justify-self:end}
+.overview-reading .overview-row-actions :is(button,a),.overview-reading .risk-rank.risk-none .risk-redo{padding:0;border:0;background:none;box-shadow:none;color:var(--muted);font:inherit;font-size:13px;text-decoration:none;cursor:pointer}
+.overview-reading .overview-row-actions>:is(button,a):first-child:not([hidden]),.overview-reading .overview-row-actions>[hidden]+:is(button,a),.overview-reading .risk-rank.risk-none .risk-redo{color:var(--ink);font-weight:550}
+.overview-reading .overview-row-actions :is(button,a):hover,.overview-reading .risk-rank.risk-none .risk-redo:hover{color:var(--ink);text-decoration:underline;text-underline-offset:3px}
 .overview-reading .risk-rank.risk-none .risk-redo .review-icon{display:none}
-.overview-reading .dcr-try-templates{grid-column:2 / -1;gap:2px 22px;color:var(--muted);font-size:13px}
 .overview-reading .overview-intro{margin-bottom:0}
-/* The rows are a table on a card: the app's row on top, the risk ranking under it, a hairline between. */
-.overview-reading .dcr-try{margin:28px 0 0;border:1px solid var(--line);border-bottom:0;border-radius:calc(9px * var(--round)) calc(9px * var(--round)) 0 0;background:var(--surface)}
-.overview-reading .dcr-try:not(:has(.dcr-try-row:not(.dcr-try-previews))){display:none}
-.overview-reading :is(.risk-fold,.risk-rank.risk-none){margin:0;border:1px solid var(--line);border-radius:0 0 calc(9px * var(--round)) calc(9px * var(--round));background:var(--surface)}
-.overview-reading:not(:has(.dcr-try .dcr-try-row:not(.dcr-try-previews))) :is(.risk-fold,.risk-rank.risk-none){margin-top:28px;border-radius:calc(9px * var(--round))}
-.overview-reading :is(.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary){padding:12px 18px}
+/* The risk ranking is a row on a card. */
+.overview-reading :is(.risk-fold,.risk-rank.risk-none){margin:28px 0 0;border:1px solid var(--line);border-radius:calc(9px * var(--round));background:var(--surface)}
+.overview-reading :is(.risk-rank.risk-none,.risk-fold>summary){padding:12px 18px}
 .overview-reading .risk-fold>.risk-rank{padding:0 18px 14px}
-/* The header already has the revision menu, the App tab and the Previews tab: the Overview keeps
-   only what it alone offers (the app's recordings, QA, the risk ranking). */
-.overview-reading :is(.overview-intro .overview-revision,.dcr-try-previews,.dcr-try-more [data-try="browse"]){display:none}
+/* The header already has the revision menu. */
+.overview-reading .overview-intro .overview-revision{display:none}
 /* With nothing to settle, space alone separates All clear from your comments. */
 .overview-reading:has(.overview-clear) #my-review{margin-top:44px;padding-top:0;background:none}
-/* The recordings are opened from where they are counted. */
-.overview-reading .dcr-try-about [data-try-shots]{margin-left:10px;padding:0;border:0;background:none;color:var(--ink-accent-1);font:inherit;font-size:13px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 
 /* Pieces only some themes show: a closed comment's place in a few characters, and the files that stand out as plain lines. */
 
@@ -1453,7 +1445,6 @@ details.thread-was:not([open])>summary{margin-bottom:0}
 .sidebar nav .nav-tests-count{display:none}
 .step-done{display:none}
 .sidebar-top{display:contents}
-.risk-brief{display:none}
 /* A review note beside the code: its summary and its ranges. */
 .review-note-popover .popover-comment{padding:14px 16px;font:13px/1.65 var(--review-font-family)}
 .review-note-popover .comment-discussion{margin:0;font-size:13px;line-height:1.65;color:var(--ink-accent-2)}
@@ -1667,8 +1658,8 @@ dialog.modal>.modal-box{max-height:calc(100dvh - 32px)}
   .navigation-open .sidebar .sidebar-footer{display:grid}
   body.ledger-open .ledger,body.zen.ledger-open .ledger{inset:0;z-index:25;width:100vw;max-width:none;padding-bottom:var(--drawer-foot)}
   /* The overview's rows stack: what it is, its value, then what to do; the fold's chevron stays on its first line. */
-  .overview-reading :is(.overview-row,.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary,.ui-changes .shot-stack){grid-template-columns:minmax(0,1fr) auto;row-gap:4px}
-  .overview-reading :is(.overview-row,.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary,.ui-changes .shot-stack)>:not(:first-child,svg){grid-column:1 / -1}
-  .overview-reading :is(.overview-row-actions,.dcr-try-more){justify-self:start}
+  .overview-reading :is(.overview-row,.risk-rank.risk-none,.risk-fold>summary,.ui-changes .shot-stack){grid-template-columns:minmax(0,1fr) auto;row-gap:4px}
+  .overview-reading :is(.overview-row,.risk-rank.risk-none,.risk-fold>summary,.ui-changes .shot-stack)>:not(:first-child,svg){grid-column:1 / -1}
+  .overview-reading .overview-row-actions{justify-self:start}
   .overview-reading .risk-fold>summary>svg{grid-row:1;grid-column:2}
 }

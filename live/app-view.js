@@ -827,10 +827,12 @@
     openRail(read(railKey, false));
     refresh();
   };
-  // For the Overview band: open the app, optionally straight into Comment or recording. Record must
+  // For Try the change: open the app, optionally straight into Comment or recording. Record must
   // run inside the reader's click, which still counts as their gesture for the share prompt.
+  // running: the agent is recording a QA review in this tab.
   window.DCRApp = {
     app,
+    running: () => !!qaActive,
     open: (intent = 'browse') => {
       open();
       if (intent === 'comment') { if (ready && !left) setMode('comment'); else pendingMode = 'comment'; }

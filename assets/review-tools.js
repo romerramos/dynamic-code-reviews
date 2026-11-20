@@ -717,6 +717,13 @@ globalThis.ReviewTools = (() => {
     if (!wide && !zen) return !!overOpen;
     return typeof chosen === 'boolean' ? chosen : !!(wide && filled);
   };
+  // A popover from a button: under it, right edges aligned, or over it when the button is low on
+  // the screen, and never past the window's edges.
+  const popoverPlace = (anchor, menu, view) => {
+    const below = anchor.bottom + 8 + menu.height <= view.height - 8;
+    return {top: Math.round(below ? anchor.bottom + 6 : Math.max(8, anchor.top - 6 - menu.height)),
+      left: Math.round(Math.max(12, Math.min(anchor.right - menu.width, view.width - menu.width - 12)))};
+  };
   // Where a review opens. An address that names a step or a view is a link to it. A bare address,
   // or the Overview link every command prints, resumes where the reader stopped, like a bookmark
   // in a book. forced: the page itself reloads onto a view (the Overview, to show new QA clips).
@@ -726,5 +733,5 @@ globalThis.ReviewTools = (() => {
     return views.includes(savedView) ? savedView : 'overview';
   };
 
-  return {whenText, ledgerPlace, screenshotLink, issueUrl, pullRequestDescription, overviewShows, whereLine, ledgerBy, pathParts, pathFit, modelName, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, ledgerOpen, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, where, scopeLabel, sha256, githubLink, githubFileLink, evidenceFlows, flowLines, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  return {whenText, ledgerPlace, screenshotLink, issueUrl, pullRequestDescription, overviewShows, whereLine, ledgerBy, pathParts, pathFit, modelName, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, ledgerOpen, popoverPlace, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, where, scopeLabel, sha256, githubLink, githubFileLink, evidenceFlows, flowLines, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();

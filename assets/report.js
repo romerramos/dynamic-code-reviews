@@ -1878,7 +1878,8 @@
   }
   // Open the stage on a template's preview.
   function showPreview(path) { openStage(path); }
-  window.ReviewPreviews = {set: setLivePreviews, show: showPreview};
+  // ready and short: how many previews are built, and their state in a few words, for Try the change.
+  window.ReviewPreviews = {set: setLivePreviews, show: showPreview, ready: () => lifecycle().ready.length + live.ready.size, short: () => previewShort(lifecycle())};
   // A served review in progress receives the agent's comments as it writes them (live/live.js).
   function addLiveComments(list) {
     const known = new Set(generatedComments.map(comment => comment.id));
@@ -1896,7 +1897,7 @@
     reopen: id => { if (comments.find(comment => comment.id === id)?.resolved) toggleResolved(id, true); }};
   // Until the review is finished, QA and template previews wait: they build on its comments and
   // would compete with it for the agent. The controls stay visible, greyed, and say why.
-  const LOCKED = '[data-open-previews], [data-copy-qa], [data-request-preview], [data-preview-toggle], [data-try="qa"], [data-try-preview], [data-try-all], [data-start-qa], [data-empty-qa], [data-view="previews"], #qa-connect';
+  const LOCKED = '[data-open-previews], [data-copy-qa], [data-request-preview], [data-preview-toggle], [data-try="qa"], [data-start-qa], [data-empty-qa], [data-view="previews"], #qa-connect';
   if (inProgress) {
     document.body.classList.add('review-in-progress');
     const lock = () => document.querySelectorAll(LOCKED).forEach(node => {
@@ -2530,6 +2531,8 @@
     stepShot(event.key === 'ArrowRight' ? 1 : -1);
   }, true);
   window.ReviewScreenshots = {
+    // How many there are to see: screenshots and QA recordings, as the viewer lists them.
+    count: () => seenItems('').length,
     // posted: what the agent sent to the open page, images loaded.
     set(posted, none = null) {
       const next = [...(review.screenshots || []).filter(shot => !posted.some(own => own.id === shot.id)), ...posted];
@@ -2671,17 +2674,23 @@
     // One line until the reader asks for it: how many files stand out, and the one that stands out most.
     const top = ranked[0] && files.get(ranked[0].file);
     const line = top ? `${plural(ranked.length, 'file')} to read first, ${top.path.split('/').pop()} highest at ${ranked[0].score}%` : 'No file stands out';
-    const brief = ranked.slice(0, 4).map(entry => {
-      const layer = layerOf(entry.file), file = files.get(entry.file);
-      // Its score first, a number and a short bar; why; then the way to the file. A migration's long,
-      // dated name says nothing a reader needs here, so it is just "migration" (the name is in the tooltip).
-      const name = /(^|\/)db\/migrate\//.test(file.path) ? 'migration' : file.path.split('/').pop();
-      const go = layer ? `<button type="button" class="risk-brief-go" data-file-link="${escape(entry.file)}" data-file-layer="${escape(layer.id)}" title="${escape(file.path)}">${escape(name)}${icon('arrow-up-right')}</button>` : `<code class="risk-brief-go" title="${escape(file.path)}">${escape(name)}</code>`;
-      return `<li class="risk-${ReviewTools.riskLevel(entry.score).key}" title="${escape(entry.reason)}"><span class="risk-brief-score"><b>${entry.score}%</b><i aria-hidden="true"><i style="width:${Math.max(4, entry.score)}%"></i></i></span><span class="risk-brief-why">${prose(entry.title || shortTitle(entry.reason))}</span>${go}</li>`;
-    }).join('');
-    return `<section class="risk-brief" aria-label="Read these first"><h2>Read these first</h2><ol>${brief}</ol></section><details class="overview-fold risk-fold" data-fold="risk" ${foldsOpen.has('risk') ? 'open' : ''}><summary><strong class="risk-fold-title">Risk ranking</strong><span class="risk-fold-line">${escape(line)}</span>${icon('chevron-down')}</summary><section class="risk-rank" aria-labelledby="risk-title"><header class="risk-head"><h2 id="risk-title">Risk ranking</h2>${riskRanking.summary ? `<p>${escape(riskRanking.summary)}</p>` : ''}${riskRedo()}</header><ol class="risk-rows">${rows}</ol>${calm > 0 ? `<p class="risk-calm">${calm} other ${calm === 1 ? 'file' : 'files'}: low risk.</p>` : ''}</section></details>`;
+    return `<details class="overview-fold risk-fold" data-fold="risk" ${foldsOpen.has('risk') ? 'open' : ''}><summary><strong class="risk-fold-title">Risk ranking</strong><span class="risk-fold-line">${escape(line)}</span>${icon('chevron-down')}</summary><section class="risk-rank" aria-labelledby="risk-title"><header class="risk-head"><h2 id="risk-title">Risk ranking</h2>${riskRanking.summary ? `<p>${escape(riskRanking.summary)}</p>` : ''}${riskRedo()}</header><ol class="risk-rows">${rows}</ol>${calm > 0 ? `<p class="risk-calm">${calm} other ${calm === 1 ? 'file' : 'files'}: low risk.</p>` : ''}</section></details>`;
   }
   window.ReviewRisk = {
+    // For Try the change: where the ranking stands and, once there is one, its files, riskiest first.
+    brief() {
+      if (riskRanking === 'ranking') return {state: 'ranking'};
+      if (riskRanking?.none) return {state: 'none', why: riskRanking.none, redo: riskRedoable};
+      if (!riskRanking?.files) return riskRedoable ? {state: 'unranked', redo: true} : null;
+      const layerOf = fid => layers.find(layer => layer.items.some(item => item.file === fid));
+      const ranked = ReviewTools.riskFiles(riskRanking).filter(entry => files.has(entry.file)).map(entry => {
+        const path = files.get(entry.file).path;
+        // A migration's long, dated name says nothing a reader needs here: it is just "migration".
+        return {file: entry.file, layer: layerOf(entry.file)?.id || null, path, name: /(^|\/)db\/migrate\//.test(path) ? 'migration' : path.split('/').pop(),
+          score: entry.score, level: ReviewTools.riskLevel(entry.score).key, why: entry.title || shortTitle(entry.reason)};
+      });
+      return {state: 'files', files: ranked, redo: riskRedoable};
+    },
     allowRedo(on) {
       if (riskRedoable === !!on) return;
       riskRedoable = !!on;
@@ -4005,12 +4014,11 @@
   $('file-menu').addEventListener('toggle', event => {
     fileMenuTrigger?.setAttribute('aria-expanded', event.newState === 'open');
     if (event.newState !== 'open') { fileMenuClosed = Date.now(); fileMenuTrigger?.focus({preventScroll: true}); return; }
-    const anchor = fileMenuTrigger.getBoundingClientRect();
     const menu = $('file-menu');
     menu.style.maxHeight = `${innerHeight - 24}px`;
-    const below = anchor.bottom + 8 + menu.offsetHeight <= innerHeight - 8;
-    menu.style.top = `${Math.round(below ? anchor.bottom + 6 : Math.max(8, anchor.top - 6 - menu.offsetHeight))}px`;
-    menu.style.left = `${Math.round(Math.max(12, Math.min(anchor.right - menu.offsetWidth, innerWidth - menu.offsetWidth - 12)))}px`;
+    const {top, left} = ReviewTools.popoverPlace(fileMenuTrigger.getBoundingClientRect(), {width: menu.offsetWidth, height: menu.offsetHeight}, {width: innerWidth, height: innerHeight});
+    menu.style.top = `${top}px`;
+    menu.style.left = `${left}px`;
     menu.querySelector('button,a')?.focus({preventScroll: true});
   });
   $('file-menu').addEventListener('click', event => {
@@ -4394,7 +4402,7 @@
     const reading = pagedReading() ? readingFile() : null;
     const revisions = $('revision-navigation').querySelector('select');
     const update = document.getElementById('dcr-update');
-    const qa = document.querySelector('.dcr-try [data-try="qa"]');
+    const qa = document.querySelector('#dcr-try [data-try="qa"]');
     const next = barNext();
     return [
       next.run && {label: next.label, run: next.run},
@@ -4402,9 +4410,9 @@
       ...leaderCommands(markKeyboardFile).filter(command => command.key !== ' ').map(command => ({label: command.label, keys: `space ${command.key}`, run: command.run})),
       document.getElementById('dcr-presence') && !agentChip() && {label: 'Agents and adversaries', run: () => openSettings('agents')},
       document.querySelector('[data-dcr-export]') && {label: 'Export your review', run: () => document.querySelector('[data-dcr-export]').click()},
-      qa && {label: 'Start QA review', run: () => { select('overview'); qa.click(); }},
+      qa && {label: 'Start QA review', run: () => qa.click()},
       document.getElementById('qa-panel') && {label: 'Record the app yourself', run: () => { select('overview'); document.body.classList.add('qa-recorder-shown'); requestAnimationFrame(() => document.getElementById('qa-panel')?.scrollIntoView({block: 'center'})); }},
-      document.querySelector('.dcr-try [data-try-all]') && {label: 'Open previews of the changed templates', run: () => document.querySelector('.dcr-try [data-try-all]').click()},
+      document.querySelector('#dcr-try [data-open-previews]') && {label: 'Open previews of the changed templates', run: () => openStage()},
       document.querySelector('.risk-redo') && {label: 'Rank the risky files again', run: () => { select('overview'); document.querySelector('.risk-redo')?.click(); }},
       sinceView && state.view !== 'since' && {label: `See what changed since the previous revision (${sinceView.revision})`, run: () => select('since')},
       review.history && {label: 'All revisions of this review', run: () => { location.href = `${review.history.preview ? '' : '../'}index.html`; }},

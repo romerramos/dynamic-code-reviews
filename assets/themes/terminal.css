@@ -271,7 +271,7 @@
 /* --- boxes: one line around what sits in the page, a double line around what floats over it,
    and never a second box inside either ------------------------------------------------------------- */
 [data-theme^="terminal-"] :is(.risk-rank,.file-card){box-shadow:none}
-[data-theme^="terminal-"] :is(.comment-popover[popover],.view-menu,.file-menu,.modal-box,#dcr-presence-card,#dcr-arrival,.dropdown-content,.leader-menu){border:3px double var(--terminal-overlay0);box-shadow:none;background:var(--surface)}
+[data-theme^="terminal-"] :is(.comment-popover[popover],.view-menu,.file-menu,.dcr-try,.modal-box,#dcr-presence-card,#dcr-arrival,.dropdown-content,.leader-menu){border:3px double var(--terminal-overlay0);box-shadow:none;background:var(--surface)}
 [data-theme^="terminal-"] .file-menu a{text-decoration:none}
 [data-theme^="terminal-"] body.ledger-open .ledger{border-left:3px double var(--terminal-overlay0)}
 [data-theme^="terminal-"] .view-keys kbd{text-transform:none}
@@ -351,18 +351,14 @@
   [data-theme^="terminal-"] .dcr-jev-actions{padding-right:12px}
 }
 
-/* The Overview's rows as a markdown table: item | now | next, a dashed rule under the header, pipes that line up. */
-[data-theme^="terminal-"] .overview-reading :is(.dcr-try,.risk-fold,.risk-rank.risk-none){margin-block:0;border:0;border-radius:0;background:transparent}
-[data-theme^="terminal-"] .overview-reading .dcr-try{margin-top:26px}
-[data-theme^="terminal-"] .overview-reading :is(.dcr-try-head,.dcr-try-rule,.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary){display:grid;grid-template-columns:16ch minmax(0,1fr) 22ch 1ch;gap:0;align-items:baseline;min-height:0;padding:0;border:0;font-size:12px;line-height:1.9}
-[data-theme^="terminal-"] .overview-reading :is(.dcr-try-head,.dcr-try-rule,.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary)>:not(svg,[hidden]){min-width:0;overflow:hidden;white-space:nowrap}
-[data-theme^="terminal-"] .overview-reading :is(.dcr-try-head,.dcr-try-rule,.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary)>:not(svg,[hidden])::before{content:"| ";color:var(--terminal-overlay0)}
-[data-theme^="terminal-"] .overview-reading :is(.dcr-try-head,.dcr-try-rule,.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary)::after{content:"|";color:var(--terminal-overlay0)}
-[data-theme^="terminal-"] .overview-reading .dcr-try-head{color:var(--terminal-overlay0)}
-[data-theme^="terminal-"] .overview-reading .dcr-try-rule>span{color:var(--terminal-overlay0)}
-[data-theme^="terminal-"] .overview-reading .dcr-try-rule>span::after{content:"--------------------------------------------------------------------------------------------------------------------------------"}
-[data-theme^="terminal-"] .overview-reading :is(.dcr-try-more,.risk-redo){justify-self:stretch;display:block;text-align:left}
-[data-theme^="terminal-"] .overview-reading .dcr-try-more>[hidden]{display:none}
+/* The Overview's risk ranking as a row of a markdown table: pipes that line up. A served review has it in Try the change. */
+[data-theme^="terminal-"] body.dcr-has-try .overview-reading :is(.risk-fold,.risk-rank){display:none}
+[data-theme^="terminal-"] .overview-reading :is(.risk-fold,.risk-rank.risk-none){margin-block:26px 0;border:0;border-radius:0;background:transparent}
+[data-theme^="terminal-"] .overview-reading :is(.risk-rank.risk-none,.risk-fold>summary){display:grid;grid-template-columns:16ch minmax(0,1fr) 22ch 1ch;gap:0;align-items:baseline;min-height:0;padding:0;border:0;font-size:12px;line-height:1.9}
+[data-theme^="terminal-"] .overview-reading :is(.risk-rank.risk-none,.risk-fold>summary)>:not(svg,[hidden]){min-width:0;overflow:hidden;white-space:nowrap}
+[data-theme^="terminal-"] .overview-reading :is(.risk-rank.risk-none,.risk-fold>summary)>:not(svg,[hidden])::before{content:"| ";color:var(--terminal-overlay0)}
+[data-theme^="terminal-"] .overview-reading :is(.risk-rank.risk-none,.risk-fold>summary)::after{content:"|";color:var(--terminal-overlay0)}
+[data-theme^="terminal-"] .overview-reading .risk-redo{justify-self:stretch;display:block;text-align:left}
 [data-theme^="terminal-"] .overview-reading .risk-rank.risk-none h2::before{content:"| "}
 [data-theme^="terminal-"] .overview-reading .risk-fold>summary>svg{display:none}
 [data-theme^="terminal-"] .overview-reading .risk-fold>summary{list-style:none}
@@ -370,9 +366,6 @@
 [data-theme^="terminal-"] .overview-reading .risk-fold.overview-fold>summary::after{grid-row:1;grid-column:3;content:"| [ show ]";color:var(--terminal-overlay0)}
 [data-theme^="terminal-"] .overview-reading .risk-fold>summary::before{grid-row:1;grid-column:4;content:"|";color:var(--terminal-overlay0)}
 [data-theme^="terminal-"] .overview-reading .risk-fold.overview-fold[open]>summary::after{content:"| [ hide ]"}
-[data-theme^="terminal-"] .overview-reading .dcr-try-rows>.dcr-try-previews{display:none}
-[data-theme^="terminal-"] .overview-reading .dcr-try-more button:not([hidden])::before{content:"[ ";color:var(--terminal-overlay0)}
-[data-theme^="terminal-"] .overview-reading .dcr-try-more button:not([hidden])::after{content:" ]";color:var(--terminal-overlay0)}
 [data-theme^="terminal-"] .overview-reading .risk-fold>.risk-rank{padding:6px 0 0 2ch}
 /* The bar, as a terminal's prompt line: square, no shadow, the field bare, its button in brackets,
    and Your review's groups headed like the rest of the page. */
@@ -405,10 +398,45 @@
 /* Phone: the overview's table becomes a list, each row its item, what it is now and what is next,
    one under the other; no header, no rule, no column bars. */
 @media(max-width:740px){
-  [data-theme^="terminal-"] .overview-reading :is(.dcr-try-head,.dcr-try-rule){display:none}
-  [data-theme^="terminal-"] .overview-reading :is(.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary){grid-template-columns:minmax(0,1fr);row-gap:2px;padding:8px 0;border-bottom:1px dashed var(--line)}
-  [data-theme^="terminal-"] .overview-reading :is(.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary)>:not(svg,[hidden]){white-space:normal}
-  [data-theme^="terminal-"] .overview-reading :is(.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary)>:not(svg,[hidden])::before,[data-theme^="terminal-"] .overview-reading :is(.dcr-try-row,.risk-rank.risk-none,.risk-fold>summary)::after,[data-theme^="terminal-"] .overview-reading .risk-fold>summary::before,[data-theme^="terminal-"] .overview-reading .risk-rank.risk-none h2::before{content:none}
+  [data-theme^="terminal-"] .overview-reading :is(.risk-rank.risk-none,.risk-fold>summary){grid-template-columns:minmax(0,1fr);row-gap:2px;padding:8px 0;border-bottom:1px dashed var(--line)}
+  [data-theme^="terminal-"] .overview-reading :is(.risk-rank.risk-none,.risk-fold>summary)>:not(svg,[hidden]){white-space:normal}
+  [data-theme^="terminal-"] .overview-reading :is(.risk-rank.risk-none,.risk-fold>summary)>:not(svg,[hidden])::before,[data-theme^="terminal-"] .overview-reading :is(.risk-rank.risk-none,.risk-fold>summary)::after,[data-theme^="terminal-"] .overview-reading .risk-fold>summary::before,[data-theme^="terminal-"] .overview-reading .risk-rank.risk-none h2::before{content:none}
   [data-theme^="terminal-"] .overview-reading .risk-fold.overview-fold>summary::after{grid-row:auto;grid-column:1;content:"[ show ]"}
   [data-theme^="terminal-"] .overview-reading .risk-fold.overview-fold[open]>summary::after{content:"[ hide ]"}
 }
+/* Try the change: [ try ] in the header; its panel a double-ruled box (as the other popovers) with
+   ── headings, ▸ rows with dotted leaders, and the risk scores as rows of blocks. */
+[data-theme^="terminal-"] .try-header svg,[data-theme^="terminal-"] .try-header .try-header-rest{display:none}
+[data-theme^="terminal-"] .try-header{border:0;text-transform:lowercase}
+[data-theme^="terminal-"] .try-header[aria-expanded="true"]{background:var(--terminal-hover)}
+[data-theme^="terminal-"] .try-header.has-news>span::after{content:" *";color:var(--terminal-fill)}
+[data-theme^="terminal-"] .dcr-try{padding:4px 0 8px;border-radius:0;font:12px/1.6 var(--mono)}
+@media(min-width:741px){[data-theme^="terminal-"] .dcr-try{width:400px}}
+[data-theme^="terminal-"] :is(.dcr-try-title,.dcr-try-head){display:flex;gap:1ch;margin:8px 1ch 2px;color:var(--terminal-subtext0);font:700 12px/1.6 var(--mono);text-transform:uppercase;white-space:nowrap}
+[data-theme^="terminal-"] :is(.dcr-try-title,.dcr-try-head)::before{content:"──";color:var(--terminal-surface2)}
+[data-theme^="terminal-"] :is(.dcr-try-title,.dcr-try-head)::after{content:"";flex:1;align-self:center;border-top:1px solid var(--line)}
+[data-theme^="terminal-"] .dcr-try hr{display:none}
+[data-theme^="terminal-"] .dcr-try-item{gap:1ch;min-height:24px;padding:0 1ch;border-radius:0;font:12px/1.6 var(--mono);text-transform:lowercase}
+[data-theme^="terminal-"] .dcr-try-item:is(:hover,:focus-visible):not(:disabled),[data-theme^="terminal-"] .dcr-try-item[aria-expanded="true"]{background:var(--terminal-hover)}
+[data-theme^="terminal-"] .dcr-try-item>svg,[data-theme^="terminal-"] .dcr-try-end svg{display:none}
+[data-theme^="terminal-"] .dcr-try-item::before{content:"▸";color:var(--terminal-blue)}
+[data-theme^="terminal-"] .dcr-try-item[aria-expanded="true"]::before{content:"▾"}
+[data-theme^="terminal-"] .dcr-try [data-try="browse"]::before{content:"↗"}
+[data-theme^="terminal-"] .dcr-try [data-try="browse"] .dcr-try-end::before{content:"open"}
+[data-theme^="terminal-"] .dcr-try [data-try="browse"] .dcr-try-label{text-transform:none}
+[data-theme^="terminal-"] .dcr-try-label::after{content:" ································································";color:var(--terminal-surface2)}
+[data-theme^="terminal-"] .dcr-try-label{text-overflow:clip}
+[data-theme^="terminal-"] .dcr-try-end{color:var(--terminal-subtext0);font-size:12px}
+[data-theme^="terminal-"] .dcr-try-note{margin:2px 1ch 6px;font-size:12px}
+[data-theme^="terminal-"] .dcr-try-risk{gap:0;padding:1px 1ch 1px 3ch}
+[data-theme^="terminal-"] .dcr-try-file{grid-template-columns:4ch 8ch minmax(0,1fr);gap:1ch;padding:1px 0;font:12px/1.6 var(--mono)}
+[data-theme^="terminal-"] .dcr-try-file b{grid-row:auto;font-weight:700}
+[data-theme^="terminal-"] .dcr-try-bar{display:inline;font-style:normal}
+[data-theme^="terminal-"] .dcr-try-why{display:none}
+[data-theme^="terminal-"] .dcr-try-file code{grid-column:auto;color:var(--ink);font:inherit}
+[data-theme^="terminal-"] .dcr-try-risk .risk-medium :is(b,.dcr-try-bar){color:var(--terminal-yellow)}
+[data-theme^="terminal-"] .dcr-try-risk :is(.risk-high,.risk-critical) :is(b,.dcr-try-bar){color:var(--terminal-red)}
+[data-theme^="terminal-"] .dcr-try-risk .risk-low :is(b,.dcr-try-bar){color:var(--muted)}
+[data-theme^="terminal-"] .dcr-try-redo{margin-left:0;font:12px var(--mono);text-transform:lowercase}
+[data-theme^="terminal-"] .dcr-try-redo::before{content:"[ ";color:var(--terminal-overlay0)}
+[data-theme^="terminal-"] .dcr-try-redo::after{content:" ]";color:var(--terminal-overlay0)}

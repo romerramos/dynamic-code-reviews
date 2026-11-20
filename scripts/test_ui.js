@@ -283,3 +283,11 @@ console.log('PASS the risk ranking writes each level and tag in words, most risk
   assert.equal(tools.ledgerOpen({...wide, view: 'overview', wide: false, overOpen: true}), false, 'over the page, not on the Overview either');
   console.log('PASS Your review is never on the Overview and opens as before while reading');
 }
+{
+  // A popover from a button (the ··· menu, Try the change): under it, right edges aligned, inside the window.
+  const view = {width: 1180, height: 900};
+  assert.deepEqual(tools.popoverPlace({top: 25, bottom: 57, right: 1162}, {width: 320, height: 420}, view), {top: 63, left: 842});
+  assert.deepEqual(tools.popoverPlace({top: 800, bottom: 832, right: 1162}, {width: 320, height: 420}, view), {top: 374, left: 842}, 'over a button low on the screen');
+  assert.equal(tools.popoverPlace({top: 25, bottom: 57, right: 100}, {width: 320, height: 420}, view).left, 12, 'never past the left edge');
+  console.log('PASS a popover opens under its button, right edges aligned, and stays in the window');
+}

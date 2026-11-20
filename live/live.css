@@ -233,31 +233,64 @@ html[data-mode="dark"] .dcr-send:not(:disabled){background:var(--color-primary)}
 
 body.dcr-has-try .evidence-strip{display:none}
 body.dcr-has-app #qa-panel{display:none}
-/* Try the change, and the risk ranking before it is ranked: one row each. What it is, a few words on it, the ways in. */
-.dcr-try{margin:0 0 6px}
-.dcr-try > h2{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-.dcr-try-rows{margin:0;padding:0;list-style:none}
-/* A header for themes that draw these rows as a markdown table. */
-.dcr-try-head,.dcr-try-rule{display:none}
-/* The icons, the risk ranking and the recorder as rows are for a theme that draws them so; the others keep their cards. */
-.dcr-try-icon,.dcr-try-line,.dcr-try.dcr-try-theme-only{display:none}
-.dcr-try-row,.risk-rank.risk-none{display:grid;grid-template-columns:150px minmax(0,1fr) auto;align-items:baseline;gap:4px 18px;padding:11px 0;border-top:1px solid var(--line);font-size:14px}
-.dcr-try-do,.risk-rank.risk-none h2{margin:0;padding:0;border:0;background:none;color:var(--ink);font:inherit;font-weight:600;text-align:left}
-button.dcr-try-do{cursor:pointer}
-button.dcr-try-do:hover{text-decoration:underline;text-underline-offset:3px}
-.dcr-try-about,.risk-rank.risk-none p{margin:0;color:var(--muted)}
-.dcr-try-more{display:flex;gap:16px}
-.dcr-try-more button,.dcr-try-templates button{padding:0;border:0;background:none;color:var(--ink-neutral-3);font:inherit;cursor:pointer}
-.dcr-try-more button:hover,.dcr-try-templates button:hover{color:var(--ink);text-decoration:underline;text-underline-offset:3px}
-.dcr-try-more kbd{margin-left:4px;color:var(--muted);font:11px var(--mono)}
-.dcr-try-templates{grid-column:2 / -1;display:flex;flex-wrap:wrap;gap:4px 22px;margin:0;padding:0;list-style:none;font-size:13px}
-.dcr-try-templates:empty{display:none}
-.dcr-try-templates li{display:flex;align-items:baseline;gap:7px}
-.dcr-try-templates code{font:12.5px var(--mono)}
-.dcr-try-state{color:var(--muted)}
-.risk-rank.risk-none{margin:0;border-radius:0;border-left:0;border-right:0;border-bottom:1px solid var(--line);background:transparent;box-shadow:none}
-.risk-rank.risk-none .risk-redo{justify-self:end}
-@media(max-width:700px){.dcr-try-row,.risk-rank.risk-none{grid-template-columns:1fr}.dcr-try-templates{grid-column:1}}
+/* Try the change holds the risk ranking and what was seen in the app: the Overview leaves them to it. */
+body.dcr-has-try .overview-reading :is(.risk-fold,.risk-rank,.ui-changes){display:none}
+/* Try the change: a panel of the ··· menu's family, a row each (an icon, what it is, where it stands).
+   Over the page it is a popover under its button; on the Overview, with room, part of the page. */
+.dcr-try{box-sizing:border-box;width:320px;max-width:calc(100vw - 24px);padding:5px;border:1px solid var(--line-neutral-2);border-radius:calc(12px * var(--round));background:var(--surface);color:var(--ink);font:13px/1.3 var(--review-font-family)}
+.dcr-try[popover]{inset:auto;margin:0;overflow-y:auto;box-shadow:0 18px 50px color-mix(in srgb,var(--shade) 15%,transparent),0 2px 6px color-mix(in srgb,var(--shade) 6%,transparent)}
+/* On the Overview the review area is the column and, beside it, the panel's place: pinned there
+   while the area is wide enough for both and the reader has not hidden it (try-band.js reads --try-room). */
+@media(min-width:741px){
+  body.on-overview .review-area{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:minmax(0,1fr);container:try-room / inline-size}
+  body.on-overview .review-area>:is(#content,.review-bar){grid-area:1 / 1 / 2 / 2}
+}
+@container try-room (min-width:1240px){
+  body.on-overview .dcr-try{--try-room:1}
+  body.on-overview:not(.dcr-try-hidden) .dcr-try:not(:popover-open){display:block;position:static;grid-row:1;grid-column:2;align-self:start;max-height:calc(100% - var(--panel-icon-top) + var(--chrome-h) - 75px);margin:calc(var(--panel-icon-top) - var(--chrome-h) + 51px) 50px 0 0;overflow-y:auto;box-shadow:none}
+}
+/* On a phone it is a sheet from the bottom. */
+@media(max-width:740px){
+  .dcr-try[popover]{inset:auto 0 0 0;width:100%;max-width:none;max-height:80dvh;padding:8px 8px calc(8px + env(safe-area-inset-bottom));border-width:1px 0 0;border-radius:calc(16px * var(--round)) calc(16px * var(--round)) 0 0}
+}
+/* Its name is the panel's label; a theme that heads it says it again. */
+.dcr-try-title{display:none}
+.dcr-try-item{display:flex;align-items:center;gap:10px;width:100%;min-height:32px;padding:0 10px;border:0;border-radius:calc(7px * var(--round));background:transparent;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.dcr-try-item:is(:hover,:focus-visible):not(:disabled),.dcr-try-item[aria-expanded="true"]{background:var(--bg-neutral-3);outline:0}
+.dcr-try-item:disabled{cursor:default}
+.dcr-try-item>svg{flex:none;width:15px;height:15px;color:var(--muted);stroke-width:1.8}
+.dcr-try-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dcr-try-end{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;white-space:nowrap}
+.dcr-try-end svg{width:14px;height:14px;stroke-width:1.8}
+.dcr-try [data-try="browse"] .dcr-try-end svg{width:13px;height:13px}
+.dcr-try-item[aria-expanded="true"] .dcr-try-end svg{transform:rotate(180deg)}
+.dcr-try [data-preview-short]:empty,.dcr-try [data-preview-short]:not(:empty)+.dcr-try-count{display:none}
+.dcr-try hr{height:1px;margin:5px 10px;border:0;background:var(--line)}
+.dcr-try-head{margin:6px 10px 2px;color:var(--muted);font-size:12px}
+.dcr-try-note{margin:2px 10px 6px;color:var(--muted);font-size:12px;line-height:1.45}
+.dcr-try-note code{font:11.5px var(--mono)}
+/* The ranked files, unfolded under their row: the score, why, then the file. Each opens it. */
+.dcr-try-risk{display:grid;grid-template-columns:minmax(0,1fr);gap:2px;margin:0;padding:2px 10px 6px 35px;list-style:none}
+.dcr-try-risk[hidden]{display:none}
+.dcr-try-file{display:grid;grid-template-columns:34px minmax(0,1fr);gap:0 10px;width:100%;padding:5px 0;border:0;background:none;color:var(--ink);font:12.5px/1.35 var(--review-font-family);text-align:left;white-space:normal}
+button.dcr-try-file{cursor:pointer}
+button.dcr-try-file:is(:hover,:focus-visible) .dcr-try-why{text-decoration:underline;text-underline-offset:3px}
+.dcr-try-file b{grid-row:1 / 3;font-weight:600;font-variant-numeric:tabular-nums}
+.dcr-try-bar{display:none}
+.dcr-try-file code{grid-column:2;overflow:hidden;color:var(--muted);font:11.5px var(--mono);text-overflow:ellipsis;white-space:nowrap}
+.dcr-try-redo{justify-self:start;margin-left:44px;padding:4px 0 0;border:0;background:none;color:var(--muted);font:12px var(--review-font-family);cursor:pointer}
+.dcr-try-redo:hover{color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+/* Its button: a theme shows the one it keeps (in the header here, on a phone in the bar). A dot says
+   something new is in it: screenshots or previews the reader has not seen. */
+.try-show,.try-header,.bar-try{display:none}
+@media(min-width:741px){.app-header .try-header:not([hidden]){display:inline-flex;border:1px solid var(--line-neutral-3);border-radius:calc(9px * var(--round));background:var(--surface);color:var(--ink);font-weight:600}}
+.try-header[aria-expanded="true"]{background:var(--bg-neutral-2)}
+.try-header svg{width:15px;height:15px;stroke-width:1.8}
+@media(max-width:740px){.review-bar .bar-try:not([hidden]){display:grid;place-items:center;padding:0 6px;border:0;background:none;color:var(--muted)}}
+.bar-try svg{width:18px;height:18px}
+:is(.try-show,.bar-try)>svg{grid-area:1 / 1}
+:is(.try-show,.try-header,.bar-try).has-news::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--surface)}
+:is(.try-show,.bar-try).has-news::after{grid-area:1 / 1;align-self:start;justify-self:end;margin:5px}
 /* No app needed: the recorder card and the video QA prompt would only offer what does not apply. */
 body.dcr-no-app #qa-panel,body.dcr-no-app .visual-qa-option,body.dcr-no-app .evidence-strip:not(:has(.btn:not(.visual-qa-option))){display:none}
 
