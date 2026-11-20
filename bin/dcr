@@ -45,7 +45,8 @@ USAGE = <<~TEXT
     record <action>                Control a running recorder (wait-ready, start, still, stop, end, status, reload)
     lens                           The review lens: what to look for when reviewing (list, use <id>, update)
     context                        What was already said on a pull request and around it (threads, stack, mentions),
-                                   to read before reviewing; read-only, never saved
+                                   to read before reviewing; read-only, kept privately beside a review with --name;
+                                   --since-last says what changed since that read
     setup                          Download Universal Ctags for links from a name to its definition (optional)
 
   Run a command with no further arguments to see its own usage.

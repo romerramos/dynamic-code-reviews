@@ -60,6 +60,7 @@ module DCR
 
     SYNC_RULE = <<~TEXT.strip
       CODE UPDATE. The review now shows the code as it is. Say what became of each outdated comment, then review what changed.
+      First read what changed on the pull request since the last read with `dcr context --since-last` (below): an edited description, a new or resolved thread, a reply or a newly stacked pull request can answer, defer or settle a point. Weigh each outdated comment and each new one against it, as against the first read. It also keeps that read for the adversaries.
       For each OUTDATED COMMENT below: read the code it was written on and what changed since, weigh what other agents said of it, and answer with `dcr reply --outcome`: `addressed` (the new code deals with it), `still-applies` (it does not: first post it again on the new lines with `dcr comment`, under a new id and with `"follows": "<the outdated comment's id>"`) or `not-relevant` (the code it was about is gone, or the point no longer matters). Say why in one or two sentences. This goes for the reviewer's own comments too; there the outcome is your reading and they decide. You resolve nothing.
       Then read each range listed as not reviewed yet, with the code around it, and post a comment for anything a reviewer should know, one at a time, as in a review in progress. No comment is the right answer when nothing stands out.
       Last, rethink the walkthrough for this code; the update only parked new files in "Added since the review". Run `dcr series prepare` (for a pull request with its verified --base and --head), then `dcr series publish` an update that explains every range it lists and gives every file its place: the step it belongs to, a new step or a new group, moving a file whose role changed and reordering groups with group_order. It saves into this revision. Files whose diff changed already lost their viewed mark, so the steps they sit in read as not done again.
@@ -241,7 +242,8 @@ module DCR
     end
 
     def sync_commands(flags)
-      ["Say what became of each outdated comment with: dcr reply #{flags} --outcome addressed|still-applies|not-relevant <comment-id> '<why, in a sentence or two>'",
+      ["Read what changed on the pull request since the last read with: dcr context #{flags} --since-last",
+       "Say what became of each outdated comment with: dcr reply #{flags} --outcome addressed|still-applies|not-relevant <comment-id> '<why, in a sentence or two>'",
        "Post each comment with: dcr comment #{flags} --file <comment.json>"].join("\n")
     end
 

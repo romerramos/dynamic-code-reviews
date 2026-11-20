@@ -1,7 +1,10 @@
 # frozen_string_literal: true
 
+require 'fileutils'
+require 'json'
 require 'open3'
 require 'optparse'
+require 'time'
 require_relative 'github'
 require_relative 'review_report'
 
@@ -11,6 +14,9 @@ module DCR
   # resolved, the pull requests stacked below and above it, and the issues and pull requests that
   # text mentions, with their titles. Read-only, two GraphQL calls through the signed-in `gh`, and
   # printed short: it shapes the agent's comments and is never posted or saved in the review.
+  # With a series (--name), the last read is kept beside the review's own files (context.json,
+  # private: never on the page, exported or posted), for the adversaries checking comments and for
+  # --since-last, which says what changed on the pull request since that read.
   # With no pull request, no GitHub remote or no `gh`, it says so in one line and that is all.
   module PRContext
     module_function
@@ -35,7 +41,7 @@ module DCR
     # An agent's session or a shared chat: fine for the review's own agent, private to another company's.
     SESSION = %r{\bhttps?://(?:[\w-]+\.)*(?:claude\.ai|chatgpt\.com|chat\.openai\.com|gemini\.google\.com|g\.co/gemini|aistudio\.google\.com|grok\.com|perplexity\.ai|poe\.com|copilot\.microsoft\.com|chat\.deepseek\.com|chat\.mistral\.ai)(?:/#{URL_END}*)?}i
 
-    PEOPLE = 'author { login __typename }'
+    PEOPLE = 'id author { login __typename }'
     QUERY = <<~GRAPHQL
       query($owner: String!, $name: String!, $number: Int!) {
         repository(owner: $owner, name: $name) {
@@ -46,7 +52,7 @@ module DCR
             reviews(first: 100) { totalCount nodes { #{PEOPLE} state body } }
             reviewThreads(first: 100) {
               totalCount
-              nodes { isResolved isOutdated path line originalLine comments(first: 30) { totalCount nodes { #{PEOPLE} body } } }
+              nodes { id isResolved isOutdated path line originalLine comments(first: 30) { totalCount nodes { #{PEOPLE} body } } }
             }
           }
         }
@@ -121,6 +127,96 @@ module DCR
       {'own' => own, 'linked' => linked}
     end
 
+    FILE = 'context.json'
+    DIFF_LINES = 20 # of an edited description
+
+    # The last read kept beside a review: {'read_at', 'revision', 'context'}, or nil.
+    def stored(series_dir)
+      path = File.join(series_dir.to_s, FILE)
+      File.file?(path) && !File.symlink?(path) ? JSON.parse(File.read(path)) : nil
+    rescue JSON::ParserError, SystemCallError
+      nil
+    end
+
+    # Keeps this read beside the review, with the revision it was read at.
+    def store(series_dir, context)
+      manifest = File.join(series_dir, 'manifest.json')
+      revision = File.file?(manifest) ? JSON.parse(File.read(manifest)).fetch('revisions', []).last&.fetch('number', nil) : nil
+      path = File.join(series_dir, FILE)
+      raise ArgumentError, "Refusing symlink: #{path}" if File.symlink?(path)
+      File.write("#{path}.tmp", JSON.generate('read_at' => Time.now.utc.iso8601, 'revision' => revision, 'context' => context), perm: 0o600)
+      File.rename("#{path}.tmp", path)
+    end
+
+    # What changed on the pull request between two reads, as short plain text.
+    def since(before, context)
+      was = before['context']
+      at = [("revision #{before['revision']}" if before['revision']), Time.parse(before['read_at']).utc.strftime('%Y-%m-%d %H:%M UTC')].compact.join(', ')
+      out = []
+      out << "- The title changed, from: #{was['title']}" if was['title'] != context['title']
+      out << "- It is #{state(context)} now (was #{state(was)})." if state(was) != state(context)
+      if clean(was['body']) != clean(context['body'])
+        old, new = clean(was['body']).lines.map(&:rstrip), clean(context['body']).lines.map(&:rstrip)
+        lines = (old - new).reject(&:empty?).map { |line| "    - #{line}" } + (new - old).reject(&:empty?).map { |line| "    + #{line}" }
+        out << '- The description was edited:' << lines.first(DIFF_LINES).join("\n")
+        out << "    (#{lines.length - DIFF_LINES} more changed lines: read `dcr context` in full)" if lines.length > DIFF_LINES
+      end
+      { 'below' => 'Now on top of', 'above' => 'Newly stacked on this:' }.each do |side, words|
+        known = Array(was[side]).to_h { |node| [node['number'], node] }
+        context[side].each do |node|
+          if !known[node['number']] then out << "- #{words} #{pull_line(node)}"
+          elsif known[node['number']]['state'] != node['state'] then out << "- ##{node['number']} is #{state(node)} now (was #{state(known[node['number']])})."
+          end
+        end
+        (known.keys - context[side].map { |node| node['number'] }).each { |number| out << "- ##{number} is no longer #{side == 'below' ? 'under' : 'stacked on'} this one." }
+      end
+      closes = Array(was.dig('closingIssuesReferences', 'nodes')).map { |issue| issue['url'] }
+      Array(context.dig('closingIssuesReferences', 'nodes')).reject { |issue| closes.include?(issue['url']) }.each { |issue| out << "- Now closes #{issue.dig('repository', 'nameWithOwner')}##{issue['number']} #{issue['title']} (#{issue['state'].downcase})" }
+      key = ->(node) { node['id'] || node['body'] }
+      said_before = Array(was.dig('comments', 'nodes')).to_h { |node| [key.(node), node] }
+      Array(context.dig('comments', 'nodes')).select { |c| said(c) }.each do |comment|
+        earlier = said_before[key.(comment)]
+        next if earlier && clean(earlier['body']) == clean(comment['body'])
+        out << "- @#{comment.dig('author', 'login')} #{earlier ? 'edited a comment' : 'in the conversation'}:" << quote(comment['body'], COMMENT)
+      end
+      reviewed = Array(was.dig('reviews', 'nodes')).map { |node| key.(node) }
+      Array(context.dig('reviews', 'nodes')).select { |r| said(r) && !reviewed.include?(key.(r)) && !clean(r['body']).empty? }.each do |review|
+        out << "- @#{review.dig('author', 'login')} reviewed (#{review['state'].downcase.tr('_', ' ')}):" << quote(review['body'], COMMENT)
+      end
+      threads = Array(was.dig('reviewThreads', 'nodes')).to_h { |thread| [thread['id'] || [thread['path'], thread['originalLine']], thread] }
+      Array(context.dig('reviewThreads', 'nodes')).each do |thread|
+        earlier = threads[thread['id'] || [thread['path'], thread['originalLine']]]
+        heard = Array(earlier&.dig('comments', 'nodes')).map { |comment| key.(comment) }
+        fresh = Array(thread.dig('comments', 'nodes')).select { |comment| said(comment) && !heard.include?(key.(comment)) }
+        where = "#{thread['path']}:#{thread['line'] || thread['originalLine']}"
+        if earlier.nil? && fresh.any? then out << "- New thread on #{where} (#{thread_marks(thread)}):"
+        elsif fresh.any? then out << "- New replies on #{where} (#{thread_marks(thread)}):"
+        elsif earlier && earlier['isResolved'] != thread['isResolved'] then out << "- #{thread['isResolved'] ? 'Resolved' : 'Reopened'} since: #{where}"
+        end
+        fresh.each { |comment| out << "  - @#{comment.dig('author', 'login')}:" << quote(comment['body'], COMMENT).gsub(/^/, '  ') }
+        out << "  (resolved since)" if earlier && fresh.any? && thread['isResolved'] && !earlier['isResolved']
+      end
+      mentioned = Array(was['references']).map { |ref| [ref['repo'], ref['number']] }
+      context['references'].reject { |ref| mentioned.include?([ref['repo'], ref['number']]) }.each { |ref| out << "- Newly mentioned: #{reference_line(context, ref)}" }
+      ids = was['tracker'] ? was['tracker'].values.flatten : []
+      fresh_ids = context['tracker'].values.flatten - ids
+      out << "- Newly linked issue-tracker ids: #{fresh_ids.join(', ')}" if fresh_ids.any?
+      head = "# #{context['repo']}##{context['number']}: #{context['title']}\n## Since the last read (#{at})"
+      [head, out.empty? ? 'Nothing changed on the pull request or around it.' : out.join("\n")].join("\n")
+    end
+
+    def thread_marks(thread) = [thread['isResolved'] ? 'resolved' : 'unresolved', ('outdated' if thread['isOutdated'])].compact.join(', ')
+
+    def reference_line(context, ref)
+      item = ref['item']
+      name = ref['repo'] == context['repo'] ? "##{ref['number']}" : "#{ref['repo']}##{ref['number']}"
+      title = if item.nil? then '(not found, or this account cannot see it)'
+              elsif item['__typename'] == 'PullRequest' then "pull request: #{item['title']} (#{state(item)}; #{item['headRefName']} → #{item['baseRefName']})"
+              else "issue: #{item['title']} (#{state(item)})"
+              end
+      "#{name} #{title}, first mentioned in #{ref['where']}"
+    end
+
     # Text without HTML comments, trailing space, runs of blank lines and secrets.
     def clean(text) = scrub(text.to_s.gsub(/<!--.*?-->/m, '').gsub(/[ \t]+$/, '').gsub(/\n{3,}/, "\n\n").strip)
 
@@ -177,46 +273,68 @@ module DCR
       if threads.any?
         out << '' << "## Review threads#{more(context['reviewThreads'], Array(context.dig('reviewThreads', 'nodes')).length)}"
         threads.each do |thread|
-          marks = [thread['isResolved'] ? 'resolved' : 'unresolved', ('outdated' if thread['isOutdated'])].compact.join(', ')
-          out << "- #{thread['path']}:#{thread['line'] || thread['originalLine']} (#{marks})"
+          out << "- #{thread['path']}:#{thread['line'] || thread['originalLine']} (#{thread_marks(thread)})"
           Array(thread.dig('comments', 'nodes')).select { |c| said(c) }.each { |c| out << "  - @#{c.dig('author', 'login')}:" << quote(c['body'], COMMENT).gsub(/^/, '  ') }
         end
       end
 
       if context['references'].any?
         out << '' << '## Mentioned'
-        context['references'].each do |ref|
-          item = ref['item']
-          name = ref['repo'] == context['repo'] ? "##{ref['number']}" : "#{ref['repo']}##{ref['number']}"
-          title = if item.nil? then '(not found, or this account cannot see it)'
-                  elsif item['__typename'] == 'PullRequest' then "pull request: #{item['title']} (#{state(item)}; #{item['headRefName']} → #{item['baseRefName']})"
-                  else "issue: #{item['title']} (#{state(item)})"
-                  end
-          out << "- #{name} #{title}, first mentioned in #{ref['where']}"
-        end
+        context['references'].each { |ref| out << "- #{reference_line(context, ref)}" }
       end
       out.join("\n")
     end
 
-    # `dcr context --repo ROOT [--pr NUMBER|URL]`. Prints the context, or one line saying why there
-    # is none; it exits 0 either way, so a review without a pull request goes on as before.
+    # `dcr context --repo ROOT [--pr NUMBER|URL] [--name SERIES [--since-last]]`. Prints the context,
+    # or one line saying why there is none; it exits 0 either way, so a review without a pull request
+    # goes on as before. With a series it keeps the read beside the review; --since-last prints only
+    # what changed since the kept one (all of it when there is none). A failed read keeps the last.
     def cli(argv, gh: ENV.fetch('DCR_GH', 'gh'), out: $stdout)
       options = {}
       parser = OptionParser.new do |p|
-        p.banner = 'Usage: dcr context --repo ROOT [--pr NUMBER|URL]   (what was already said on the pull request and around it, ' \
-                   "to read before reviewing; read-only, printed and never saved. Without --pr, the current branch's open pull request)"
+        p.banner = 'Usage: dcr context (--repo ROOT [--name SERIES] | --dir SERIES_DIR) [--pr NUMBER|URL] [--since-last]   ' \
+                   '(what was already said on the pull request and around it, to read before reviewing; read-only on GitHub, ' \
+                   "never posted. Without --pr, the series' pull request or the current branch's open one. With a series, the read is " \
+                   'kept beside the review, privately, for the adversaries; --since-last prints only what changed since the kept read)'
         p.on('--repo PATH') { |v| options[:repo] = v }
+        p.on('--name SERIES') { |v| options[:name] = v }
+        p.on('--dir PATH') { |v| options[:dir] = v }
         p.on('--pr REF') { |v| options[:pr] = v }
+        p.on('--since-last') { options[:since_last] = true }
       end
       parser.parse!(argv)
+      series = series_dir(options)
       abort parser.banner unless options[:repo] || options[:pr].to_s.match?(GitHub::PR_URL)
+      abort '--since-last needs the series: --name SERIES or --dir SERIES_DIR' if options[:since_last] && !series
+      before = series && stored(series)
+      options[:pr] ||= before&.dig('context', 'url')
       github = GitHub.new(nil, gh: gh)
       repo, number = target(github, options)
-      out.puts(number ? text(gather(github, repo, number)) : "No GitHub context: #{repo}")
+      return out.puts("No GitHub context: #{repo}") unless number
+
+      context = gather(github, repo, number)
+      store(series, context) if series
+      out.puts(options[:since_last] && before && before.dig('context', 'url') == context['url'] ? since(before, context) : text(context))
     rescue GitHub::Error => e
       out.puts "No GitHub context: #{e.message}"
     rescue ArgumentError
       abort parser.banner # a --pr that is no number or pull request link
+    end
+
+    # The series' directory (made when the review does not exist yet), or nil without one.
+    def series_dir(options)
+      if options[:dir]
+        dir = File.expand_path(options[:dir])
+        options[:repo] ||= JSON.parse(File.read(File.join(dir, 'manifest.json'))).fetch('repo')
+        return dir
+      end
+      return unless options[:name] && options[:repo]
+      require_relative '../../scripts/series'
+      ReviewSeries.directory(options[:repo], options[:name], create: true)
+    rescue Errno::ENOENT, JSON::ParserError, KeyError
+      abort "No review series in #{options[:dir]}"
+    rescue ArgumentError => e
+      abort e.message
     end
 
     # [owner/name, number], or [why there is none, nil].

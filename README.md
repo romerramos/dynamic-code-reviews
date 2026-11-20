@@ -240,7 +240,7 @@ commands. Everything runs as `<skill>/bin/dcr <command>`, with Ruby 3.1+ (under 
 
 | Command | What it does |
 | --- | --- |
-| `context` | What was already said on a pull request and around it, for the agent to read before it reviews: the description, the conversation, review threads (resolved or not), the stack below and above it, the issues it closes, its issue-tracker id and what people mention. Read-only, printed, never saved or posted; one line when there is no pull request. |
+| `context` | What was already said on a pull request and around it, for the agent to read before it reviews: the description, the conversation, review threads (resolved or not), the stack below and above it, the issues it closes, its issue-tracker id and what people mention. Read-only on GitHub, never posted; secrets in it are replaced by a placeholder; one line when there is no pull request. With `--name` the read is kept privately beside the review, for the adversaries (with agent session links removed too), and `--since-last` prints only what changed since it, for a new revision. |
 | `collect` | Snapshot uncommitted changes, a commit or a PR range; `--mode repo --scope <files.json>` reads a repository's chosen critical files whole. |
 | `critical` | Candidate files for a critical-code review: sign-in and users, regulated data, secrets and security, payments, with the signals each matched (never the matched text). |
 | `series start --in-progress` / `series finish` | Open the review from an outline, then save the full review into the same revision. |

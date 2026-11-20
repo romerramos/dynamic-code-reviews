@@ -26,7 +26,7 @@ FAKE_GH = <<~'RUBY'
     nodes = body.dig('variables', 'branch') == 'feat/acme-42-keep-value' ? [{'number' => 7}] : []
     puts JSON.generate('data' => {'repository' => {'pullRequests' => {'nodes' => nodes}}})
   elsif query.include?('pullRequest(number:')
-    puts JSON.generate('data' => {'repository' => {'pullRequest' => {
+    pull = {
       'number' => 7, 'title' => 'feat(ACME-42): keep the value', 'url' => 'https://github.com/acme/web/pull/7',
       'state' => 'OPEN', 'isDraft' => false, 'baseRefName' => 'feat/acme-42-store', 'headRefName' => 'feat/acme-42-keep-value',
       'author' => person.('ada-author'),
@@ -43,23 +43,37 @@ FAKE_GH = <<~'RUBY'
         {'author' => person.('rae-reviewer'), 'state' => 'COMMENTED', 'body' => ''}
       ]},
       'reviewThreads' => {'totalCount' => 150, 'nodes' => [
-        {'isResolved' => true, 'isOutdated' => false, 'path' => 'app/notifier.rb', 'line' => 64, 'originalLine' => 60, 'comments' => {'totalCount' => 2, 'nodes' => [
+        {'id' => 't-1', 'isResolved' => true, 'isOutdated' => false, 'path' => 'app/notifier.rb', 'line' => 64, 'originalLine' => 60, 'comments' => {'totalCount' => 2, 'nodes' => [
           {'author' => person.('rae-reviewer'), 'body' => '**question (blocking):** Should the flag wait until the email is sent?'},
           {'author' => person.('ada-author'), 'body' => 'That follows in https://github.com/acme/web/pull/8'}
         ]}},
-        {'isResolved' => false, 'isOutdated' => true, 'path' => 'app/job.rb', 'line' => nil, 'originalLine' => 12, 'comments' => {'totalCount' => 1, 'nodes' => [
+        {'id' => 't-2', 'isResolved' => false, 'isOutdated' => true, 'path' => 'app/job.rb', 'line' => nil, 'originalLine' => 12, 'comments' => {'totalCount' => 1, 'nodes' => [
           {'author' => person.('rae-reviewer'), 'body' => 'Is #999 still a problem here?'}
         ]}},
         {'isResolved' => false, 'isOutdated' => false, 'path' => 'app/bot.rb', 'line' => 3, 'originalLine' => 3, 'comments' => {'totalCount' => 1, 'nodes' => [
           {'author' => person.('lint-helper', 'Bot'), 'body' => 'Style offence'}
         ]}}
       ]}
-    }}})
+    }
+    # Later, after a new revision: the description was edited, a thread got a reply, another was
+    # resolved, a new one opened and someone commented.
+    if ENV['GH_LATER']
+      pull['body'] += "\n\nSending it later is #8's job."
+      threads = pull.dig('reviewThreads', 'nodes')
+      threads[0]['comments']['nodes'] << {'id' => 'c-late', 'author' => person.('rae-reviewer'), 'body' => 'Thanks, that works.'}
+      threads[1]['isResolved'] = true
+      threads << {'id' => 't-new', 'isResolved' => false, 'isOutdated' => false, 'path' => 'app/store.rb', 'line' => 9, 'originalLine' => 9, 'comments' => {'totalCount' => 1, 'nodes' => [
+        {'id' => 'c-new', 'author' => person.('rae-reviewer'), 'body' => 'Is the store still needed?'}
+      ]}}
+      pull['comments']['nodes'] << {'id' => 'c-conv', 'author' => person.('ada-author'), 'body' => 'Rebased on main.'}
+    end
+    puts JSON.generate('data' => {'repository' => {'pullRequest' => pull}})
   else
     data = {
       'below' => {'pullRequests' => {'nodes' => [{'number' => 6, 'title' => 'feat(ACME-42): store the value', 'state' => 'MERGED', 'url' => 'https://github.com/acme/web/pull/6', 'baseRefName' => 'main', 'headRefName' => 'feat/acme-42-store'}]}},
       'above' => {'pullRequests' => {'nodes' => [{'number' => 8, 'title' => 'feat(ACME-42): send it later', 'state' => 'OPEN', 'url' => 'https://github.com/acme/web/pull/8', 'baseRefName' => 'feat/acme-42-keep-value', 'headRefName' => 'feat/acme-42-later'}]}}
     }
+    data['above']['pullRequests']['nodes'] << {'number' => 9, 'title' => 'feat(ACME-42): tidy up', 'state' => 'OPEN', 'url' => 'https://github.com/acme/web/pull/9', 'baseRefName' => 'feat/acme-42-keep-value', 'headRefName' => 'feat/acme-42-tidy'} if ENV['GH_LATER']
     found = {'6' => {'__typename' => 'PullRequest', 'title' => 'feat(ACME-42): store the value', 'state' => 'MERGED', 'baseRefName' => 'main', 'headRefName' => 'feat/acme-42-store'},
              '8' => {'__typename' => 'PullRequest', 'title' => 'feat(ACME-42): send it later', 'state' => 'OPEN', 'baseRefName' => 'feat/acme-42-keep-value', 'headRefName' => 'feat/acme-42-later'},
              '12' => {'__typename' => 'Issue', 'title' => 'API keeps old values', 'state' => 'CLOSED'}}
@@ -136,6 +150,30 @@ Dir.mktmpdir('dcr-pr-context-test') do |directory|
   out, _, status = dcr.('--repo', repo, extra: {'DCR_GH' => File.join(directory, 'missing-gh')})
   assert(status.success? && out.strip.start_with?('No GitHub context: GitHub CLI (`gh`) is not installed.'), "A missing gh must say so in one line: #{out}")
   puts 'PASS with no pull request, no GitHub remote or no gh it says so in one line and succeeds'
+
+  # A review keeps its read and, after a new revision, learns what changed on the pull request since.
+  kept = File.join(repo, '.reviews', 'acme-42', 'context.json')
+  out, _, status = dcr.('--repo', repo, '--name', 'acme-42', '--pr', '#7')
+  assert(status.success? && out.include?('## Review threads') && File.file?(kept), "With a series the read is printed in full and kept: #{out}")
+  assert(File.stat(kept).mode & 0o777 == 0o600 && system('git', '-C', repo, 'check-ignore', '-q', kept), 'The kept read is private and git-ignored')
+  File.write(File.join(repo, '.reviews', 'acme-42', 'manifest.json'), JSON.generate('revisions' => [{'number' => 1}, {'number' => 2}]))
+  out, _, status = dcr.('--repo', repo, '--name', 'acme-42', '--since-last', extra: {'GH_LATER' => '1'})
+  assert(status.success? && out.start_with?("# acme/web#7: feat(ACME-42): keep the value\n## Since the last read (20"), "--since-last needs no --pr and says what it compares with: #{out}")
+  changed = {
+    'the edited description' => "- The description was edited:\n    + Sending it later is #8's job.",
+    'a newly stacked pull request' => '- Newly stacked on this: #9 feat(ACME-42): tidy up (open; feat/acme-42-tidy → feat/acme-42-keep-value)',
+    'a new reply in a thread' => "- New replies on app/notifier.rb:64 (resolved):\n  - @rae-reviewer:\n      Thanks, that works.",
+    'a thread resolved since' => '- Resolved since: app/job.rb:12',
+    'a new thread' => "- New thread on app/store.rb:9 (unresolved):\n  - @rae-reviewer:\n      Is the store still needed?",
+    'a new comment in the conversation' => "- @ada-author in the conversation:\n    Rebased on main."
+  }
+  changed.each { |what, text| assert(out.include?(text), "Since the last read it must show #{what}:\n#{text}\n--- got ---\n#{out}") }
+  assert(!out.include?('Backfill has run') && !out.include?('## Description') && !out.include?('Should the flag wait'), "What was already read is not repeated:\n#{out}")
+  out, _, status = dcr.('--repo', repo, '--name', 'acme-42', '--since-last', extra: {'GH_LATER' => '1'})
+  assert(status.success? && out.include?('## Since the last read (revision 2, ') && out.end_with?("Nothing changed on the pull request or around it.\n"), "Read again, nothing is new, and the read says its revision: #{out}")
+  out, _, status = dcr.('--repo', repo, '--name', 'acme-42', '--since-last', extra: {'GH_SIGNED_OUT' => '1'})
+  assert(status.success? && out.start_with?('No GitHub context:') && File.read(kept).include?('Thanks, that works.'), "A failed read says so and keeps the last one: #{out}")
+  puts 'PASS a review keeps its last read privately, and --since-last says only what changed on the pull request since'
 end
 
 require_relative '../lib/dcr/pr_context'
