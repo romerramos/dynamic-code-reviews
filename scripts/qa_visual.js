@@ -377,6 +377,8 @@ async function panelsOpenAndClose(page) {
       return {open, control: ${JSON.stringify(controls)}.map(usable).find(Boolean) || null};
     })()`;
     const first = await page.evaluate(state);
+    // The Overview lists the comments itself: Your review, and its icon, are not there.
+    if (name === 'your review' && await page.evaluate(`document.body.classList.contains('on-overview')`)) { results.push(first.control || first.open ? `${name}: shown on the Overview` : `${name}: ok`); continue; }
     if (!first.control) { results.push(`${name}: no icon in sight`); continue; }
     await page.evaluate(`document.getElementById(${JSON.stringify(first.control)}).click()`); await sleep(400);
     const second = await page.evaluate(state);

@@ -709,6 +709,14 @@ globalThis.ReviewTools = (() => {
   const riskTag = tag => RISK_TAGS[tag] || tag;
   // Most risky first; files of equal score keep the agent's order.
   const riskFiles = ranking => [...(ranking?.files || [])].sort((a, b) => b.score - a.score);
+  // Your review is not on the Overview, which lists the comments already; elsewhere it is open by
+  // choice, and until you choose, on a wide screen once there is something in it. Where it slides
+  // over the page it opens for this visit only (overOpen).
+  const ledgerOpen = ({view, wide, zen, chosen, overOpen, filled}) => {
+    if (view === 'overview') return false;
+    if (!wide && !zen) return !!overOpen;
+    return typeof chosen === 'boolean' ? chosen : !!(wide && filled);
+  };
   // Where a review opens. An address that names a step or a view is a link to it. A bare address,
   // or the Overview link every command prints, resumes where the reader stopped, like a bookmark
   // in a book. forced: the page itself reloads onto a view (the Overview, to show new QA clips).
@@ -718,5 +726,5 @@ globalThis.ReviewTools = (() => {
     return views.includes(savedView) ? savedView : 'overview';
   };
 
-  return {whenText, ledgerPlace, screenshotLink, issueUrl, pullRequestDescription, overviewShows, whereLine, ledgerBy, pathParts, pathFit, modelName, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, where, scopeLabel, sha256, githubLink, githubFileLink, evidenceFlows, flowLines, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  return {whenText, ledgerPlace, screenshotLink, issueUrl, pullRequestDescription, overviewShows, whereLine, ledgerBy, pathParts, pathFit, modelName, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, ledgerOpen, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, where, scopeLabel, sha256, githubLink, githubFileLink, evidenceFlows, flowLines, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();

@@ -243,7 +243,7 @@
       {key:'e', label: collapsed ? 'Show the sidebar' : 'Hide the sidebar', run: () => { $('nav-toggle').click(); setPane(document.body.classList.contains('sidebar-collapsed') ? 'main' : 'nav'); }},
       view('app') && {key:'a', label: inApp ? 'Back to the code' : 'Open the app', run: () => (inApp ? view('code') : view('app')).click()},
       previews && {key:'p', label:'Template previews', run: () => previews.click()},
-      {key:'l', label: ledgerOpen() ? 'Hide your review' : 'Show your review', run: () => { setLedger(!ledgerOpen()); setPane(ledgerOpen() ? 'ledger' : 'main'); }},
+      state.view !== 'overview' && {key:'l', label: ledgerOpen() ? 'Hide your review' : 'Show your review', run: () => { setLedger(!ledgerOpen()); setPane(ledgerOpen() ? 'ledger' : 'main'); }},
       {key:'d', label:'Review details', run: () => $('context-toggle').click()},
       agentChip() && {key:'g', label:'Agents and adversaries', run: openAgentCard},
       {key:'/', label:'Find a file or a line of code', run: findInSidebar},
@@ -3093,11 +3093,10 @@
               where:was ? `Outdated · ${was.lines}` : comment.general ? 'General comment' : `${comment.side === 'new' ? 'After' : 'Before'} L${comment.start}${comment.end !== comment.start ? `–${comment.end}` : ''}`};
     });
   }
-  // Open by choice; until you choose, open on a wide screen once there is something to show.
-  const ledgerOpen = () => {
-    if (!ledgerWide() && !document.body.classList.contains?.('zen')) return ledgerOverOpen;
-    return typeof state.ledgerOpen === 'boolean' ? state.ledgerOpen : ledgerWide() && (ledgerEntries().length > 0 || personalNotes().length > 0);
-  };
+  // Open by choice; until you choose, open on a wide screen once there is something to show. Never
+  // on the Overview, which lists the comments itself (ReviewTools.ledgerOpen).
+  const ledgerOpen = () => ReviewTools.ledgerOpen({view: state.view, wide: ledgerWide(), zen: !!document.body.classList.contains?.('zen'),
+    chosen: state.ledgerOpen, overOpen: ledgerOverOpen, filled: ledgerEntries().length > 0 || personalNotes().length > 0});
   function renderLedger() {
     const entries = ledgerEntries();
     const notes = personalNotes();
@@ -3297,6 +3296,8 @@
     $('prev').setAttribute('aria-label', pagedReading() ? 'Previous file' : 'Previous step');
     $('next').setAttribute('aria-label', pagedReading() ? 'Next file' : 'Next step');
     $('content').innerHTML = fileReadingActive() ? renderFocus() : layer ? renderStep(layer) : state.view === 'files' ? renderFiles() : state.view === 'since' ? renderSince() : renderOverview();
+    // The Overview has no Your review, nor its icons: for the stylesheets.
+    document.body.classList.toggle('on-overview', state.view === 'overview');
     refreshVisualControls();
     renderLedger();
     hydratePreviews($('content'));
@@ -4284,7 +4285,7 @@
     // Everything read and settled: what the served review would do next (publish it, or see it published).
     const publish = document.getElementById('dcr-publish');
     if (publish && !publish.hidden) return {meta: '', label: publish.textContent.trim(), run: () => publish.click()};
-    return {meta: '', label: 'Your review', run: () => setLedger(true)};
+    return state.view === 'overview' ? {meta: '', label: '', run: null} : {meta: '', label: 'Your review', run: () => setLedger(true)};
   }
   // What the field would be about: the selected lines, else the line the keyboard is on, else the
   // top of the file being read, else the review as a whole.
@@ -4400,6 +4401,7 @@
       reading && {label: fileViewed(reading) ? 'Mark this file as not reviewed' : 'Mark this file reviewed', keys: 'm', run: () => markViewed(reading, !fileViewed(reading))},
       ...leaderCommands(markKeyboardFile).filter(command => command.key !== ' ').map(command => ({label: command.label, keys: `space ${command.key}`, run: command.run})),
       document.getElementById('dcr-presence') && !agentChip() && {label: 'Agents and adversaries', run: () => openSettings('agents')},
+      document.querySelector('[data-dcr-export]') && {label: 'Export your review', run: () => document.querySelector('[data-dcr-export]').click()},
       qa && {label: 'Start QA review', run: () => { select('overview'); qa.click(); }},
       document.getElementById('qa-panel') && {label: 'Record the app yourself', run: () => { select('overview'); document.body.classList.add('qa-recorder-shown'); requestAnimationFrame(() => document.getElementById('qa-panel')?.scrollIntoView({block: 'center'})); }},
       document.querySelector('.dcr-try [data-try-all]') && {label: 'Open previews of the changed templates', run: () => document.querySelector('.dcr-try [data-try-all]').click()},

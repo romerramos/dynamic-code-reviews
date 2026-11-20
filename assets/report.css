@@ -1564,6 +1564,7 @@ body:not(.navigation-open) .sidebar{position:relative}
 .ledger-head .ledger-export svg{width:15px;height:15px;stroke-width:1.8}
 .settings-round h2{margin:0 0 8px;color:var(--muted);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
 .settings-round p{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;color:var(--muted);font-size:12.5px}
+.settings-round p+p{margin-top:10px}
 .settings-round .btn{flex:none;--_button-height:30px;--_button-min-height:30px;--_button-pad:0 11px;--button-border-width:1px;--button-border-color:var(--line);--_button-radius:8px;--button-ink:var(--ink);--_button-weight:500}
 #settings-dialog.has-agents[data-tab="agents"] .settings-round:not([hidden]){display:block;margin:18px 0 0;padding:16px 0 0;border-top:1px solid var(--line);margin-inline:10px}
 .settings-agents .dcr-presence-help{margin-top:8px;color:var(--muted);font-size:12.5px;line-height:1.45}
@@ -1620,7 +1621,7 @@ html[data-mode="dark"] .review-bar textarea{background:transparent}
 /* From a tablet up the panels' icons sit in the page's corners; on a phone they are in the bar. */
 @media(min-width:741px){
   body:not(.list-open):not(.zen) .sidebar-show{display:grid;position:fixed;top:var(--panel-icon-top);left:18px;z-index:30}
-  body:not(.ledger-open):not(.zen) .ledger-show{display:grid;position:fixed;top:var(--panel-icon-top);right:18px;z-index:30}
+  body:not(.ledger-open):not(.zen):not(.on-overview) .ledger-show{display:grid;position:fixed;top:var(--panel-icon-top);right:18px;z-index:30}
 }
 :is(.sidebar-show,.ledger-show,.bar-review) .when-open{display:none}
 body.list-open .sidebar-show .when-open,body.ledger-open :is(.ledger-show,.bar-review) .when-open{display:contents}
@@ -1661,7 +1662,7 @@ dialog.modal>.modal-box{max-height:calc(100dvh - 32px)}
 @media(max-width:740px){
   /* --drawer-foot: the room a drawer leaves at its foot for the bar; a theme that sets a drawer's padding reads it. */
   :root{--bar-room:calc(76px + env(safe-area-inset-bottom));--drawer-foot:var(--bar-room);--ledger-finish-foot:0px}
-  .review-bar .bar-review{display:grid}
+  body:not(.on-overview) .review-bar .bar-review{display:grid}
   .navigation-open .sidebar{inset:0;z-index:25;width:100vw;max-width:none;max-height:none;padding-bottom:var(--drawer-foot);border:0}
   .navigation-open .sidebar .sidebar-footer{display:grid}
   body.ledger-open .ledger,body.zen.ledger-open .ledger{inset:0;z-index:25;width:100vw;max-width:none;padding-bottom:var(--drawer-foot)}

@@ -272,3 +272,14 @@ assert.deepEqual(['security', 'data-volume', 'shared-code', 'other'].map(tools.r
 assert.deepEqual(tools.riskFiles({files:[{file:'a', score:40}, {file:'b', score:90}, {file:'c', score:40}]}).map(entry => entry.file), ['b', 'a', 'c'], 'most risky first; equal scores keep the order given');
 assert.deepEqual(tools.riskFiles(null), []);
 console.log('PASS the risk ranking writes each level and tag in words, most risky first');
+{
+  // Your review is not on the Overview, which lists the comments itself; reading, it is as before.
+  const wide = {wide: true, zen: false, overOpen: false, filled: true};
+  assert.equal(tools.ledgerOpen({...wide, view: 'overview', chosen: true}), false, 'never on the Overview, even when chosen open');
+  assert.equal(tools.ledgerOpen({...wide, view: 'g0l1', chosen: true}), true, 'reading, it opens as the reader left it');
+  assert.equal(tools.ledgerOpen({...wide, view: 'g0l1', chosen: undefined}), true, 'until chosen, open on a wide screen once something is in it');
+  assert.equal(tools.ledgerOpen({...wide, view: 'files', chosen: false}), false);
+  assert.equal(tools.ledgerOpen({...wide, view: 'g0l1', wide: false, overOpen: true}), true, 'over the page, open for this visit');
+  assert.equal(tools.ledgerOpen({...wide, view: 'overview', wide: false, overOpen: true}), false, 'over the page, not on the Overview either');
+  console.log('PASS Your review is never on the Overview and opens as before while reading');
+}

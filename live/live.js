@@ -1254,9 +1254,16 @@
     <div class="dcr-detail-title"><span class="dcr-detail-mark"></span><span class="ledger-where"></span><strong></strong><button type="button" class="dcr-detail-code" data-ledger-jump>${ico('arrow-up-right')}<span>Show in the code</span><span class="dcr-detail-at"></span></button></div><div class="dcr-detail-slot"></div>`;
   ledgerPanel?.append(view);
   let current = null;
+  let revealCard = () => null;
   const openConversation = (id, {focus = true} = {}) => {
     const comment = comments().find(entry => entry.id === id);
     if (!comment || !hasConversation(threads[id]) || !ledgerPanel) return false;
+    // The Overview has no Your review: there the conversation is read in its comment's card.
+    const card = document.body.classList.contains('on-overview') && revealCard(id);
+    if (card) {
+      if (focus) card.querySelector('.dcr-reply:not([hidden]) textarea')?.focus({preventScroll: true});
+      return true;
+    }
     if (!document.body.classList.contains('ledger-open')) document.getElementById('ledger-toggle')?.click();
     current = id;
     view.querySelector('.dcr-detail-title .ledger-where').innerHTML = whereOf(comment);
@@ -1746,12 +1753,16 @@
   // card: they go wherever they are shown, and are listed afresh when that tab opens.
   const settingsDialog = document.getElementById('settings-dialog');
   const settingsAgents = settingsDialog?.querySelector('.settings-agents');
-  // For a theme with no footer in Your review: Export is an icon by its title, Finish with agent is in
-  // Settings, Agents. Both press the footer's own buttons, so they do exactly the same.
+  // For a theme with no footer in Your review: Export is an icon by its title, and in Settings, Agents
+  // beside Finish with agent (the Overview has no Your review). Both press the footer's own buttons.
   const ledgerExport = document.getElementById('ledger-export');
   if (ledgerExport) { ledgerExport.innerHTML = ico('download'); ledgerExport.hidden = false; ledgerExport.addEventListener('click', () => document.querySelector('[data-dcr-export]')?.click()); }
   const settingsRound = settingsDialog?.querySelector('.settings-round');
-  if (settingsRound) { settingsRound.hidden = false; settingsRound.querySelector('[data-settings-finish]').addEventListener('click', () => { settingsDialog.close(); document.querySelector('[data-dcr-finish]')?.click(); }); }
+  if (settingsRound) {
+    settingsRound.hidden = false;
+    settingsRound.querySelector('[data-settings-finish]').addEventListener('click', () => { settingsDialog.close(); document.querySelector('[data-dcr-finish]')?.click(); });
+    settingsRound.querySelector('[data-settings-export]').addEventListener('click', () => { settingsDialog.close(); document.querySelector('[data-dcr-export]')?.click(); });
+  }
   const agentParts = [presenceMain, advPanel, presenceCard.querySelector('.dcr-voice-link')];
   const agentsInSettings = () => !!settingsAgents && settingsDialog.open && getComputedStyle(settingsAgents).display !== 'none';
   const homeAgentParts = () => {
@@ -2412,20 +2423,21 @@
   };
   todoHook = renderTodo;
   // To a comment's card in the Overview, opening the fold it is in.
+  revealCard = id => {
+    const card = document.querySelector(`#content article.review-thread[data-thread-id="${CSS.escape(id)}"]`);
+    if (!card) return null;
+    for (let fold = card.closest('details'); fold; fold = fold.parentElement.closest('details')) fold.open = true;
+    const body = card.querySelector('details.thread-details');
+    if (body) body.open = true;
+    card.scrollIntoView({block: 'start', behavior: 'instant'});
+    return card;
+  };
   document.addEventListener('click', event => {
     const show = event.target.closest('[data-dcr-show]');
     if (!show?.dataset.dcrShow) return;
     event.preventDefault(); // on a card's summary it goes to the comment, without folding this one
-    const reveal = () => {
-      const card = document.querySelector(`#content article.review-thread[data-thread-id="${CSS.escape(show.dataset.dcrShow)}"]`);
-      if (!card) return false;
-      for (let fold = card.closest('details'); fold; fold = fold.parentElement.closest('details')) fold.open = true;
-      const body = card.querySelector('details.thread-details');
-      if (body) body.open = true;
-      card.scrollIntoView({block: 'start', behavior: 'instant'});
-      return true;
-    };
-    if (!reveal()) { document.querySelector('.sidebar nav [data-view="overview"]')?.click(); requestAnimationFrame(reveal); }
+    const id = show.dataset.dcrShow;
+    if (!revealCard(id)) { document.querySelector('.sidebar nav [data-view="overview"]')?.click(); requestAnimationFrame(() => revealCard(id)); }
   });
 
   const publishDialog = document.createElement('dialog');

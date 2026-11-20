@@ -772,6 +772,7 @@ html[data-theme^="minimal-"] body.review-in-progress .overview-reading .dcr-try:
 [data-theme^="minimal-"] .ledger-head .ledger-export svg{width:15px;height:15px;stroke-width:1.8}
 [data-theme^="minimal-"] .settings-round h2{margin:0 0 8px;color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
 [data-theme^="minimal-"] .settings-round p{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;color:var(--muted);font-size:12.5px}
+[data-theme^="minimal-"] .settings-round p+p{margin-top:10px}
 [data-theme^="minimal-"] #settings-dialog.has-agents[data-tab="agents"] .settings-round:not([hidden]){display:block;margin:18px 0 0;padding:16px 0 0;border-top:1px solid var(--line);margin-inline:10px}
 [data-theme^="minimal-"] .settings-agents .dcr-presence-help{margin-top:8px;color:var(--muted);font-size:12.5px;line-height:1.45}
 [data-theme^="minimal-"] .settings-agents .dcr-presence-cmd code{font-size:11.5px}
@@ -811,5 +812,5 @@ html[data-theme^="minimal-"]{--panel-icon-top:25px}
 /* They are the panels' only close, so they sit above the open drawer's scrim. */
 @media(min-width:741px){html[data-theme^="minimal-"] body:not(.zen) .sidebar-show{display:grid;position:fixed;top:var(--panel-icon-top);left:18px;z-index:45}}
 @media(min-width:741px){html[data-theme^="minimal-"] body.list-open:not(.zen) .sidebar-show{left:calc(min(var(--list-w),85vw) + 8px)}}
-@media(min-width:741px){html[data-theme^="minimal-"] body:not(.zen) .ledger-show{display:grid;position:fixed;top:var(--panel-icon-top);right:18px;z-index:45}}
+@media(min-width:741px){html[data-theme^="minimal-"] body:not(.zen):not(.on-overview) .ledger-show{display:grid;position:fixed;top:var(--panel-icon-top);right:18px;z-index:45}}
 @media(min-width:741px){html[data-theme^="minimal-"] body.ledger-open:not(.zen) .ledger-show{right:calc(var(--ledger-size) + 8px)}}
