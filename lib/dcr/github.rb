@@ -245,6 +245,10 @@ module DCR
       {'id' => posted['id'], 'url' => posted['html_url'], 'head' => target[:commit]}.merge(mark_reviewed(target, description, posted['html_url']))
     end
 
+    # A read-only GraphQL query's data. A part GitHub cannot resolve (a number nobody can see)
+    # comes back as null beside the rest, as GitHub answers it.
+    def graphql(query, variables = {}) = api('POST', 'graphql', {'query' => query, 'variables' => variables})['data'] || {}
+
     private
 
     def pull_head(target) = api('GET', "repos/#{target[:repo]}/pulls/#{target[:number]}").dig('head', 'sha')
@@ -389,6 +393,7 @@ module DCR
 
       code = err[/HTTP (\d{3})/, 1].to_i
       error = (JSON.parse(out) rescue {})
+      return error if path == 'graphql' && error['data'].is_a?(Hash) # partial: what it could resolve
       reasons = Array(error['errors']).map { |item| item.is_a?(Hash) ? item['message'] : item }.compact.reject(&:empty?)
       detail = reasons.any? ? reasons.join('; ') : error['message']
       raise Rejected, "GitHub refused it: #{detail || 'validation failed'}." if code == 422

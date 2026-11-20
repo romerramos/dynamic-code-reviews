@@ -44,6 +44,8 @@ USAGE = <<~TEXT
                                    posts; --publish posts it and marks the reviewed commit
     record <action>                Control a running recorder (wait-ready, start, still, stop, end, status, reload)
     lens                           The review lens: what to look for when reviewing (list, use <id>, update)
+    context                        What was already said on a pull request and around it (threads, stack, mentions),
+                                   to read before reviewing; read-only, never saved
     setup                          Download Universal Ctags for links from a name to its definition (optional)
 
   Run a command with no further arguments to see its own usage.
@@ -83,6 +85,9 @@ when 'lens'
     abort e.message
   end
 when 'critical' then run_script('critical.rb', *ARGV)
+when 'context'
+  require_relative '../lib/dcr/pr_context'
+  DCR::PRContext.cli(ARGV)
 when nil, '-h', '--help', 'help' then puts USAGE
 else abort "Unknown command #{command}\n\n#{USAGE}"
 end

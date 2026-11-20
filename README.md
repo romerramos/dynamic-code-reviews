@@ -240,6 +240,7 @@ commands. Everything runs as `<skill>/bin/dcr <command>`, with Ruby 3.1+ (under 
 
 | Command | What it does |
 | --- | --- |
+| `context` | What was already said on a pull request and around it, for the agent to read before it reviews: the description, the conversation, review threads (resolved or not), the stack below and above it, the issues it closes, its issue-tracker id and what people mention. Read-only, printed, never saved or posted; one line when there is no pull request. |
 | `collect` | Snapshot uncommitted changes, a commit or a PR range; `--mode repo --scope <files.json>` reads a repository's chosen critical files whole. |
 | `critical` | Candidate files for a critical-code review: sign-in and users, regulated data, secrets and security, payments, with the signals each matched (never the matched text). |
 | `series start --in-progress` / `series finish` | Open the review from an outline, then save the full review into the same revision. |
@@ -368,6 +369,7 @@ ruby scripts/test_lenses.rb        # review lenses: files and licenses present, 
 ruby scripts/test_jevmypr.rb       # JevMyPR's verdict: what is sent, on unless turned off, errors and no network (a stand-in service)
 ruby scripts/test_github.rb        # posting to the pull request through gh (a stand-in gh, nothing reaches GitHub)
 ruby scripts/test_github_inbox.rb  # teammates' GitHub comments taken in, handed to the agent, answered under them
+ruby scripts/test_pr_context.rb    # what was already said on a pull request, read before reviewing (a stand-in gh)
 ruby scripts/test_publish.rb       # the review's report: what it counts, what it leaves out, publishing it once and in place
 ruby scripts/test_live_previews.rb # preview requests, stylesheets, stand-ins
 ruby scripts/test_app_proxy.rb     # the running app inside the review
