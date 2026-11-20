@@ -25,6 +25,9 @@
   const icon = name => (window.ReviewIcons?.[name] || '').replace('<svg', '<svg aria-hidden="true" focusable="false"');
   let storage = null;
   try { storage = window.localStorage; } catch { /* this visit only */ }
+  // The whole change, as All changes shows it: its files and the lines added and removed.
+  const lines = (snapshot.files || []).flatMap(file => (file.hunks || []).flatMap(hunk => hunk.rows?.unified || []));
+  const changes = {files: (snapshot.files || []).length, added: lines.filter(line => line.kind === 'add').length, removed: lines.filter(line => line.kind === 'del').length};
   const memory = live.tryMemory(storage, live.progressKey(snapshot, review));
 
   const panel = document.createElement('aside');
@@ -61,7 +64,7 @@
   const set = (node, name, value) => { if (node[name] !== value) node[name] = value; };
   const draw = () => {
     const html = live.tryPanelHTML({risk: window.ReviewRisk?.brief?.() || null, app, noApp, recorder: recorder(), shots: marks().shots, templates,
-      previewsShort: window.ReviewPreviews?.short?.() || '', qaRunning: !!window.DCRApp?.running?.()}, {icon, riskOpen});
+      previewsShort: window.ReviewPreviews?.short?.() || '', qaRunning: !!window.DCRApp?.running?.(), changes}, {icon, riskOpen});
     if (html !== drawn) {
       const focused = panel.contains(document.activeElement) && document.activeElement.matches('[data-try-risk]');
       drawn = html;

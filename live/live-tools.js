@@ -547,15 +547,16 @@ globalThis.LiveTools = (() => {
 
   // --- Try the change ---------------------------------------------------------------------------
   // What a reader can do with the change itself, as one panel: the risk ranking, which unfolds its
-  // files; QA, the screenshots and the template previews; then the running app. A row that does not
-  // apply is left out, and with none the panel is not there at all (an empty string).
+  // files; QA, the screenshots, the template previews and the whole change (its files and lines,
+  // opening All changes); then the running app. A row that does not apply is left out, and with
+  // none the panel is not there at all (an empty string).
   //   data: {risk: ReviewRisk.brief(), app: {upstream}, noApp: why, recorder, shots, templates,
-  //          previewsShort, qaRunning}
+  //          previewsShort, qaRunning, changes: {files, added, removed}}
   //   options: {icon(name), riskOpen}
   const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
   const riskBar = score => { const full = Math.max(1, Math.min(8, Math.floor(score / 12.5))); return '█'.repeat(full) + '░'.repeat(8 - full); };
   function tryPanelHTML(data, {icon = () => '', riskOpen = false} = {}) {
-    const {risk = null, app = null, noApp = null, recorder = false, shots = 0, templates = 0, previewsShort = '', qaRunning = false} = data || {};
+    const {risk = null, app = null, noApp = null, recorder = false, shots = 0, templates = 0, previewsShort = '', qaRunning = false, changes = null} = data || {};
     const item = (attrs, glyph, label, end = '', extra = '') => `<button type="button" class="dcr-try-item"${extra} ${attrs}>${icon(glyph)}<span class="dcr-try-label">${label}</span><span class="dcr-try-end">${end}</span></button>`;
     const groups = [];
     if (risk) {
@@ -575,7 +576,8 @@ globalThis.LiveTools = (() => {
     const actions = [
       app && item('data-try="qa" title="Your agent records the flows behind the comments, in this tab"', 'video', 'Start QA review', qaRunning ? 'Running' : ''),
       shots && item('data-open-shots="" aria-haspopup="dialog" title="The screenshots and recordings from the app"', 'image', 'Screenshots', String(shots)),
-      templates && item('data-open-previews title="The changed templates, rendered"', 'layout-template', 'Previews', `<span data-preview-short>${escape(previewsShort)}</span><span class="dcr-try-count">${plural(templates, 'template')}</span>`)
+      templates && item('data-open-previews title="The changed templates, rendered"', 'layout-template', 'Previews', `<span data-preview-short>${escape(previewsShort)}</span><span class="dcr-try-count">${plural(templates, 'template')}</span>`),
+      changes?.files && item('data-view="files" title="Every diff, grouped by the work it does"', 'file-diff', 'Changes', `${plural(changes.files, 'file')}<span class="dcr-try-add">+${changes.added || 0}</span><span class="dcr-try-del">−${changes.removed || 0}</span>`)
     ].filter(Boolean).join('');
     if (actions) groups.push(actions);
     // The app: its address, to use it inside the review. Without one, why there is none.

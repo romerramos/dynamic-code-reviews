@@ -437,6 +437,7 @@ console.log('PASS a file row keeps who reads it apart from how risky it is');
   assert.doesNotMatch(bare, /Risk ranking|Start QA review|Screenshots|Running app|<hr>/, 'no ranking, no app, no screenshots: those rows are left out');
   assert.match(bare, /<span data-preview-short>1 ready<\/span><span class="dcr-try-count">1 template<\/span>/, 'previews say how they stand once some are built');
   assert.equal(tools.tryPanelHTML({risk: null, app: null, shots: 0, templates: 0}, {icon}), '', 'with nothing to try there is no panel');
+  assert.match(tools.tryPanelHTML({changes: {files: 5, added: 13, removed: 3}}, {icon}), /data-view="files"[^>]*>.*Changes<\/span><span class="dcr-try-end">5 files<span class="dcr-try-add">\+13<\/span><span class="dcr-try-del">−3<\/span>/, 'Changes: its files and lines, opening All changes');
   assert.match(tools.tryPanelHTML({app: null, noApp: 'no UI in this change.'}), /No UI in this change, so there is no QA review and no screenshots\./);
   assert.match(tools.tryPanelHTML({app: null, recorder: true}), /Serve it with <code>--app<\/code>/);
   assert.match(tools.tryPanelHTML({risk: {state: 'ranking'}}), /disabled[^>]*>.*Risk ranking.*Ranking…/, 'while ranking it says so and does not unfold');
