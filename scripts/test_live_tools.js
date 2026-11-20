@@ -168,6 +168,9 @@ assert.match(UI.Avatar({agent:'my-bot'}), /<b>M<\/b>/, 'an agent with no bundled
 assert.match(UI.Avatar({agent:'claude', model:'claude-fable-5-2', effort:'max'}), /data-tip="Claude · Fable 5\.2 · max"/, 'a face says the model it ran on in its tip');
 assert.doesNotMatch(UI.Avatar({agent:'claude'}), /data-tip/, 'no model, no tip');
 assert.equal(tools.agentInfo('antigravity').company, 'Google');
+globalThis.ReviewBrands = {codex:'<svg data-mark="codex"></svg>', antigravity:'<svg id="colour"></svg>', 'antigravity-mono':'<svg id="plain"></svg>'};
+assert.equal(UI.AgentMark('antigravity'), '<svg data-mark="brand" id="colour"></svg><svg data-mark="mono" id="plain"></svg>', 'a mark in colours ink cannot fill carries its plain version, for the style to choose');
+assert.deepEqual([UI.AgentMark('antigravity', {plain: true}), UI.AgentMark('codex', {plain: true})], ['<svg id="plain"></svg>', '<svg data-mark="codex"></svg>'], 'asked for plain: the plain version, or the one mark');
 
 const debated = {delivery:'draft', live:false, adversary:'codex', waiting_on:['gemini'],
   messages:[{id:'m1', author:'agent', agent:'codex', role:'adversary', verdict:'disagree', body:'The cap is already enforced in `limit`.', at:'2026-10-09T10:00:00Z'}],

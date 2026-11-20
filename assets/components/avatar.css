@@ -22,6 +22,8 @@ html[data-mode="dark"]{--agent-claude:#ec9a7c;--agent-claude-bg:#3b2620;--agent-
 /* Plain marks: the logo in ink, as large as the face, nothing behind it; a filled button that holds one
    gives it its own text colour (--mono-mark-ink), so it shows on the fill. */
 html[data-avatar-style="mono"] .ui-avatar[data-kind="agent"]{--face-ink:var(--mono-mark-ink,var(--ink));--face-bg:transparent;--avatar-mark:var(--avatar-mono-mark,82%)}
+/* A mark with a plain version carries both (AgentMark): the style shows its own. */
+html:not([data-avatar-style="mono"]) .ui-avatar>svg[data-mark="mono"],html[data-avatar-style="mono"] .ui-avatar>svg[data-mark="brand"]{display:none}
 /* What an agent ran on, as a small card under its face where nothing hovers: a tap opens it (avatar.js)
    and the next tap anywhere closes it. On hover the page's own tip says it (report.js). The card shares
    the face's one grid cell, which keeps the face's size, and hangs below it by its top margin, so

@@ -20,8 +20,13 @@
     return {slug: slug || '', name, company: known?.company || '', mark: slug ? root.ReviewBrands?.[slug] || '' : ''};
   };
   const SPARK = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg>';
-  UI.AgentMark = slug => {
+  // A mark drawn in colours that ink cannot fill (Antigravity's) has a plain version, `<slug>-mono`.
+  // An avatar carries both and its --avatar-style shows one (avatar.css); plain: only the plain one,
+  // for a place that always fills the mark with its text colour.
+  UI.AgentMark = (slug, {plain = false} = {}) => {
     const agent = UI.agentInfo(slug);
+    const mono = slug && agent.mark ? root.ReviewBrands?.[`${slug}-mono`] : '';
+    if (mono) return plain ? mono : agent.mark.replace('<svg', '<svg data-mark="brand"') + mono.replace('<svg', '<svg data-mark="mono"');
     return agent.mark || (slug ? `<b>${UI.escape(agent.name.charAt(0))}</b>` : SPARK);
   };
 })(globalThis);

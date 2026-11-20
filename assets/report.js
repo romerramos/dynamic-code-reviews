@@ -1311,7 +1311,7 @@
     if (face.dataset.html !== faceHTML) { face.innerHTML = faceHTML; face.dataset.html = faceHTML; }
     const agentTab = form.querySelector('.composer-mode input[value="agent"] + span');
     const slug = mainAgent();
-    if (agentTab && agentTab.dataset.agent !== slug) { agentTab.dataset.agent = slug; agentTab.innerHTML = `<span class="composer-agent-mark" data-agent="${escape(slug)}" aria-hidden="true">${UI.AgentMark(slug)}</span>Agent`; }
+    if (agentTab && agentTab.dataset.agent !== slug) { agentTab.dataset.agent = slug; agentTab.innerHTML = `<span class="composer-agent-mark" data-agent="${escape(slug)}" aria-hidden="true">${UI.AgentMark(slug, {plain: true})}</span>Agent`; }
     const status = ghStatus();
     const who = gh === 'post' && status.phase === 'ready' && !unpushed ? `<b>@${escape(status.login)}</b> on #${escape(status.number)}${ghPending() ? ` · ${ghPending()} pending` : ''}` : '';
     if (as.dataset.html !== who) { as.innerHTML = who; as.dataset.html = who; as.title = who ? `Commenting as @${status.login} on ${status.repo} #${status.number}` : ''; }

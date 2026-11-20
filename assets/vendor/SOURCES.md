@@ -36,9 +36,10 @@ Keep their licenses with this skill when sharing it.
     for Codex) and `gemini.svg` (Google Gemini).
 - LobeHub Icons 1.95.1 (`@lobehub/icons-static-svg`): https://cdn.jsdelivr.net/npm/@lobehub/icons-static-svg@1.95.1/icons/
   - License: `brands/LOBEHUB-LICENSE` (MIT). The marks remain their owners' trademarks.
-  - `grok.svg` (Grok, from `grok.svg`), `opencode.svg` (opencode, from `opencode.svg`) and
-    `antigravity.svg` (Google Antigravity, from
-    `antigravity-color.svg`). Simple Icons has neither. Any other agent shows its initial.
+  - `grok.svg` (Grok, from `grok.svg`), `opencode.svg` (opencode, from `opencode.svg`),
+    `antigravity.svg` (Google Antigravity, from `antigravity-color.svg`) and its plain mark
+    `antigravity-mono.svg` (from `antigravity.svg`), for the themes that draw marks in ink.
+    Simple Icons has neither. Any other agent shows its initial.
 
 Update only when needed, pin versions, retain license text, and verify the
 synthetic diff fixture plus actual token colors/layout after a library change.
