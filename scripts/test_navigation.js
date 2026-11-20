@@ -319,6 +319,42 @@ console.log('PASS a report opens on Overview the first time, resumes the step an
   console.log('PASS in the reading area J and K only scroll, and L opens the first file from Overview or All changes');
 }
 
+// An opened comment on the Overview names its file at the end of its meta line, and that name opens
+// the file here, at the comment, as the row's arrow does; a general comment has no file to name.
+{
+  const hunk = {id:'h-price', old_start:1, old_count:0, new_start:4, new_count:2, rows:{unified:[{kind:'add', new:4, text:'  def included? = true'}, {kind:'add', new:5, text:'end'}]}};
+  const files3 = data.snapshot.files.map(file => file.id === 'f2' ? {...file, hunks:[hunk]} : file);
+  const comments3 = [
+    {id:'on-file', hunk:'h-price', side:'new', start:4, end:4, label:'suggestion', decoration:'non-blocking', agent:'claude', subject:'Included with no level to include', discussion:'It says included while nothing is.'},
+    {id:'on-review', general:true, label:'note', decoration:'non-blocking', agent:'claude', subject:'Say what waits for the next issue', discussion:'The copy comes later.'}
+  ];
+  const groups3 = [data.review.groups[0], {title:'Other behavior', layers:[{title:'Other behavior', items:[{file:'f2', summaries:{'h-price':'What is included'}}]}]}];
+  const [shared, sharedClicks] = [get('data').textContent, listeners.click];
+  get('data').textContent = JSON.stringify({...data, snapshot:{...data.snapshot, files:files3}, review:{...data.review, groups:groups3, comments:comments3}});
+  listeners.click = [];
+  const context = vm.createContext({...sandbox, ReviewIcons:{'arrow-up-right':'<svg class="lucide"></svg>'}});
+  for (const name of ['ui', 'variants', ...fs.readdirSync(require.resolve('../assets/components/ui.js').replace(/ui\.js$/, '')).filter(file => file.endsWith('.js') && !['ui.js', 'variants.js'].includes(file)).map(file => file.slice(0, -3))]) {
+    vm.runInContext(fs.readFileSync(require.resolve(`../assets/components/${name}.js`), 'utf8'), context);
+  }
+  vm.runInContext(source.replace(/  render\(\);\n\}\)\(\);\s*$/, '  globalThis.commentTest = {commentCard, comments, state};\n})();'), context);
+  const {commentCard, comments, state} = context.commentTest;
+  const meta = html => html.match(/<p class="thread-meta"[^]*?<\/p>/)[0];
+  const onFile = meta(commentCard(comments.find(comment => comment.id === 'on-file')));
+  const link = onFile.match(/<button type="button" class="thread-file"[^>]*>([^]*?)<\/button>/);
+  assert(link, `An opened comment on a file ends its meta line with the file: ${onFile}`);
+  assert.equal(link[1].replace(/<[^>]+>/g, ''), 'message.rb', 'It names the file by its name alone, not its path');
+  assert.match(link[0], /title="app\/models\/message\.rb · After L4"/, 'The full path is in its tooltip');
+  assert.match(link[0], /data-comment="on-file"/, 'It opens the comment\'s lines as the row\'s arrow does');
+  assert.doesNotMatch(link[0], /href=/, 'It opens the file here, never on GitHub');
+  assert.doesNotMatch(meta(commentCard(comments.find(comment => comment.id === 'on-review'))), /thread-file/, 'A general comment names no file');
+  const button = {dataset:{comment:'on-file'}, closest:selector => selector === 'summary' ? null : button};
+  for (const listener of listeners.click) listener({target:{closest:selector => selector === '[data-comment]' ? button : null}, preventDefault(){}});
+  assert.equal(state.navFile, 'f2', 'Its name opens the file it is on, in the review');
+  assert.notEqual(state.view, 'overview', 'and leaves the Overview for it');
+  [get('data').textContent, listeners.click] = [shared, sharedClicks];
+  console.log('PASS an opened comment names its file, with the path in its tooltip, and opens it in the review; a general one names none');
+}
+
 // Since revision reads like file by file: one file at a time, whole, with no range headings to
 // work out, and the sidebar lists its files under it.
 {

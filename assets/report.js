@@ -2199,12 +2199,15 @@
   };
   const stateWord = (comment, closed) => comment.personal && !comment.resolved ? 'yours' : closed && comment.outdated?.revision ? `revision ${comment.outdated.revision}` : comment.resolved ? 'resolved' : '';
   // Who wrote it, what kind it is and how much it matters, where it is: one line under the title.
-  const threadMeta = (comment, path, range) => {
+  // go: {path, range} when the page can show its lines; it then ends the line with the file's name,
+  // the way to its code once the comment is open and the row's arrow is hidden.
+  const threadMeta = (comment, path, range, go = null) => {
     const kind = comment.personal ? (comment.audience === 'agent' ? 'Your question' : 'Your comment') : (comment.label ? comment.label.charAt(0).toUpperCase() + comment.label.slice(1) : 'Comment');
     const slug = comment.personal ? '' : comment.agent || '';
     const by = slug ? escape(UI.agentInfo(slug).name) : '';
     // Who wrote it is the face beside the title, and where it is is at the right of it: only what kind of comment it is is said.
-    return `<p class="thread-meta" title="${escape([by, path && range ? `${path}, ${range}` : ''].filter(Boolean).join(' · '))}">${[kind, comment.decoration && !comment.personal ? escape(comment.decoration) : ''].filter(Boolean).join('<i aria-hidden="true">·</i>')}${ghBadgeSlot(comment)}</p>`;
+    const file = go ? `<button type="button" class="thread-file" data-comment="${escape(comment.id)}" title="${escape(`${go.path} · ${go.range}`)}" aria-label="${escape(`Show in the code: ${go.path}, ${go.range}`)}">${escape(go.path.split('/').pop())}${icon('arrow-up-right')}</button>` : '';
+    return `<p class="thread-meta" title="${escape([by, path && range ? `${path}, ${range}` : ''].filter(Boolean).join(' · '))}">${[kind, comment.decoration && !comment.personal ? escape(comment.decoration) : '', file].filter(Boolean).join('<i aria-hidden="true">·</i>')}${ghBadgeSlot(comment)}</p>`;
   };
   // The agent this review is with: the one listening, else the one that wrote its comments.
   function mainAgent() {
@@ -2235,11 +2238,12 @@
     const source = !found ? '' : found.fullFile
       ? UI.Button({html: `View in file · ${lines} ${icon('arrow-right')}`, variant: 'ghost', className: 'thread-source', attrs: {'data-comment': comment.id}})
       : UI.Button({html: `View code · ${lines} ${icon('arrow-right')}`, variant: 'ghost', className: 'thread-source', attrs: {'data-open-code': comment.id, 'aria-haspopup': 'dialog', 'aria-label': `View code for ${found.file.path}, ${range}: ${comment.subject}`}});
+    const go = found && comment.hunk ? {path: found.file.path, range} : null;
     return UI.CommentCard({id: comment.id, open: threadsOpen.has(comment.id), resolved: comment.resolved, earlier: closed, own: comment.personal,
-      row: {subject: comment.subject, title, face: authorFace(comment), go: found && comment.hunk ? {path: found.file.path, range} : null,
+      row: {subject: comment.subject, title, face: authorFace(comment), go,
         tags: `${comment.personal && comment.audience === 'agent' ? '' : UI.Tag(comment.label)}${ghBadgeSlot(comment)}`,
         place: place(found ? found.file.path : was?.path, found ? comment.start : comment.outdated?.start), state: stateWord(comment, closed), priority: comment.severity || ''},
-      meta: threadMeta(comment, found?.file.path || was?.path, found ? range : was?.lines),
+      meta: threadMeta(comment, found?.file.path || was?.path, found ? range : was?.lines, go),
       body: `${told ? `<div class="comment-discussion">${ReviewTools.markdown(told)}</div>` : ''}${wasCode}${follows}${commentShots(comment)}${commentEvidence(comment)}`,
       source,
       footer: `<div class="comment-actions">${commentActions(comment)}</div>${UI.Button({html: comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`, variant: comment.resolved ? 'ghost' : 'soft', attrs: {'data-resolve': comment.id}})}`});

@@ -22,6 +22,10 @@
 .ui-comment-body{display:block;padding:var(--comment-body-top) var(--comment-pad) var(--comment-body-bottom) calc(var(--comment-pad) + var(--comment-indent))}
 .ui-comment-body .thread-meta{display:var(--comment-meta);flex-wrap:wrap;gap:2px 8px;margin:4px 0 16px;color:var(--comment-quiet);font-size:12.5px}
 .ui-comment-body .thread-meta i{font-style:normal;opacity:.6}
+/* The file's name and an arrow: the way to the code once the comment is open, in the meta line's quiet ink. */
+.ui-comment-body .thread-meta .thread-file{display:inline-flex;align-items:center;gap:4px;padding:0;border:0;background:none;color:inherit;font:12px var(--mono);white-space:nowrap;cursor:pointer}
+.ui-comment-body .thread-meta .thread-file:hover{color:var(--ink)}
+.ui-comment-body .thread-meta .thread-file svg{width:12px;height:12px;stroke-width:1.8}
 /* What QA recorded for the comment reads as more of its words: the same width, not the card's. */
 .ui-comment-body .qa-journey{max-width:var(--comment-text-width)}
 .ui-comment-body .comment-discussion{max-width:var(--comment-text-width);margin:0;color:var(--ink-neutral-3);font-size:var(--comment-text-size);line-height:var(--comment-text-line)}
