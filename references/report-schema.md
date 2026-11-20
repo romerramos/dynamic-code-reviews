@@ -19,7 +19,7 @@ All prose is plain text, escaped by the renderer. Do not include HTML or duplica
       "summary": "Explain this step in the group's reading order.",
       "checks": ["Only selected tasks appear in the export"],
       "flow": [],
-      "items": [{"file": "f1", "summary": "Optional file-level context.", "summaries": {"f1h1": "Explain the behavioral effect of this exact range."}}]
+      "items": [{"file": "f1", "summary": "Optional file-level context.", "summaries": {"f1h1": "What this block does and why the change needs it, as in Block notes below."}}]
     }]
   }],
   "risk_ranking": {"summary": "Optional: one sentence on where the risk is.", "files": [{"file": "f2", "score": 72, "tags": ["data-volume", "shared-code"], "reason": "Reloads every conversation in the inbox on each filter change, through the action Store front checkout also uses.", "line": 11}]},
@@ -41,6 +41,27 @@ The HTML embeds `{snapshot, review}` as inert JSON in `<script id="data" type="a
 For a new series, optionally supply top-level `context_paths` listing repository-relative callers, tests or instructions actually inspected. The series helper records their fingerprints. Group/layer IDs and finding IDs are assigned on first save when missing; future updates use those stable IDs. `review.history` and `review.context` are helper-owned metadata. Use [incremental-reviews.md](incremental-reviews.md) for follow-up update JSON; do not author these metadata fields by hand.
 
 Group and layer titles are the review's table of contents, read in a narrow list: keep each to about 34 characters, a few plain words that fit one line ("The send re-runs the check"), and let the summary carry the detail. The top-level `summary` says what the change does and never opens with the pull request or its branches, which the page shows above the title. Its first sentence is shown on its own, large: make it the one a reader needs. Wrap code in backticks (`not_opted_in`); the page shows it as code. Leave a blank line between ideas; a summary written as one block is cut into short paragraphs of about two sentences.
+
+## Block notes
+
+Each hunk's entry in `summaries` is the note a reader opens from the icon beside that block of code. Write it for a junior developer who knows the codebase's language but not the business rules or this feature, as you would tell them at their desk:
+
+- Say what this block does and why the change needs it, in one to three short sentences.
+- Explain a domain term the first time you use it, in a few words.
+- Never cite line numbers, ranges or "before/after", and never restate what the code plainly says (column names, types, defaults).
+- If something here is risky or subtle, end by pointing at what is worth checking.
+
+The note is shown as Markdown: wrap code in backticks, and keep **bold** for the one thing to notice.
+
+Good, on a migration that creates `price_inclusion_configurations`:
+
+> Each site (one storage facility an operator runs) gets one row here saying what its storage price already includes: whether insurance is in the price, whether customers may bring their own, and whether mandatory products are part of it. `ask_items_value` is stored but **nothing reads it yet**; it is parked for a later step that asks customers what their goods are worth. Worth checking: a site with no row should price as it did before.
+
+Bad, on the same block:
+
+> Creates `price_inclusion_configurations`: one row per site (unique `site_id`), `insurance_setup` defaulting to `not_in_price`, and three booleans defaulting to false, including the parked `ask_items_value`.
+
+It repeats what the migration already says and never says what an operator controls with the table, or why a column nothing reads is there.
 
 ## All changes categories
 
