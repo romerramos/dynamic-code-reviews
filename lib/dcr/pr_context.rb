@@ -23,6 +23,18 @@ module DCR
     GITHUB_URL = %r{https://github\.com/([\w.-]+)/([\w.-]+)/(?:pull|issues)/(\d+)}
     SHORT_REF = %r{(?<![\w/&#])(?:([\w.-]+)/([\w.-]+))?#(\d+)\b}
 
+    # What must never leave this computer in someone else's words: a URL's credentials, a token in
+    # a URL and keys. A PR's description is printed as written, and may carry them.
+    URL_END = %q{[^\s)\]>"'`]}
+    SECRETS = [
+      [/-----BEGIN [A-Z ]*PRIVATE KEY-----.*?(?:-----END [A-Z ]*PRIVATE KEY-----|\z)/m, '[private key removed]'],
+      [%r{\bhttps?://[^\s/@)\]>"'`]+:[^\s/@)\]>"'`]+@#{URL_END}*}i, '[link with a password removed]'],
+      [%r{\bhttps?://#{URL_END}*?[?&](?:access_token|token|api_?key|key|secret|password|sig|signature|x-amz-signature|x-amz-credential|x-goog-signature)=#{URL_END}+}i, '[link with a token removed]'],
+      [/\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_\w{20,}|sk-(?:ant-|proj-)?[A-Za-z0-9_-]{20,}|[sr]k_(?:live|test)_[0-9A-Za-z]{16,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|xox[abposr]-[0-9A-Za-z-]{10,}|eyJ[\w-]{10,}\.eyJ[\w-]{10,}\.[\w-]{10,})/, '[secret removed]']
+    ].freeze
+    # An agent's session or a shared chat: fine for the review's own agent, private to another company's.
+    SESSION = %r{\bhttps?://(?:[\w-]+\.)*(?:claude\.ai|chatgpt\.com|chat\.openai\.com|gemini\.google\.com|g\.co/gemini|aistudio\.google\.com|grok\.com|perplexity\.ai|poe\.com|copilot\.microsoft\.com|chat\.deepseek\.com|chat\.mistral\.ai)(?:/#{URL_END}*)?}i
+
     PEOPLE = 'author { login __typename }'
     QUERY = <<~GRAPHQL
       query($owner: String!, $name: String!, $number: Int!) {
@@ -109,8 +121,15 @@ module DCR
       {'own' => own, 'linked' => linked}
     end
 
-    # Text without HTML comments, trailing space and runs of blank lines.
-    def clean(text) = text.to_s.gsub(/<!--.*?-->/m, '').gsub(/[ \t]+$/, '').gsub(/\n{3,}/, "\n\n").strip
+    # Text without HTML comments, trailing space, runs of blank lines and secrets.
+    def clean(text) = scrub(text.to_s.gsub(/<!--.*?-->/m, '').gsub(/[ \t]+$/, '').gsub(/\n{3,}/, "\n\n").strip)
+
+    # Text with every secret replaced by a short placeholder; sessions: agent session and shared-chat
+    # links too, for text another company's agent reads.
+    def scrub(text, sessions: false)
+      text = SECRETS.reduce(text.to_s) { |done, (pattern, placeholder)| done.gsub(pattern, placeholder) }
+      sessions ? text.gsub(SESSION, '[private link removed]') : text
+    end
 
     def short(text, limit)
       text = clean(text)

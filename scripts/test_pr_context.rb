@@ -30,7 +30,8 @@ FAKE_GH = <<~'RUBY'
       'number' => 7, 'title' => 'feat(ACME-42): keep the value', 'url' => 'https://github.com/acme/web/pull/7',
       'state' => 'OPEN', 'isDraft' => false, 'baseRefName' => 'feat/acme-42-store', 'headRefName' => 'feat/acme-42-keep-value',
       'author' => person.('ada-author'),
-      'body' => "<!-- template: hidden -->\nKeeps the value.\n\nStacked on #6. See [ACME-42](https://linear.app/acme/issue/ACME-42).",
+      'body' => "<!-- template: hidden -->\nKeeps the value.\n\nStacked on #6. See [ACME-42](https://linear.app/acme/issue/ACME-42).\n\n" \
+                "Asked in [a session](https://claude.ai/code/session_0123abcd). CI log: https://ci.example.com/run/5?token=tok3n-value-9",
       'closingIssuesReferences' => {'nodes' => [{'number' => 3, 'title' => 'Value is lost', 'state' => 'OPEN', 'url' => 'https://github.com/acme/web/issues/3', 'repository' => {'nameWithOwner' => 'acme/web'}}]},
       'comments' => {'totalCount' => 3, 'nodes' => [
         {'author' => person.('ci-helper', 'Bot'), 'body' => 'Coverage dropped, see #900. Linked https://linear.app/acme/issue/ACME-50/related'},
@@ -109,6 +110,8 @@ Dir.mktmpdir('dcr-pr-context-test') do |directory|
               'the review\'s own report' => 'Review report', 'an HTML comment' => 'template: hidden', 'an empty review' => 'reviewed (commented)',
               'the pull request itself as a mention' => '- #7 '}
   left_out.each { |what, text| assert(!out.include?(text), "The context must leave out #{what} (#{text}):\n#{out}") }
+  assert(out.include?('CI log: [link with a token removed]') && !out.include?('tok3n-value-9'), "A token in a link never reaches even the review's own agent:\n#{out}")
+  assert(out.include?('[a session](https://claude.ai/code/session_0123abcd)'), "The review's own agent still sees the author's session link:\n#{out}")
   assert(calls.().length == 2 && calls.().all? { |call| call['args'].first(4) == %w[api --method POST graphql] && !call['query'].match?(/\bmutation\b/) },
          "It must make two read-only GraphQL queries: #{calls.()}")
   puts 'PASS a pull request\'s context: threads with their state, the stack, issues and mentions; bots and the report left out'
@@ -134,3 +137,23 @@ Dir.mktmpdir('dcr-pr-context-test') do |directory|
   assert(status.success? && out.strip.start_with?('No GitHub context: GitHub CLI (`gh`) is not installed.'), "A missing gh must say so in one line: #{out}")
   puts 'PASS with no pull request, no GitHub remote or no gh it says so in one line and succeeds'
 end
+
+require_relative '../lib/dcr/pr_context'
+private_text = {
+  'https://claude.ai/code/session_01AbC' => '[private link removed]',
+  'https://chatgpt.com/share/6f1e-77aa' => '[private link removed]',
+  'https://gemini.google.com/share/abc123' => '[private link removed]',
+  'https://ci-bot:hunter22@ci.example.com/job/4' => '[link with a password removed]',
+  'https://files.example.com/a.png?X-Amz-Signature=deadbeef01&x=1' => '[link with a token removed]',
+  "ghp_#{'a1' * 18}" => '[secret removed]',
+  "sk-ant-api03-#{'Z9' * 12}" => '[secret removed]',
+  "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaA\n-----END OPENSSH PRIVATE KEY-----" => '[private key removed]'
+}
+private_text.each do |text, placeholder|
+  scrubbed = DCR::PRContext.scrub("before #{text} after", sessions: true)
+  assert(scrubbed == "before #{placeholder} after", "#{text.lines.first.strip} must become #{placeholder}: #{scrubbed}")
+end
+kept = 'See https://github.com/acme/web/pull/8, https://claude.com/claude-code and https://example.com/list?page=2.'
+assert(DCR::PRContext.scrub(kept, sessions: true) == kept, 'Public links stay as they are')
+assert(DCR::PRContext.scrub('https://claude.ai/code/session_01AbC') == 'https://claude.ai/code/session_01AbC', "Without sessions: the review's own agent keeps session links")
+puts 'PASS session links, credentials in links and keys become short placeholders; public links stay'
