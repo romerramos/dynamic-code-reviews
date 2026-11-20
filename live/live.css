@@ -234,7 +234,7 @@ html[data-mode="dark"] .dcr-send:not(:disabled){background:var(--color-primary)}
 body.dcr-has-try .evidence-strip{display:none}
 body.dcr-has-app #qa-panel{display:none}
 /* Try the change holds the risk ranking and what was seen in the app: the Overview leaves them to it. */
-body.dcr-has-try .overview-reading :is(.risk-fold,.risk-rank,.ui-changes){display:none}
+body.dcr-has-try .overview-reading :is(.risk-fold,.risk-rank,.ui-changes,.ui-changes-none){display:none}
 /* Try the change: a panel of the ··· menu's family, a row each (an icon, what it is, where it stands).
    Over the page it is a popover under its button; on the Overview, with room, part of the page. */
 .dcr-try{box-sizing:border-box;width:320px;max-width:calc(100vw - 24px);padding:5px;border:1px solid var(--line-neutral-2);border-radius:calc(12px * var(--round));background:var(--surface);color:var(--ink);font:13px/1.3 var(--review-font-family)}

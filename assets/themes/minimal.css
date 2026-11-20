@@ -259,7 +259,7 @@ html[data-theme="minimal-dark"]{--bar-card-bg:color-mix(in srgb,var(--ink) 9%,va
 [data-theme^="minimal-"] .overview-where{margin-bottom:14px;color:var(--minimal-faint)}
 [data-theme^="minimal-"] .overview-intro h1{margin:0 0 20px;font-weight:600;line-height:1.25;letter-spacing:-.022em}
 [data-theme^="minimal-"] .overview-intro :is(.lead,.lead-rest){display:inline;margin:0;color:var(--ink-neutral-3);font-size:15px;line-height:1.75;letter-spacing:0}
-[data-theme^="minimal-"] .overview-reading :is(.overview-revision,.risk-fold,.risk-rank.risk-none,.ui-changes){display:none}
+[data-theme^="minimal-"] .overview-reading :is(.overview-revision,.risk-fold,.risk-rank.risk-none,.ui-changes,.ui-changes-none){display:none}
 /* A list's label: small, grey, with the page's 48px of air above it. */
 [data-theme^="minimal-"] .overview-reading :where(.overview-comments,#my-review.review-section,.overview-settled){display:block;margin:48px 0 0;padding:0;border:0}
 [data-theme^="minimal-"] .overview-reading :is(.overview-comments>h2,#my-review h2,.overview-fold-title){margin:0 0 6px;color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0}
