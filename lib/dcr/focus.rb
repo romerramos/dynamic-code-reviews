@@ -9,7 +9,8 @@ module DCR
   # window. `dcr serve` calls this when the review page first loads and `dcr series finish` when the
   # full review is saved; `dcr focus` does it on demand.
   #
-  # macOS asks the browser itself, through AppleScript, to select the tab and raise its window.
+  # macOS asks the browser itself, through Apple events (JavaScript for Automation), to select the
+  # tab and raise its window.
   # Linux has no way to pick a tab from outside, so it finds the browser window whose title is the
   # review's (the window shows its active tab's title) and asks the window manager to raise it:
   # Hyprland (Omarchy), Sway, or X11 with wmctrl or xdotool.
@@ -21,31 +22,40 @@ module DCR
     # Browser windows on Linux, by their class or app id.
     BROWSER_CLASS = /chrom|brave|edge|vivaldi|opera|firefox|librewolf|zen|floorp/i
 
-    SCRIPT = <<~APPLESCRIPT
-      on run argv
-        set appName to item 1 of argv
-        set prefixes to items 2 thru -1 of argv
-        using terms from application "Google Chrome"
-          tell application appName
-            repeat with w in windows
-              set i to 0
-              repeat with t in tabs of w
-                set i to i + 1
-                repeat with prefix in prefixes
-                  if (URL of t) starts with (prefix as text) then
-                    set active tab index of w to i
-                    set index of w to 1
-                    activate
-                    return "found"
-                  end if
-                end repeat
-              end repeat
-            end repeat
-          end tell
-        end using terms from
-        return ""
-      end run
-    APPLESCRIPT
+    # Each running copy of the browser is asked by its process id, the reviewer's own first: Chrome
+    # DevTools MCP and Playwright run more copies of the same app, and asking for it by name may
+    # reach one of those, which has no review tab (or not the one the reviewer reads in).
+    SCRIPT = <<~JAVASCRIPT
+      function run(argv) {
+        ObjC.import('AppKit');
+        ObjC.import('ScriptingBridge');
+        const [appName, ...prefixes] = argv;
+        const all = $.NSWorkspace.sharedWorkspace.runningApplications;
+        const copies = [];
+        for (let i = 0; i < all.count; i++) {
+          const copy = all.objectAtIndex(i);
+          if (ObjC.unwrap(copy.localizedName) === appName) copies.push(copy);
+        }
+        // A regular app (policy 0) is the one the reviewer sees; a background copy comes last.
+        copies.sort((a, b) => a.activationPolicy - b.activationPolicy);
+        for (const copy of copies) {
+          const windows = $.SBApplication.applicationWithProcessIdentifier(copy.processIdentifier).valueForKey('windows');
+          for (let w = 0; w < windows.count; w++) {
+            const window = windows.objectAtIndex(w);
+            const tabs = window.valueForKey('tabs');
+            for (let t = 0; t < tabs.count; t++) {
+              const url = ObjC.unwrap(tabs.objectAtIndex(t).valueForKey('URL')) || '';
+              if (!prefixes.some(prefix => url.startsWith(prefix))) continue;
+              window.setValueForKey(t + 1, 'activeTabIndex');
+              window.setValueForKey(1, 'index');
+              copy.activateWithOptions($.NSApplicationActivateAllWindows);
+              return 'found';
+            }
+          }
+        }
+        return '';
+      }
+    JAVASCRIPT
 
     # The addresses a served review answers on: this computer (by IP and by name) and the tailnet.
     def prefixes(port, shared = nil)
@@ -141,7 +151,7 @@ module DCR
     def running?(name) = system('pgrep', '-xq', name)
 
     def osascript(name, prefixes)
-      out, error, = Open3.capture3('osascript', '-', name, *prefixes, stdin_data: SCRIPT)
+      out, error, = Open3.capture3('osascript', '-l', 'JavaScript', '-', name, *prefixes, stdin_data: SCRIPT)
       [out, error]
     end
 
