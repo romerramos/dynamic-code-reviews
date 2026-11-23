@@ -57,7 +57,7 @@ module DCR
     # own: the pull request is the person's own, so a new comment is a note addressed to no one.
     def prompt(voice:, context:, opinions: [], emojis: DEFAULT_EMOJIS, reply_to: nil, own: false)
       # Each with its verdict on the comment, which was taken out of its answer when it was kept.
-      stance = {'agree' => 'agrees', 'partly' => 'partly agrees', 'disagree' => 'disagrees'}
+      stance = {'agree' => 'agrees', 'mostly' => 'mostly agrees', 'partly' => 'partly agrees', 'disagree' => 'disagrees'}
       others = opinions.map { |opinion| "#{Agents.name(opinion['agent'])}#{" (#{stance[opinion['verdict']]})" if stance[opinion['verdict']]}: #{opinion['body']}" }.join("\n\n")
       task = if reply_to
                "A teammate, @#{reply_to}, commented on a person's pull request on GitHub. Below is the comment, the code it is about, and what was said about it since: the teammate's and the person's messages, an AI review agent's answers and other agents' opinions.\n\n" \

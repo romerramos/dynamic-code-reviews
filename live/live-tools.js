@@ -25,11 +25,13 @@ globalThis.LiveTools = (() => {
   };
   const VERDICTS = {
     agree: {label: 'Agrees', short: 'Agree', tone: 'agree'},
+    mostly: {label: 'Mostly agrees', short: 'Mostly', tone: 'mostly'},
     partly: {label: 'Partly agrees', short: 'Partly', tone: 'partly'},
     disagree: {label: 'Disagrees', short: 'Disagree', tone: 'disagree'}
   };
   const VERDICT_ICON = {
     agree: '<path d="M20 6 9 17l-5-5"/>',
+    mostly: '<path d="M20 6 9 17l-5-5"/>',
     partly: '<path d="M5 12h14"/>',
     disagree: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'
   };
@@ -294,9 +296,9 @@ globalThis.LiveTools = (() => {
   function tally(thread, on = null) {
     const list = verdicts(thread, on);
     const count = verdict => list.filter(entry => entry.verdict === verdict).length;
-    return {total: list.length, agree: count('agree'), partly: count('partly'), disagree: count('disagree')};
+    return {total: list.length, agree: count('agree'), mostly: count('mostly'), partly: count('partly'), disagree: count('disagree')};
   }
-  const tallyText = counts => [counts.agree && `${counts.agree} agree${counts.agree === 1 ? 's' : ''}`, counts.partly && `${counts.partly} partly`, counts.disagree && `${counts.disagree} disagree${counts.disagree === 1 ? 's' : ''}`].filter(Boolean).join(' · ');
+  const tallyText = counts => [counts.agree && `${counts.agree} agree${counts.agree === 1 ? 's' : ''}`, counts.mostly && `${counts.mostly} mostly`, counts.partly && `${counts.partly} partly`, counts.disagree && `${counts.disagree} disagree${counts.disagree === 1 ? 's' : ''}`].filter(Boolean).join(' · ');
 
   // How the whole panel came out, in words: the second reviewer and the others together.
   function consensus(counts) {
@@ -305,7 +307,8 @@ globalThis.LiveTools = (() => {
     if (counts.disagree === counts.total) return counts.total === 1 ? 'Disagrees' : 'Everyone disagrees';
     return tallyText(counts);
   }
-  const consensusTone = counts => !counts.total ? '' : counts.agree === counts.total ? 'agree' : counts.disagree === counts.total ? 'disagree' : 'partly';
+  // Agree and Mostly agree both say to act on the comment, so a panel of only those reads as agreeing.
+  const consensusTone = counts => !counts.total ? '' : counts.agree === counts.total ? 'agree' : counts.agree + counts.mostly === counts.total ? 'mostly' : counts.disagree === counts.total ? 'disagree' : 'partly';
 
   // The other agents' opinions, under the conversation rather than in it: one row per agent with
   // its mark, name and verdict once, then its short answer, or the start of its answer when it gave

@@ -361,7 +361,7 @@ body.dcr-no-app #qa-panel,body.dcr-no-app .visual-qa-option,body.dcr-no-app .evi
 /* What an agent thinks of a comment. */
 .dcr-verdict{display:inline-flex;align-items:center;gap:4px;padding:1px 8px 1px 6px;border-radius:calc(999px * var(--round));font-size:11.5px;font-weight:600;line-height:18px;white-space:nowrap}
 .dcr-verdict svg{flex:none}
-.dcr-verdict.dcr-v-agree{--_verdict-bg:var(--dcr-agree-soft);--_verdict-ink:var(--dcr-agree);background:var(--_verdict-bg);color:var(--_verdict-ink)}
+.dcr-verdict:is(.dcr-v-agree,.dcr-v-mostly){--_verdict-bg:var(--dcr-agree-soft);--_verdict-ink:var(--dcr-agree);background:var(--_verdict-bg);color:var(--_verdict-ink)}
 .dcr-verdict.dcr-v-partly{--_verdict-bg:var(--dcr-partly-soft);--_verdict-ink:var(--dcr-partly);background:var(--_verdict-bg);color:var(--_verdict-ink)}
 .dcr-verdict.dcr-v-disagree{--_verdict-bg:var(--dcr-disagree-soft);--_verdict-ink:var(--dcr-disagree);background:var(--_verdict-bg);color:var(--_verdict-ink)}
 .dcr-verdict.dcr-o-addressed{--_verdict-bg:var(--dcr-agree-soft);--_verdict-ink:var(--dcr-agree);background:var(--_verdict-bg);color:var(--_verdict-ink)}
@@ -391,7 +391,7 @@ body.dcr-no-app #qa-panel,body.dcr-no-app .visual-qa-option,body.dcr-no-app .evi
 .dcr-check{display:inline-flex;align-items:center;gap:6px;min-width:0;min-height:28px;padding:2px 0;border:0;background:none;color:inherit;font:inherit;font-size:13px}
 button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-decoration:underline}button.dcr-check:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .dcr-check strong{font-weight:600}.dcr-check-said{color:var(--muted)}
-.dcr-check-said.dcr-v-agree{color:var(--dcr-agree)}.dcr-check-said.dcr-v-disagree{color:var(--dcr-disagree);font-weight:600}
+.dcr-check-said:is(.dcr-v-agree,.dcr-v-mostly){color:var(--dcr-agree)}.dcr-check-said.dcr-v-disagree{color:var(--dcr-disagree);font-weight:600}
 .dcr-check .dcr-op-chevron{color:var(--muted)}.dcr-check.is-open .dcr-op-chevron{transform:rotate(90deg)}
 .dcr-check-body{margin-top:14px}
 .dcr-closure-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
@@ -428,7 +428,7 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 .dcr-opinions-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:4px}
 .dcr-opinions-title{color:var(--muted);font-size:11px;font-weight:650;letter-spacing:.06em;text-transform:uppercase}
 .dcr-consensus{font-size:12px;font-weight:600}
-.dcr-consensus.dcr-v-agree{color:var(--dcr-agree)}
+.dcr-consensus:is(.dcr-v-agree,.dcr-v-mostly){color:var(--dcr-agree)}
 .dcr-consensus.dcr-v-partly{color:var(--dcr-partly)}
 .dcr-consensus.dcr-v-disagree{color:var(--dcr-disagree)}
 .dcr-differ{margin:0 0 6px;color:var(--muted);font-size:12.5px;line-height:1.45;overflow-wrap:anywhere}
@@ -444,7 +444,7 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 .dcr-op-line{display:flex;align-items:center;gap:8px;min-width:0;font-size:13px}
 .dcr-op-line strong{flex:none;font-weight:600}
 .dcr-op-verdict{flex:none;display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:600}
-.dcr-op-verdict.dcr-v-agree{color:var(--dcr-agree)}
+.dcr-op-verdict:is(.dcr-v-agree,.dcr-v-mostly){color:var(--dcr-agree)}
 .dcr-op-verdict.dcr-v-partly{color:var(--dcr-partly)}
 .dcr-op-verdict.dcr-v-disagree{color:var(--dcr-disagree)}
 .dcr-op-snippet{min-width:0;overflow:hidden;color:var(--muted);text-overflow:ellipsis;white-space:nowrap}

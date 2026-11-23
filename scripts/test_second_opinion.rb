@@ -53,12 +53,13 @@ puts 'PASS the chosen adversaries answer in their order, never the author on its
 assert(DCR::SecondOpinion.verdict("Disagree\nThe cap is enforced.") == ['disagree', 'The cap is enforced.'], 'A verdict line is read and removed')
 assert(DCR::SecondOpinion.verdict('**Partly agree.** It is bounded, but not here.') == ['partly', 'It is bounded, but not here.'], 'A verdict in bold on the first line is read')
 assert(DCR::SecondOpinion.verdict('Agree') == ['agree', 'Agree'], 'A bare verdict keeps its text')
+assert(DCR::SecondOpinion.verdict("Mostly agree\nDrop the one-run claim.") == ['mostly', 'Drop the one-run claim.'], 'Mostly agree is its own verdict, on the side of acting')
 assert(DCR::SecondOpinion.verdict('Hard to say.') == [nil, 'Hard to say.'], 'No verdict, no guess')
 assert(DCR::SecondOpinion.verdict("I'll check how stats are cached.Agree\n\nThe key keeps the head only.") == ['agree', 'The key keeps the head only.'], 'Narration before a verdict is dropped')
 assert(DCR::SecondOpinion.verdict("Looking at it now.\n**Disagree**\nIt is fine.") == ['disagree', 'It is fine.'], 'A verdict on its own later line is read')
 assert(DCR::SecondOpinion.verdict('I agree with most of it.') == [nil, 'I agree with most of it.'], 'A verdict word inside a sentence is not a verdict')
 assert(DCR::SecondOpinion.tidy('See [app/a.rb:160](/Users/me/app/a.rb:160) and [docs](https://example.com).') == 'See `app/a.rb:160` and [docs](https://example.com).', 'Local file links become code; web links stay')
-puts 'PASS the verdict (agree, partly, disagree) is read from the first line of an answer'
+puts 'PASS the verdict (agree, mostly, partly, disagree) is read from the first line of an answer'
 
 hunk = {'id' => 'h1', 'old_start' => 1, 'old_count' => 3, 'new_start' => 1, 'new_count' => 4, 'patch' => "@@ -1,3 +1,4 @@\n def run\n-  loop { work }\n+  10.times { work }\n+  done\n end\n"}
 snapshot = {'files' => [{'id' => 'f1', 'path' => 'app/job.rb', 'hunks' => [hunk]}]}
@@ -67,7 +68,7 @@ code = DCR::SecondOpinion.code(snapshot, comment)
 assert(code[:where].start_with?('app/job.rb, after the change, line 2') && code[:language] == 'ruby', "The code says where it is: #{code[:where]}")
 assert(code[:lines] == "1    def run\n2 +>   10.times { work }\n3 +    done\n4    end", "The commented line is marked among its neighbours:\n#{code[:lines]}")
 prompt = DCR::SecondOpinion.prompt(asked: 'codex', author: 'claude', context: 'Stop the job from running forever.', code: code, comment: comment, adversary: true)
-assert(prompt.include?('Claude left this comment') && prompt.include?('You are Codex') && prompt.include?('Agree, Partly agree or Disagree'), 'The question names both agents and asks for a verdict')
+assert(prompt.include?('Claude left this comment') && prompt.include?('You are Codex') && prompt.include?('Agree, Mostly agree, Partly agree or Disagree'), 'The question names both agents and asks for a verdict')
 assert(prompt.include?('plain, simple words') && prompt.include?('Do not change anything'), 'The answer is asked to be simple and read-only')
 assert(prompt.include?("Stop the job from running forever.\n") && prompt.include?('10.times') && prompt.include?('Why ten?') && prompt.include?('Ten looks arbitrary.'), 'The question carries the context, the code and the comment')
 assert(prompt.length < 2000, "The question stays compact (#{prompt.length} characters)")
@@ -344,10 +345,10 @@ puts 'PASS a question asked with adversaries ticked: each answers it beside the 
 assert(DCR::SecondOpinion.structured("Answer: Yes, keep it.\n\nDetails:\n- `app/job.rb` line 4 caps it.") == ['Yes, keep it.', "Yes, keep it.\n\n- `app/job.rb` line 4 caps it."], 'An answer is split into the short one and the whole')
 assert(DCR::SecondOpinion.structured("I'll look at the matcher first.**Answer:** Yes.\n**Details:**\n- One.") == ['Yes.', "Yes.\n\n- One."], 'Narration before the answer is dropped, and bold markers are read')
 assert(DCR::SecondOpinion.structured('Answer: Yes.') == ['Yes.', 'Yes.'] && DCR::SecondOpinion.structured('Yes, keep it.') == [nil, 'Yes, keep it.'], 'Details are optional, and an unmarked answer is kept whole')
-assert(DCR::SecondOpinion.judged("A: Agree\n**B:** Partly agree\nC: maybe\nDiffer: B would split the line.", 3) == [['agree', 'partly', nil], 'B would split the line.'], 'The judge is read line by line')
+assert(DCR::SecondOpinion.judged("A: Agree\n**B:** Partly agree\nC: maybe\nD: Mostly agree\nDiffer: B would split the line.", 4) == [['agree', 'partly', nil, 'mostly'], 'B would split the line.'], 'The judge is read line by line')
 assert(DCR::SecondOpinion.judged("A: Disagree\nDiffer: nothing.", 1) == [['disagree'], nil], 'Nothing to differ on is no sentence')
 prompt = DCR::SecondOpinion.judge_prompt(question: 'Why ten?', main: 'It is the retry limit.', answers: ['Yes.', 'No.'])
-assert(prompt.include?("Answer A:\nYes.") && prompt.include?("Answer B:\nNo.") && prompt.include?('B: Agree, Partly agree or Disagree') && !prompt.match?(/codex|grok|claude/i), "The judge sees letters, not names:\n#{prompt}")
+assert(prompt.include?("Answer A:\nYes.") && prompt.include?("Answer B:\nNo.") && prompt.include?('B: Agree, Mostly agree, Partly agree or Disagree') && !prompt.match?(/codex|grok|claude/i), "The judge sees letters, not names:\n#{prompt}")
 puts 'PASS a short answer is told from its details, and the judge\'s lines are read'
 
 Dir.mktmpdir('dcr-judge') do |series|

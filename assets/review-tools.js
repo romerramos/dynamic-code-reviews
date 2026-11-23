@@ -286,7 +286,7 @@ globalThis.ReviewTools = (() => {
     // Who said each message, so a reader (the GitHub rewrite among them) can follow where it went: the
     // second reviewer disagreeing, the review's agent changing its mind, a teammate's words not yours.
     const name = slug => globalThis.UI?.agentInfo?.(slug)?.name || slug.charAt(0).toUpperCase() + slug.slice(1);
-    const stance = {agree: 'agrees', partly: 'partly agrees', disagree: 'disagrees'};
+    const stance = {agree: 'agrees', mostly: 'mostly agrees', partly: 'partly agrees', disagree: 'disagrees'};
     const who = message => message.author === 'user' ? 'Reviewer'
       : message.author === 'person' ? `@${message.person?.login || 'someone'} (a teammate, on GitHub)`
       : !message.agent ? 'Agent'

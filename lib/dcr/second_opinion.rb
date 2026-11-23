@@ -34,7 +34,12 @@ module DCR
         #{Agents.name(author)} left this comment while reviewing a code change. You are #{Agents.name(asked)}.
 
         How to answer:
-        - Start with one word on its own line: Agree, Partly agree or Disagree.
+        - Start with your verdict on its own line: Agree, Mostly agree, Partly agree or Disagree. Pick it by what should happen to the comment:
+          - Agree: it is right as written; act on it as it is.
+          - Mostly agree: its main point is right and worth acting on, but a detail is off (the fix, its scope, the wording or how serious it is). Say what to change.
+          - Partly agree: some of it holds, but its main point is wrong, unproven or not worth acting on now.
+          - Disagree: its main point is wrong.
+          A caveat that does not change what to do is Agree or Mostly agree, never Partly agree.
         - Check first, without writing. Your reply is only the verdict and its reasons: write nothing before the word, and never say what you are about to do, are checking or have looked at.
         - Always give the word, also when you could not check everything; then say what you could not check.
         - Then 2 to 4 short sentences in plain, simple words. No jargon you do not need, no long words.
@@ -89,15 +94,18 @@ module DCR
     # A verdict that ends a sentence of narration ("I'll check the cache.Agree") or stands on its own line.
     LATE_VERDICT = /(?:[.!?:]|\n)[ \t*_]*(agree|partly agree|partially agree|mostly agree|disagree)[.!*_]*[ \t]*(?:\n|\z)/i
 
-    # [verdict, body without the verdict line]. verdict is agree, partly or disagree, or nil.
+    # [verdict, body without the verdict line]. verdict is agree, mostly, partly or disagree, or nil.
     # Anything an agent narrated before its verdict ("I'll check how...") is dropped with it.
     def verdict(answer)
       text = tidy(answer)
       match = text.match(VERDICT) || text.match(LATE_VERDICT) or return [nil, text]
       word = match[1].downcase
       rest = text[match.end(0)..].to_s.strip
-      [word == 'disagree' ? 'disagree' : (word == 'agree' ? 'agree' : 'partly'), rest.empty? ? text : rest]
+      [stance(word), rest.empty? ? text : rest]
     end
+
+    # The stored verdict of a word an agent wrote: agree, mostly, partly or disagree.
+    def stance(word) = {'agree' => 'agree', 'mostly agree' => 'mostly', 'disagree' => 'disagree'}.fetch(word.downcase, 'partly')
 
     # Local links (a file on this computer) read as code; the page links only to the web.
     def tidy(answer) = answer.to_s.gsub(/\[([^\]\n]+)\]\((?!https?:)[^)\s]+\)/) { "`#{Regexp.last_match(1).delete('`')}`" }.strip
@@ -274,11 +282,12 @@ module DCR
         A reviewer asked a question about a code change. One agent gave the main answer; #{answers.length == 1 ? 'another agent' : 'other agents'} answered on #{answers.length == 1 ? 'its' : 'their'} own, without seeing it. Say how far each other answer agrees with the main answer.
 
         - Agree: the same conclusion.
-        - Partly agree: the same conclusion with a real caveat, or a different fix.
+        - Mostly agree: the same conclusion and what to do, with a detail that differs.
+        - Partly agree: the same conclusion with a caveat that changes what to do, or a different fix.
         - Disagree: a different conclusion.
 
         Judge only what is written here. Do not read files. Reply with exactly these lines and nothing else:
-        #{letters.map { |letter| "#{letter}: Agree, Partly agree or Disagree" }.join("\n")}
+        #{letters.map { |letter| "#{letter}: Agree, Mostly agree, Partly agree or Disagree" }.join("\n")}
         Differ: one short, plain sentence on where the answers differ most, or the word nothing when they all agree. Name an answer as `Answer A`, each time.
 
         The question:
@@ -296,7 +305,7 @@ module DCR
       lines = tidy(answer).lines.map(&:strip)
       verdicts = ('A'..'Z').first(count).map do |letter|
         word = lines.filter_map { |line| line[/\A\W*#{letter}\W*:\W*(agree|partly agree|partially agree|mostly agree|disagree)\b/i, 1] }.first&.downcase
-        word && (word == 'disagree' ? 'disagree' : (word == 'agree' ? 'agree' : 'partly'))
+        word && stance(word)
       end
       differ = lines.filter_map { |line| line[/\A\W*differ\w*\W*:\s*(.+)/i, 1] }.first.to_s.strip
       [verdicts, differ.empty? || differ.match?(/\Anothing\W*\z/i) ? nil : differ[0, 300]]

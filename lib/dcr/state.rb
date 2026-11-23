@@ -417,7 +417,7 @@ module DCR
       end
     end
 
-    # verdict: agree, partly or disagree, when the answer said so. short: the answer in a sentence
+    # verdict: agree, mostly, partly or disagree, when the answer said so. short: the answer in a sentence
     # or two, when the agent marked one; body then carries it and the details under it.
     # about 'outcome': it is said of the review agent's outcome, so what the same agent said of
     # the comment itself stays in the conversation.
@@ -459,7 +459,7 @@ module DCR
     end
 
     # How far each opinion agrees with the review's agent, as a judge compared them.
-    # verdicts: {agent => {'body' => the answer judged (each revision's copy has its own id), 'verdict' => agree, partly, disagree or nil}}.
+    # verdicts: {agent => {'body' => the answer judged (each revision's copy has its own id), 'verdict' => agree, mostly, partly, disagree or nil}}.
     # differ: where the answers differ, in a sentence. An opinion replaced since is left alone.
     # 'of' => 'answer' tells such a verdict from one given on a comment.
     def judge_opinions(key, id, verdicts, differ = nil)

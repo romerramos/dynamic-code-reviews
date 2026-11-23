@@ -201,7 +201,7 @@ const thread = tools.messagesHTML(debated, {seen:new Set(['m1'])});
 assert.match(thread, /<strong>Codex<\/strong><span class="dcr-verdict dcr-v-disagree">.*Disagrees<\/span><span class="dcr-role">second reviewer<\/span>/s, 'the second reviewer is named, shows its verdict, then its role in plain text');
 assert.match(thread, /dcr-adversary dcr-v-disagree/);
 assert.match(tools.messagesHTML({messages:[{id:'r1', author:'agent', body:'ok'}]}, {agent:'claude'}), /<strong>Claude<\/strong>/, 'an unnamed reply takes the listening agent');
-assert.deepEqual(tools.tally(debated), {total:2, agree:1, partly:0, disagree:1});
+assert.deepEqual(tools.tally(debated), {total:2, agree:1, mostly:0, partly:0, disagree:1});
 assert.equal(tools.tallyText(tools.tally(debated)), '1 agrees · 1 disagrees');
 // Once the review's agent said what became of the comment, the thread closes on a block: each
 // agent's own word, and how they add up. Addressed and No longer relevant are the same side.
@@ -242,8 +242,8 @@ assert.equal(tools.closure({...differing, waiting_on:['gemini']}).state, 'differ
 // The first action on a comment the agent wrote follows what the comment is.
 assert.deepEqual(['issue', 'typo', 'suggestion', 'nitpick', 'question', 'thought', 'note', 'praise'].map(label => [tools.commentAction(label).kind, tools.commentAction(label).act]),
   [['fix', 'Fix this'], ['fix', 'Fix this'], ['apply', 'Apply this'], ['apply', 'Apply this'], ['answer', 'Act on this'], ['answer', 'Act on this'], ['none', null], ['none', null]]);
-assert.deepEqual(tools.tally(settled), {total:1, agree:1, partly:0, disagree:0}, 'of an outcome, agreement is read from each agent\'s own word; an answer with no word counts for neither');
-assert.deepEqual(tools.tally(differing), {total:2, agree:1, partly:0, disagree:1});
+assert.deepEqual(tools.tally(settled), {total:1, agree:1, mostly:0, partly:0, disagree:0}, 'of an outcome, agreement is read from each agent\'s own word; an answer with no word counts for neither');
+assert.deepEqual(tools.tally(differing), {total:2, agree:1, mostly:0, partly:0, disagree:1});
 const settledThread = tools.messagesHTML(settled, {seen:new Set(['m1', 'm2', 'm3'])});
 assert.doesNotMatch(settledThread, /It is capped now|The cap is there/, 'what was said of the outcome is in the closing block, not in the conversation too');
 assert.match(settledThread, /data-msg="m1"/, 'the discussion before it stays');
@@ -262,6 +262,9 @@ assert.match(side, /is-waiting[^>]*>.*Gemini.*is reading the code/s, 'an agent s
 assert.match(side, /is-failed[^>]*>.*Claude.*did not answer/s, 'a failed agent says so, quietly');
 assert.doesNotMatch(side, /Grok|Codex|Other opinions|dcr-consensus/, 'who answered is not repeated beside the conversation');
 assert.equal(tools.consensus({total:2, agree:2, partly:0, disagree:0}), 'Everyone agrees');
+// Mostly agrees is on the side of acting: with Agrees, the panel reads as agreeing, in the agree colour.
+assert.equal(tools.consensus({total:2, agree:1, mostly:1, partly:0, disagree:0}), '1 agrees · 1 mostly');
+assert.match(tools.verdictHTML('mostly'), /dcr-v-mostly[^>]*>.*Mostly agrees/);
 assert.equal(tools.opinionsHTML({messages:[]}), '', 'no opinions, no section');
 assert.equal(tools.opinionsHTML({opinions:{grok:{id:'o', body:'Fine.', verdict:'agree'}}}), '', 'everyone answered: nothing beside the conversation');
 const checking = tools.statusModel({...debated, messages:[], waiting_on:['codex', 'gemini']}, true);
