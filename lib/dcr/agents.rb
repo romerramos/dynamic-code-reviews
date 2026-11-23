@@ -21,7 +21,9 @@ module DCR
       'cursor' => {'name' => 'Cursor', 'company' => 'Cursor', 'env' => %w[CURSOR_AGENT]},
       'opencode' => {'name' => 'opencode', 'company' => 'opencode', 'env' => %w[OPENCODE]}
     }.freeze
-    TIMEOUT = 300
+    # An adversary on a high effort reads and searches for minutes (Grok at high took over 5); the page
+    # calls a wait lost after 10 (live-tools STALE_MS), so an answer has until 8.
+    TIMEOUT = 480
     # The folder Antigravity finds the dcr-reader agent in, added to its workspace for the question.
     ANTIGRAVITY_AGENTS = File.expand_path('antigravity', __dir__)
 
@@ -41,7 +43,9 @@ module DCR
       # Antigravity's own agent searches with the shell, which a headless run denies, ending its turn
       # with no answer; its dcr-reader agent (ANTIGRAVITY_AGENTS) has only its file and web tools.
       # Its model names carry the effort (gemini-4-neon-high); it refuses --effort beside one.
-      'antigravity' => ->(prompt, _out, model, _effort) { [['agy', '-p', prompt, '--mode', 'plan', '--agent', 'dcr-reader', '--add-dir', ANTIGRAVITY_AGENTS] + flag('--model', model), nil] },
+      # It also reaches for the reader's MCP servers (Linear, for an issue a comment names), which a
+      # headless run cannot ask about and ends with no answer; denied up front, it answers without them.
+      'antigravity' => ->(prompt, _out, model, _effort) { [['agy', '-p', prompt, '--mode', 'plan', '--agent', 'dcr-reader', '--add-dir', ANTIGRAVITY_AGENTS, '--settings={"permissions":{"deny":["mcp(*)"]}}'] + flag('--model', model), nil] },
       # opencode's built-in plan agent cannot edit, and a headless run denies anything it would ask for.
       'opencode' => ->(prompt, _out, model, _effort) { [['opencode', 'run', '--agent', 'plan'] + flag('-m', model) + [prompt], nil] }
     }.freeze

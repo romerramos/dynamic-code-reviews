@@ -136,7 +136,7 @@ Dir.mktmpdir('dcr-ask') do |dir|
     assert(DCR::Agents::RUNNERS['claude'].call('q', nil, nil, nil)[0] == %w[claude -p --tools Read,Grep,Glob,WebSearch,WebFetch --allowedTools WebSearch,WebFetch], 'No model or effort chosen: the CLI keeps its own; it may search the web')
     assert(DCR::Agents::RUNNERS['codex'].call('q', '/o', nil, nil)[0].first(3) == %w[codex --search exec], 'Codex may search the web: --search goes before exec')
     antigravity = DCR::Agents::RUNNERS['antigravity'].call('q', nil, 'gemini-x-high', 'medium')[0]
-    assert(antigravity == ['agy', '-p', 'q', '--mode', 'plan', '--agent', 'dcr-reader', '--add-dir', DCR::Agents::ANTIGRAVITY_AGENTS, '--model', 'gemini-x-high'], 'Antigravity answers through its reading-only agent, with no --effort: its model names carry it')
+    assert(antigravity == ['agy', '-p', 'q', '--mode', 'plan', '--agent', 'dcr-reader', '--add-dir', DCR::Agents::ANTIGRAVITY_AGENTS, '--settings={"permissions":{"deny":["mcp(*)"]}}', '--model', 'gemini-x-high'], 'Antigravity answers through its reading-only agent, with no MCP server (a headless run ends silent on one) and no --effort: its model names carry it')
     assert(File.read(File.join(DCR::Agents::ANTIGRAVITY_AGENTS, '.agents/agents/dcr-reader.md'))[/^tools:\n((?:  - .*\n)+)/, 1].scan(/- (\S+)/).flatten == %w[read_file search_web], 'The reading-only agent has only its file and web tools')
     assert(DCR::Agents::RUNNERS['opencode'].call('q', nil, 'opencode/big-pickle', nil)[0] == %w[opencode run --agent plan -m opencode/big-pickle q], 'opencode answers through its read-only plan agent')
     begin
