@@ -1383,6 +1383,12 @@ main#content:has(>.overview-reading>.overview-shows){padding-top:calc(var(--pane
 .pr-description :not(pre)>code{padding:1px 5px;border-radius:calc(5px * var(--round));background:var(--bg-neutral-3);color:var(--ink);font:.87em/1.4 var(--mono)}
 .pr-description pre code{padding:0;background:none;font:inherit}
 .pr-description img{max-width:100%;height:auto}
+/* A table reads as GitHub's: smaller type than the prose, ruled cells, a shaded header and every other row. */
+.pr-description .md-table{overflow-x:auto}
+.pr-description table{border-collapse:collapse;font-size:13px;line-height:1.5}
+.pr-description :is(th,td){padding:6px 13px;border:1px solid var(--line-neutral-3);text-align:left;vertical-align:top;overflow-wrap:normal}
+.pr-description th{font-weight:600;color:var(--ink);background:var(--bg-neutral-2)}
+.pr-description tbody tr:nth-child(2n){background:var(--bg-neutral-2)}
 .pr-description-more{display:flex;width:fit-content;align-items:center;gap:5px;margin:2px 0 24px;padding:0;border:0;background:none;color:var(--ink);font-size:13px;font-weight:550}
 .pr-description-more .review-icon{width:14px;height:14px}
 .pr-description.is-whole+.pr-description-more{display:none}
