@@ -952,7 +952,9 @@
     }
     // Where to read next: the first step with files left. A theme may point at it.
     const nextLayer = layers.find(layer => { const done = progress(layer.items); return done.total && done.viewed < done.total; });
-    const stepNext = '<span class="step-next">up next</span>'; // the first step to read, or the next: right whether you started or not
+    // The first step to read, or the next: right whether you started or not. It marks one row, the
+    // folded one that hides that step's files; once they show, their own checkboxes say what is left.
+    const stepNext = '<span class="step-next">up next</span>';
     // A title in the list folds what is under it; only a file opens something. Where you are always
     // starts open: arriving at another step forgets the folds set on it and on its group.
     if (state.view !== navFoldView) {
@@ -970,7 +972,7 @@
       const groupKey = `group:${matching[0].id}`;
       const titled = group.layers.length > 1;
       const groupOpen = !titled || (navFolds[groupKey] ?? (groupsStart !== 'current' || matching.some(layer => layer.id === state.view)));
-      html += `<section class="nav-section">${titled ? `<h3 class="nav-group-title"><button type="button" class="nav-group-toggle" data-nav-fold="${groupKey}" aria-expanded="${groupOpen}" aria-controls="nav-steps-${matching[0].id}">${stepTitle(titleWithoutNumber(group.title), matching.every(layer => { const done = progress(layer.items); return done.total && done.viewed === done.total; }))}${startsHere ? stepNext : ''}</button></h3>` : ''}`;
+      html += `<section class="nav-section">${titled ? `<h3 class="nav-group-title"><button type="button" class="nav-group-toggle" data-nav-fold="${groupKey}" aria-expanded="${groupOpen}" aria-controls="nav-steps-${matching[0].id}">${stepTitle(titleWithoutNumber(group.title), matching.every(layer => { const done = progress(layer.items); return done.total && done.viewed === done.total; }))}${startsHere && !groupOpen ? stepNext : ''}</button></h3>` : ''}`;
       if (!groupOpen) { html += `<ul id="nav-steps-${matching[0].id}" hidden></ul></section>`; return; }
       html += `<ul id="nav-steps-${matching[0].id}" class="menu">`;
       matching.forEach(layer => {
@@ -996,7 +998,7 @@
         // Read file by file a step has no page of its own, so its title only folds its files. In the
         // walkthrough the step is a page, and its title opens it.
         const expanded = navFolds[layer.id] ?? state.view === layer.id;
-        html += `<li><button ${focusMode ? `data-nav-fold="${layer.id}" ` : ''}data-view="${layer.id}" aria-current="${state.view === layer.id ? 'page' : 'false'}" aria-expanded="${expanded}" aria-controls="nav-files-${layer.id}"><span class="step-number">${completed.total && completed.viewed === completed.total ? icon('check') : layers.indexOf(layer) + 1}</span><span class="step-body"><strong>${stepTitle(titleWithoutNumber(group.layers.length === 1 ? group.title : layer.title), completed.total && completed.viewed === completed.total)}${layer === nextLayer ? stepNext : ''}</strong><small>${progressText(completed)}${count ? ` · ${count} comments` : ''}</small></span></button>${expanded ? `<ul id="nav-files-${layer.id}" class="nav-files">${links}${tests}</ul>` : `<ul id="nav-files-${layer.id}" hidden></ul>`}</li>`;
+        html += `<li><button ${focusMode ? `data-nav-fold="${layer.id}" ` : ''}data-view="${layer.id}" aria-current="${state.view === layer.id ? 'page' : 'false'}" aria-expanded="${expanded}" aria-controls="nav-files-${layer.id}"><span class="step-number">${completed.total && completed.viewed === completed.total ? icon('check') : layers.indexOf(layer) + 1}</span><span class="step-body"><strong>${stepTitle(titleWithoutNumber(group.layers.length === 1 ? group.title : layer.title), completed.total && completed.viewed === completed.total)}${layer === nextLayer && !expanded ? stepNext : ''}</strong><small>${progressText(completed)}${count ? ` · ${count} comments` : ''}</small></span></button>${expanded ? `<ul id="nav-files-${layer.id}" class="nav-files">${links}${tests}</ul>` : `<ul id="nav-files-${layer.id}" hidden></ul>`}</li>`;
       });
       html += '</ul></section>';
     });
