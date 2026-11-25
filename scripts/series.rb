@@ -795,7 +795,9 @@ module ReviewSeries
       # Each comment whose lines changed, with what is needed to say what became of it: the code it
       # was written on, what changed in its file since, and what other agents said of it.
       kept_state = state.read
-      own = Array(kept_state.dig('blobs', key.call(entry['number'] + 1, current['fingerprint']), 'personalComments')).select { |comment| comment.dig('outdated', 'revision') == entry['number'] }
+      # The reader's questions are left out: answered in their conversation, they have no outcome to
+      # say, and one would read as the question still applying or not.
+      own = Array(kept_state.dig('blobs', key.call(entry['number'] + 1, current['fingerprint']), 'personalComments')).select { |comment| comment.dig('outdated', 'revision') == entry['number'] && comment['label'] != 'question' }
       threads = kept_state.dig('threads', key.call(entry['number'] + 1, current['fingerprint'])) || {}
       patches = delta['files'].to_h { |file| [file['path'], file['patch']] }
       lost = (outdated + own.map { |comment| comment.merge('reader' => true) }).map do |comment|

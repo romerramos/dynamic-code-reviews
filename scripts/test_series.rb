@@ -619,7 +619,7 @@ module SeriesChecks
           hid = before['files'].first['hunks'].first['id']
           old_key = DCR::State.review_key(before['fingerprint'], 'live', 1)
           mine = ->(id, line) { {'id' => id, 'hunk' => hid, 'side' => 'new', 'start' => line, 'end' => line, 'label' => 'note', 'decoration' => 'non-blocking', 'subject' => id} }
-          state.save_blob(old_key, {'personalComments' => [mine.call('mine-kept', 2), mine.call('mine-gone', 3)], 'viewedFiles' => ['sample.rb'], 'autoReviewed' => ['sample.rb'], 'notes' => {'group-1-step-1' => 'Mine'}})
+          state.save_blob(old_key, {'personalComments' => [mine.call('mine-kept', 2), mine.call('mine-gone', 3), mine.call('mine-asked', 3).merge('label' => 'question')], 'viewedFiles' => ['sample.rb'], 'autoReviewed' => ['sample.rb'], 'notes' => {'group-1-step-1' => 'Mine'}})
           state.user_message(old_key, 'mine-kept', 'Why this name?')
           state.await_opinions(old_key, 'value-note', 'codex')
           state.add_opinion(old_key, 'value-note', 'codex', 'It should be three.', verdict: 'disagree', adversary: true)
@@ -661,7 +661,7 @@ module SeriesChecks
           # What became of each comment the update outdated is the agent's to say. It is handed the
           # comment, the code it was written on, what changed since and what other agents said of it.
           lost = result['outdated_comments']
-          assert(lost.map { |comment| comment.values_at('id', 'reader') } == [['value-note', nil], ['mine-gone', true]] && lost.all? { |comment| comment['patch'].include?("-    2\n+    3") }, 'The outdated comments were not handed over with what changed under them')
+          assert(lost.map { |comment| comment.values_at('id', 'reader') } == [['value-note', nil], ['mine-gone', true]] && lost.none? { |comment| comment['id'] == 'mine-asked' } && lost.all? { |comment| comment['patch'].include?("-    2\n+    3") }, 'The outdated comments were not handed over with what changed under them, or the reader\'s question was asked for an outcome')
           brief = ReviewSeries.sync_brief(result)
           assert(brief.include?('OUTDATED COMMENT value-note (by ') && brief.include?('OUTDATED COMMENT mine-gone (written by the reviewer)') && brief.include?("revision 1):\n    2") && brief.include?('What changed in sample.rb since revision 1:'), "The agent is not told what each outdated comment was about:\n#{brief}")
           assert(brief.include?('- Codex (second reviewer, disagree): It should be three.') && brief.scan('What other agents said of it').length == 1, 'What the adversaries said of an outdated comment was not passed on')
