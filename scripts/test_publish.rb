@@ -81,11 +81,11 @@ Dir.mktmpdir('dcr-publish-test') do |directory|
   assert(DCR::ReviewReport.description(facts) == '3 files reviewed · 2 comments settled · 2 agents', "The status line is wrong: #{DCR::ReviewReport.description(facts)}")
   puts 'PASS the report counts files, agents, comments and conversations, and keeps what was said out'
 
-  # Without JevMyPR every file needs the reader; any unresolved comment of the review is open, as the Overview's All clear has it.
+  # Without JevMyPR every file needs the reader; an unresolved comment of the review is open, unless it asks nothing (praise, a note).
   saved['verdicts'] = {}
   saved['blobs'][KEY] = {'viewedFiles' => %w[app/a.rb], 'resolvedComments' => %w[c1]}
   open = DCR::ReviewReport.facts(shot, said, saved, key)
-  assert(open['left'] == %w[app/b.rb README.md] && open['open'] == %w[c2 c3], "What is left is wrong: #{open.slice('left', 'open')}")
+  assert(open['left'] == %w[app/b.rb README.md] && open['open'] == %w[c2], "What is left is wrong: #{open.slice('left', 'open')}")
   assert(DCR::ReviewReport.markdown(open).include?('- **3 files** · 1 read') && !DCR::ReviewReport.markdown(open).include?('JevMyPR'), 'Without a verdict the report says how many files were read, and no JevMyPR')
   # The reader's own questions to the agent are conversations, never something left to resolve.
   saved['blobs'][KEY]['resolvedComments'] = %w[c1 c2 c3]
@@ -94,7 +94,7 @@ Dir.mktmpdir('dcr-publish-test') do |directory|
   saved['threads'][KEY]['mine-1'] = {'messages' => [{'author' => 'agent', 'agent' => 'claude', 'body' => 'Because.'}]}
   asked = DCR::ReviewReport.facts(shot, said, saved, key)
   assert(asked['open'].empty? && asked['comments']['total'] == 2 && asked['conversations'] == 2, "A question of the reader's is open, or counted as a comment: #{asked.slice('open', 'comments', 'conversations')}")
-  puts 'PASS without a verdict every file needs the reader; unresolved comments are open, the reader\'s own questions never'
+  puts 'PASS without a verdict every file needs the reader; unresolved comments are open, notes, praise and the reader\'s own questions never'
 
   # A comment from GitHub, the reader's or a teammate's, never holds back publishing: it is settled on GitHub.
   arrived = saved['comments'][KEY]

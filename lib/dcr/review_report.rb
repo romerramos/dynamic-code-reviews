@@ -44,9 +44,9 @@ module DCR
       # Counted are the agents' comments: one from GitHub, the reader's or a teammate's, is not the review's.
       reviews = comments.reject { |comment| comment['mine'] || comment['author'] }
       actionable = reviews.reject { |comment| QUIET.include?(comment['label']) }
-      # Open is what the Overview's All clear waits on: the review's own comments on the code as it is.
-      # The reader's questions to the agent are not something to resolve, and a comment from GitHub
-      # is settled there: it stays under From GitHub while open, and never holds the review back.
+      # Unsettled: the review's own comments on the code as it is. The reader's questions to the agent
+      # are not something to resolve, and a comment from GitHub is settled there: it stays under From
+      # GitHub while open, and never holds the review back.
       waiting = reviews.reject { |comment| comment['outdated'] || resolved.include?(comment['id']) || threads.dig(comment['id'], 'closed') }
       settled = actionable - waiting
       fixed = settled.count { |comment| fixed?(threads[comment['id']]) }
@@ -64,7 +64,8 @@ module DCR
         'conversations' => comments.count { |comment| talked?(threads[comment['id']], mine: comment['mine']) },
         'revisions' => key.split(':').last.to_i,
         'left' => yours - viewed,
-        'open' => waiting.map { |comment| comment['id'] }
+        # Open is what publishing waits on. A note or praise asks nothing, so there is nothing to settle.
+        'open' => (actionable & waiting).map { |comment| comment['id'] }
       }
     end
 
