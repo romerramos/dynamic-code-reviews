@@ -112,10 +112,11 @@ module DCR
 
     # Asks the panel about each comment and posts every answer as it arrives. Returns what happened,
     # per comment and agent, for the terminal.
-    def run(series_dir:, comment_ids:, author:, context: nil, repo: nil, ask: Agents.method(:ask), adversaries: Settings.new.adversaries)
+    # only, failed: one agent asked again (ask_again), and what went wrong the last time.
+    def run(series_dir:, comment_ids:, author:, context: nil, repo: nil, ask: Agents.method(:ask), adversaries: Settings.new.adversaries, only: nil, failed: nil)
       require_relative '../../scripts/series'
       panel = Agents.panel(author, adversaries)
-      return {} if panel.empty?
+      return {} if panel.empty? && !only
       history = ReviewSeries.manifest(series_dir)
       payload = ReviewSeries.latest(series_dir, history)
       entry = history['revisions'].last
@@ -128,8 +129,9 @@ module DCR
         comment = posted.find { |candidate| candidate['id'] == id } or raise ArgumentError, "No comment #{id} in this review"
         excerpt = code(payload['snapshot'], comment)
         said = already_said(series_dir, payload['snapshot'], comment)
-        state.await_opinions(key, id, panel.first['agent'], panel.drop(1).map { |adversary| adversary['agent'] })
-        results = consult(state, key, id, panel, repo, ask) do |agent, adversarial|
+        lead, asked = narrow(state.read.dig('threads', key, id), panel, only)
+        state.await_opinions(key, id, *waits(lead, asked))
+        results = consult(state, key, id, asked, repo, ask, lead: lead, failed: failed) do |agent, adversarial|
           prompt(asked: agent, author: author, context: context, code: excerpt, comment: comment, adversary: adversarial, said: said)
         end
         [id, results]
@@ -147,10 +149,10 @@ module DCR
     # The review's agent said what became of a comment once the code changed (`dcr reply --outcome`).
     # The adversaries answer the same question on their own, from the comment and the code and never
     # from its answer; theirs is then held against it: the same finding agrees, another disagrees.
-    def outcome(series_dir:, id:, author:, repo: nil, ask: Agents.method(:ask), adversaries: Settings.new.adversaries)
+    def outcome(series_dir:, id:, author:, repo: nil, ask: Agents.method(:ask), adversaries: Settings.new.adversaries, only: nil, failed: nil)
       require_relative '../../scripts/series'
       panel = Agents.panel(author, adversaries)
-      return {} if panel.empty?
+      return {} if panel.empty? && !only
       history = ReviewSeries.manifest(series_dir)
       payload = ReviewSeries.latest(series_dir, history)
       entry = history['revisions'].last
@@ -161,12 +163,13 @@ module DCR
       known = Array(kept.dig('comments', key)) + Array(payload.dig('review', 'comments')) + Array(kept.dig('blobs', key, 'personalComments'))
       comment = known.find { |candidate| candidate['id'] == id } or raise ArgumentError, "No comment #{id} in this review"
       text = outcome_prompt(author: comment['agent'], comment: comment, payload: payload, said: already_said(series_dir, payload['snapshot'], comment))
-      state.await_opinions(key, id, panel.first['agent'], panel.drop(1).map { |adversary| adversary['agent'] })
+      lead, asked = narrow(kept.dig('threads', key, id), panel, only)
+      state.await_opinions(key, id, *waits(lead, asked))
       found = lambda do |answer|
         word, body = outcome_word(answer)
         [word && (OUTCOME_SIDES[word] == OUTCOME_SIDES[said] ? 'agree' : 'disagree'), word ? "**#{OUTCOME_WORDS[word]}.** #{body}" : body]
       end
-      consult(state, key, id, panel, repo || history['repo'], ask, about: 'outcome', parse: found) { |agent, _| "You are #{Agents.name(agent)}.\n\n#{text}" }
+      consult(state, key, id, asked, repo || history['repo'], ask, about: 'outcome', parse: found, lead: lead, failed: failed) { |agent, _| "You are #{Agents.name(agent)}.\n\n#{text}" }
     end
 
     # [addressed, still-applies, not-relevant or nil, the answer without that line].
@@ -215,14 +218,18 @@ module DCR
     # A question the reviewer asked with adversaries ticked: each answers it on its own, beside the
     # review's agent (author), which answers in the conversation as usual. text: what the review's
     # agent was sent, so they know as much as it does.
-    def question(state:, key:, id:, text:, author:, repo:, ask: Agents.method(:ask), adversaries: Settings.new.adversaries, patience: PATIENCE, pause: 2)
+    def question(state:, key:, id:, text:, author:, repo:, ask: Agents.method(:ask), adversaries: Settings.new.adversaries, patience: PATIENCE, pause: 2, only: nil, failed: nil)
       panel = Agents.panel(author, adversaries)
-      return {} if panel.empty?
-      heard = state.answers(key, id).map { |message| message['id'] }
+      return {} if panel.empty? && !only
+      judge = panel.first || {'agent' => only}
+      # Asked again, the answer already given to the reviewer's question is the one to compare with.
+      asked_since = only && state.read.dig('threads', key, id, 'messages')&.reverse&.find { |message| message['author'] == 'user' }&.fetch('at')
+      heard = state.answers(key, id).select { |message| !asked_since || message['at'].to_s < asked_since }.map { |message| message['id'] }
+      _, panel = narrow(nil, panel, only)
       asked_at = state.await_opinions(key, id, nil, panel.map { |adversary| adversary['agent'] })
       said = said_on_thread(state, key, id)
-      results = consult(state, key, id, panel, repo, ask, on_comment: false) { |agent, _| question_prompt(asked: agent, author: author, text: text, said: said) }
-      judge(state: state, key: key, id: id, text: text, asked_at: asked_at, heard: heard, judge: panel.first, repo: repo, ask: ask, patience: patience, pause: pause)
+      results = consult(state, key, id, panel, repo, ask, on_comment: false, failed: failed) { |agent, _| question_prompt(asked: agent, author: author, text: text, said: said) }
+      judge(state: state, key: key, id: id, text: text, asked_at: asked_at, heard: heard, judge: judge, repo: repo, ask: ask, patience: patience, pause: pause)
       results
     end
 
@@ -329,6 +336,67 @@ module DCR
       TEXT
     end
 
+    # The reviewer asks one agent again on a thread where it did not answer (it failed, or its run was
+    # lost): the same question as the first time, a check of the comment, of what became of it, or the
+    # reviewer's question, in the same role, without the answers given since, so it still answers on its
+    # own. Only what went wrong changes the prompt (retry_note). Runs until the agent answers or fails.
+    def ask_again(series_dir:, key:, id:, agent:, ask: Agents.method(:ask), adversaries: Settings.new.adversaries)
+      require_relative '../../scripts/series'
+      agent = Agents.check(agent)
+      state = State.new(series_dir)
+      kept = state.read
+      thread = askable_again(kept, key, id, agent)
+      last = thread.dig('opinions', agent)
+      failed = last&.dig('error') || 'its last run was interrupted'
+      # A failure says what it was asked; a lost run was asked about the reviewer's question when one
+      # came before it, else about the comment.
+      asked_at = last&.dig('at') || thread['asked_at'].to_s
+      kind = last&.dig('kind') || (thread['messages'].to_a.any? { |message| message['author'] == 'user' && message['at'].to_s <= asked_at } ? 'question' : 'comment')
+      history = ReviewSeries.manifest(series_dir)
+      repo = history['repo'] || Dir.pwd
+      case kind
+      when 'comment'
+        payload = ReviewSeries.latest(series_dir, history)
+        comment = (Array(kept.dig('comments', key)) + Array(payload.dig('review', 'comments'))).find { |candidate| candidate['id'] == id }
+        run(series_dir: series_dir, comment_ids: [id], author: comment&.dig('agent') || state.listener || 'agent', repo: repo, ask: ask, adversaries: adversaries, only: agent, failed: failed)[id]
+      when 'outcome' then outcome(series_dir: series_dir, id: id, author: state.listener, repo: repo, ask: ask, adversaries: adversaries, only: agent, failed: failed)
+      else question(state: state, key: key, id: id, text: follow_up(kept, key, id), author: state.listener, repo: repo, ask: ask, adversaries: adversaries, only: agent, failed: failed)
+      end
+    end
+
+    # The thread, when the agent can be asked again on it: it failed there, or is still awaited (its run
+    # was lost). Raises ArgumentError with a sentence the page can show.
+    def askable_again(state_data, key, id, agent)
+      thread = state_data.dig('threads', key, id) or raise ArgumentError, "No conversation #{id} in this review"
+      raise ArgumentError, "#{Agents.name(agent)} has nothing to be asked again here" unless thread.dig('opinions', agent, 'error') || Array(thread['waiting_on']).include?(agent)
+      raise ArgumentError, "#{Agents.name(agent)} is not installed on this computer" unless Agents.installed?(agent)
+      thread
+    end
+
+    # [the agent that answers in the conversation, the panel to ask]. Asked again (only), just that
+    # agent, on the model the reviewer chose for it if still chosen, in the role it had on the thread.
+    def narrow(thread, panel, only)
+      return [panel.first&.fetch('agent'), panel] unless only
+      [thread&.dig('adversary') || panel.first&.fetch('agent'), [panel.find { |entry| entry['agent'] == only } || {'agent' => only}]]
+    end
+
+    # await_opinions' arguments: the lead, when asked, and the others.
+    def waits(lead, asked)
+      agents = asked.map { |entry| entry['agent'] }
+      [agents.include?(lead) ? lead : nil, agents - [lead]]
+    end
+
+    # What an agent asked again is told of its last try. Only running out of time, or stopping short of
+    # its word, is its own doing; a run that failed around it (a sign-in, a crash) gets the same question.
+    def retry_note(reason)
+      case reason.to_s
+      when /took longer than/
+        "Your last try at this ran out of time before you answered. Check only what decides your answer, and answer with what you could check; say what you could not."
+      when /stopped before giving/
+        'Your last try ended before your conclusion. Check less, and start your reply with it.'
+      end
+    end
+
     # What adversaries need to answer a follow-up: what the review's agent was first sent about the
     # thread, the conversation since, and the new message (already the thread's last).
     def follow_up(state_data, key, id)
@@ -368,7 +436,7 @@ module DCR
     TEXT
 
     # The same question once more, for an agent whose reply stopped before its conclusion.
-    def again(prompt, answer)
+    def once_more(prompt, answer)
       <<~TEXT
         #{prompt}
 
@@ -380,12 +448,15 @@ module DCR
       TEXT
     end
 
-    def consult(state, key, id, panel, repo, ask, on_comment: true, about: nil, parse: method(:verdict))
-      panel.each_with_index.map do |adversary, index|
+    # lead: the agent that answers in the conversation (the panel's first, unless asked again).
+    # failed: why the agent did not answer the last time it was asked this.
+    def consult(state, key, id, panel, repo, ask, on_comment: true, about: nil, parse: method(:verdict), lead: panel.first&.fetch('agent'), failed: nil)
+      kind = about == 'outcome' ? 'outcome' : on_comment ? 'comment' : 'question'
+      panel.map do |adversary|
         agent, model, effort = adversary.values_at('agent', 'model', 'effort')
-        adversarial = on_comment && index.zero?
+        adversarial = on_comment && agent == lead
         Thread.new do
-          prompt = "#{yield(agent, adversarial)}\n\n#{CHECK_FIRST}"
+          prompt = [yield(agent, adversarial), retry_note(failed), CHECK_FIRST].compact.join("\n\n")
           asked = lambda do |text|
             turn do
               # The page counts the wait from when the agent starts, not from when it queued.
@@ -398,14 +469,14 @@ module DCR
           read = ->(answer) { on_comment ? parse.call(answer) : structured(answer) }
           answer = asked.call(prompt)
           first, body = read.call(answer)
-          first, body = read.call(asked.call(again(prompt, answer))) unless first
+          first, body = read.call(asked.call(once_more(prompt, answer))) unless first
           raise ArgumentError, "#{Agents.name(agent)} stopped before giving its #{on_comment ? 'verdict' : 'answer'}" unless first
           word, short = on_comment ? [first, nil] : [nil, first]
           state.add_opinion(key, id, agent, body, verdict: word, short: short, adversary: adversarial, model: model, effort: effort, about: about)
           AgentCatalog::Results.record(agent)
           [agent, word || 'answered']
         rescue ArgumentError, SystemCallError => error
-          state.opinion_failed(key, id, agent, error.message, adversary: adversarial)
+          state.opinion_failed(key, id, agent, error.message, adversary: adversarial, kind: kind)
           AgentCatalog::Results.record(agent, error.message)
           [agent, "failed: #{error.message}"]
         end

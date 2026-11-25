@@ -273,10 +273,19 @@ const quiet = {...debated, messages:[], waiting_on:['codex', 'gemini'], asked_at
 assert.equal(tools.statusModel(quiet, true, Date.parse('2026-10-07T11:45:00Z')).typing, true, 'a second reviewer asked minutes ago is still checking');
 const lost = tools.statusModel(quiet, true, Date.parse('2026-10-07T12:00:00Z'));
 assert.equal(lost.tone, 'idle', 'a second reviewer silent past every timeout is not shown as typing');
-assert.match(lost.text, /Codex was asked to check this comment 20 min ago and has not answered.*run it again/);
-const lostRows = tools.opinionsHTML(quiet, {now: Date.parse('2026-10-07T12:00:00Z')});
-assert.match(lostRows, /is-failed[^>]*>.*Gemini.*did not answer/s, 'a side opinion that never came reads as not answered');
+assert.match(lost.text, /Codex was asked to check this comment 20 min ago and has not answered/);
+assert.equal(lost.lost, true, 'the page leaves a lost check to the list, where it can be asked again');
+const lostRows = tools.opinionsHTML(quiet, {now: Date.parse('2026-10-07T12:00:00Z'), again: true});
+assert.match(lostRows, /is-failed[^>]*>.*Gemini.*did not answer.*· was interrupted.*data-dcr-again="gemini"/s, 'a side opinion that never came reads as not answered, and can be asked again');
+assert.match(lostRows, /is-failed[^>]*>.*Codex.*did not answer.*data-dcr-again="codex"/s, 'so can a second reviewer whose check was lost');
 assert.doesNotMatch(lostRows, /is reading the code/);
+// Why it did not answer, in a few words; asking again where it could fail the same way is not offered.
+assert.deepEqual(['Grok took longer than 8 minutes', 'Grok stopped before giving its verdict', 'Gemini is not signed in. Run `gemini` once to sign in.', 'opencode is not installed', 'Antigravity did not answer (jetski: no output produced)'].map(tools.failedWhy),
+  ['ran out of time', 'stopped short', 'not signed in', 'not installed', 'hit an error']);
+const failedRows = tools.opinionsHTML({opinions: {grok: {error: 'Grok took longer than 8 minutes'}, opencode: {error: 'opencode is not installed'}}}, {again: true});
+assert.match(failedRows, /title="Grok took longer than 8 minutes">.*Grok.*did not answer.*· ran out of time.*<button[^>]*data-dcr-again="grok"[^>]*title="[^"]*ran out of time"[^>]*>Ask again<\/button>/s, 'the full failure is in the tooltip; Ask again says what the agent is told');
+assert.doesNotMatch(failedRows, /data-dcr-again="opencode"/, 'an agent that is not installed is not offered again');
+assert.doesNotMatch(tools.opinionsHTML({opinions: {grok: {error: 'Grok took longer than 8 minutes'}}}), /Ask again/, 'a saved page, which cannot ask, has no Ask again');
 assert.equal(tools.agentModel({}, true, Date.now(), {}, 'claude').text, 'Claude listening');
 const asked = tools.sendText(snapshot, review, comments[0], '', debated);
 assert.match(asked, /Second opinions from other agents:\n- Codex \(second reviewer, disagrees\): The cap is already enforced/);

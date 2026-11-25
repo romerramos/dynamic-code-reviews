@@ -438,7 +438,8 @@ module DCR
       end
     end
 
-    def opinion_failed(key, id, agent, reason, adversary: false)
+    # kind: what the agent was asked (comment, outcome or question), to ask it the same again.
+    def opinion_failed(key, id, agent, reason, adversary: false, kind: nil)
       agent = Agents.check(agent)
       update do |state|
         awaiting(state, current(state, key), id, agent).each do |copy|
@@ -446,7 +447,7 @@ module DCR
           thread['waiting_on'] = Array(thread['waiting_on']) - [agent]
           # A failed retry keeps the earlier answer; only a first failure is shown.
           next if thread['messages'].any? { |message| message['role'] == 'adversary' && message['agent'] == agent } || thread.dig('opinions', agent, 'body')
-          (thread['opinions'] ||= {})[agent] = {'error' => reason.to_s.strip[0, 300], 'role' => (adversary ? 'adversary' : nil), 'at' => Time.now.utc.iso8601}.compact
+          (thread['opinions'] ||= {})[agent] = {'error' => reason.to_s.strip[0, 300], 'role' => (adversary ? 'adversary' : nil), 'kind' => kind, 'at' => Time.now.utc.iso8601}.compact
         end
       end
     end

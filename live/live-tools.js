@@ -222,7 +222,7 @@ globalThis.LiveTools = (() => {
     const last = [...(thread.messages || [])].reverse().find(message => message.author === 'agent' && message.role !== 'adversary');
     // A second reviewer checking the comment shows in the conversation, like someone typing.
     if (checkingComment(thread) && thread.delivery !== 'sent' && thread.delivery !== 'delivered') {
-      if (lostOpinion(thread, now)) return {tone: 'idle', text: `${agentInfo(thread.adversary).name} was asked to check this comment ${relativeTime(thread.asked_at, now)} and has not answered. The check may have been interrupted; ask your agent to run it again.`};
+      if (lostOpinion(thread, now)) return {tone: 'idle', text: `${agentInfo(thread.adversary).name} was asked to check this comment ${relativeTime(thread.asked_at, now)} and has not answered. The check may have been interrupted.`, lost: true};
       // The list of who is still to answer says it, first (opinionsHTML); this is for where there is no list.
       return {tone: 'work', text: `${agentInfo(thread.adversary).name} is checking this comment`, typing: true, agent: thread.adversary, checking: true};
     }
@@ -313,7 +313,18 @@ globalThis.LiveTools = (() => {
   // The other agents' opinions, under the conversation rather than in it: one row per agent with
   // its mark, name and verdict once, then its short answer, or the start of its answer when it gave
   // no short one. A row opens in place to the full answer. `open`: the agents whose answers are open.
-  function opinionsHTML(thread, {now = Date.now()} = {}) {
+  // Why an agent did not answer, in a few words, from the sentence its failure left.
+  function failedWhy(error) {
+    const text = String(error || '');
+    if (/took longer than/i.test(text)) return 'ran out of time';
+    if (/stopped before giving/i.test(text)) return 'stopped short';
+    if (/not signed in/i.test(text)) return 'not signed in';
+    if (/not installed|cannot be asked from here/i.test(text)) return 'not installed';
+    return 'hit an error';
+  }
+
+  // again: the page can ask an agent that did not answer to try once more (the served review, online).
+  function opinionsHTML(thread, {now = Date.now(), again = false} = {}) {
     const opinions = thread?.opinions || {};
     const adversary = thread?.adversary;
     // The second reviewer answers in the conversation; it shows here only when it could not answer.
@@ -321,9 +332,9 @@ globalThis.LiveTools = (() => {
     const closing = !!OUTCOMES[thread?.outcome?.verdict];
     const answered = Object.keys(opinions).filter(agent => (opinions[agent].role !== 'adversary' || opinions[agent].error) && !(closing && (opinions[agent].about === 'outcome' || opinions[agent].error)));
     // The second reviewer checking the comment leads the list, so everyone still working reads as one list;
-    // one whose check was lost is said by the status line instead, with what to do.
+    // one whose check was lost stays in it as not answered, to be asked again.
     const checking = checkingComment(thread) && !lostOpinion(thread, now);
-    const waiting = closing ? [] : (thread?.waiting_on || []).filter(agent => agent !== adversary || !checkingComment(thread) || checking).sort((a, b) => (b === adversary) - (a === adversary));
+    const waiting = closing ? [] : (thread?.waiting_on || []).slice().sort((a, b) => (b === adversary) - (a === adversary));
     const agents = [...new Set([...answered, ...waiting])];
     if (!agents.length) return '';
     // Verdicts a judge gave on answers to a question are counted apart from those on the comment.
@@ -335,9 +346,12 @@ globalThis.LiveTools = (() => {
       const name = escape(agentInfo(agent).name);
       // Asked again, an agent shows as reading until its new answer replaces the old one.
       const asked = waiting.includes(agent);
-      if (asked && lostOpinion(thread, now)) return `<li class="dcr-op is-failed" title="Asked ${escape(relativeTime(thread.asked_at, now))}; the check may have been interrupted">${face(agent, 'sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">did not answer</span></span></li>`;
+      // Did not answer: why, in a few words (the whole sentence in the tooltip), and Ask again,
+      // except where asking again would fail the same way.
+      const failed = (why, title) => `<li class="dcr-op is-failed" title="${escape(title)}">${face(agent, 'sm')}<span class="dcr-op-line"><span class="dcr-op-said"><strong>${name}</strong> <span class="dcr-op-note">did not answer</span> <span class="dcr-op-why">· ${why}</span></span>${again && why !== 'not installed' ? `<button type="button" class="dcr-op-again" data-dcr-again="${escape(agent)}" title="Ask ${name} the same question again${why === 'ran out of time' ? '; it is told its last try ran out of time' : ''}">Ask again</button>` : ''}</span></li>`;
+      if (asked && lostOpinion(thread, now)) return failed('was interrupted', `Asked ${relativeTime(thread.asked_at, now)}; the check may have been interrupted`);
       if (asked || !opinion) return `<li class="dcr-op is-waiting">${face(agent, 'sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">${agent === adversary && checking ? 'is checking this comment' : 'is reading the code'}</span><span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span></span></li>`;
-      if (opinion.error) return `<li class="dcr-op is-failed" title="${escape(opinion.error)}">${face(agent, 'sm')}<span class="dcr-op-line"><strong>${name}</strong><span class="dcr-op-note">did not answer</span></span></li>`;
+      if (opinion.error) return failed(failedWhy(opinion.error), opinion.error);
       return '';
     }).join('');
     // On a question a judge compared the answers with the review's agent's: where they part, in a sentence.
@@ -608,6 +622,6 @@ globalThis.LiveTools = (() => {
   });
 
   return {tryPanelHTML, tryPinned, tryPress, tryNews, tryMemory, emojiToken, emojiMatches, escape, progressKey, allComments, sendText, drafts, statusText, statusModel, actionLabel, markdown, snippet, relativeTime, messagesHTML, unseen, agentModel, summary,
-    agentInfo, youName, personName, opinionMessages, modelHTML, verdictHTML, verdicts, closure, closureHTML, confirmed, closesItself, leftForGitHub, outcomeWord, outcomeSide: word => SIDES[word], OUTCOMES, commentAction, tally, tallyText, consensus, opinionsHTML, names, VERDICTS,
+    agentInfo, youName, personName, opinionMessages, modelHTML, verdictHTML, verdicts, closure, closureHTML, confirmed, closesItself, leftForGitHub, outcomeWord, outcomeSide: word => SIDES[word], OUTCOMES, commentAction, tally, tallyText, consensus, opinionsHTML, failedWhy, names, VERDICTS,
     activeAdversaries, agentStatus, modelOptionsHTML, effortLevels, effortOptionsHTML, chosenModel, chosenEffort, settle, adversaryPanelHTML, adversaryIntroHTML, jevBannerHTML};
 })();

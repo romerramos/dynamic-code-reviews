@@ -210,7 +210,7 @@
     // The DOM re-serialises markup (an escaped quote comes back as a quote), so compare the
     // string that was set, not innerHTML, or the observer would re-trigger itself forever.
     const convo = block.querySelector('.dcr-convo');
-    const opinions = tools.opinionsHTML(thread);
+    const opinions = tools.opinionsHTML(thread, {again: online});
     const model = online ? tools.statusModel(thread, heard(), Date.now(), listener) : {tone: 'off', text: 'The review server stopped. Restart `dcr serve` to send or receive.'};
     // Under a thread the status line only says what is still happening; an answer is shown, not announced.
     // What became of the comment once its code changed: each agent's word, and the reader's closing buttons.
@@ -224,8 +224,8 @@
     // A request that was not taken says why here, and stays until it is read: a toast is gone too soon.
     const refused = refusals.has(id) ? `<p class="dcr-refusal" role="alert">${ico('circle-alert')}<span>${tools.escape(refusals.get(id))}</span><button type="button" class="btn btn-xs btn-ghost" data-dcr-refusal="${tools.escape(id)}">Dismiss</button></p>` : '';
     // An answer is its own message, signed by who wrote it: no line above it says that it came.
-    // The second reviewer checking the comment is in the list of who is still working (opinions), not a line of its own.
-    const status = refused + (ledger ? '' : outcome) + (model?.tone === 'done' || (model?.checking && opinions) ? '' : stateHTML(model, ''));
+    // The second reviewer checking the comment, or whose check was lost, is in the list of who is still to answer (opinions), not a line of its own.
+    const status = refused + (ledger ? '' : outcome) + (model?.tone === 'done' || ((model?.checking || model?.lost) && opinions) ? '' : stateHTML(model, ''));
     const statusSignature = status ? `${model?.tone}|${model?.text}|${outcome}|${refused}` : '';
     const form = block.querySelector('.dcr-reply');
     if (ledger) {
@@ -501,6 +501,23 @@
       }
       openOpinions.set(id, open);
       document.querySelectorAll(`.dcr-thread[data-dcr="${CSS.escape(id)}"]`).forEach(refreshBlock);
+      return;
+    }
+    // Ask an agent that did not answer once more: it reads as at work at once, as the server has it.
+    const again = event.target.closest('[data-dcr-again]');
+    if (again) {
+      const id = again.closest('.dcr-thread').dataset.dcr;
+      const agent = again.dataset.dcrAgain;
+      again.disabled = true;
+      try {
+        await api('/api/opinion/again', {key, id, agent});
+        const thread = threads[id];
+        if (thread) {
+          thread.waiting_on = [...new Set([...(thread.waiting_on || []), agent])];
+          thread.asked_at = new Date().toISOString();
+        }
+        document.querySelectorAll(`.dcr-thread[data-dcr="${CSS.escape(id)}"]`).forEach(refreshBlock);
+      } catch (error) { flash(error.message); again.disabled = false; }
       return;
     }
     const more = event.target.closest('.dcr-more');

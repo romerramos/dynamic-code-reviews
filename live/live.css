@@ -453,7 +453,15 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 .dcr-op-new{flex:none;width:7px;height:7px;border-radius:calc(50% * var(--round));background:var(--accent)}
 .dcr-op-chevron{color:var(--muted);transition:transform .15s}
 .dcr-op.is-open .dcr-op-chevron{transform:rotate(90deg)}
-.dcr-op.is-failed{opacity:.6}
+/* Did not answer: the mark and the words stay quiet, why in a few words; Ask again keeps the theme's
+   link ink and its own place at the end, so a long reason wraps instead of pushing it out. */
+.dcr-op.is-failed>.ui-avatar{filter:opacity(.6)}
+.dcr-op.is-failed .dcr-op-said{opacity:.6}
+.dcr-op-said{flex:1 1 auto;min-width:0;white-space:normal}
+.dcr-op-again{flex:none;align-self:flex-start;margin:0;padding:0;border:0;background:none;color:var(--accent);font:inherit;font-weight:550;white-space:nowrap;cursor:pointer}
+.dcr-op-again:hover{text-decoration:underline;text-underline-offset:3px}
+.dcr-op-again:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.dcr-op-again:disabled{opacity:.5;cursor:default;text-decoration:none}
 .dcr-op.is-waiting .ui-avatar{animation:dcr-breathe 1.6s infinite ease-in-out}
 /* .dcr-op .dcr-op-body outranks the panel's own .dcr-ledger .dcr-body, so the answer lines up under the name. */
 .dcr-op .dcr-op-body{margin:0 0 8px 29px;font-size:13.5px;line-height:1.55}

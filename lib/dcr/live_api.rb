@@ -29,8 +29,9 @@ module DCR
     # that has the reviewer's adversaries answer a question in the background. jevmypr: the client
     # for the outside verdict, asked only for a repository whose reviewer turned it on.
     # draft: callable(context:, opinions:, voice:, author:, adversaries:, repo:) returning [text, agent],
-    # which writes a comment in the reviewer's voice for GitHub.
-    def initialize(directory, settings: Settings.new, evidence: nil, github: GitHub.new(directory), catalog: nil, ask_adversaries: nil, jevmypr: JevMyPR.new, draft: GitHubDraft.method(:write), titler: nil)
+    # which writes a comment in the reviewer's voice for GitHub. ask_again: callable(key, id, agent) that
+    # asks one adversary again, in the background, where it did not answer.
+    def initialize(directory, settings: Settings.new, evidence: nil, github: GitHub.new(directory), catalog: nil, ask_adversaries: nil, jevmypr: JevMyPR.new, draft: GitHubDraft.method(:write), titler: nil, ask_again: nil)
       @draft = draft
       @jevmypr = jevmypr
       @state = State.new(directory)
@@ -39,6 +40,7 @@ module DCR
       @github = github
       @catalog = catalog || ->(fresh) { AgentCatalog.list(fresh: fresh) }
       @ask_adversaries = ask_adversaries || method(:question_in_background)
+      @ask_again = ask_again || method(:again_in_background)
       @titler = titler || lambda do |text|
         agent = Titles.writer(@state.listener) or raise ArgumentError, 'No agent CLI on this computer can write a title'
         Titles.make(text, agent: agent)
@@ -95,6 +97,7 @@ module DCR
       when ['GET', '/api/agents'] then [200, adversaries.merge('agents' => @catalog.call(query['fresh'] == '1'))]
       when ['POST', '/api/agents'] then (@settings.save_adversaries(json(body)['adversaries']); [200, adversaries])
       when ['POST', '/api/verdict'] then [200, verdict(json(body))]
+      when ['POST', '/api/opinion/again'] then [200, ask_again(json(body))]
       when ['POST', '/api/finish'] then [200, {'entry' => @state.finish(json(body)['key'])}]
       when ['GET', '/api/github'] then [200, @github.status(key)]
       when ['GET', '/api/github/me'] then [200, @github.me]
@@ -207,6 +210,28 @@ module DCR
         warn "No title for #{id}: #{error.message}"
       end
       {'titling' => 'working'}
+    end
+
+    # The reviewer asked an adversary that did not answer to try again. The thread shows it reading at
+    # once; its answer, or why it failed again, arrives as the first one would have.
+    def ask_again(input)
+      key, id, agent = input['key'].to_s, input['id'].to_s, Agents.check(input['agent'])
+      raise ArgumentError, 'Invalid review key' unless key.match?(State::KEY)
+      thread = SecondOpinion.askable_again(@state.read, key, id, agent)
+      # Awaited at once, in the role it had, so the next poll already shows it at work.
+      lead = thread['adversary'] == agent
+      @state.await_opinions(key, id, lead ? agent : nil, lead ? [] : [agent])
+      @ask_again.call(key, id, agent)
+      {'asked' => agent}
+    end
+
+    def again_in_background(key, id, agent)
+      Thread.new do
+        SecondOpinion.ask_again(series_dir: File.dirname(@state.path), key: key, id: id, agent: agent)
+      rescue StandardError => error
+        @state.opinion_failed(key, id, agent, error.message) if error.is_a?(ArgumentError)
+        warn "#{Agents.name(agent)} could not be asked again about #{id}: #{error.message}"
+      end
     end
 
     def question_in_background(key, id, text)

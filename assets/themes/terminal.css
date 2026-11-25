@@ -440,3 +440,8 @@
 [data-theme^="terminal-"] .dcr-try-redo{margin-left:0;font:12px var(--mono);text-transform:lowercase}
 [data-theme^="terminal-"] .dcr-try-redo::before{content:"[ ";color:var(--terminal-overlay0)}
 [data-theme^="terminal-"] .dcr-try-redo::after{content:" ]";color:var(--terminal-overlay0)}
+
+/* Ask again an agent that did not answer: a [ bracketed ] command, like the theme's other actions. */
+[data-theme^="terminal-"] .dcr-op-again{text-transform:lowercase}
+[data-theme^="terminal-"] .dcr-op-again::before{content:"[ ";color:var(--terminal-overlay0);font-weight:400}
+[data-theme^="terminal-"] .dcr-op-again::after{content:" ]";color:var(--terminal-overlay0);font-weight:400}

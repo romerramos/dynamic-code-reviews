@@ -389,6 +389,64 @@ Dir.mktmpdir('dcr-judge') do |series|
 end
 puts 'PASS once the review\'s agent has answered, one adversary says how far each independent answer agrees with it'
 
+Dir.mktmpdir('dcr-again') do |series|
+  FileUtils.mkdir_p(File.join(series, 'revisions'))
+  File.write(File.join(series, 'manifest.json'), JSON.generate('version' => 1, 'name' => 'job', 'repo' => series, 'revisions' => [{'number' => 1, 'fingerprint' => 'f00d'}]))
+  File.write(File.join(series, 'revisions', '001.html'), DCR::Page.review({'snapshot' => snapshot, 'review' => {'title' => 'Bound the job', 'status' => 'in_progress', 'comments' => []}}))
+  state = DCR::State.new(series)
+  key = DCR::State.review_key('f00d', 'job', 1)
+  state.post_comments(key, [comment.merge('agent' => 'claude')])
+  DCR::Settings.new.save_adversaries([{'agent' => 'codex'}, {'agent' => 'grok', 'effort' => 'high'}])
+  asked = Queue.new
+  slow = lambda do |agent, question, dir:, model:, effort:, adversary:|
+    asked << [agent, question, effort]
+    raise ArgumentError, 'Grok took longer than 8 minutes' if agent == 'grok'
+    "Mostly agree\nTen is the limit, but say where it is documented."
+  end
+  with_agents('codex' => 'exit 0', 'grok' => 'exit 0') { DCR::SecondOpinion.run(series_dir: series, comment_ids: ['c1'], author: 'claude', ask: slow) }
+  Array.new(asked.size) { asked.pop }
+  assert(state.read.dig('threads', key, 'c1', 'opinions', 'grok').values_at('error', 'kind') == ['Grok took longer than 8 minutes', 'comment'], 'A failure says what the agent was asked')
+  answer = ->(agent, question, dir:, model:, effort:, adversary:) { asked << [agent, question, effort]; "Agree\nTen is the documented limit." }
+  with_agents('codex' => 'exit 0', 'grok' => 'exit 0') do
+    begin
+      DCR::SecondOpinion.ask_again(series_dir: series, key: key, id: 'c1', agent: 'codex', ask: answer)
+      assert(false, 'An agent that answered was asked again')
+    rescue ArgumentError => error
+      assert(error.message.include?('nothing to be asked again'), error.message)
+    end
+    DCR::SecondOpinion.ask_again(series_dir: series, key: key, id: 'c1', agent: 'grok', ask: answer)
+  end
+  tries = Array.new(asked.size) { asked.pop }
+  assert(tries.map(&:first) == ['grok'] && tries.first[2] == 'high', "Only the agent that did not answer is asked, on its own settings: #{tries}")
+  assert(tries.first[1].include?("Claude's comment") && tries.first[1].include?('Ten looks arbitrary.') && !tries.first[1].include?('say where it is documented'),
+         "It gets the question it was first asked, without the second reviewer's answer:\n#{tries.first[1]}")
+  assert(tries.first[1].include?('ran out of time') && !tries.first[1].include?('You are the second reviewer'), 'Told its last try ran out of time, it keeps its place beside the conversation')
+  thread = state.read.dig('threads', key, 'c1')
+  assert(thread.dig('opinions', 'grok').values_at('verdict', 'error') == ['agree', nil] && thread['messages'].map { |message| message['agent'] } == ['codex'] && thread['waiting_on'] == [], "Its answer replaces the failure: #{thread}")
+  # The second reviewer that did not answer is asked again as the second reviewer, with the same
+  # question; a crash is not its doing, so nothing is added.
+  state.update { |data| data['threads'][key]['c1']['messages'].clear }
+  state.opinion_failed(key, 'c1', 'codex', 'Codex did not answer (exit 1)', adversary: true, kind: 'comment')
+  with_agents('codex' => 'exit 0', 'grok' => 'exit 0') { DCR::SecondOpinion.ask_again(series_dir: series, key: key, id: 'c1', agent: 'codex', ask: answer) }
+  retried = asked.pop
+  assert(retried[1].include?('You are the second reviewer') && !retried[1].include?('last try') && asked.empty?, 'The second reviewer is asked the same question again')
+  thread = state.read.dig('threads', key, 'c1')
+  assert(thread['messages'].map { |message| message.values_at('agent', 'role', 'verdict') } == [%w[codex adversary agree]] && !thread.dig('opinions', 'codex'), "It answers in the conversation, and its failure is gone: #{thread}")
+  # A run lost on the way (the server stopped) has no failure, only a wait: it is asked again too.
+  state.send_items(key, [{'id' => 'mine-1', 'text' => "File: app/job.rb\n\nWhy ten?"}])
+  state.user_message(key, 'mine-1', 'Why ten?')
+  state.await_opinions(key, 'mine-1', nil, ['grok'])
+  state.agent_reply('mine-1', 'It is the retry limit.', key: key, agent: 'claude')
+  with_agents('codex' => 'exit 0', 'grok' => 'exit 0') { DCR::SecondOpinion.ask_again(series_dir: series, key: key, id: 'mine-1', agent: 'grok', ask: ->(agent, question, **) { asked << [agent, question]; agent == 'grok' ? 'Answer: It is the retry limit.' : 'A: Agree' }) }
+  tries = Array.new(asked.size) { asked.pop }
+  question = tries.find { |agent, _| agent == 'grok' }[1]
+  assert(tries.find { |agent, _| agent == 'codex' }&.last.to_s.include?('The main answer:'), "Once it answers, the judge compares it with the review's agent's answer: #{tries}")
+  assert(state.read.dig('threads', key, 'mine-1', 'opinions', 'grok', 'verdict') == 'agree', 'and its verdict lands on it')
+  assert(question.include?('independent answer') && question.include?('Why ten?'), "A lost answer to the reviewer's question is asked as that question:\n#{question}")
+  assert(state.read.dig('threads', key, 'mine-1', 'opinions', 'grok', 'short') == 'It is the retry limit.', 'Its answer sits beside the conversation')
+end
+puts 'PASS an adversary that did not answer is asked again alone, the same question in the same role, told only that it ran out of time'
+
 Dir.mktmpdir('dcr-api') do |series|
   settings = DCR::Settings.new(File.join(series, 'config'))
   asked = []
@@ -405,6 +463,15 @@ Dir.mktmpdir('dcr-api') do |series|
   api.call('POST', '/api/send', body.call('key' => key, 'items' => [{'id' => 'mine-2', 'text' => 'Why five?'}], 'adversaries' => true))
   api.call('POST', '/api/message', body.call('key' => key, 'id' => 'mine-1', 'body' => 'And eleven?', 'adversaries' => true))
   assert(asked.map { |job| job.first(2) } == [[key, 'mine-2'], [key, 'mine-1']] && asked[0][2] == 'Why five?' && asked[1][2].start_with?('Why ten?') && asked[1][2].end_with?('And eleven?'), "With the tick, adversaries get the same question: #{asked}")
+  again = []
+  api = DCR::LiveAPI.new(series, settings: settings, ask_adversaries: ->(*job) {}, ask_again: ->(*job) { again << job })
+  api.state.opinion_failed(key, 'mine-1', 'codex', 'Codex took longer than 8 minutes', kind: 'question')
+  with_agents('codex' => 'exit 0') do
+    assert(api.call('POST', '/api/opinion/again', body.call('key' => key, 'id' => 'mine-1', 'agent' => 'codex')) == [200, {'asked' => 'codex'}] && again == [[key, 'mine-1', 'codex']], "The page asks one agent again: #{again}")
+    assert(api.state.read.dig('threads', key, 'mine-1', 'waiting_on') == ['codex'], 'and the next poll already shows it at work')
+    status, refused = api.call('POST', '/api/opinion/again', body.call('key' => key, 'id' => 'mine-2', 'agent' => 'codex'))
+    assert(status == 400 && refused['error'].include?('nothing to be asked again') && again.length == 1, "An agent with nothing to answer again is refused: #{refused}")
+  end
 end
 puts 'PASS the page lists agents, saves adversaries, and asks them only when the reviewer ticks it'
 
