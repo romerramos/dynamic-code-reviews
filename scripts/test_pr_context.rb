@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 # Run with ruby scripts/test_pr_context.rb. Stdlib only; a stand-in `gh` answers the GraphQL
 # queries and records them, so nothing reaches GitHub.
+require 'fileutils'
 require 'json'
 require 'open3'
 require 'rbconfig'
@@ -58,6 +59,11 @@ FAKE_GH = <<~'RUBY'
     }
     # Later, after a new revision: the description was edited, a thread got a reply, another was
     # resolved, a new one opened and someone commented.
+    # A screenshot attached on GitHub: the HTML links it at a short-lived signed address.
+    if ENV['GH_IMAGES']
+      pull['body'] += "\n\n![Card](https://github.com/user-attachments/assets/0a1b2c3d-0000-4000-8000-00000000abcd)"
+      pull['bodyHTML'] = '<p><a href="#"><img src="https://private-user-images.githubusercontent.com/9/1-0a1b2c3d-0000-4000-8000-00000000abcd.png?jwt=eyJsigned&amp;x=1" alt="Card"></a></p>'
+    end
     if ENV['GH_LATER']
       pull['body'] += "\n\nSending it later is #8's job."
       threads = pull.dig('reviewThreads', 'nodes')
@@ -176,6 +182,32 @@ Dir.mktmpdir('dcr-pr-context-test') do |directory|
   out, _, status = dcr.('--repo', repo, '--name', 'acme-42', '--since-last', extra: {'GH_SIGNED_OUT' => '1'})
   assert(status.success? && out.start_with?('No GitHub context:') && File.read(kept).include?('Thanks, that works.'), "A failed read says so and keeps the last one: #{out}")
   puts 'PASS a review keeps its last read privately, and --since-last says only what changed on the pull request since'
+
+  # The description's GitHub attachments are kept, so a reader not signed in to GitHub sees them.
+  # A stand-in curl serves the image and records the address it was asked for.
+  bin = File.join(directory, 'bin')
+  FileUtils.mkdir_p(bin)
+  File.write(File.join(bin, 'curl'), <<~SH)
+    #!/bin/sh
+    out=""; while [ $# -gt 1 ]; do [ "$1" = "-o" ] && out="$2"; shift; done
+    echo "$1" >> "#{directory}/curl.log"
+    [ -n "$CURL_FAIL" ] && exit 22
+    printf '\211PNG\r\n\032\nfake' > "$out"
+  SH
+  File.chmod(0o755, File.join(bin, 'curl'))
+  path = {'PATH' => "#{bin}:#{ENV.fetch('PATH')}", 'GH_IMAGES' => '1'}
+  shown = 'https://github.com/user-attachments/assets/0a1b2c3d-0000-4000-8000-00000000abcd'
+  _, _, status = dcr.('--repo', repo, '--name', 'imaged', '--pr', '#7', extra: path.merge('CURL_FAIL' => '1'))
+  assert(status.success? && DCR::PRContext.description(File.join(repo, '.reviews', 'imaged'))['images'] == {}, 'An image GitHub would not give stays a link to GitHub')
+  _, _, status = dcr.('--repo', repo, '--name', 'imaged', '--pr', '#7', extra: path)
+  images = DCR::PRContext.description(File.join(repo, '.reviews', 'imaged'))['images']
+  assert(status.success? && images == {shown => "data:image/png;base64,#{["\x89PNG\r\n\x1A\nfake".b].pack('m0')}"}, "The Overview gets the kept image for its GitHub address: #{images}")
+  assert(File.readlines(File.join(directory, 'curl.log')).last.strip == 'https://private-user-images.githubusercontent.com/9/1-0a1b2c3d-0000-4000-8000-00000000abcd.png?jwt=eyJsigned&x=1', 'It downloads from the signed address')
+  stored = File.read(File.join(repo, '.reviews', 'imaged', 'context.json'))
+  assert(!stored.include?('jwt=') && File.stat(Dir[File.join(repo, '.reviews', 'imaged', 'images', '*.png')].first).mode & 0o777 == 0o600, 'The signed address is not kept, and the image is private')
+  dcr.('--repo', repo, '--name', 'imaged', '--pr', '#7', extra: path)
+  assert(File.readlines(File.join(directory, 'curl.log')).length == 2, 'A kept image is not downloaded again')
+  puts "PASS the description's GitHub attachments are kept, for readers not signed in to GitHub"
 end
 
 private_text = {

@@ -598,9 +598,10 @@ globalThis.ReviewTools = (() => {
       .replace(/\u0001(\d+)\u0001/g, (match, index) => images[index])
       .replace(/\u0000(\d+)\u0000/g, (match, index) => `<code>${escapeHTML(codes[index].replace(/\s*\n\s*/g, ' '))}</code>`);
   };
-  // An image the reader's browser could not load (GitHub's attachments need its sign-in): a link to
-  // it instead, never a broken image.
-  const screenshotLink = src => /^https:\/\//.test(String(src || '')) ? `<a class="md-image-link" href="${escapeHTML(src)}" target="_blank" rel="noopener noreferrer">Screenshot ↗</a>` : '';
+  // An image the reader's browser could not load (a GitHub attachment the review could not keep a
+  // copy of opens only for someone signed in to GitHub): a link to it that says so, never a broken
+  // image.
+  const screenshotLink = src => /^https:\/\//.test(String(src || '')) ? `<a class="md-image-link" href="${escapeHTML(src)}" target="_blank" rel="noopener noreferrer">Image on GitHub: sign in with access to this pull request to see it ↗</a>` : '';
   // A table row's cells. A pipe inside `code` or written as \| belongs to the cell.
   const tableCells = line => {
     const cells = [''];
@@ -636,8 +637,11 @@ globalThis.ReviewTools = (() => {
   // HTML comments are hidden, as GitHub hides them, except inside fenced code.
   const withoutComments = text => text.split(/(^\s*```[^\n]*\n[\s\S]*?^\s*```[^\n]*$)/m).map((part, index) => index % 2 ? part : part.replace(/<!--[\s\S]*?(?:-->|$)/g, '')).join('');
   // headings: how far below the page's own headings a # is (a comment's # is h3; a pull request's
-  // description, read under the review's title, starts at h2).
-  function markdown(text, {headings = 2} = {}) {
+  // description, read under the review's title, starts at h2). images: kept copies of its images,
+  // {address => data: URI}, shown in their place (a GitHub attachment loads only for someone
+  // signed in to GitHub).
+  const KEPT_IMAGE = /^data:image\/(?:png|jpeg|gif|webp);base64,[A-Za-z0-9+/]+=*$/;
+  function markdown(text, {headings = 2, images = {}} = {}) {
     const lines = withoutComments(String(text ?? '').replace(/\r\n?/g, '\n')).split('\n');
     const out = [];
     for (let i = 0; i < lines.length;) {
@@ -672,7 +676,8 @@ globalThis.ReviewTools = (() => {
         out.push(`<p>${inline(para.join('\n'))}</p>`);
       }
     }
-    return out.join('');
+    const kept = src => { const copy = images?.[src.replace(/&amp;/g, '&')]; return typeof copy === 'string' && KEPT_IMAGE.test(copy) ? copy : null; };
+    return out.join('').replace(/<img class="md-image" src="([^"]*)"/g, (tag, src) => kept(src) ? `<img class="md-image" src="${kept(src)}"` : tag);
   }
 
   // Whose judgement it is: an agent's model and effort as a short label ("grok-4.7 · high",

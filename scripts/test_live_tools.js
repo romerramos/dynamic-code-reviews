@@ -118,7 +118,9 @@ const shot = 'https://github.com/user-attachments/assets/0f1e2d3c';
 assert.equal(tools.markdown(`<img width="600" alt="Pricing card" src="${shot}" onerror="alert(1)">`), `<p><img class="md-image" src="${shot}" alt="Pricing card" loading="lazy"></p>`, "GitHub's <img> is the page's own image, with only its address and alt");
 assert.equal(tools.markdown(`![Card](${shot})`), `<p><img class="md-image" src="${shot}" alt="Card" loading="lazy"></p>`);
 assert.equal(tools.markdown('![x](http://plain.test/a.png)'), '<p>![x](http://plain.test/a.png)</p>', 'only https images');
-assert.equal(globalThis.ReviewTools.screenshotLink(shot), `<a class="md-image-link" href="${shot}" target="_blank" rel="noopener noreferrer">Screenshot ↗</a>`, 'an image that fails to load becomes a link to it');
+assert.equal(globalThis.ReviewTools.screenshotLink(shot), `<a class="md-image-link" href="${shot}" target="_blank" rel="noopener noreferrer">Image on GitHub: sign in with access to this pull request to see it ↗</a>`, 'an image that fails to load becomes a link to it that says why');
+assert.equal(globalThis.ReviewTools.markdown(`![Card](${shot})`, {images: {[shot]: 'data:image/png;base64,iVBORw0='}}), '<p><img class="md-image" src="data:image/png;base64,iVBORw0=" alt="Card" loading="lazy"></p>', 'a kept copy shows in place of the GitHub address');
+assert.equal(globalThis.ReviewTools.markdown(`![Card](${shot})`, {images: {[shot]: 'data:image/svg+xml;base64,PHN2Zz4='}}), `<p><img class="md-image" src="${shot}" alt="Card" loading="lazy"></p>`, 'only a kept raster image is used');
 assert.equal(globalThis.ReviewTools.screenshotLink('javascript:alert(1)'), '');
 console.log("PASS a pull request's description renders as on GitHub: nested lists, links, images, and no HTML comments");
 

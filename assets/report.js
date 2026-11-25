@@ -2760,7 +2760,7 @@
   }
   // The description is folded to half the window, fading out, with a way to open it whole; one
   // shorter than that shows whole (fitDescription).
-  const descriptionBlock = () => `<div class="pr-description${descriptionOpen ? ' is-open' : ''}" id="pr-description">${ReviewTools.markdown(description, {headings: 1})}</div><button type="button" class="pr-description-more" data-description-more aria-controls="pr-description" aria-expanded="${descriptionOpen}">${descriptionOpen ? `Show less ${icon('chevron-up')}` : `Show the whole description ${icon('chevron-down')}`}</button>`;
+  const descriptionBlock = () => `<div class="pr-description${descriptionOpen ? ' is-open' : ''}" id="pr-description">${ReviewTools.markdown(description, {headings: 1, images: review.pull_request?.images})}</div><button type="button" class="pr-description-more" data-description-more aria-controls="pr-description" aria-expanded="${descriptionOpen}">${descriptionOpen ? `Show less ${icon('chevron-up')}` : `Show the whole description ${icon('chevron-down')}`}</button>`;
   function fitDescription() {
     if (!description) return;
     const body = document.querySelector('#content .pr-description');

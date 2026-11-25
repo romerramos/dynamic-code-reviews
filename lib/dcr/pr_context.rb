@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'fileutils'
+require 'base64'
 require 'json'
 require 'open3'
 require 'optparse'
@@ -19,6 +20,8 @@ module DCR
   # for the adversaries checking comments and for --since-last, which says what changed on the pull
   # request since that read.
   # With no pull request, no GitHub remote or no `gh`, it says so in one line and that is all.
+  # The description's images that GitHub keeps behind its sign-in (its attachments) are kept there
+  # too, so the Overview shows them to a reader who is not signed in to GitHub.
   module PRContext
     module_function
 
@@ -47,7 +50,7 @@ module DCR
       query($owner: String!, $name: String!, $number: Int!) {
         repository(owner: $owner, name: $name) {
           pullRequest(number: $number) {
-            number title url state isDraft body baseRefName headRefName #{PEOPLE}
+            number title url state isDraft body bodyHTML baseRefName headRefName #{PEOPLE}
             closingIssuesReferences(first: 10) { nodes { number title state url repository { nameWithOwner } } }
             comments(first: 100) { totalCount nodes { #{PEOPLE} body } }
             reviews(first: 100) { totalCount nodes { #{PEOPLE} state body } }
@@ -140,14 +143,69 @@ module DCR
     end
 
     # The pull request's description from the kept read, for the review's Overview: {'url', 'body'}
-    # with its HTML comments and secrets removed, or nil without a read.
+    # with its HTML comments and secrets removed, and 'images', the kept copies of its attachments
+    # by their GitHub address, or nil without a read.
     def description(series_dir)
       kept = stored(series_dir)&.dig('context') or return
-      {'url' => kept['url'], 'title' => kept['title'], 'body' => clean(kept['body'])} if kept['url'].is_a?(String)
+      return unless kept['url'].is_a?(String)
+
+      body = clean(kept['body'])
+      {'url' => kept['url'], 'title' => kept['title'], 'body' => body, 'images' => kept_images(series_dir, body)}
     end
 
-    # Keeps this read beside the review, with the revision it was read at.
+    # A GitHub attachment opens only for someone signed in to GitHub, and a page elsewhere cannot use
+    # that sign-in. The read's HTML links each one at a signed address that works for five minutes,
+    # so each is downloaded at once and kept in images/ by its id: an attachment never changes.
+    ATTACHMENT = %r{https://github\.com/user-attachments/assets/(\h{8}-\h{4}-\h{4}-\h{4}-\h{12})}
+    SIGNED = %r{\Ahttps://private-user-images\.githubusercontent\.com/[^\s"'<>]+\z}
+    IMAGE_TYPES = {'png' => "\x89PNG".b, 'jpeg' => "\xFF\xD8\xFF".b, 'gif' => 'GIF8'.b}.freeze
+    IMAGE_BYTES = 5_000_000      # one image
+    IMAGES_BYTES = 10_000_000    # all of them, as they go into every revision's page
+    IMAGES = 'images'
+
+    def keep_images(series_dir, context)
+      html = context['bodyHTML'].to_s
+      dir = File.join(series_dir, IMAGES)
+      raise ArgumentError, "Refusing symlink: #{dir}" if File.symlink?(dir)
+      context['body'].to_s.scan(ATTACHMENT).flatten.uniq.each do |id|
+        next if Dir.glob(File.join(dir, "#{id}.*")).any?
+        src = html.scan(/\ssrc="([^"]*#{id}[^"]*)"/).flatten.map { |url| url.gsub('&amp;', '&') }.find { |url| url.match?(SIGNED) } or next
+        FileUtils.mkdir_p(dir)
+        download(src, dir, id)
+      end
+    end
+
+    def download(url, dir, id)
+      part = File.join(dir, "#{id}.part")
+      _, status = Open3.capture2e('curl', '-sfL', '--proto', '=https', '--max-time', '20', '--max-filesize', IMAGE_BYTES.to_s, '-o', part, url)
+      head = status.success? && File.file?(part) ? File.binread(part, 12).to_s : ''
+      type = IMAGE_TYPES.find { |_, magic| head.start_with?(magic) }&.first || ('webp' if head.start_with?('RIFF') && head[8, 4] == 'WEBP')
+      return unless type && File.size(part) <= IMAGE_BYTES
+
+      File.chmod(0o600, part)
+      File.rename(part, File.join(dir, "#{id}.#{type}"))
+    rescue SystemCallError
+      nil
+    ensure
+      FileUtils.rm_f(part)
+    end
+
+    # The kept copies of the body's attachments, {GitHub address => data: URI}, while they fit.
+    def kept_images(series_dir, body)
+      total = 0
+      body.scan(ATTACHMENT).uniq.each_with_object({}) do |(id), images|
+        file = Dir.glob(File.join(series_dir, IMAGES, "#{id}.{png,jpeg,gif,webp}")).first or next
+        next if File.symlink?(file) || (total += File.size(file)) > IMAGES_BYTES
+
+        images["https://github.com/user-attachments/assets/#{id}"] = "data:image/#{File.extname(file).delete('.')};base64,#{Base64.strict_encode64(File.binread(file))}"
+      end
+    end
+
+    # Keeps this read beside the review, with the revision it was read at, and the description's
+    # images. Not the read's HTML: its signed addresses are credentials, if short-lived ones.
     def store(series_dir, context)
+      keep_images(series_dir, context)
+      context = context.reject { |key, _| key == 'bodyHTML' }
       manifest = File.join(series_dir, 'manifest.json')
       revision = File.file?(manifest) ? JSON.parse(File.read(manifest)).fetch('revisions', []).last&.fetch('number', nil) : nil
       path = File.join(series_dir, FILE)
