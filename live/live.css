@@ -380,26 +380,28 @@ body.dcr-no-app #qa-panel,body.dcr-no-app .visual-qa-option,body.dcr-no-app .evi
 .dcr-closure-head strong{font-size:14.5px;font-weight:650;color:var(--dcr-agree)}
 .dcr-closure.dcr-c-differ .dcr-closure-head strong{color:var(--dcr-partly)}.dcr-closure.dcr-c-applies .dcr-closure-head strong{color:var(--dcr-disagree)}.dcr-closure.dcr-c-waiting .dcr-closure-head strong{color:var(--ink)}
 .dcr-closure-rev{margin-left:auto;font-size:12px}
-.dcr-closure-main,.dcr-check-body{display:grid;grid-template-columns:20px minmax(0,1fr);column-gap:12px;align-items:start}
-.dcr-closure-main>.ui-avatar,.dcr-check-body>.ui-avatar{margin-top:2px}
-.dcr-closure-by,.dcr-check-by{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 6px;margin:0 0 4px;font-size:13px;line-height:1.5;color:var(--muted)}
-.dcr-closure-by strong,.dcr-check-by strong{font-weight:600;color:var(--ink)}
+.dcr-closure-main{display:grid;grid-template-columns:20px minmax(0,1fr);column-gap:12px;align-items:start}
+.dcr-closure-main>.ui-avatar{margin-top:2px}
+.dcr-closure-by{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 6px;margin:0 0 4px;font-size:13px;line-height:1.5;color:var(--muted)}
+.dcr-closure-by strong{font-weight:600;color:var(--ink)}
 .dcr-closure{--message-text-size:13.5px;--message-text-line:1.6}.dcr-closure .dcr-body{max-width:72ch}.dcr-closure .dcr-body>:last-child{margin-bottom:0}
-.dcr-checks{display:flex;flex-wrap:wrap;align-items:center;gap:2px 18px;margin-top:10px;font-size:13px}
+.dcr-checks{display:grid;gap:2px;margin:10px 0 0;padding:0;list-style:none;font-size:13px}
+/* A check's reasons hang under its own line, in from its face, so the line says whose they are. */
+.dcr-checks{--check-face:20px}.dcr-check>.ui-avatar{--avatar-size:var(--check-face)}
+.dcr-checks>li>.dcr-check-body{margin:2px 0 10px;padding-left:calc(var(--check-face) + 6px)}
 /* Where the agents differ the block's own two buttons close the comment; the card's Resolve would be a third. */
-.review-thread:has(.dcr-closure-actions)>.thread-footer>[data-resolve]{display:none}
 .dcr-check{display:inline-flex;align-items:center;gap:6px;min-width:0;min-height:28px;padding:2px 0;border:0;background:none;color:inherit;font:inherit;font-size:13px}
 button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-decoration:underline}button.dcr-check:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .dcr-check strong{font-weight:600}.dcr-check-said{color:var(--muted)}
 .dcr-check-said:is(.dcr-v-agree,.dcr-v-mostly){color:var(--dcr-agree)}.dcr-check-said.dcr-v-disagree{color:var(--dcr-disagree);font-weight:600}
 .dcr-check .dcr-op-chevron{color:var(--muted)}.dcr-check.is-open .dcr-op-chevron{transform:rotate(90deg)}
-.dcr-check-body{margin-top:14px}
-.dcr-closure-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.dcr-closure-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-top:18px}
+/* Fix this joins Resolve at the footer's right while the agents differ. */
+.thread-footer>[data-dcr-still]{margin-left:auto}
 /* On a phone the words keep the full width: the checks go one to a line, and the closing buttons
    are as wide as the card, tall enough for a thumb. */
 @media(max-width:640px){
   .dcr-closure-rev{flex-basis:100%;margin-left:0}
-  .dcr-checks{flex-direction:column;align-items:flex-start;gap:4px}
   .dcr-check{min-height:36px}
   .dcr-closure-actions{flex-direction:column;gap:10px}
   :is(#content,#comment-popover,#ledger) .dcr-closure-actions .btn{width:100%;--_button-min-height:40px;justify-content:flex-start}

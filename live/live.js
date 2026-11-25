@@ -202,6 +202,18 @@
       body.after(Object.assign(document.createElement('button'), {type: 'button', className: 'dcr-more', textContent: 'Show more'}));
     }
   });
+  // On a card or in the popover the reader decides in the footer, at its right: Resolve is there
+  // already, and Fix this joins it while the agents differ on a comment that is the agent's to fix.
+  const footerOf = block => { for (let el = block.parentElement; el; el = el.parentElement) { const footer = el.querySelector(':scope > .thread-footer'); if (footer) return footer; } return null; };
+  const stillButton = (block, id, comment) => {
+    const footer = footerOf(block);
+    const resolve = footer?.querySelector(':scope > [data-resolve]');
+    if (!resolve) return;
+    const want = tools.closure(threads[id])?.state === 'differ' && !resolved().includes(id) && !!comment && !comment.personal && online && !fixingId();
+    const still = footer.querySelector(':scope > [data-dcr-still]');
+    if (want && !still) resolve.insertAdjacentHTML('beforebegin', UI.Button({label: 'Fix this', variant: 'soft', size: resolve.classList.contains('btn-xs') ? 'xs' : 'sm', attrs: {'data-dcr-still': id, 'data-dcr-side': 'applies'}}));
+    else if (!want) still?.remove();
+  };
   const refreshBlock = block => {
     const id = block.dataset.dcr;
     const ledger = block.classList.contains('dcr-ledger');
@@ -215,6 +227,7 @@
     // Under a thread the status line only says what is still happening; an answer is shown, not announced.
     // What became of the comment once its code changed: each agent's word, and the reader's closing buttons.
     const comment = comments().find(entry => entry.id === id);
+    if (!ledger) stillButton(block, id, comment);
     const outcome = tools.closureHTML(thread, {plain: ledger, resolved: resolved().includes(id), resolve: resolved().includes(id) ? null : id, still: !!comment && !comment.personal && online && !fixingId(), open: [...(openOpinions.get(id) || [])]});
     // Your review is one thread in time: the closing block sits where it was said, among the messages.
     const html = tools.messagesHTML(thread, {seen, agent: listener, me, closure: ledger ? outcome : ''});
@@ -539,7 +552,7 @@
     }
     // The reader closes a comment whose code changed: which side they took is kept beside what
     // each agent said, and Still a problem sends it back to the agent as a fix.
-    const side = event.target.closest('.dcr-closure [data-dcr-side]');
+    const side = event.target.closest('.dcr-closure [data-dcr-side], .thread-footer > [data-dcr-still]');
     if (side) {
       const id = side.dataset.resolve || side.dataset.dcrStill;
       api('/api/closure', {key, id, side: side.dataset.dcrSide}).catch(() => {});
@@ -551,10 +564,10 @@
         return;
       }
     }
-    // The card's own Resolve closes it on the side the agents took.
+    // The card's own Resolve closes it on the side the agents took; where they differ, as no longer a problem.
     const closed = event.target.closest('.thread-footer > [data-resolve].btn-soft');
     const closedOn = closed && tools.closure(threads[closed.dataset.resolve]);
-    if (closedOn) api('/api/closure', {key, id: closed.dataset.resolve, side: closedOn.side}).catch(() => {});
+    if (closedOn) api('/api/closure', {key, id: closed.dataset.resolve, side: closedOn.state === 'differ' ? 'dealt' : closedOn.side}).catch(() => {});
     const changing = event.target.closest('[data-dcr-change]');
     if (changing) {
       const form = changing.closest('.dcr-reply');

@@ -323,11 +323,10 @@ html[data-theme="minimal-dark"]{--bar-card-bg:color-mix(in srgb,var(--ink) 9%,va
 [data-theme^="minimal-"] .dcr-card .dcr-closure-rev{margin:0;font-size:12.5px}
 [data-theme^="minimal-"] .dcr-card .dcr-closure-rev::before{content:"·";margin-right:6px}
 [data-theme^="minimal-"] .dcr-card .dcr-closure .dcr-body{margin-top:4px}
-[data-theme^="minimal-"] .dcr-card .dcr-checks{display:flex;gap:14px;margin-top:6px}
+[data-theme^="minimal-"] .dcr-card .dcr-checks{margin-top:6px}
 [data-theme^="minimal-"] .dcr-card .dcr-stage>summary{margin-left:calc(var(--message-face-col,18px) + var(--message-gap,12px));font-weight:400}
-/* Everyone agrees it is no longer a problem: Resolve is what is left, so it leads, in ink. */
-[data-theme^="minimal-"] .ui-comment:has(.dcr-closure.dcr-c-settled)>.thread-footer{justify-content:flex-start}
-[data-theme^="minimal-"] .ui-comment:has(.dcr-closure.dcr-c-settled)>.thread-footer>[data-resolve].btn-soft{order:-1;--comment-action-bg:var(--ink);--comment-action-ink:var(--surface);--comment-action-border:1px solid transparent}
+/* Everyone agrees it is no longer a problem: Resolve is what is left, so it is in ink, in its place at the right. */
+[data-theme^="minimal-"] .ui-comment:has(.dcr-closure.dcr-c-settled)>.thread-footer>[data-resolve].btn-soft{--comment-action-bg:var(--ink);--comment-action-ink:var(--surface);--comment-action-border:1px solid transparent}
 [data-theme^="minimal-"] .dcr-card{--message-space:14px;--message-text-size:14px;--message-text-line:1.65;--message-text-ink:var(--ink-neutral-3)}
 [data-theme^="minimal-"] .dcr-card .dcr-check strong{color:var(--ink-neutral-3);font-weight:500}
 [data-theme^="minimal-"] .dcr-card .dcr-stage{margin-top:18px;border:0;background:transparent}
@@ -359,7 +358,6 @@ html[data-theme="minimal-dark"]{--bar-card-bg:color-mix(in srgb,var(--ink) 9%,va
 /* A reply is said by its face: who wrote it is the face; what they concluded and when, beside it. */
 /* What became of it and who checked it, the same way. */
 [data-theme^="minimal-"] .dcr-card .dcr-check{padding:0;border:0;background:none;color:var(--minimal-faint);font-size:12.5px;display:inline-flex;align-items:center;gap:6px}
-[data-theme^="minimal-"] .dcr-card .dcr-check strong{display:none}
 /* Actions are real buttons, small and quiet; the one that settles it stands apart at the right. */
 
 /* --- the composer, as in a chat: your face beside what you type ------------------------------------- */

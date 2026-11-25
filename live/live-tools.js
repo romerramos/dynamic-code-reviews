@@ -117,7 +117,7 @@ globalThis.LiveTools = (() => {
   // is shown with its reasons, since that is what the reader has to weigh. Each thing is said
   // once: the headline is what became of it, and the checks say who agrees. open: the agents the
   // reader toggled. resolve: the comment's id while it is not resolved. still: it can be sent
-  // back to the agent as a fix. plain: offer Resolve here too (off where the card has its own).
+  // back to the agent as a fix. plain: offer Resolve (and Fix this) here; a card has them in its footer.
   // resolved: the reader closed it; their word ends any disagreement, so nothing asks them to decide.
   function closureHTML(thread, {resolve = null, still = false, open = [], plain = true, resolved = false} = {}) {
     const closing = closure(thread);
@@ -136,19 +136,24 @@ globalThis.LiveTools = (() => {
     const chevron = '<svg class="dcr-op-chevron" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
     // One that does not agree is open until the reader closes it; the others open when asked.
     const isOpen = row => String(row.body || '').trim() && (against.includes(row) ? !toggled.has(row.agent) : toggled.has(row.agent));
-    const chips = checks.map(row => {
+    // A list, the ones that disagree first: each check is a line of its own, and opened, its reasons
+    // unfold under that line, which already says who and what, so nothing above them repeats it.
+    // The model is in the face's tip, as everywhere.
+    const listed = [...against, ...checks.filter(row => !against.includes(row))];
+    const chips = listed.map(row => {
       const tone = row.failed || !SIDES[row.word] ? 'none' : SIDES[row.word] === closing.side ? 'agree' : 'disagree';
       const chip = `${face(row.agent, 'sm', '', row)}<strong>${escape(name(row))}</strong><span class="dcr-check-said dcr-v-${tone}">${said(row)}</span>`;
-      return String(row.body || '').trim() ? `<button type="button" class="dcr-check${isOpen(row) ? ' is-open' : ''}" data-dcr-opinion="${escape(row.agent)}" aria-expanded="${!!isOpen(row)}" title="${escape(modelText(row))}">${chip}${chevron}</button>` : `<span class="dcr-check">${chip}</span>`;
-    }).join('') + closing.waiting.map(agent => `<span class="dcr-check is-waiting">${face(agent, 'sm')}<strong>${escape(agentInfo(agent).name)}</strong><span class="dcr-check-said dcr-v-none">is checking</span><span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span></span>`).join('');
-    const opened = checks.filter(isOpen).map(row => `<div class="dcr-check-body">${face(row.agent, 'sm', '', row)}<div><p class="dcr-check-by"><strong>${escape(name(row))}</strong> ${said(row)}${modelHTML(row)}</p><div class="dcr-body">${markdown(row.body)}</div></div></div>`).join('');
+      const line = String(row.body || '').trim() ? `<button type="button" class="dcr-check${isOpen(row) ? ' is-open' : ''}" data-dcr-opinion="${escape(row.agent)}" aria-expanded="${!!isOpen(row)}">${chip}${chevron}</button>` : `<span class="dcr-check">${chip}</span>`;
+      return `<li>${line}${isOpen(row) ? `<div class="dcr-check-body"><div class="dcr-body">${markdown(row.body)}</div></div>` : ''}</li>`;
+    }).join('') + closing.waiting.map(agent => `<li><span class="dcr-check is-waiting">${face(agent, 'sm')}<strong>${escape(agentInfo(agent).name)}</strong><span class="dcr-check-said dcr-v-none">is checking</span><span class="dcr-typing" aria-hidden="true"><i></i><i></i><i></i></span></span></li>`).join('');
+    // On a card, Resolve and Fix this are the footer's, at its right (live.js); elsewhere they close the block.
     const id = resolve && escape(resolve);
-    const buttons = !id ? '' : differ
-      ? `${UI.Button({label: 'No longer a problem · Resolve', variant: 'primary', attrs: {'data-resolve': resolve, 'data-dcr-side': 'dealt'}})}${still ? UI.Button({label: 'Still a problem · Fix this', variant: null, attrs: {'data-dcr-still': resolve, 'data-dcr-side': 'applies'}}) : ''}`
-      : plain ? UI.Button({label: 'Resolve', variant: closing.state === 'settled' ? 'primary' : null, attrs: {'data-resolve': resolve, 'data-dcr-side': closing.side}}) : '';
+    const buttons = !id || !plain ? '' : differ
+      ? `${still ? UI.Button({label: 'Fix this', variant: null, attrs: {'data-dcr-still': resolve, 'data-dcr-side': 'applies'}}) : ''}${UI.Button({label: 'Resolve', variant: null, attrs: {'data-resolve': resolve, 'data-dcr-side': 'dealt'}})}`
+      : UI.Button({label: 'Resolve', variant: closing.state === 'settled' ? 'primary' : null, attrs: {'data-resolve': resolve, 'data-dcr-side': closing.side}});
     return `<section class="dcr-closure dcr-c-${resolved ? 'settled' : closing.state}" aria-label="What became of this comment"><header class="dcr-closure-head"><strong>${head}</strong>${note ? `<span>${escape(note)}</span>` : ''}<span class="dcr-closure-rev">revision ${escape(closing.revision)}</span></header>`
       + `<div class="dcr-closure-main">${face(main.agent, 'sm', '', main)}<div class="dcr-closure-told"><p class="dcr-closure-by"><strong>${escape(name(main))}</strong>${did ? ` ${did}` : ''}${modelHTML(main)}</p>${String(main.body || '').trim() ? `<div class="dcr-body">${markdown(main.body)}</div>` : ''}`
-      + `${chips ? `<div class="dcr-checks" aria-label="Checked by">${chips}</div>` : ''}${opened}</div></div>${buttons ? `<div class="dcr-closure-actions">${buttons}</div>` : ''}</section>`;
+      + `${chips ? `<ul class="dcr-checks" aria-label="Checked by">${chips}</ul>` : ''}</div></div>${buttons ? `<div class="dcr-closure-actions">${buttons}</div>` : ''}</section>`;
   }
   const modelText = item => globalThis.ReviewTools?.modelText(item?.model, item?.effort) || '';
   const names = list => list.length < 2 ? list.join('') : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`;
