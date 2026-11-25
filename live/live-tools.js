@@ -76,8 +76,12 @@ globalThis.LiveTools = (() => {
       const said = outcomeWord(message.body);
       rows.push({agent: message.agent, word: said.word, body: said.rest, model: message.model, effort: message.effort, at: message.at});
     });
+    // A failure counts only when it was asking about this outcome: one from checking the comment
+    // itself (carried over from an earlier revision) says nothing of the fix. Failures before they
+    // recorded their kind are placed by time.
+    const ofOutcome = opinion => opinion.kind ? opinion.kind === 'outcome' : String(opinion.at || '') >= String(outcome.at || '');
     Object.entries(thread.opinions || {}).forEach(([agent, opinion]) => {
-      if (opinion.about !== 'outcome' && !opinion.error) return;
+      if (opinion.error ? !ofOutcome(opinion) : opinion.about !== 'outcome') return;
       if (opinion.error) { if (agent !== rows[0].agent && !(thread.waiting_on || []).includes(agent)) rows.push({agent, word: null, failed: true, body: ''}); return; }
       const said = outcomeWord(opinion.body);
       rows.push({agent, word: said.word, body: said.rest, model: opinion.model, effort: opinion.effort, at: opinion.at});

@@ -236,6 +236,9 @@ assert.equal(tools.leftForGitHub({id:'c-1'}, {pending:{}, posted:{}}), false, 'a
 assert.equal(tools.leftForGitHub({id:'gh-1', author:{login:'teammate'}}, {posted:{'gh-1':{url:'u'}}}), false, 'answering a comment from GitHub does not close it');
 assert.equal(tools.confirmed({...agreed, opinions:{grok:{id:'o2', body:'I will look at the cap.', about:'outcome'}}}), false, 'a check with no clear answer leaves it to the reader');
 assert.equal(tools.confirmed({...agreed, messages:agreed.messages.filter(message => message.id !== 'm3'), opinions:{}}), false, 'so does the agent\'s word alone');
+assert.equal(tools.confirmed({...agreed, opinions:{...agreed.opinions, gemini:{error:'Gemini took longer than 8 minutes', kind:'outcome'}}}), false, 'a check of the outcome that failed leaves it to the reader');
+assert.equal(tools.confirmed({...agreed, opinions:{...agreed.opinions, gemini:{error:'Gemini took longer than 8 minutes', kind:'comment'}}}), true, 'a failed check of the comment itself, from before the fix, does not hold the fix open');
+assert.equal(tools.confirmed({...agreed, outcome:{...agreed.outcome, at:'2026-01-02T00:00:00Z'}, opinions:{...agreed.opinions, gemini:{error:'Gemini took longer than 5 minutes', at:'2026-01-01T00:00:00Z'}}}), true, 'nor does one recorded before failures said what they were about, from before the outcome');
 assert.equal(tools.confirmed(differing), false);
 assert.equal(tools.closure({...agreed, waiting_on:['gemini']}).state, 'waiting', 'an agent still to answer keeps it open');
 assert.equal(tools.closure({...differing, waiting_on:['gemini']}).state, 'differ', 'a disagreement shows before everyone answered');
