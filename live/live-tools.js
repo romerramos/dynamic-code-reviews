@@ -602,7 +602,7 @@ globalThis.LiveTools = (() => {
     const actions = [
       app && item('data-try="qa" title="Your agent records the flows behind the comments, in this tab"', 'video', 'Start QA review', qaRunning ? 'Running' : ''),
       app && browse && browse.state !== 'ready' && '<p class="dcr-try-note">QA recording needs anomalyco/browse · <button type="button" data-try="setup">Set up</button></p>',
-      shots && item('data-open-shots="" aria-haspopup="dialog" title="The screenshots and recordings from the app"', 'image', 'Screenshots', String(shots)),
+      shots && item('data-open-shots="" aria-haspopup="dialog" title="The screenshots and recordings from the app"', 'image', 'Evidence', String(shots)),
       templates && item('data-open-previews title="The changed templates, rendered"', 'layout-template', 'Previews', `<span data-preview-short>${escape(previewsShort)}</span><span class="dcr-try-count">${plural(templates, 'template')}</span>`),
       changes?.files && item('data-view="files" title="Every diff, grouped by the work it does"', 'file-diff', 'Changes', `${plural(changes.files, 'file')}<span class="dcr-try-add">+${changes.added || 0}</span><span class="dcr-try-del">−${changes.removed || 0}</span>`)
     ].filter(Boolean).join('');

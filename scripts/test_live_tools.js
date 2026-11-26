@@ -445,14 +445,14 @@ console.log('PASS a file row keeps who reads it apart from how risky it is');
   assert.match(full, /███░░░░░/, 'a score as a row of blocks, for a theme that draws it');
   assert.match(full, /data-risk-redo>Rank again/);
   assert.match(full, /data-try="qa"[^>]*>.*Start QA review/);
-  assert.match(full, /data-open-shots=""[^>]*>.*Screenshots<\/span><span class="dcr-try-end">2</);
+  assert.match(full, /data-open-shots=""[^>]*>.*Evidence<\/span><span class="dcr-try-end">2</, 'Evidence: the screenshots and recordings, counted together');
   assert.match(full, /data-open-previews[^>]*>.*Previews.*2 templates/);
   assert.match(full, /Running app<\/p><button[^>]*data-try="browse"[^>]*>.*shop\.example\.test<\/span>/, 'the app by its address, opened inside the review');
   assert.equal((full.match(/<hr>/g) || []).length, 2, 'a rule between the ranking, the ways to try it and the app');
   assert.match(tools.tryPanelHTML({risk, app: null}, {icon, riskOpen: true}), /aria-expanded="true"[\s\S]*<ol class="dcr-try-risk" id="dcr-try-risk">/, 'unfolded, its files show');
 
   const bare = tools.tryPanelHTML({risk: null, app: null, shots: 0, templates: 1, previewsShort: '1 ready'}, {icon});
-  assert.doesNotMatch(bare, /Risk ranking|Start QA review|Screenshots|Running app|<hr>/, 'no ranking, no app, no screenshots: those rows are left out');
+  assert.doesNotMatch(bare, /Risk ranking|Start QA review|Evidence|Running app|<hr>/, 'no ranking, no app, no evidence: those rows are left out');
   assert.match(bare, /<span data-preview-short>1 ready<\/span><span class="dcr-try-count">1 template<\/span>/, 'previews say how they stand once some are built');
   assert.equal(tools.tryPanelHTML({risk: null, app: null, shots: 0, templates: 0}, {icon}), '', 'with nothing to try there is no panel');
   assert.match(tools.tryPanelHTML({changes: {files: 5, added: 13, removed: 3}}, {icon}), /data-view="files"[^>]*>.*Changes<\/span><span class="dcr-try-end">5 files<span class="dcr-try-add">\+13<\/span><span class="dcr-try-del">−3<\/span>/, 'Changes: its files and lines, opening All changes');

@@ -327,7 +327,8 @@ thing: recording now (a red dot on **Record**, a red pill reading **Stop m:ss** 
   The agent's state is a dot on Your review, its words in that button's tooltip.
 - **Try the change** (a served review): a 320px panel of the ··· menu's family. **Risk ranking**
   with its top score and file count unfolds in place to the ranked files (score, why, the file,
-  which opens it; Rank again); then **Start QA review**, **Screenshots** (count) and
+  which opens it; Rank again); then **Start QA review**, **Evidence** (the screenshots and QA
+  recordings together, as Seen in the app counts them, opening its viewer) and
   **Previews** (count, or how they stand), each the control it always was, locked while the
   review is in progress (while browse is not ready, a quiet line under Start QA review,
   "QA recording needs anomalyco/browse · Set up", text only, its Set up opening the browse setup); then
