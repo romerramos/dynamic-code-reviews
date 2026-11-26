@@ -3017,7 +3017,7 @@
     // First pin the header, then correct for its final position. Use instant
     // scrolling so a second click never observes an unfinished animation.
     for (let pass = 0; pass < 2; pass++) {
-      const top = readingTop() + 8;
+      const top = readingTop();
       const delta = target.getBoundingClientRect().top - top;
       if (getComputedStyle($('content')).overflowY === 'visible') window.scrollTo({top:window.scrollY + delta, behavior:'instant'});
       else $('content').scrollTo({top:$('content').scrollTop + delta, behavior:'instant'});

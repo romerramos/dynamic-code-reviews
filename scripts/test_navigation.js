@@ -172,10 +172,10 @@ const anchors = [250, 1100].map((top,i) => ({id:`anchor-${i}`,classList:{contain
 content.querySelectorAll = selector => selector === '.change-anchor' ? anchors : [];
 sandbox.document.querySelector = selector => selector === '.focus-file-header' ? {getBoundingClientRect:()=>({bottom:content.scrollTop ? 192 : 222})} : selector.includes('"-1"') ? previous : next;
 sandbox.focusTest.jumpChangedSection(1);
-assert.equal(content.scrollTop, 900, 'One click must reach the second change and correct the moving sticky header');
+assert.equal(content.scrollTop, 908, 'One click must reach the second change and correct the moving sticky header');
 assert(next.disabled, 'Second of two sections must be the final destination');
 sandbox.focusTest.jumpChangedSection(-1);
-assert.equal(content.scrollTop, 50, 'Previous returns directly to the first changed line');
+assert.equal(content.scrollTop, 58, 'Previous returns directly to the first changed line');
 // Opening a long file lands on its first change when that change starts below the fold.
 const openedAnchor = {id:'opened',classList:{contains:name=>name==='code-row',add(){},remove(){}},querySelector:()=>({}),getBoundingClientRect:()=>({top:openedTop-content.scrollTop})};
 let openedTop = 1500;
@@ -185,7 +185,7 @@ content.querySelector = selector => selector === '.change-anchor' ? openedAnchor
 content.querySelectorAll = selector => selector === '.change-anchor' ? [openedAnchor] : [];
 content.scrollTop = 900;
 sandbox.focusTest.select('g0l0');
-assert.equal(content.scrollTop, 1300, 'A first change below the fold must be scrolled to under the sticky header');
+assert.equal(content.scrollTop, 1308, 'A first change below the fold must be scrolled to under the sticky header');
 openedTop = 200;
 sandbox.focusTest.select('g0l0');
 assert.equal(content.scrollTop, 0, 'A first change that is already visible must leave the file at its top');
