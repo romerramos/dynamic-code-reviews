@@ -295,7 +295,7 @@ html[data-theme="minimal-dark"]{--bar-card-bg:color-mix(in srgb,var(--ink) 9%,va
 [data-theme^="minimal-"] #navigation button[data-view] .step-number{position:absolute;right:8px;top:5px;margin:0}
 [data-theme^="minimal-"] .sidebar nav li:has(>button[data-view]:is([aria-current="page"],[aria-current="true"],[aria-expanded="true"])){margin-left:0;padding-left:0;border-left:0}
 /* Nothing waiting is one sentence. */
-[data-theme^="minimal-"] .overview-clear{gap:10px;padding:0;border:0;border-radius:0;background:transparent;color:var(--ink);display:flex;align-items:baseline}
+[data-theme^="minimal-"] .overview-clear{gap:10px;padding:14px 16px;border:1px dashed color-mix(in srgb,var(--ink) 22%,transparent);border-radius:calc(10px * var(--round));background:transparent;color:var(--ink);display:flex;align-items:baseline}
 [data-theme^="minimal-"] .overview-clear p{color:var(--minimal-faint)}
 /* A fold's head is a list's label: one size, one grey, one baseline; its arrow is small and at the right. */
 [data-theme^="minimal-"] .overview-settled{display:flex;flex-direction:column;gap:28px}
