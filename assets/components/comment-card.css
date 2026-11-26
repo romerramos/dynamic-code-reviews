@@ -39,7 +39,7 @@
    it: the column is wider by the inset on each side, and everything else in it keeps to the reading
    width with a margin of the inset (block flow, so vertical margins still collapse as before). */
 .overview-reading{max-width:calc(840px + 2 * var(--comment-inset))}
-.overview-reading>:not(.overview-comments,#my-review,.overview-settled),.overview-reading>:is(.overview-comments,#my-review,.overview-settled)>:not(.ui-comment,.overview-fold),.overview-reading>.overview-settled>.overview-fold>summary{margin-inline:var(--comment-inset)}
+.overview-reading>:not(.overview-comments,#my-review,.overview-evidence,.overview-settled),.overview-reading>:is(.overview-comments,#my-review,.overview-evidence,.overview-settled)>:not(.ui-comment,.overview-fold),.overview-reading>.overview-settled>.overview-fold>summary{margin-inline:var(--comment-inset)}
 /* Where the page sets a gutter (--page-gutter, room for icons that float at its sides), the column keeps it;
    at its end it also keeps clear the place of a panel pinned over the page (--panel-place). */
 main#content:has(>.overview-reading){--_gutter:var(--page-gutter,max(0px,calc(28px - var(--comment-inset))));padding-inline:var(--_gutter) calc(var(--_gutter) + var(--panel-place,0px))}

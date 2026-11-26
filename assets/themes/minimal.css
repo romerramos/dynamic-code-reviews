@@ -213,7 +213,7 @@ html[data-theme="minimal-dark"]{--bar-card-bg:color-mix(in srgb,var(--ink) 9%,va
 /* The verdict strip is one fact by the progress: how many files need you. The rest is its tooltip. */
 [data-theme^="minimal-"] .dcr-jev{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);padding:0;border:0}
 [data-theme^="minimal-"] .progress-need{display:inline;padding:0;border:0;background:none;color:var(--ink);font:inherit;font-weight:600;text-align:left;cursor:pointer}
-[data-theme^="minimal-"] .overview-reading #my-review.review-section{border-top:0;padding-top:0;margin-top:26px}
+[data-theme^="minimal-"] .overview-reading :is(#my-review,.overview-evidence).review-section{border-top:0;padding-top:0;margin-top:26px}
 [data-theme^="minimal-"] .sidebar nav .nav-section button[data-view]{min-height:0;height:auto}
 
 /* --- Minimal's page, as one system ----------------------------------------------------------------
@@ -222,8 +222,8 @@ html[data-theme="minimal-dark"]{--bar-card-bg:color-mix(in srgb,var(--ink) 9%,va
    A label is grey and medium; what it labels is ink. Nothing else carries weight. */
 [data-theme^="minimal-"] .overview-reading .overview-intro .overview-row{margin-top:36px}
 /* A section starts with its label, the same grey as a row's, and 44px of air above it. */
-[data-theme^="minimal-"] .overview-reading :is(.overview-comments,#my-review.review-section,.overview-settled){margin-top:44px}
-[data-theme^="minimal-"] .overview-reading :is(.overview-comments>h2,#my-review h2){margin:0 0 14px;color:var(--muted);font-size:13px;font-weight:500;letter-spacing:0}
+[data-theme^="minimal-"] .overview-reading :is(.overview-comments,#my-review.review-section,.overview-evidence,.overview-settled){margin-top:44px}
+[data-theme^="minimal-"] .overview-reading :is(.overview-comments>h2,#my-review h2,.overview-evidence h2){margin:0 0 14px;color:var(--muted);font-size:13px;font-weight:500;letter-spacing:0}
 /* Nothing waiting is a sentence, not a banner. */
 [data-theme^="minimal-"] .overview-clear .review-icon{width:16px;height:16px;margin-top:3px;color:var(--dcr-ok)}
 [data-theme^="minimal-"] .overview-clear strong{font-weight:600}
@@ -261,8 +261,8 @@ html[data-theme="minimal-dark"]{--bar-card-bg:color-mix(in srgb,var(--ink) 9%,va
 [data-theme^="minimal-"] .overview-intro :is(.lead,.lead-rest){display:inline;margin:0;color:var(--ink-neutral-3);font-size:15px;line-height:1.75;letter-spacing:0}
 [data-theme^="minimal-"] .overview-reading :is(.overview-revision,.risk-fold,.risk-rank.risk-none,.ui-changes,.ui-changes-none){display:none}
 /* A list's label: small, grey, with the page's 48px of air above it. */
-[data-theme^="minimal-"] .overview-reading :where(.overview-comments,#my-review.review-section,.overview-settled){display:block;margin:48px 0 0;padding:0;border:0}
-[data-theme^="minimal-"] .overview-reading :is(.overview-comments>h2,#my-review h2,.overview-fold-title){margin:0 0 6px;color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0}
+[data-theme^="minimal-"] .overview-reading :where(.overview-comments,#my-review.review-section,.overview-evidence,.overview-settled){display:block;margin:48px 0 0;padding:0;border:0}
+[data-theme^="minimal-"] .overview-reading :is(.overview-comments>h2,#my-review h2,.overview-evidence h2,.overview-fold-title){margin:0 0 6px;color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0}
 [data-theme^="minimal-"] .overview-comments:has(>.overview-todo)>h2{display:none}
 [data-theme^="minimal-"] .overview-reading .overview-todo{margin:0 0 6px;color:var(--minimal-faint);font-size:0}
 [data-theme^="minimal-"] .overview-reading .overview-todo strong{color:var(--minimal-faint);font-size:12px;font-weight:400}
@@ -271,10 +271,10 @@ html[data-theme="minimal-dark"]{--bar-card-bg:color-mix(in srgb,var(--ink) 9%,va
 /* A closed comment is such a line: what it says, and where. Its kind, its author and the rest come when it opens. */
 /* Open, a comment is set apart by space and one rule above and below it. */
 /* Your comments: the same lines; its two actions are words beside the label. */
-[data-theme^="minimal-"] #my-review .section-heading{display:flex;align-items:baseline;justify-content:space-between;margin:0 0 6px}
-[data-theme^="minimal-"] #my-review .section-heading h2{margin:0}
-[data-theme^="minimal-"] #my-review .section-heading h2 .badge{display:none}
-[data-theme^="minimal-"] #my-review .section-heading .comment-actions{--button-height:auto;--button-min-height:0;--button-pad:0 0 0 16px;--button-ink:var(--minimal-faint);--button-size:12px;--button-weight:400;--button-hover-bg:transparent;--button-hover-ink:var(--ink)}
+[data-theme^="minimal-"] :is(#my-review,.overview-evidence) .section-heading{display:flex;align-items:baseline;justify-content:space-between;margin:0 0 6px}
+[data-theme^="minimal-"] :is(#my-review,.overview-evidence) .section-heading h2{margin:0}
+[data-theme^="minimal-"] :is(#my-review,.overview-evidence) .section-heading h2 .badge{display:none}
+[data-theme^="minimal-"] :is(#my-review,.overview-evidence) .section-heading .comment-actions{--button-height:auto;--button-min-height:0;--button-pad:0 0 0 16px;--button-ink:var(--minimal-faint);--button-size:12px;--button-weight:400;--button-hover-bg:transparent;--button-hover-ink:var(--ink)}
 /* What is settled: two quiet lines at the end. */
 [data-theme^="minimal-"] .overview-settled .overview-fold,[data-theme^="minimal-"] .overview-settled .overview-fold:last-child{margin:0;border:0}
 [data-theme^="minimal-"] .overview-clear p{font-size:14px}
@@ -282,7 +282,7 @@ html[data-theme="minimal-dark"]{--bar-card-bg:color-mix(in srgb,var(--ink) 9%,va
 [data-theme^="minimal-"] .overview-reading #my-review.review-section:has(>.review-empty){display:none}
 [data-theme^="minimal-"] .overview-reading .overview-todo strong{white-space:nowrap}
 /* What waits on the reader comes before what to read first, as designed; your comments, then GitHub's. */
-[data-theme^="minimal-"] .overview-reading>:is(#my-review,.overview-github){order:2}
+[data-theme^="minimal-"] .overview-reading>:is(#my-review,.overview-github,.overview-evidence){order:2}
 [data-theme^="minimal-"] .overview-reading>.overview-settled{order:3}
 
 /* --- Round four, from the real review: one column of 760px, one way to show a comment --------------- */
@@ -675,8 +675,7 @@ html[data-theme^="minimal-"] #content .overview-reading .overview-comments:not(.
 [data-theme^="minimal-"] .dcr-qa-done .dcr-qa-check svg{width:16px;height:16px}
 
 /* --- What QA recorded, drawn as the rest of the Overview: no grey cards. In a comment, what was seen
-   (or what should happen and what did instead) is the comment's own size and the recording a small framed still with one quiet line;
-   Other flows checked is a heading like Agent comments, each flow a row. --- */
+   (or what should happen and what did instead) is the comment's own size and the recording a small framed still with one quiet line. --- */
 [data-theme^="minimal-"] .overview-reading .qa-journey{margin:10px 0 0;padding:0;border:0;background:none;font-size:14.5px}
 [data-theme^="minimal-"] .overview-reading .qa-journey .qa-route:empty{display:none}
 [data-theme^="minimal-"] .overview-reading .qa-journey :is(.qa-result,.qa-expected){margin:0 0 6px;padding:0;border:0;background:none;color:var(--ink);font-size:inherit;line-height:1.6}
@@ -686,29 +685,10 @@ html[data-theme^="minimal-"] #content .overview-reading .overview-comments:not(.
 [data-theme^="minimal-"] .overview-reading .qa-preview-image :is(img,video){width:100%;height:100%;object-fit:cover;object-position:top}
 [data-theme^="minimal-"] .overview-reading .qa-preview-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:color-mix(in srgb,var(--ink) 75%,transparent);color:var(--surface);font-size:10px}
 [data-theme^="minimal-"] .overview-reading .qa-preview-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
-[data-theme^="minimal-"] .overview-reading .qa-preview:not(.qa-preview-compact) .qa-preview-copy>strong{display:none}
+[data-theme^="minimal-"] .overview-reading .qa-preview .qa-preview-copy>strong{display:none}
 [data-theme^="minimal-"] .overview-reading .qa-preview-flow{display:block;font-size:13px}
 [data-theme^="minimal-"] .overview-reading .qa-preview-action{color:var(--minimal-faint);font-size:12px;font-weight:400}
-[data-theme^="minimal-"] .overview-reading .qa-preview:hover :is(.qa-preview-flow,.qa-preview-copy>strong){text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
-[data-theme^="minimal-"] .overview-reading .other-checks{margin:44px 0 0;padding:0;border:0;background:none}
-[data-theme^="minimal-"] .overview-reading .other-checks>h2{margin:0 0 6px;color:var(--minimal-faint);font-size:12px;font-weight:400;letter-spacing:0;text-transform:none}
-[data-theme^="minimal-"] .overview-reading .other-checks>h2 .badge{display:none}
-[data-theme^="minimal-"] .overview-reading .qa-check-list{display:grid;gap:0}
-[data-theme^="minimal-"] .overview-reading .qa-preview-compact{display:grid;grid-template-columns:112px minmax(0,1fr);gap:0 16px;align-items:start;margin:0;padding:10px 0}
-[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-copy>strong{grid-column:1;font-size:14px;font-weight:400}
-[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status{grid-column:2;grid-row:1;padding:0;border:0;background:none;color:var(--minimal-faint);font-weight:400;text-transform:none}
-[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status.failed{color:var(--ink)}
-[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-action{display:none}
-[data-theme^="minimal-"] .overview-reading .qa-preview-compact small{grid-column:1 / -1;color:var(--minimal-faint);font-size:12.5px;line-height:1.5}
-
-/* A flow's result is a mark after its name: a check when it passed, an ✕ when it failed. */
-[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-copy{grid-template-columns:minmax(0,1fr) auto;gap:3px 16px;display:block}
-[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-copy>strong{display:inline}
-[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status{display:inline-block;margin-left:6px;font-size:0;vertical-align:baseline}
-[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status::before{content:"✓";color:var(--ink-neutral-3);font-size:13px}
-[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status.failed::before{content:"✕";color:var(--ink)}
-[data-theme^="minimal-"] .overview-reading .qa-preview-compact .qa-preview-status:not(.passed,.failed){display:none}
-[data-theme^="minimal-"] .overview-reading .qa-preview-compact small{display:block;margin-top:3px}
+[data-theme^="minimal-"] .overview-reading .qa-preview:hover .qa-preview-flow{text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
 
 /* --- Your review has no footer: Export is a download icon by its title, and Finish with agent is in
    Settings, Agents, under This round. --- */

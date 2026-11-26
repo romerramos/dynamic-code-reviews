@@ -139,7 +139,7 @@ console.log('PASS navigation reveals component controls, restores selection and 
 // File-by-file remains the default reading mode when the reader enters a layer.
 sandbox.location.hash = '';
 sandbox.localStorage.getItem = () => null;
-vm.runInContext(source.replace(/  render\(\);\n\}\)\(\);\s*$/, '  globalThis.focusTest = {render, renderHunk, hunkFiles, select, chooseReadingMode, fileReadingActive, selectedReadingMode:()=>focusMode, changedSectionPosition, updateChangeNavigation, jumpChangedSection, review, qaPreview, renderOtherChecks};\n})();'), sandbox);
+vm.runInContext(source.replace(/  render\(\);\n\}\)\(\);\s*$/, '  globalThis.focusTest = {render, renderHunk, hunkFiles, select, chooseReadingMode, fileReadingActive, selectedReadingMode:()=>focusMode, changedSectionPosition, updateChangeNavigation, jumpChangedSection, review, qaPreview};\n})();'), sandbox);
 sandbox.focusTest.select('g0l0');
 assert.equal(get('focus').textContent, 'File by file');
 assert(get('content').innerHTML.includes('focus-reader'));
@@ -243,7 +243,6 @@ sandbox.focusTest.review.qa = {flows:[flow,{...flow,title:'Sidebar highlight',re
 const preview = sandbox.focusTest.qaPreview(flow,0);
 assert.equal((preview.match(/data-open-evidence=/g)||[]).length,1);
 assert(!preview.includes('<details'), 'Visual evidence should not need another disclosure');
-assert.match(sandbox.focusTest.renderOtherChecks(), /Sidebar highlight/);
 const evidenceButton = {dataset:{openEvidence:'0'},getAttribute(){return null;}};
 listeners.click[1]({target:{closest:selector=>selector==='[data-open-evidence]' ? evidenceButton : null}});
 assert.match(viewerElements[0].content.innerHTML, /data:image\/gif;base64,R0lGODlh/);
@@ -361,6 +360,38 @@ console.log('PASS a report opens on Overview the first time, resumes the step an
   assert.notEqual(state.view, 'overview', 'and leaves the Overview for it');
   [get('data').textContent, listeners.click] = [shared, sharedClicks];
   console.log('PASS an opened comment names its file, with the path in its tooltip, and opens it in the review; a general one names none');
+}
+
+// The Overview lists every screenshot and recording in its Evidence section, after Your comments,
+// one line each that opens it in the viewer: no list of other flows checked, nothing behind a fold.
+{
+  const png = 'data:image/png;base64,iVBORw0KGgo=';
+  const clip = (title, result, more = {}) => ({title, result, observed:'Seen.', steps:['Open it.'], assets:[{data_uri:png, caption:title}], ...more});
+  const flows = [clip('Yearly offer: start follows move-in', 'passed'), clip('Monthly offer: start date without its year', 'failed', {comment_id:'on-dates'}),
+    ...['Phone width: order summary lines', 'Forever offer: monthly figure only', 'Single page: start date appears', 'Monthly offer: label gains its date'].map(title => clip(title, 'passed'))];
+  const comments4 = [{id:'on-dates', general:true, label:'issue', decoration:'blocking', agent:'claude', subject:'The full price date drops its year', discussion:'It says 28 Jan.'}];
+  const [shared, sharedClicks] = [get('data').textContent, listeners.click];
+  get('data').textContent = JSON.stringify({...data, review:{...data.review, comments:comments4, qa:{status:'partial', summary:'Recorded on an earlier revision.', flows},
+    screenshots:[{id:'shot-a', title:'Checkout summary', paths:[data.snapshot.files[0].path], data_uri:png}]}});
+  listeners.click = [];
+  const icons = {image:'<svg class="lucide lucide-image"></svg>', video:'<svg class="lucide lucide-video"></svg>'};
+  const context = vm.createContext({...sandbox, ReviewIcons:icons, window:{...sandbox.window, ReviewIcons:icons}});
+  for (const name of ['ui', 'variants', ...fs.readdirSync(require.resolve('../assets/components/ui.js').replace(/ui\.js$/, '')).filter(file => file.endsWith('.js') && !['ui.js', 'variants.js'].includes(file)).map(file => file.slice(0, -3))]) {
+    vm.runInContext(fs.readFileSync(require.resolve(`../assets/components/${name}.js`), 'utf8'), context);
+  }
+  vm.runInContext(source.replace(/  render\(\);\n\}\)\(\);\s*$/, '  globalThis.overviewTest = {renderOverview};\n})();'), context);
+  const page = context.overviewTest.renderOverview();
+  const section = page.match(/<section class="review-section overview-evidence"[^]*?<\/section>/)?.[0];
+  assert(section, 'The Overview has an Evidence section');
+  assert(page.indexOf('id="my-review"') < page.indexOf('overview-evidence'), 'Evidence comes after Your comments');
+  assert.match(section, /<h2>Evidence <span class="badge neutral">7<\/span><\/h2>/, 'Its count is every screenshot and recording');
+  assert.match(section, /data-open-shots=""[^>]*>View all/, 'View all opens the viewer');
+  assert.deepEqual([...section.matchAll(/data-seen-at="(\d+)"/g)].map(match => match[1]), ['0', '1', '2', '3', '4', '5', '6'], 'Each item is a line that opens it');
+  assert.match(section, /lucide-image[^]*?Checkout summary<\/strong><span class="overview-evidence-result">✓/, 'A screenshot has the image icon');
+  assert.match(section, /lucide-video[^]*?title="Monthly offer: start date without its year">Monthly offer: start date without its year<\/strong><span class="overview-evidence-result failed">failed · on its comment</, 'A failed recording says it is on its comment');
+  assert.doesNotMatch(page, /Other flows checked|more check|overview-notice|Recorded on an earlier revision/, 'No other list and no note on the Overview');
+  [get('data').textContent, listeners.click] = [shared, sharedClicks];
+  console.log('PASS the Overview lists every screenshot and recording under Evidence, after Your comments, each opening the viewer');
 }
 
 // Since revision reads like file by file: one file at a time, whole, with no range headings to

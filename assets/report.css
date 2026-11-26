@@ -129,12 +129,6 @@ dialog>article>:not(header,footer){padding-inline:25px}dialog>article>header{bac
 .qa-preview-status { color: var(--ink-green-1); font-size: 12px; font-weight: 700; text-transform: capitalize; }
 .qa-preview-status.failed { color: var(--ink-red-1); }
 .qa-preview-status.blocked,.qa-preview-status.not-run { color: var(--ink-amber-2); }
-.qa-preview-compact { grid-template-columns: 128px minmax(0, 1fr); padding: 8px; }
-.qa-preview-compact .qa-preview-image { height: 80px; }
-.qa-check-list { display: grid; gap: 10px; }
-.qa-more-checks { margin-top: 12px; }
-.qa-more-checks>summary { width: fit-content; color: var(--ink-accent-3); font-size: 13px; cursor: pointer; }
-.qa-more-checks .qa-check-list { margin-top: 12px; }
 .qa-evidence-modal { display: flex; flex-direction: column; width: 100%; height: 100%; overflow: hidden; background: var(--bg-neutral-1); color: var(--ink); }
 .qa-evidence-modal>header { flex: none; padding: 20px 28px 14px; border-bottom: 1px solid var(--line-neutral-2); }
 .qa-evidence-modal h2 { margin: 4px 0 6px; font-size: 21px; line-height: 1.35; }
@@ -226,7 +220,6 @@ dialog>article>:not(header,footer){padding-inline:25px}dialog>article>header{bac
 .since-note{margin:12px 16px}
 .since-outdated{padding:14px 16px;border-top:1px solid var(--line-neutral-2)}.since-outdated h3{margin:0 0 10px;font-size:12px;font-weight:600;color:var(--ink-neutral-5)}
 .overview-history{display:flex;flex-wrap:wrap;gap:18px;font-size:13px}
-.overview-notice{margin:14px 0 18px;font-size:14px;line-height:1.6;color:var(--ink-neutral-5)}
 .overview-reading .review-comment .comment-discussion{font-size:16px;line-height:1.65;color:var(--ink-neutral-3);max-width:none}
 .thread-severity{font-size:12px;font-weight:600;color:var(--ink-neutral-5)}
 .overview-reading .qa-asset{margin:22px 0 0}
@@ -257,14 +250,19 @@ dialog>article>:not(header,footer){padding-inline:25px}dialog>article>header{bac
 
 .overview-comments .qa-journey{border:0;padding:0;margin-top:12px}
 .qa-expected{font-size:15px;line-height:1.6;margin:0 0 12px}
-.other-checks{margin:28px 0 36px;border-top:1px solid var(--line-neutral-2);padding-top:18px}
-.other-checks h2{font-size:18px;margin:0 0 14px}
-.other-checks h2 .badge{vertical-align:middle}
-@media(max-width:520px){.qa-preview,.qa-preview-compact{grid-template-columns:100px minmax(0,1fr)}.qa-preview-image,.qa-preview-compact .qa-preview-image{height:72px}.qa-evidence-modal>header{padding:16px 18px 12px}.qa-evidence-scroll{padding:14px 18px 20px}}
-/* Your comments reach past the reading column for their cards; the rule above them keeps to the column. */
-#my-review{margin-top:24px;padding-top:28px;background:linear-gradient(var(--section-rule),var(--section-rule)) top center / calc(100% - 2 * var(--comment-inset)) 1px no-repeat}
-#my-review .section-heading{flex-wrap:wrap;gap:16px}
+@media(max-width:520px){.qa-preview{grid-template-columns:100px minmax(0,1fr)}.qa-preview-image{height:72px}.qa-evidence-modal>header{padding:16px 18px 12px}.qa-evidence-scroll{padding:14px 18px 20px}}
+/* Your comments reach past the reading column for their cards; the rule above them keeps to the column.
+   Evidence is the same section, its screenshots and recordings drawn as comment lines. */
+:is(#my-review,.overview-evidence){margin-top:24px;padding-top:28px;background:linear-gradient(var(--section-rule),var(--section-rule)) top center / calc(100% - 2 * var(--comment-inset)) 1px no-repeat}
+:is(#my-review,.overview-evidence) .section-heading{flex-wrap:wrap;gap:16px}
 #my-review .section-heading p{font-size:14px;max-width:60ch;line-height:1.6}
+/* A line of Evidence: what it is, its title on one line (the whole of it on hover), its result in a
+   column of its own, so a long title is cut short and never runs under it. */
+.overview-evidence .ui-comment-line{grid-template-columns:var(--comment-face-col,28px) minmax(0,1fr) auto;width:100%;margin:0;border:0;background:none;color:inherit;font:inherit;text-align:left}
+.overview-evidence .ui-comment-face{color:var(--comment-quiet,var(--muted))}
+.overview-evidence .ui-comment-title{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.overview-evidence-result{color:var(--comment-quiet,var(--muted));font-size:12.5px;white-space:nowrap}
+.overview-evidence-result.failed{color:var(--ink-neutral-3)}
 .thread-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--line-neutral-2);background:var(--bg-neutral-1);flex-wrap:wrap;gap:12px}
 
 /* File progress is shared by the walkthrough and All changes. */
@@ -1418,7 +1416,7 @@ main#content:has(>.overview-reading>.overview-shows){padding-top:calc(var(--pane
 /* The header already has the revision menu. */
 .overview-reading .overview-intro .overview-revision{display:none}
 /* With nothing to settle, space alone separates All clear from your comments. */
-.overview-reading:has(.overview-clear) #my-review{margin-top:44px;padding-top:0;background:none}
+.overview-reading:has(.overview-clear) :is(#my-review,.overview-evidence){margin-top:44px;padding-top:0;background:none}
 
 /* Pieces only some themes show: a closed comment's place in a few characters, and the files that stand out as plain lines. */
 

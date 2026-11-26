@@ -7,7 +7,7 @@ states and a short flow; avoid exhaustive screenshots or full-session recordings
 
 The Copy video QA prompt button copies a complete request. Derive the QA plan from saved
 findings, walkthroughs and changed user flows. Attach finding evidence with its
-comment_id; retain relevant successful flows in Other flows checked. A review may
+comment_id; every flow is also a line of the Overview's Evidence section. A review may
 already hold screenshots from its first round (`dcr screenshot`): give a clip that
 shows the same thing that screenshot's id as `screenshot_id`, and it replaces the still.
 
@@ -104,8 +104,8 @@ Prefer flow comment_id to assign the evidence to one comment, including text-onl
 flows. Legacy asset associations use the first linked comment as owner. The
 owning comment shows one compact preview; its viewer contains media and steps. Keep discussion empty
 when the flow already supplies the explanation; use journey and expected/observed
-for its concise visible summary. Unmatched failures remain visible; useful passed
-checks go in Other flows checked. Keep gutter popovers compact. New comments and
+for its concise visible summary. Unmatched failures remain visible; every flow,
+passed or failed, is also a line in Evidence. Keep gutter popovers compact. New comments and
 changed findings belong in a normal review update, then attach media to that
 revision. Use a short factual caption instead of repeating the image in prose.
 Text-only copy does not carry image bytes; share the offline report for evidence.

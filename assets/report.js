@@ -2317,7 +2317,7 @@
     const first = flow.assets[0];
     return `<figure class="qa-asset qa-sequence" data-qa-sequence="${index}" data-frame="0"><div class="qa-sequence-controls"><button type="button" data-sequence-prev aria-label="Previous evidence frame">← Previous</button><button type="button" data-sequence-play aria-pressed="false">Play again</button><button type="button" data-sequence-next aria-label="Next evidence frame">Next →</button><span data-sequence-count aria-live="polite">1 / ${flow.assets.length}</span></div><img alt="${escape(first.caption)}" src="${escape(first.data_uri)}"><figcaption data-sequence-caption>${escape(first.caption)}</figcaption></figure>`;
   }
-  function qaPreview(flow, index, compact = false) {
+  function qaPreview(flow, index) {
     const assets = flow.assets || [];
     const poster = shotOf(flow) || assets.filter(asset => asset.data_uri.startsWith('data:image/')).at(-1) || null;
     const isGif = poster?.data_uri.startsWith('data:image/gif;');
@@ -2326,7 +2326,7 @@
     const posterUri = isGif ? null : poster?.data_uri.startsWith('data:image/') ? poster.data_uri : null;
     const image = posterUri ? `<img loading="lazy" alt="" src="${escape(posterUri)}"${motion && !video ? ` data-poster-source="${escape(posterUri)}" data-motion-source="${escape(motion)}"` : ''}>` : video ? `<video class="qa-preview-frame" muted playsinline preload="metadata" tabindex="-1" aria-hidden="true" src="${escape(motion)}#t=0.5"></video>` : motion ? `<span class="qa-preview-placeholder">GIF preview</span><img alt="" data-poster-source="" data-motion-source="${escape(motion)}">` : '<span class="qa-preview-placeholder">No image</span>';
     const action = video ? 'Watch video' : motion ? 'Watch GIF' : flow.presentation === 'sequence' ? `Watch ${assets.length} steps` : poster?.data_uri.startsWith('data:video/') ? 'Watch video' : assets.length ? `View ${assets.length} image${assets.length === 1 ? '' : 's'}` : 'Read check';
-    return `<button type="button" class="qa-preview ${compact ? 'qa-preview-compact' : ''}" data-open-evidence="${index}" aria-haspopup="dialog" aria-label="${escape(`${action}: ${flow.title}`)}"><span class="qa-preview-image">${image}<span class="qa-preview-play" aria-hidden="true">▶</span></span><span class="qa-preview-copy">${compact ? `<strong>${escape(flow.title)}</strong><span class="qa-preview-status ${escape(flow.result)}">${escape(flow.result)}</span>` : `<strong>Visual evidence</strong><span class="qa-preview-flow">${escape(flow.title)}</span>`}<span class="qa-preview-action">${escape(action)} →</span>${compact ? `<small>${escape(flow.observed)}</small>` : ''}</span></button>`;
+    return `<button type="button" class="qa-preview" data-open-evidence="${index}" aria-haspopup="dialog" aria-label="${escape(`${action}: ${flow.title}`)}"><span class="qa-preview-image">${image}<span class="qa-preview-play" aria-hidden="true">▶</span></span><span class="qa-preview-copy"><strong>Visual evidence</strong><span class="qa-preview-flow">${escape(flow.title)}</span><span class="qa-preview-action">${escape(action)} →</span></span></button>`;
   }
   let playingSequence = null;
   function stopQASequence() {
@@ -2523,17 +2523,20 @@
     const video = seenVideo(item);
     const media = video ? `<video controls playsinline preload="metadata"${seenImage(item) ? ` poster="${escape(seenImage(item))}"` : ''} aria-label="${escape(flow.title)}" src="${escape(video)}"></video>` : `<img alt="${escape((flow || shot).title)}" src="${escape(seenImage(item))}" title="Click for its real size">`;
     const strip = list.length > 1 ? `<footer><button type="button" class="btn btn-sm btn-ghost" data-shot-step="-1" aria-label="Previous">← Previous</button><span class="shot-show-strip">${list.map((other, index) => `<button type="button" data-shot-at="${index}" aria-label="${escape((other.flow || other.shot).title)}" aria-current="${index === at}">${seenThumb(other)}${other.flow ? '<i aria-hidden="true">▶</i>' : ''}</button>`).join('')}</span><button type="button" class="btn btn-sm btn-ghost" data-shot-step="1" aria-label="Next">Next →</button></footer>` : '';
-    node.innerHTML = `<header><p class="shot-show-count">${shotShow.scope ? 'Screenshot' : `Seen in the app · ${flow ? 'Recording' : 'Screenshot'}`} · ${at + 1} of ${list.length}</p><h2>${escape((flow || shot).title)}</h2>${text}${meta ? `<p class="shot-meta">${meta}</p>` : ''}</header><div class="shot-show-stage">${media}</div>${strip}`;
+    // A recording from a QA review that is not complete (one from an earlier revision) says so, in its words.
+    const qaNote = flow && review.qa?.summary && !['complete','skipped'].includes(review.qa.status) ? ` · ${escape(review.qa.summary)}` : '';
+    node.innerHTML = `<header><p class="shot-show-count">${shotShow.scope ? 'Screenshot' : `Seen in the app · ${flow ? 'Recording' : 'Screenshot'}`} · ${at + 1} of ${list.length}${qaNote}</p><h2>${escape((flow || shot).title)}</h2>${text}${meta ? `<p class="shot-meta">${meta}</p>` : ''}</header><div class="shot-show-stage">${media}</div>${strip}`;
     node.focus({preventScroll: true});
   }
   function stepShot(by) {
     shotShow.at = (shotShow.at + by + shotShow.list.length) % shotShow.list.length;
     drawShot();
   }
-  function openShots(scope, id, anchor) {
+  // at: the item's place in the list, for one that is no screenshot (a recording of its own).
+  function openShots(scope, id, anchor, at) {
     const list = seenItems(scope);
     if (!list.length) return;
-    shotShow = {scope, list, at: id ? Math.max(0, list.findIndex(item => item.shot?.id === id)) : 0};
+    shotShow = {scope, list, at: at !== undefined ? Math.min(Number(at) || 0, list.length - 1) : id ? Math.max(0, list.findIndex(item => item.shot?.id === id)) : 0};
     viewerAnchor = anchor;
     viewerCode = null;
     viewerLabel = 'Seen in the app';
@@ -2565,11 +2568,20 @@
       render(); $('content').scrollTop = scroll;
     }
   };
-  function renderOtherChecks() {
-    const other = unlinkedFlows().filter(({flow}) => flow.result !== 'failed' && !(shotOf(flow) && !shotOf(flow).comment_id));
-    const visible = other.slice(0, 4);
-    const more = other.slice(4);
-    return other.length ? `<section class="other-checks" aria-label="Other flows checked"><h2>Other flows checked <span class="badge neutral">${other.length}</span></h2><div class="qa-check-list">${visible.map(({flow,index}) => qaPreview(flow,index,true)).join('')}</div>${more.length ? `<details class="qa-more-checks"><summary>Show ${more.length} more check${more.length === 1 ? '' : 's'}</summary><div class="qa-check-list">${more.map(({flow,index}) => qaPreview(flow,index,true)).join('')}</div></details>` : ''}</section>` : '';
+  // Every screenshot and recording, one line each, drawn as Your comments draws a comment: what it
+  // is, its title and its result. A line opens it in the viewer, View all from the first (openShots).
+  function renderEvidence() {
+    const items = seenItems('');
+    if (!items.length) return '';
+    const results = {passed: '✓', blocked: 'blocked', 'not-run': 'not run'};
+    const rows = items.map((item, at) => {
+      const {shot, flow} = item;
+      const title = (flow || shot).title;
+      const failed = flow?.result === 'failed';
+      const result = failed ? `failed${seenComment(item) ? ' · on its comment' : ''}` : results[flow?.result || 'passed'];
+      return `<article class="ui-comment overview-evidence-item"><button type="button" class="ui-comment-line" data-open-shots="" data-seen-at="${at}" aria-haspopup="dialog" aria-label="${escape(`${flow ? 'Recording' : 'Screenshot'}: ${title}`)}"><span class="ui-comment-face">${icon(flow ? 'video' : 'image')}</span><strong class="ui-comment-title" title="${escape(title)}">${escape(title)}</strong><span class="overview-evidence-result${failed ? ' failed' : ''}">${result}</span></button></article>`;
+    }).join('');
+    return `<section class="review-section overview-evidence" aria-label="Evidence"><div class="section-heading"><div><h2>Evidence <span class="badge neutral">${items.length}</span></h2></div><div class="comment-actions">${UI.Button({label: 'View all', attrs: {'data-open-shots': '', 'aria-haspopup': 'dialog'}})}</div></div>${rows}</section>`;
   }
   function showQA(index) {
     if ($('details-dialog').open) $('details-dialog').close();
@@ -2846,11 +2858,10 @@
     const folded = settledAll.length;
     const clear = !inProgress && !feedback.findings.length && !failed.length && !pending && !openEarlier.length && !current.some(ReviewTools.waitsOnReader)
       ? `<div class="overview-clear" data-overview-status>${icon('check-check')}<div><strong>All clear</strong><p>Nothing waits on you.${folded ? ` ${folded === 1 ? 'The comment is' : `The ${folded} comments are`} settled.` : ''}</p></div></div>` : '';
-    const qa = review.qa;
     const empty = inProgress && !generated.length && !feedback.findings.length && !pending && !failed.length ? '<p class="review-empty">No comments yet. They appear here as your agent writes them.</p>' : '';
     const progressBox = inProgress ? `<div class="review-progress" role="status"><span class="review-progress-dot" aria-hidden="true"></span><div><h3>Your review is in progress</h3><p>Start reading now. Your agent's comments appear here and beside the code as it writes them, with a notice when one arrives, even on a file you already read. Explanations, test results and the finished walkthrough follow. Template previews and QA open once it is done.</p><p class="review-progress-count">${generated.length ? `${generated.length} comment${generated.length === 1 ? '' : 's'} so far` : 'No comments yet'}</p></div><button type="button" class="btn btn-sm btn-primary" data-start-reading>Start reading ${icon('arrow-right')}</button></div>` : '';
     const shows = ReviewTools.overviewShows(overviewChoice, description);
-    return `<div class="overview-reading">${description ? overviewSwitch(shows) : ''}<header class="overview-intro">${ReviewTools.whereLine(snapshot, review, description || '')}<h1>${escape(shows === 'pr' && review.pull_request?.title || review.title)}</h1>${shows === 'pr' ? descriptionBlock() : summaryLead(review.summary)}${revisionLine}${renderUIChanges()}${progressBox}</header>${inProgress ? '' : renderVisualOptions()}${qa && !['complete','skipped'].includes(qa.status) ? `<p class="overview-notice">${escape(qa.summary)}</p>` : ''}${renderRiskRanking()}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${clear}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${current.filter(comment => !comment.resolved && !comment.author).map(comment => commentCard(comment)).join('')}${openEarlier.map(comment => commentCard(comment, true)).join('')}${failed.map(({flow,index}) => qaFlow(flow,index)).join('')}${pending ? `<p class="overview-status">${plural(pending, 'earlier finding')} ${pending === 1 ? 'was' : 'were'} not checked again after the code changed. Review details has ${pending === 1 ? 'it' : 'them'}.</p>` : ''}</section>${renderOtherChecks()}${renderMyReview()}${fromGitHub.length ? `<section class="overview-comments overview-github" aria-label="From GitHub"><h2>From GitHub</h2>${fromGitHub.map(comment => commentCard(comment)).join('')}</section>` : ''}${resolvedSection ? `<section class="overview-settled" aria-label="Settled comments">${resolvedSection}</section>` : ''}</div>`;
+    return `<div class="overview-reading">${description ? overviewSwitch(shows) : ''}<header class="overview-intro">${ReviewTools.whereLine(snapshot, review, description || '')}<h1>${escape(shows === 'pr' && review.pull_request?.title || review.title)}</h1>${shows === 'pr' ? descriptionBlock() : summaryLead(review.summary)}${revisionLine}${renderUIChanges()}${progressBox}</header>${inProgress ? '' : renderVisualOptions()}${renderRiskRanking()}<section class="overview-comments" aria-label="Review comments"><h2>Review comments</h2>${empty}${clear}${feedback.findings.map(finding => findingCard(finding, review.findings.indexOf(finding))).join('')}${current.filter(comment => !comment.resolved && !comment.author).map(comment => commentCard(comment)).join('')}${openEarlier.map(comment => commentCard(comment, true)).join('')}${failed.map(({flow,index}) => qaFlow(flow,index)).join('')}${pending ? `<p class="overview-status">${plural(pending, 'earlier finding')} ${pending === 1 ? 'was' : 'were'} not checked again after the code changed. Review details has ${pending === 1 ? 'it' : 'them'}.</p>` : ''}</section>${renderMyReview()}${fromGitHub.length ? `<section class="overview-comments overview-github" aria-label="From GitHub"><h2>From GitHub</h2>${fromGitHub.map(comment => commentCard(comment)).join('')}</section>` : ''}${renderEvidence()}${resolvedSection ? `<section class="overview-settled" aria-label="Settled comments">${resolvedSection}</section>` : ''}</div>`;
   }
 
   // On a phone the bar at the bottom has no pager, so a step ends with the way to the next one.
@@ -3693,7 +3704,7 @@
       return;
     }
     const shots = event.target.closest('[data-open-shots]');
-    if (shots) { openShots(shots.dataset.openShots, shots.dataset.shot, shots); return; }
+    if (shots) { openShots(shots.dataset.openShots, shots.dataset.shot, shots, shots.dataset.seenAt); return; }
     if (event.target.closest('.shot-show') && shotShow) {
       const step = event.target.closest('[data-shot-step]');
       if (step) { stepShot(Number(step.dataset.shotStep)); return; }
