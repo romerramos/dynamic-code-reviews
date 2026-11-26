@@ -412,6 +412,8 @@
 [data-theme^="terminal-"] .try-header.has-news>span::after{content:" *";color:var(--terminal-fill)}
 [data-theme^="terminal-"] .dcr-try{padding:4px 0 8px;border-radius:0;font:12px/1.6 var(--mono)}
 @media(min-width:741px){[data-theme^="terminal-"] .dcr-try{width:400px}}
+/* Pinned beside the Overview's column, the page keeps this wider panel's place (400px and its 50px) clear. */
+@container try-room (min-width:1100px){[data-theme^="terminal-"] body.on-overview.dcr-has-try:not(.dcr-try-hidden) .review-area>#content{--panel-place:450px}}
 [data-theme^="terminal-"] :is(.dcr-try-title,.dcr-try-head){display:flex;gap:1ch;margin:8px 1ch 2px;color:var(--terminal-subtext0);font:700 12px/1.6 var(--mono);text-transform:uppercase;white-space:nowrap}
 [data-theme^="terminal-"] :is(.dcr-try-title,.dcr-try-head)::before{content:"──";color:var(--terminal-surface2)}
 [data-theme^="terminal-"] :is(.dcr-try-title,.dcr-try-head)::after{content:"";flex:1;align-self:center;border-top:1px solid var(--line)}
