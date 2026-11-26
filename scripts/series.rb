@@ -726,6 +726,8 @@ module ReviewSeries
         review = previous['review']
         keep_posted(path, history, review)
         verified.call(review)
+        # The QA checked this same code, so it holds for the pushed snapshot too.
+        review['qa'] = review['qa'].merge('fingerprint' => current['fingerprint']) if review['qa']
         summary = comparison ? "This review is pull request ##{comparison['pr_number']}'s now, which has the same code." : 'This review shows the pull request as pushed, which has the same code as your checkout.'
         amend(path, history, current, review, summary, was: review['history'])
         next({'status' => 'updated', 'revision' => entry['number'], 'summary' => summary, 'unreviewed' => [], 'outdated_comments' => [],

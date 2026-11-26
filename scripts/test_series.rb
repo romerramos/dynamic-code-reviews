@@ -251,15 +251,24 @@ module SeriesChecks
           key = DCR::State.review_key(fingerprint, 'mine', 1)
           state = DCR::State.new(series)
           state.user_message(key, 'value-note', 'Why two?')
-          # QA names the checkout's snapshot, so saving the revision as the pushed commit's fails.
-          File.write(File.join(out, 'qa.json'), JSON.generate({'status' => 'partial', 'fingerprint' => fingerprint, 'summary' => 'A synthetic state was checked.', 'environment' => 'Synthetic fixture.',
-                                                                'flows' => [{'title' => 'Inspect', 'steps' => ['Inspect'], 'expected' => 'Two', 'observed' => 'Two', 'result' => 'passed'}]}))
-          ReviewSeries.qa(repo: root, name: 'mine', revision: 1, update: File.join(out, 'qa.json'))
           DynamicReviews.git(root, 'add', 'sample.rb')
           second = DynamicReviews.git(root, 'commit-tree', DynamicReviews.git(root, 'write-tree').strip, '-p', first, '-m', 'test: push the change').strip
           DynamicReviews.git(root, 'update-ref', 'HEAD', second)
           pull = {'head' => second, 'base' => first, 'number' => 7, 'url' => 'https://github.com/acme/app/pull/7', 'title' => 'Keep the value', 'head_label' => 'feat/value', 'base_label' => 'main'}
-          rejects('The save was expected to fail on its QA') { ReviewSeries.switch(repo: root, name: 'mine', pull: pull) }
+          # The revision cannot be written, so saving it as the pushed commit's fails.
+          revisions = File.join(series, 'revisions')
+          begin
+            File.chmod(0o555, revisions)
+            failed = begin
+              ReviewSeries.switch(repo: root, name: 'mine', pull: pull)
+              false
+            rescue Errno::EACCES
+              true
+            end
+            assert(failed, 'The save was expected to fail')
+          ensure
+            File.chmod(0o755, revisions)
+          end
           entry = ReviewSeries.manifest(series)['revisions'].last
           assert(entry['fingerprint'] == fingerprint, 'The failed save changed the revision')
           after = state.read
@@ -389,6 +398,9 @@ module SeriesChecks
           assert(target.call(4).values_at(:commit, :unpushed) == [third, []], 'GitHub refused comments on the pull request it was updated to')
           # The reader pushes what the checkout showed: that revision becomes the pull request's, with no Update.
           assert(api.call('POST', {'follow' => true})['revision'] == 5 && target.call(5)[:unpushed].include?('local.rb'), 'The checkout was not followed again')
+          checked = DynamicReviews.extract(File.join(series, 'current.html'))['snapshot']['fingerprint']
+          File.write(File.join(out, 'qa.json'), JSON.generate('qa' => {'status' => 'skipped', 'fingerprint' => checked, 'summary' => 'Checked on the checkout.'}, 'previews' => []))
+          ReviewSeries.enrich(repo: root, name: 'pushed', revision: 5, update: File.join(out, 'qa.json'))
           git.call('add', 'extra.rb', 'local.rb')
           fourth = git.call('commit-tree', git.call('write-tree'), '-p', third, '-m', 'test: push the checkout')
           git.call('update-ref', 'HEAD', fourth)
@@ -397,6 +409,7 @@ module SeriesChecks
           assert(ReviewSeries.manifest(series)['revisions'].length == 5, 'A push of the code the review shows saved a revision')
           saved = DynamicReviews.extract(File.join(series, 'current.html'))
           assert(saved['snapshot']['head'] == fourth && !saved['review']['history'].key?('local') && !ReviewSeries.manifest(series).key?('follows'), 'The revision does not show the pull request as pushed')
+          assert(saved['review']['qa'].values_at('summary', 'fingerprint') == ['Checked on the checkout.', saved['snapshot']['fingerprint']], "The checkout's QA did not stay with the pushed code: #{saved['review']['qa']}")
           assert(target.call(5).values_at(:commit, :unpushed) == [fourth, []], 'GitHub still refused comments on pushed code')
         end
       end
