@@ -240,6 +240,34 @@ module SeriesChecks
         end
       end
     end
+    checks['a save of the same code under another commit that fails leaves the conversations where the page reads them'] = lambda do
+      ReviewChecks.fixture do |root, first|
+        Dir.mktmpdir('review-failed-save-') do |out|
+          DynamicReviews.git(root, 'branch', 'main', first) unless DynamicReviews.git(root, 'branch', '--show-current').strip == 'main'
+          DynamicReviews.git(root, 'checkout', '-q', '-b', 'feat/value')
+          ReviewSeries.start(repo: root, name: 'mine', report: initial(root))
+          series = File.join(root, '.reviews/mine')
+          fingerprint = DynamicReviews.extract(File.join(series, 'current.html'))['snapshot']['fingerprint']
+          key = DCR::State.review_key(fingerprint, 'mine', 1)
+          state = DCR::State.new(series)
+          state.user_message(key, 'value-note', 'Why two?')
+          # QA names the checkout's snapshot, so saving the revision as the pushed commit's fails.
+          File.write(File.join(out, 'qa.json'), JSON.generate({'status' => 'partial', 'fingerprint' => fingerprint, 'summary' => 'A synthetic state was checked.', 'environment' => 'Synthetic fixture.',
+                                                                'flows' => [{'title' => 'Inspect', 'steps' => ['Inspect'], 'expected' => 'Two', 'observed' => 'Two', 'result' => 'passed'}]}))
+          ReviewSeries.qa(repo: root, name: 'mine', revision: 1, update: File.join(out, 'qa.json'))
+          DynamicReviews.git(root, 'add', 'sample.rb')
+          second = DynamicReviews.git(root, 'commit-tree', DynamicReviews.git(root, 'write-tree').strip, '-p', first, '-m', 'test: push the change').strip
+          DynamicReviews.git(root, 'update-ref', 'HEAD', second)
+          pull = {'head' => second, 'base' => first, 'number' => 7, 'url' => 'https://github.com/acme/app/pull/7', 'title' => 'Keep the value', 'head_label' => 'feat/value', 'base_label' => 'main'}
+          rejects('The save was expected to fail on its QA') { ReviewSeries.switch(repo: root, name: 'mine', pull: pull) }
+          entry = ReviewSeries.manifest(series)['revisions'].last
+          assert(entry['fingerprint'] == fingerprint, 'The failed save changed the revision')
+          after = state.read
+          assert(Array(after.dig('threads', key, 'value-note', 'messages')).map { |message| message['body'] } == ['Why two?'] && !after['moved']&.key?(key),
+                 "The conversation left the key the page reads: #{after['threads'].keys}")
+        end
+      end
+    end
     checks['the page offers a review of the checkout its branch\'s pull request, and switches to it'] = lambda do
       require_relative '../lib/dcr/live_api'
       ReviewChecks.fixture do |root, first|

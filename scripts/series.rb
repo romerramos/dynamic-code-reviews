@@ -1004,9 +1004,11 @@ module ReviewSeries
     before = key.call
     (entry['saves'] ||= []) << {'at' => Time.now.utc.iso8601, 'summary' => note}
     entry.merge!({'captured' => snapshot['created'], 'head' => snapshot['head'], 'fingerprint' => snapshot['fingerprint'], 'title' => review['title'], 'summary' => increment['summary']}.compact)
-    # The same code under another commit: what the reader has on it goes with it.
+    output = write(path, history, snapshot, review, was.except('series', 'revision', 'save', 'entries', 'preview', 'origin_mode', 'local').merge(increment))
+    # The same code under another commit: what the reader has on it goes with it, once the revision
+    # is saved under that commit. A save that fails leaves both where the page still reads them.
     DCR::State.new(path).rekey(before, key.call) unless key.call == before
-    write(path, history, snapshot, review, was.except('series', 'revision', 'save', 'entries', 'preview', 'origin_mode', 'local').merge(increment))
+    output
   end
 
   def write(path, history, snapshot, review, increment)
