@@ -128,12 +128,8 @@ body.qa-live .visual-qa-option{display:none}
 body.qa-live .evidence-strip:not(:has(button:not(.visual-qa-option))){display:none}
 
 /* "N comments not sent": one quiet line, bottom right, until they are sent. */
-#dcr-unsent{position:fixed;right:24px;bottom:calc(22px + var(--status-h));z-index:17;display:flex;align-items:center;gap:14px;padding:9px 10px 9px 16px;border:1px solid var(--line);border-left:3px solid var(--yours);border-radius:calc(10px * var(--round));background:var(--surface);color:var(--ink);font-size:13px;box-shadow:0 6px 26px color-mix(in srgb,var(--shade) 14.9%,transparent)}
-#dcr-unsent[hidden]{display:none}
-.range-actions:not([hidden])~#dcr-unsent{bottom:104px}
 .ledger-meta .dcr-row-send{padding:4px 10px;border:1px solid var(--accent);border-radius:calc(6px * var(--round));background:transparent;color:var(--accent);font-size:12px;font-weight:550}
 .ledger-meta .dcr-row-send:hover{background:var(--accent-soft);text-decoration:none}
-@media(prefers-reduced-motion:no-preference){#dcr-unsent{animation:dcr-unsent-in .18s ease-out}}
 @keyframes dcr-unsent-in{from{transform:translateY(8px);opacity:0}}
 .ledger-meta{flex-wrap:wrap;gap:4px 12px}
 
@@ -318,8 +314,6 @@ body.dcr-no-app #qa-panel,body.dcr-no-app .visual-qa-option,body.dcr-no-app .evi
 .range-actions:not([hidden])~#dcr-gh-note{bottom:calc(150px + var(--status-h) + var(--bar-rise))}
 @media(min-width:1500px){body.ledger-open #dcr-gh-note{right:calc(var(--ledger-w,380px) + 14px)}}
 @media(min-width:1650px){body.ledger-open #dcr-gh-note{right:calc(var(--ledger-w,420px) + 14px)}}
-#dcr-unsent.is-github{border-left-color:var(--line-amber-5)}
-#dcr-unsent.is-github .btn-primary{border-color:var(--line-green-5);background:var(--bg-green-5);color:var(--ink-neutral-9)}
 
 /* Finish your review: GitHub's summary and outcome, then the pending comments. */
 .dcr-gh-box{display:grid;gap:14px;max-width:520px}
@@ -634,7 +628,6 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 
 /* On a phone the pager is a bar at the bottom: what floats there floats above it. */
 @media(max-width:650px){
-  #dcr-unsent{bottom:calc(var(--toolbar-h) + 14px + env(safe-area-inset-bottom))}
   #dcr-arrival{bottom:calc(var(--toolbar-h) + 76px + env(safe-area-inset-bottom))}
   /* JevMyPR's strip keeps the page's own gutter: the verdict on one line, what it found under it. */
   .dcr-jev{padding:7px 12px}

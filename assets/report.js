@@ -4367,15 +4367,19 @@
     // While the agent changes the code for a comment, the bar says so and takes you to it; its edge carries a trail.
     const working = !next.meta && chip && !chip.hidden ? chip.dataset.working || '' : '';
     $('review-bar').classList.toggle('is-working', !!working);
-    $('bar-meta').textContent = next.meta || working || left;
-    $('bar-meta').classList.toggle('is-link', !!(working || left));
+    // Comments not sent yet (or pending in your GitHub review): the bar says so, and pressing it opens Review and send.
+    const unsent = !next.meta && !working && chip?.dataset.unsent || '';
+    $('bar-meta').textContent = next.meta || working || unsent || left;
+    $('bar-meta').classList.toggle('is-link', !!(working || unsent || left));
     if (working) $('bar-meta').dataset.dcrShow = chip.dataset.workingId; else delete $('bar-meta').dataset.dcrShow;
+    $('bar-meta').toggleAttribute('data-open-send', !!unsent && !chip.dataset.unsentGithub);
+    $('bar-meta').toggleAttribute('data-gh-finish', !!unsent && !!chip.dataset.unsentGithub);
     // The stacked bar's strip: who answers and on what, and the same note.
     const who = chip?.dataset.ran || '';
     if ($('bar-who').textContent !== who) $('bar-who').textContent = who;
     $('bar-left').hidden = !$('bar-meta').textContent;
     if ($('bar-left').textContent !== $('bar-meta').textContent) $('bar-left').textContent = $('bar-meta').textContent;
-    $('bar-left').disabled = !(working || left);
+    $('bar-left').disabled = !(working || unsent || left);
     $('bar-action').hidden = !next.run;
     $('bar-action').textContent = next.label;
   }
@@ -4383,7 +4387,7 @@
   function queueBar() { if (queueBar.pending) return; queueBar.pending = true; requestAnimationFrame(updateBar); }
   $('bar-action').addEventListener('click', () => { barRun?.(); queueBar(); });
   $('bar-back').addEventListener('click', () => definitionBack());
-  $('bar-meta').addEventListener('click', () => { if ($('bar-meta').classList.contains('is-link') && !$('bar-meta').dataset.dcrShow) document.querySelector('.dcr-todo-link')?.click(); });
+  $('bar-meta').addEventListener('click', () => { if ($('bar-meta').classList.contains('is-link') && !$('bar-meta').dataset.dcrShow && !$('bar-meta').matches('[data-open-send],[data-gh-finish]')) document.querySelector('.dcr-todo-link')?.click(); });
   $('bar-left').addEventListener('click', () => $('bar-meta').click());
   $('bar-update').addEventListener('click', () => document.getElementById('dcr-update')?.click());
   $('bar-nav').addEventListener('click', () => $('nav-toggle').click());
@@ -4418,7 +4422,7 @@
     if (ask) composer.sender(comment.id, 'ask');
   });
   // The served review's own buttons (Update, what is left to settle) change without the page drawing again.
-  if (typeof MutationObserver !== 'undefined') document.querySelectorAll('.header-actions, .review-toolbar').forEach(node => new MutationObserver(queueBar).observe(node, {subtree: true, childList: true, attributes: true, attributeFilter: ['hidden', 'class', 'disabled', 'data-tone', 'data-working', 'title']}));
+  if (typeof MutationObserver !== 'undefined') document.querySelectorAll('.header-actions, .review-toolbar').forEach(node => new MutationObserver(queueBar).observe(node, {subtree: true, childList: true, attributes: true, attributeFilter: ['hidden', 'class', 'disabled', 'data-tone', 'data-working', 'data-unsent', 'title']}));
 
   // ⌘K: everything the page can do, the steps, the files and the code, narrowed as you type.
   let paletteRows = [], paletteAt = 0;

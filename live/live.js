@@ -1510,25 +1510,20 @@
   composerSplit?.insertAdjacentHTML('beforebegin', advToggleHTML);
   const syncComposerAdv = () => { if (composerSplit) syncAdvToggles([composerSplit.previousElementSibling], COMPOSER, true); };
 
-  // 2. A quiet reminder wherever you are, until the comment is sent. Your review shows the same
-  //    action itself, so the reminder steps aside while that panel is open.
-  const unsent = document.createElement('div');
-  unsent.id = 'dcr-unsent';
-  unsent.hidden = true;
-  unsent.innerHTML = '<span></span><button type="button" class="btn btn-sm btn-primary" data-open-send>Review and send</button>';
-  document.body.append(unsent);
+  // 2. A quiet reminder wherever you are, until the comment is sent: the bar says it, and pressing it
+  //    opens Review and send (or finishes your GitHub review). Your review shows the same action
+  //    itself, so the bar leaves it out while that panel is open.
   const renderUnsent = () => {
+    const chip = document.getElementById('dcr-presence');
+    if (!chip) return;
     const pending = ghPendingIds().length;
     const count = pending || tools.drafts(comments(), threads, resolved()).length;
-    unsent.hidden = !count || !online || document.body.classList.contains('ledger-open');
-    unsent.classList.toggle('is-github', !!pending);
-    set(unsent.querySelector('span'), 'textContent', pending ? `${pending} comment${pending === 1 ? '' : 's'} pending in your GitHub review` : `${count} comment${count === 1 ? '' : 's'} not sent`);
-    const button = unsent.querySelector('button');
-    set(button, 'textContent', pending ? 'Finish your review' : 'Review and send');
-    button.toggleAttribute('data-open-send', !pending);
-    button.toggleAttribute('data-gh-finish', !!pending);
+    const say = !count || !online || document.body.classList.contains('ledger-open') ? ''
+      : pending ? `${pending} comment${pending === 1 ? '' : 's'} pending in your GitHub review` : `${count} comment${count === 1 ? '' : 's'} not sent`;
+    set(chip.dataset, 'unsent', say);
+    set(chip.dataset, 'unsentGithub', pending && say ? '1' : '');
   };
-  unsent.addEventListener('click', event => { if (event.target.closest('[data-gh-finish]')) openFinish(); });
+  document.addEventListener('click', event => { if (event.target.closest('#bar-meta[data-gh-finish]')) openFinish(); });
   new MutationObserver(() => { renderUnsent(); renderBubble(); }).observe(document.body, {attributes: true, attributeFilter: ['class']});
 
   // The send dialog gains its second action. Comments already with the agent are shown but not selectable.
