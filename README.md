@@ -64,11 +64,36 @@ OpenCode also finds the Claude Code and Codex locations, so one clone can serve 
 the agent if the skill does not appear. For a single project, use the project's own folder instead
 (`.claude/skills/`, `.agents/skills/` or `.opencode/skills/`).
 
+### Browser for QA
+
+Optional, and recommended. [anomalyco/browse](https://github.com/anomalyco/browse) (an extension and a command, from the
+makers of OpenCode) lets the agent drive your own Chrome, signed in as you, from any agent app (Claude Code, Codex,
+OpenCode, Cursor, T3 Code and others). It is the most reliable way for the agent to open the review,
+record a QA review and take full-size screenshots, more so than Claude in Chrome or computer use. The
+agent can use its `browse` command from the shell straight away, so nothing needs a restart.
+
+1. Add its extension to Chrome from the
+   [Chrome Web Store](https://chromewebstore.google.com/detail/mfnicocicmmlkpjnaffgihfjhdgjkdjg)
+   (`browse extension` prints the link).
+2. Install the command: `curl -fsSL https://opencode.ai/browse/install | bash` (Windows:
+   `irm https://opencode.ai/browse/install.ps1 | iex`; or `npm install -g @opencode/browse`).
+3. Add it to your agents and connect the extension: `browse install` (or `browse install -a claude`
+   for one agent; `browse pair` connects another browser).
+4. Check: `browse status` says it is connected.
+
+When it is not ready, Start QA review says what is missing and offers **Install anomalyco/browse**, which
+asks your agent to do steps 2 and 3 and opens the Web Store page for step 1. Then the agent opens the
+review in a tab browse drives, and you continue there.
+
+**Agents installing this skill:** mention anomalyco/browse once, by that name, and ask before running anything; it changes the
+person's agent configuration.
+
 ### Browser for screenshots
 
 While you read, the agent takes screenshots of the running app as evidence. It needs a browser it
-drives that saves full-size images: Chrome DevTools MCP (or Playwright). Claude in Chrome and
-computer use only save a shrunken copy, which reads blurry. The review never uses ego lite, which is
+drives that saves full-size images: browse (`browse screenshot --output`), Chrome DevTools MCP or
+Playwright. Claude in Chrome and computer use only save a shrunken copy, which reads blurry. Without
+browse, set up Chrome DevTools MCP. The review never uses ego lite, which is
 too slow for it. Set Chrome DevTools MCP up with two flags:
 
 - `--isolated`: each session gets its own throwaway browser, so several sessions can take
@@ -101,8 +126,8 @@ your projects keep working.
 | --- | --- |
 | Ruby 3.1+ and Git on `PATH` | Everything. Ruby's standard library only, no gems. |
 | A browser | Reading the review. Chrome, Edge, Brave, Arc, Firefox or Safari. |
-| A browser tool for the agent (Claude in Chrome, or computer use) | Opening the review in a tab the agent can also use, for QA. Optional. QA recording needs a desktop browser you can see and share; an agent app's embedded browser panel or a headless browser cannot, so when a change has a UI the skill moves its review to a session that has one before it starts (for Claude Code, `claude --chrome`). |
-| Chrome DevTools MCP with `--isolated --headless`, or Playwright | Screenshots of the running app as evidence. See [Browser for screenshots](#browser-for-screenshots). |
+| A browser tool for the agent: browse, or else Claude in Chrome or computer use | Opening the review in a tab the agent can also use, for QA. Optional. QA recording needs a desktop browser you can see and share; an agent app's embedded browser panel or a headless browser cannot. See [Browser for QA](#browser-for-qa). |
+| browse, Chrome DevTools MCP with `--isolated --headless`, or Playwright | Screenshots of the running app as evidence. See [Browser for screenshots](#browser-for-screenshots). |
 | macOS, or Linux with Hyprland (Omarchy), Sway or X11 (`wmctrl` or `xdotool`) | Bringing the browser to the front when the review opens and when it is ready (`dcr focus`). Elsewhere the agent tells you which tab. |
 | Tailscale | Optional. Opening reviews from your other devices. |
 | `gh`, or a GitHub or Linear connector | Optional. Reviewing a pull request with its real base and linked issues. |
@@ -376,6 +401,7 @@ ruby scripts/test_pr_context.rb    # what was already said on a pull request, re
 ruby scripts/test_publish.rb       # the review's report: what it counts, what it leaves out, publishing it once and in place
 ruby scripts/test_live_previews.rb # preview requests, stylesheets, stand-ins
 ruby scripts/test_app_proxy.rb     # the running app inside the review
+ruby scripts/test_browse.rb        # whether browse can record QA, and the request to install it
 ruby scripts/test_workspace.rb     # the workspace marker: its name in the served review, its app for serve
 node scripts/test_ui.js            # the review page's own logic
 node --check assets/report.js

@@ -52,12 +52,17 @@ widths, **Record** and a side panel with Recordings and Comments on the app.
   tab alone; the agent's reply ends it, stops sharing and shows **QA review ready**. Each
   QA review replaces the previous one's recordings; the reader's own recordings stay.
 
+- **Browse first**: before the share prompt, Start QA review asks the server whether browse
+  is ready (`GET /api/browse`, which runs `browse status --json`). When it is not, the reader
+  can install browse (a BROWSE SETUP REQUEST to the agent, through `dcr wait`) or use the
+  agent's own browser anyway.
+
 When you record QA yourself in the App view, open the served review through your own
-browser tool (so you can act in the tab the reader shares), keep that tab in front, and
+browser tool, browse first (so you can act in the tab the reader shares), keep that tab in front, and
 drive the recorder only with `dcr record start|still|stop`. While those commands drive
 it, the review draws your pointer and a ring on each click inside the app, at the
 coordinates of the input events you send: tools that click through the DevTools
-protocol (Claude in Chrome, Chrome DevTools MCP, Playwright) never move the system
+protocol (browse, Claude in Chrome, Chrome DevTools MCP, Playwright) never move the system
 pointer, and this is how their clips stay readable. Hover before you click. A
 computer-use harness that moves the system pointer is recorded as it is. Never add a
 cursor after recording. With several review pages open, recorder commands go to the

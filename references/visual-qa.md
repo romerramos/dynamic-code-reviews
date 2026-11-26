@@ -39,7 +39,8 @@ shows the same thing that screenshot's id as `screenshot_id`, and it replaces th
    the agent's real input events, live in the recorded frames, so any browser tool can
    record a clip a viewer can follow; a computer-use tool that moves the system pointer
    shows as it is. The agent's browser tool must reach the shared tab: open the served
-   review through it. Never add or move a cursor after recording. The two-tab flow
+   review through it, in a browse tab when browse is available (browse only drives tabs it
+   opened). Never add or move a cursor after recording. The two-tab flow
    below is the fallback for an app the proxy cannot show.
    For the two-tab flow, prepare access and open the app tab with the
    supported browser before serving the recorder. Identify the tab's actual
