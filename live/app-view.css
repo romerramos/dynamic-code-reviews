@@ -215,7 +215,7 @@ dialog.dcr-qa-done header p{margin:0;color:var(--muted);font-size:14px;line-heig
 .dcr-qa-report > :last-child{margin-bottom:0}
 .dcr-qa-report code{padding:1px 4px;border-radius:calc(4px * var(--round));background:color-mix(in oklab,var(--ink) 7%,transparent);font:12px var(--mono)}
 .dcr-qa-free{margin:0;color:var(--muted);font-size:13px}
-dialog.dcr-qa-done footer{display:flex;justify-content:flex-end;gap:8px}
+dialog.dcr-qa-done footer{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
 
 /* A QA review row: its clips side by side, then the agent's report; earlier runs folded. */
 .dcr-qa-clips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:0 16px 10px 19px}

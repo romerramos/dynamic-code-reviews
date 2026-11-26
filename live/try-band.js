@@ -64,7 +64,7 @@
   const set = (node, name, value) => { if (node[name] !== value) node[name] = value; };
   const draw = () => {
     const html = live.tryPanelHTML({risk: window.ReviewRisk?.brief?.() || null, app, noApp, recorder: recorder(), shots: marks().shots, templates,
-      previewsShort: window.ReviewPreviews?.short?.() || '', qaRunning: !!window.DCRApp?.running?.(), changes}, {icon, riskOpen});
+      previewsShort: window.ReviewPreviews?.short?.() || '', qaRunning: !!window.DCRApp?.running?.(), browse: window.DCRApp?.browse?.() || null, changes}, {icon, riskOpen});
     if (html !== drawn) {
       const focused = panel.contains(document.activeElement) && document.activeElement.matches('[data-try-risk]');
       drawn = html;
@@ -139,6 +139,7 @@
   // The review redraws #content as the reader moves and as the agent's work arrives (the ranking, the
   // screenshots, the previews); the review area's width says whether it has room.
   new MutationObserver(draw).observe(content, {childList: true, subtree: true});
+  window.addEventListener('dcr-browse', draw);
   new MutationObserver(draw).observe(document.body, {attributes: true, attributeFilter: ['class']});
   if (typeof ResizeObserver === 'function') new ResizeObserver(draw).observe(area);
   draw();

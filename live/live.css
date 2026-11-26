@@ -275,6 +275,7 @@ body.dcr-has-try .overview-reading :is(.risk-fold,.risk-rank,.ui-changes,.ui-cha
 .dcr-try-head{margin:6px 10px 2px;color:var(--muted);font-size:12px}
 .dcr-try-note{margin:2px 10px 6px;color:var(--muted);font-size:12px;line-height:1.45}
 .dcr-try-note code{font:11.5px var(--mono)}
+.dcr-try-note button{padding:0;border:0;background:none;color:inherit;font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 /* The ranked files, unfolded under their row: the score, why, then the file. Each opens it. */
 .dcr-try-risk{display:grid;grid-template-columns:minmax(0,1fr);gap:2px;margin:0;padding:2px 10px 6px 35px;list-style:none}
 .dcr-try-risk[hidden]{display:none}

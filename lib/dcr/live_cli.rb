@@ -49,8 +49,14 @@ module DCR
 
     QA_RULE = <<~TEXT.strip
       QA REQUEST. Record visual evidence in the review tab the reviewer shared, then attach it.
-      Recording needs a desktop browser the reviewer can see and share (Claude in Chrome, or computer use); an agent host's embedded browser panel or a headless browser never records. Without one, do not try: reply in the QA thread that this session cannot record, and offer to stop this review and start a session that can, as "Which browser to use" in the skill's SKILL.md says.
+      Recording needs a desktop browser the reviewer can see and share: browse (its MCP tools, or the `browse` CLI from your shell when `browse status --json` reports it connected) first, then Claude in Chrome or computer use; an agent host's embedded browser panel or a headless browser never records. Without any, do not try: reply in the QA thread that this session cannot record and that Install anomalyco/browse, beside Start QA review, sets it up, as "Which browser to use" in the skill's SKILL.md says.
       You may operate the running app in that tab, run `dcr record` and `dcr evidence attach`, read files and run read-only commands. You may also add the records the flows need to the development database (through the app, or the project's seeds, factories or console run against development) and update the QA notes file the request names. Do not edit, create or delete files in the project, and do not run formatters, generators, migrations, installs or git commands that change anything. Use only development data; never record credentials or unrelated screens.
+    TEXT
+
+    # Printed when the reviewer presses Install anomalyco/browse: the one request that installs something.
+    SETUP_RULE = <<~TEXT.strip
+      BROWSE SETUP REQUEST. The reviewer asked you to install browse, the browser QA records in, and approved adding it to your agent's configuration.
+      You may run browse's installer, `browse install`, `browse pair`, `browse status`, `browse navigate` and `dcr reply`. Install nothing else and do not edit, create or delete files in the project. This is the one exception to reply only: any conversation threads printed with it stay reply only.
     TEXT
 
     RISK_RULE = <<~TEXT.strip
@@ -205,22 +211,24 @@ module DCR
       sends = entries.select { |entry| entry['kind'] == 'send' }
       previews = entries.select { |entry| entry['kind'] == 'preview' }
       qas = entries.select { |entry| entry['kind'] == 'qa' }
+      setups = entries.select { |entry| entry['kind'] == 'setup' }
       syncs = entries.select { |entry| entry['kind'] == 'sync' }
       risks = entries.select { |entry| entry['kind'] == 'risk' }
       fixes = entries.select { |entry| entry['kind'] == 'fix' }
       ids = sends.flat_map { |entry| entry['thread_ids'] }.uniq
-      conversation = sends.any? || finish || (previews.empty? && qas.empty? && risks.empty? && syncs.empty? && fixes.empty?) # a pure task request is not a conversation
+      conversation = sends.any? || finish || (previews.empty? && qas.empty? && setups.empty? && risks.empty? && syncs.empty? && fixes.empty?) # a pure task request is not a conversation
       out = []
       out << REPLY_ONLY if conversation
       out << PREVIEW_RULE if previews.any?
       out << QA_RULE if qas.any?
+      out << SETUP_RULE if setups.any?
       out << RISK_RULE if risks.any?
       out << SYNC_RULE if syncs.any?
       out << FIX_RULE if fixes.any?
       out << (finish ? 'The reviewer finished this round.' : 'The reviewer sent you the following from the review.') if conversation
       sends.each { |entry| out << "---\nThread: #{entry['thread_ids'].join(', ')}\n\n#{entry['text']}" }
       previews.each { |entry| out << "---\n#{preview_request(entry, flags)}" }
-      qas.each { |entry| out << "---\nThread: #{entry['thread_ids'].join(', ')}\n\n#{entry['text']}" }
+      (qas + setups).each { |entry| out << "---\nThread: #{entry['thread_ids'].join(', ')}\n\n#{entry['text']}" }
       out << "---\nPost it with: dcr risk-ranking #{flags} --file <ranking.json>   (or --none '<why, in a few words>')" if risks.any?
       syncs.each { |entry| out << "---\n#{entry['text']}" }
       out << "---\n#{sync_commands(flags)}" if syncs.any?
@@ -231,7 +239,9 @@ module DCR
       out << 'Then run `dcr wait` again for the next round.' unless finish
       out << 'Finish received: send any outstanding replies, then stop waiting unless the reviewer asks for another round.' if finish
       out << if conversation && fixes.any? then 'Reminder: only the fix request changes code, for its one comment, in the working tree. Every other thread is reply only. No commits, no pushes.'
+             elsif conversation && setups.any? then 'Reminder: only the browse setup request installs something, as it says. Every other thread is reply only. No file changes, no commits, no pushes.'
              elsif conversation then 'Reminder: reply only. No file changes, no commits, no pushes.'
+             elsif setups.any? && qas.empty? then 'Reminder: set up browse only; change nothing in the project.'
              elsif qas.any? then 'Reminder: record and attach only, with development data you add as needed. No changes to the project\'s files, no commits, no pushes.'
              elsif risks.any? && previews.empty? then 'Reminder: post the risk ranking only; change nothing in the project.'
              elsif fixes.any? then 'Reminder: fix that one comment only, in the working tree. No commits, no pushes.'

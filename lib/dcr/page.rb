@@ -36,8 +36,9 @@ module DCR
 
     # What a served page needs from the server: its token, the browser progress to seed (the server's
     # copy wins over a stale browser one), the running app it may frame, if any, and otherwise why the
-    # review needs none (dcr serve --without-app), and the workspace name its checkout has, if any.
-    Served = Struct.new(:token, :progress, :app, :no_app, :workspace, keyword_init: true) do
+    # review needs none (dcr serve --without-app), the workspace name its checkout has, if any, and
+    # whether browse can record QA (Browse.check), with an app.
+    Served = Struct.new(:token, :progress, :app, :no_app, :workspace, :browse, keyword_init: true) do
       def csp = Page.served_csp(app && app[:origin])
     end
 

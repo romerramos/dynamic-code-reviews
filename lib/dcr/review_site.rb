@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative 'browse'
 require_relative 'http'
 require_relative 'live_api'
 require_relative 'page'
@@ -30,6 +31,8 @@ module DCR
       @no_app = no_app
       @on_first_view = on_first_view
       @live = LiveAPI.new(@series, evidence: method(:attach))
+      # QA records in browse: checked once now for the page, and again whenever the page asks.
+      @browse = browse_check if @app
     end
 
     # Returns a response, or nil when the request is not the review's.
@@ -53,6 +56,13 @@ module DCR
       raise ArgumentError, 'Cross-origin review request rejected' unless request.from_page_or_terminal?
       raise ArgumentError, 'Writes must come from the review page or the terminal' unless request.get? || request.post?
       return export if request.get? && request.path == '/api/export'
+      # Start QA review asks without ?app, so its share prompt is not kept waiting on a slow app.
+      return HTTP.json(@browse = browse_check(app: request.query['app'] == '1'), csp: Page::SERVED_CSP) if request.get? && request.path == '/api/browse'
+      if request.post? && request.path == '/api/browse/install'
+        input = request.json(LiveAPI::BODY_LIMIT)
+        raise ArgumentError, 'Expected a JSON object' unless input.is_a?(Hash)
+        return HTTP.json(Browse.request(series_dir: @series, state: @live.state, key: input['key'].to_s, origin: @origin), csp: Page::SERVED_CSP)
+      end
       if request.post? && request.path == '/api/qa'
         input = request.json(LiveAPI::BODY_LIMIT)
         raise ArgumentError, 'Expected a JSON object' unless input.is_a?(Hash)
@@ -75,7 +85,7 @@ module DCR
       @on_first_view = nil
       # The series lives in <checkout>/.reviews/<name>; the marker is read again so a renamed workspace shows.
       workspace = Workspace.find(File.expand_path('../..', @series))&.dig('name')
-      served = Page::Served.new(token: @token, progress: @live.progress, app: @app&.describe(shared: request.shared?), no_app: @no_app, workspace: workspace)
+      served = Page::Served.new(token: @token, progress: @live.progress, app: @app&.describe(shared: request.shared?), no_app: @no_app, workspace: workspace, browse: @browse)
       HTTP.html(Page.review(Page.payload(File.read(@report, encoding: 'UTF-8')), served: served), csp: served.csp)
     end
 
@@ -99,6 +109,8 @@ module DCR
       return HTTP.text(404, 'No ready preview of that template') unless key
       HTTP.html(previews.dig(key, wanted, 'html'), csp: csp(request))
     end
+
+    def browse_check(app: true) = Browse.check(app: app ? @app&.upstream&.to_s : nil)
 
     def csp(request) = Page.served_csp(@app&.describe(shared: request.shared?)&.dig(:origin))
 

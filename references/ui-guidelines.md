@@ -329,7 +329,9 @@ thing: recording now (a red dot on **Record**, a red pill reading **Stop m:ss** 
   with its top score and file count unfolds in place to the ranked files (score, why, the file,
   which opens it; Rank again); then **Start QA review**, **Screenshots** (count) and
   **Previews** (count, or how they stand), each the control it always was, locked while the
-  review is in progress; then **Running app** with the app's address (↗ opens it in the review),
+  review is in progress (while browse is not ready, a quiet line under Start QA review,
+  "QA recording needs anomalyco/browse · Set up", text only, its Set up opening the browse setup); then
+  **Running app** with the app's address (↗ opens it in the review),
   or why there is none. Rows that do not apply are left out. On the Overview, Your review is not
   shown and the panel is pinned on the right as part of the page (a bordered card, no shadow)
   while the review area has room for it beside the column (a container query); pressing its
@@ -339,6 +341,14 @@ thing: recording now (a red dot on **Record**, a red pill reading **Stop m:ss** 
   previews wait unseen. Minimal keeps the icon on the top strip; AIDA a labelled button in the
   header beside Update; Terminal
   `[ try ]` there, with a double-ruled panel, ── headings, dotted leaders and block bars.
+- **Browse setup**: Start QA review first asks the server whether browse is ready, before the
+  share prompt. When it is not, a modal of the QA review ready family says what is missing (in
+  browse's own words when it gives a next step) and recommends browse outright, with Cancel,
+  **Use my agent's browser anyway** (today's flow) and **Install anomalyco/browse** (asks the agent, opens
+  the Web Store page unless only pairing is left). While it is open it asks again every two
+  seconds, and when browse connects it becomes **Ready: Start QA review**. The agent's reply
+  is a Set up anomalyco/browse row in On this app. The UI always names it anomalyco/browse, so
+  it reads as software to install, not as the reader's browser or a verb.
 - **QA review in progress**: from Start QA review until the agent replies in the QA thread,
   an accent banner takes the first line of the App view's bar: what is happening (waiting
   for the agent, running, or sharing stopped with **Share this tab**), a count of

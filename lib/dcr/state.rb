@@ -688,6 +688,16 @@ module DCR
       end
     end
 
+    # The reviewer asks the agent to install browse (Browse.request). A thread too, so the agent's
+    # reply (which tab to continue in) shows on the app.
+    def request_setup(key, id, text)
+      update do |state|
+        add_message(state, key, id, 'user', 'Install anomalyco/browse, so QA can record in this browser.')
+        thread(state, key, id).merge!('delivery' => 'sent', 'live' => true, 'anchor' => {'selector' => '', 'path' => '/', 'kind' => 'setup'})
+        enqueue(state, 'setup', key, [id], text.to_s)
+      end
+    end
+
     # --- template previews built by the agent -----------------------------------------
 
     # Asking for a preview queues a request for the agent. The preview moves requested, working (the

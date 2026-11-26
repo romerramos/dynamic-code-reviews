@@ -577,12 +577,12 @@ globalThis.LiveTools = (() => {
   // opening All changes); then the running app. A row that does not apply is left out, and with
   // none the panel is not there at all (an empty string).
   //   data: {risk: ReviewRisk.brief(), app: {upstream}, noApp: why, recorder, shots, templates,
-  //          previewsShort, qaRunning, changes: {files, added, removed}}
+  //          previewsShort, qaRunning, browse: Browse.check (the Set up line when not ready), changes: {files, added, removed}}
   //   options: {icon(name), riskOpen}
   const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
   const riskBar = score => { const full = Math.max(1, Math.min(8, Math.floor(score / 12.5))); return '█'.repeat(full) + '░'.repeat(8 - full); };
   function tryPanelHTML(data, {icon = () => '', riskOpen = false} = {}) {
-    const {risk = null, app = null, noApp = null, recorder = false, shots = 0, templates = 0, previewsShort = '', qaRunning = false, changes = null} = data || {};
+    const {risk = null, app = null, noApp = null, recorder = false, shots = 0, templates = 0, previewsShort = '', qaRunning = false, browse = null, changes = null} = data || {};
     const item = (attrs, glyph, label, end = '', extra = '') => `<button type="button" class="dcr-try-item"${extra} ${attrs}>${icon(glyph)}<span class="dcr-try-label">${label}</span><span class="dcr-try-end">${end}</span></button>`;
     const groups = [];
     if (risk) {
@@ -601,6 +601,7 @@ globalThis.LiveTools = (() => {
     }
     const actions = [
       app && item('data-try="qa" title="Your agent records the flows behind the comments, in this tab"', 'video', 'Start QA review', qaRunning ? 'Running' : ''),
+      app && browse && browse.state !== 'ready' && '<p class="dcr-try-note">QA recording needs anomalyco/browse · <button type="button" data-try="setup">Set up</button></p>',
       shots && item('data-open-shots="" aria-haspopup="dialog" title="The screenshots and recordings from the app"', 'image', 'Screenshots', String(shots)),
       templates && item('data-open-previews title="The changed templates, rendered"', 'layout-template', 'Previews', `<span data-preview-short>${escape(previewsShort)}</span><span class="dcr-try-count">${plural(templates, 'template')}</span>`),
       changes?.files && item('data-view="files" title="Every diff, grouped by the work it does"', 'file-diff', 'Changes', `${plural(changes.files, 'file')}<span class="dcr-try-add">+${changes.added || 0}</span><span class="dcr-try-del">−${changes.removed || 0}</span>`)

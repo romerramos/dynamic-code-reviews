@@ -96,6 +96,16 @@
     <p class="dcr-qa-free">Sharing has stopped. This tab is yours again.</p>
     <footer><button type="button" class="act act-quiet" data-done-close>Close</button><button type="button" class="act act-primary" data-done-open></button></footer></div>`;
   document.body.append(done);
+  // QA records best in browse: before Start QA review shares the tab, the server says whether browse is
+  // ready, and when it is not this says what is missing and offers to have the agent install it.
+  const setup = document.createElement('dialog');
+  setup.className = 'modal dcr-qa-done dcr-qa-setup';
+  setup.setAttribute('aria-labelledby', 'dcr-qa-setup-title');
+  setup.innerHTML = `<div class="modal-box"><header><div><h2 id="dcr-qa-setup-title"></h2><p data-setup-missing></p></div></header>
+    <p class="dcr-qa-free">anomalyco/browse is the most reliable way to record QA and take screenshots. Your agent drives this Chrome with it, signed in as you, from any agent app.</p>
+    <p class="dcr-qa-free" data-setup-app hidden></p>
+    <footer><button type="button" class="act act-quiet" data-setup-cancel>Cancel</button><button type="button" class="act act-quiet" data-setup-anyway>Use my agent's browser anyway</button><button type="button" class="act act-primary" data-setup-go></button></footer></div>`;
+  document.body.append(setup);
   const $ = selector => dialog.querySelector(selector);
   const frame = $('iframe');
   const pane = $('.dcr-app-pane');
@@ -414,6 +424,7 @@
   const rowTitle = row => {
     const anchor = row.thread?.anchor || {};
     if (anchor.kind === 'request') return {name: 'QA review', kind: 'by your agent', path: 'Clips arrive in this list and on their comments'};
+    if (anchor.kind === 'setup') return {name: 'Set up anomalyco/browse', kind: 'by your agent', path: ''};
     if (row.rec || anchor.kind === 'clip' || anchor.kind === 'still') {
       const rec = row.rec;
       const kind = rec ? rec.kind : anchor.kind;
@@ -760,11 +771,61 @@
     if (error?.name === 'NotAllowedError') return 'Sharing was cancelled. Start QA review again and choose Share to let your agent record.';
     return error?.message || 'Could not share this tab.';
   };
+  // --- browse: ready to record, or set it up first ------------------------------------------------------
+  const WEB_STORE = 'https://chromewebstore.google.com/detail/mfnicocicmmlkpjnaffgihfjhdgjkdjg';
+  let browse = (() => { try { return JSON.parse(document.querySelector('meta[name="dcr-browse"]')?.content || 'null'); } catch { return null; } })();
+  let installing = false, polling = null;
+  const MISSING = {'not-installed': 'anomalyco/browse is not installed on this computer.', 'extension-missing': 'The anomalyco/browse extension is not in Chrome yet.', 'not-paired': 'The anomalyco/browse extension is not connected to this computer yet.'};
+  // A server without the check (or one that cannot answer) leaves Start QA review as it was.
+  // withApp: also whether the app answers, which can take a while, so never inside the share click.
+  const checkBrowse = async (withApp = false) => {
+    try { browse = await api(`/api/browse${withApp ? '?app=1' : ''}`); } catch { /* keep the last answer */ }
+    window.dispatchEvent(new Event('dcr-browse'));
+    return !browse || browse.state === 'ready';
+  };
+  const renderSetup = () => {
+    const ready = browse?.state === 'ready';
+    setup.querySelector('h2').textContent = ready ? 'anomalyco/browse is ready' : 'Set up anomalyco/browse to record QA';
+    const step = browse?.state !== 'not-installed' && browse?.next_step ? ` ${browse.next_step}` : '';
+    setup.querySelector('[data-setup-missing]').textContent = ready ? 'Your agent can record QA in this browser now.'
+      : `${MISSING[browse?.state] || 'anomalyco/browse is not ready.'}${step}${installing ? ' Your agent is setting it up; its reply appears on the app.' : ''}`;
+    const appNote = setup.querySelector('[data-setup-app]');
+    appNote.hidden = browse?.app !== false;
+    appNote.textContent = `The app at ${app.upstream} does not answer yet. Start it before you record.`;
+    setup.querySelector('[data-setup-anyway]').hidden = ready;
+    const go = setup.querySelector('[data-setup-go]');
+    go.textContent = ready ? 'Ready: Start QA review' : installing ? 'Sent to your agent' : 'Install anomalyco/browse';
+    go.disabled = !ready && installing;
+  };
+  const showSetup = () => {
+    renderSetup();
+    if (!setup.open) setup.showModal();
+    clearInterval(polling);
+    polling = setInterval(async () => { await checkBrowse(true); renderSetup(); }, 2000);
+  };
+  setup.addEventListener('close', () => clearInterval(polling));
+  setup.querySelector('[data-setup-cancel]').addEventListener('click', () => setup.close());
+  // Inside the reader's click, so Chrome still shows the share prompt; from the Overview the app opens first.
+  const startFromSetup = () => { setup.close(); if (!dialog.open) open(); startQA(true); };
+  setup.querySelector('[data-setup-anyway]').addEventListener('click', startFromSetup);
+  setup.querySelector('[data-setup-go]').addEventListener('click', async () => {
+    if (browse?.state === 'ready') { startFromSetup(); return; }
+    // Opened inside the click, so the browser does not block it; pairing needs no new extension.
+    if (browse?.state !== 'not-paired') window.open(WEB_STORE, '_blank', 'noopener');
+    try {
+      await api('/api/browse/install', {key});
+      installing = true;
+      renderSetup();
+      refresh();
+    } catch (error) { setup.querySelector('[data-setup-missing]').textContent = error.message; }
+  });
   // Start QA review: the share prompt must come from the reader's own click, so it is asked here;
   // with this tab shared, the agent can record through `dcr record` without asking again.
-  const startQA = async () => {
+  // checked: browse was found ready, or the reader chose their agent's own browser.
+  const startQA = async (checked = false) => {
     const rec = recorder();
     if (!rec || !key) { status('off', 'This review cannot record. Serve it with dcr serve.'); return; }
+    if (!checked && !(await checkBrowse())) { showSetup(); return; }
     try {
       const state = rec.status();
       if (!(state.ready && state.pane)) {
@@ -780,7 +841,7 @@
         : 'Your agent is recording the review in this tab. Keep it in front and leave the pointer to it.');
     } catch (error) { status('off', shareError(error)); }
   };
-  $('[data-start-qa]').addEventListener('click', startQA);
+  $('[data-start-qa]').addEventListener('click', () => startQA());
 
   window.addEventListener('qa-recorder-saved', event => {
     const saved = event.detail;
@@ -833,7 +894,9 @@
   window.DCRApp = {
     app,
     running: () => !!qaActive,
+    browse: () => browse,
     open: (intent = 'browse') => {
+      if (intent === 'setup') { showSetup(); return; }
       open();
       if (intent === 'comment') { if (ready && !left) setMode('comment'); else pendingMode = 'comment'; }
       if (intent === 'record') record.click();
