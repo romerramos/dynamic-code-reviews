@@ -497,6 +497,10 @@ button.dcr-check{cursor:pointer}button.dcr-check:hover .dcr-check-said{text-deco
 #dcr-presence[data-tone="off"] .ui-avatar{filter:grayscale(1);opacity:.55}
 .dcr-presence-state{color:var(--dcr-ok)}
 #dcr-presence .dcr-typing{margin-left:4px;color:var(--dcr-work)}
+/* While the agent changes the code for a comment, a trail goes round the bar's edge. The motion is shared;
+   each theme file draws it on its own surface, in its own way. Reduced motion holds it still. */
+@property --dcr-trail{syntax:'<angle>';inherits:false;initial-value:0deg}
+@keyframes dcr-trail{to{--dcr-trail:360deg}}
 @media(max-width:1180px){#dcr-presence .dcr-presence-text{display:none}#dcr-presence{padding:0 5px;border-color:transparent;background:none}}
 /* The card it opens: who, what, and how to connect one when nothing is listening. */
 #dcr-presence-card{position:fixed;z-index:30;top:var(--card-top);left:var(--card-left);width:var(--card-width);max-height:var(--card-max-height);box-sizing:border-box;overflow-y:auto;padding:14px 16px;border:1px solid var(--line);border-radius:calc(12px * var(--round));background:var(--surface);color:var(--ink);font-size:13px;box-shadow:0 12px 32px color-mix(in srgb,var(--shade) 18%,transparent)}

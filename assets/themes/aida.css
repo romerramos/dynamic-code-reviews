@@ -88,3 +88,8 @@
   --ring-accent-1:#b9a3d8;--ring-accent-2:#8778e1;--ring-accent-3:#5548c8;
   --ring-neutral-1:#fbfbfc;--ring-neutral-2:#64748b;
 }
+
+/* While the agent changes the code for a comment: the accent goes round the bar, a soft tail and a faint glow. */
+[data-theme^="aida-"] #review-bar.is-working{--trail-bg:var(--surface);--trail-rest:var(--line);--trail-path:var(--trail-rest) 0 56%,color-mix(in oklab,var(--accent) 35%,var(--trail-rest)) 78%,var(--accent) 97%,var(--trail-rest);border-color:transparent;background:linear-gradient(var(--trail-bg),var(--trail-bg)) padding-box,conic-gradient(from var(--dcr-trail),var(--trail-path)) border-box;animation:dcr-trail var(--trail-time,2.4s) var(--trail-ease,linear) infinite;box-shadow:0 8px 28px color-mix(in srgb,var(--shade) 9%,transparent),0 0 0 3px color-mix(in oklab,var(--accent) 14%,transparent)}
+html[data-mode="dark"][data-theme^="aida-"] #review-bar.is-working{--trail-bg:color-mix(in srgb,var(--ink) 9%,var(--surface));--trail-rest:color-mix(in srgb,var(--ink) 26%,transparent)}
+@media(prefers-reduced-motion:reduce){[data-theme^="aida-"] #review-bar.is-working{animation:none}}

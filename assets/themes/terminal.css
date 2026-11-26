@@ -447,3 +447,8 @@
 [data-theme^="terminal-"] .dcr-op-again{text-transform:lowercase}
 [data-theme^="terminal-"] .dcr-op-again::before{content:"[ ";color:var(--terminal-overlay0);font-weight:400}
 [data-theme^="terminal-"] .dcr-op-again::after{content:" ]";color:var(--terminal-overlay0);font-weight:400}
+
+/* While the agent changes the code for a comment: a hard block of the accent steps round the bar, like a scanner. */
+[data-theme^="terminal-"] #review-bar.is-working{--trail-bg:var(--surface);--trail-rest:var(--line);--trail-path:var(--trail-rest) 0 80%,var(--accent) 80% 100%;--trail-time:3.2s;--trail-ease:steps(24);border-color:transparent;background:linear-gradient(var(--trail-bg),var(--trail-bg)) padding-box,conic-gradient(from var(--dcr-trail),var(--trail-path)) border-box;animation:dcr-trail var(--trail-time,2.4s) var(--trail-ease,linear) infinite}
+html[data-mode="dark"][data-theme^="terminal-"] #review-bar.is-working{--trail-bg:color-mix(in srgb,var(--ink) 9%,var(--surface));--trail-rest:color-mix(in srgb,var(--ink) 26%,transparent)}
+@media(prefers-reduced-motion:reduce){[data-theme^="terminal-"] #review-bar.is-working{animation:none}}

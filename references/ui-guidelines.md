@@ -264,6 +264,12 @@ Design references: [CodeRabbit documentation index](https://docs.coderabbit.ai/l
   agreed then: next to "Codex agrees" above, that reads as the same thing twice. What the
   agents said of the outcome is in the block and not in the conversation too, and "Other
   opinions" lists only what was said of the comment itself.
+- **While a fix runs**: the comment keeps only its Applying… (Fixing…, Working on it…) button,
+  with nothing beside it. The bar says it page-wide in the place of "N comments to settle"
+  ("Applying 1 fix", "Fixing 1 comment", "Working on 1 change"), and pressing that goes to the
+  comment. A trail goes round the bar's edge until the agent replies, in each theme's language:
+  Minimal a thin ink trail round its top card, AIDA its accent with a soft tail and a faint glow,
+  Terminal a hard block that steps round like a scanner. Reduced motion holds it still.
 - **Reading every file is half the review.** While comments are open, the sidebar says
   "N comments to settle" under the file count, and Review comments opens with "N comments
   wait on you. Resolve each, or have it fixed, before you publish." Each takes the reader to

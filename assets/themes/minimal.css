@@ -771,3 +771,7 @@ html[data-theme^="minimal-"]{--panel-icon-top:25px}
 @media(min-width:741px){html[data-theme^="minimal-"] body:not(.zen):not(.on-overview) .ledger-show{display:grid;position:fixed;top:var(--panel-icon-top);right:18px;z-index:45}}
 @media(min-width:741px){html[data-theme^="minimal-"] body.ledger-open:not(.zen) .ledger-show{right:calc(var(--ledger-size) + 8px)}}
 @media(min-width:741px){html[data-theme^="minimal-"] body:not(.zen) .try-show:not([hidden]){display:grid;position:fixed;top:var(--panel-icon-top);right:18px;z-index:45}}
+
+/* While the agent changes the code for a comment: a thin ink trail round the bar's top card. */
+[data-theme^="minimal-"] #review-bar.is-working .bar-card{--trail-bg:var(--bar-card-bg);--trail-path:var(--bar-card-line) 0 64%,var(--ink) 97%,var(--bar-card-line);border-color:transparent;background:linear-gradient(var(--trail-bg),var(--trail-bg)) padding-box,conic-gradient(from var(--dcr-trail),var(--trail-path)) border-box;animation:dcr-trail var(--trail-time,2.4s) var(--trail-ease,linear) infinite}
+@media(prefers-reduced-motion:reduce){[data-theme^="minimal-"] #review-bar.is-working .bar-card{animation:none}}

@@ -1755,6 +1755,11 @@
     // Who answers and on what, for the bar to say (Claude · Opus 5.5 · high).
     const ran = listenerModel ? globalThis.ReviewTools.modelText(listenerModel.model, listenerModel.effort) : '';
     presence.dataset.ran = model.face ? `${tools.agentInfo(model.face).name}${ran ? ` · ${ran}` : ''}` : '';
+    // A change the agent is making for a comment, for the bar to say and to take you to it.
+    const working = fixingId();
+    const kind = working ? changeOf(working)?.kind : null;
+    presence.dataset.working = working ? kind === 'apply' ? 'Applying 1 fix' : kind === 'fix' ? 'Fixing 1 comment' : 'Working on 1 change' : '';
+    presence.dataset.workingId = working || '';
     const face = `<span class="ui-presence">${UI.Avatar({agent: model.face, size: 'sm'})}${UI.PresenceDot(model.tone)}</span>`;
     const faceSlot = presence.querySelector('.dcr-presence-face');
     if (faceSlot.dataset.html !== face) { faceSlot.innerHTML = face; faceSlot.dataset.html = face; }
