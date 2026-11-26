@@ -39,6 +39,15 @@ ReviewChecks.fixture do |root, _commit|
      [{'comment_id' => 'nope'}, 'unknown comment']].each do |change, label|
       rejected(label) { DCR::Evidence.attach(series_dir: series_dir, capture_dir: captures, input: base.merge(change)) }
     end
+    # A title is a line of the Overview's Evidence: a long one is refused with what to do instead.
+    long = 'Multi-step, monthly offer: move in on the 28th, the full price start shows no year'
+    error = begin
+      DCR::Evidence.attach(series_dir: series_dir, capture_dir: captures, input: base.merge('title' => long))
+      nil
+    rescue ArgumentError => e
+      e.message
+    end
+    assert(error&.include?("is #{long.length} characters") && error.include?('at most 60') && error.include?('put the detail in observed'), "A long title must be refused with how to shorten it: #{error.inspect}")
     File.write(File.join(captures, 'notes.txt'), 'x')
     rejected('non-media file') { DCR::Evidence.attach(series_dir: series_dir, capture_dir: captures, input: base.merge('path' => File.join(captures, 'notes.txt'))) }
     File.symlink('/etc/hosts', File.join(captures, 'link.png'))

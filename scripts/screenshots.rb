@@ -34,7 +34,7 @@ module ReviewScreenshots
     records = items.map do |item|
       unknown = item.keys - FIELDS
       raise ArgumentError, "Unknown screenshot field(s): #{unknown.join(', ')}" unless unknown.empty?
-      record = {'id' => item['id'] || "shot-#{SecureRandom.hex(3)}", 'title' => text(item['title'], 'A screenshot title', 120)}
+      record = {'id' => item['id'] || "shot-#{SecureRandom.hex(3)}", 'title' => ReviewQA.short_title(text(item['title'], 'A screenshot title', 500), 'caption')}
       raise ArgumentError, 'A screenshot id is short and URL-safe' unless record['id'].is_a?(String) && record['id'].match?(ID)
       record['caption'] = text(item['caption'], 'A caption', 300) if item.key?('caption')
       record['page'] = text(item['page'], 'The app page', 500) if item.key?('page')

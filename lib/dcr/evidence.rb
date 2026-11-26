@@ -91,7 +91,7 @@ module DCR
     def flow(capture_dir, review, input, who = 'the reviewer')
       raise ArgumentError, 'Each recording must be an object' unless input.is_a?(Hash)
       file = capture_file(capture_dir, input['path'])
-      title = text(input['title'], 'A title')
+      title = ReviewQA.short_title(text(input['title'], 'A title'), 'observed')
       observed = text(input['observed'], 'What you saw')
       expected = input['expected'].to_s.strip[0, FIELD_LIMIT]
       raise ArgumentError, 'Say what should happen instead of "works as intended"' if expected.match?(/\A(the change )?(behaves|works) as intended\.?\z/i)

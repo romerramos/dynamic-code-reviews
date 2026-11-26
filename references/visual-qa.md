@@ -82,7 +82,7 @@ Existing GIFs and legacy sequences remain supported for history.
   "summary": "Checked the last-row dropdown with a continuous tab recording and native PNG stills.",
   "environment": "Local test app; build SHA verified against the reviewed head; Chrome, 1280 x 800; synthetic account.",
   "flows": [{
-    "title": "Open the assignment menu on the last row",
+    "title": "Last row: assignment menu",
     "journey": ["Templates", "Last row", "Assignment menu"],
     "steps": ["Open templates", "Click the last row's assignment count"],
     "expected": "All menu items remain readable beyond the table boundary.",
@@ -98,6 +98,9 @@ Existing GIFs and legacy sequences remain supported for history.
 }
 ```
 
+A flow's title is a line of the Overview's Evidence list: a few words, at most 60
+characters ("Yearly once offer: start follows move-in"), with the detail in steps,
+expected and observed; `dcr evidence attach` and `dcr screenshot` refuse a longer one.
 Paths resolve relative to the QA JSON, not the current directory. `comment_id` is
 optional; it associates that generated comment with the evidence flow.
 Prefer flow comment_id to assign the evidence to one comment, including text-only

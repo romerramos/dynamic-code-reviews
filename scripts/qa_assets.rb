@@ -6,7 +6,16 @@ require 'base64'
 module ReviewQA
   LIMIT = 24 * 1024 * 1024
   TYPES = %w[image/png image/jpeg image/webp image/gif video/mp4 video/webm].freeze
+  # A screenshot's or recording's title is a line of the Overview's Evidence: a few words.
+  TITLE_LIMIT = 60
   module_function
+
+  # The title as given, or an error that asks for a shorter one and says where the detail goes.
+  def short_title(title, detail)
+    return title if title.length <= TITLE_LIMIT
+    raise ArgumentError, "Title \"#{title}\" is #{title.length} characters; keep it to a few words, at most #{TITLE_LIMIT} " \
+                         "(e.g. \"Yearly once offer: start follows move-in\"), and put the detail in #{detail}"
+  end
 
   def media_type(bytes)
     return 'image/png' if bytes.start_with?("\x89PNG\r\n\x1a\n".b)
