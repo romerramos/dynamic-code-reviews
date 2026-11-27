@@ -63,6 +63,14 @@ module ReviewChecks
       rejects('Silently left test files unassigned') { DynamicReviews.validate(snapshot, {'groups' => [{'layers' => [layer.merge('related_tests' => [])]}]}) }
       DynamicReviews.validate(snapshot, {'groups' => [{'layers' => [layer.reject { |key, _| key == 'related_tests' }]}]})
     end
+    checks['takes where the work is as after_review and a short part only'] = lambda do
+      snapshot = {'files' => [{'id' => 'f1', 'path' => 'app/value.rb', 'hunks' => []}]}
+      review = {'groups' => [{'layers' => [{'items' => [{'file' => 'f1'}]}]}]}
+      DynamicReviews.validate(snapshot, review.merge('stage' => {'after_review' => true, 'part' => 'Part 2 of 3: the fee window'}))
+      [{'after_review' => 'yes'}, {'part' => ''}, {'part' => 'x' * 81}, {'name' => 'progress'}, 'progress'].each do |bad|
+        rejects("Accepted stage #{bad.inspect}") { DynamicReviews.validate(snapshot, review.merge('stage' => bad)) }
+      end
+    end
     checks['handles pure additions, deletions and missing final newline'] = lambda do
       addition = DynamicReviews.hunks("@@ -0,0 +1,2 @@\n+one\n+two\n\\ No newline at end of file\n", 'f1').first
       rows = DynamicReviews.diff_rows(addition)

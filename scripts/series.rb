@@ -205,6 +205,7 @@ module ReviewSeries
     review['sections'] = []
     review['coverage'] = ''
     review.delete('risk_ranking') # a judgement of this change's risk, made again for each increment
+    review.delete('stage') # where the work is, decided again for each increment
     review.delete('history')
     review.delete('qa') # Captures prove a particular runtime/snapshot, never an automatic increment.
     review.delete('previews') # Rendered from one snapshot's templates; re-render after code changes.

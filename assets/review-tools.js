@@ -478,8 +478,21 @@ globalThis.ReviewTools = (() => {
     const issue = (String(head).match(/(?:^|[\/_-])([A-Za-z]{2,10}-\d{1,6})(?=$|[\/_-])/) || [])[1]?.toUpperCase() || null;
     const local = snapshot.mode === 'uncommitted' || !!snapshot.working_tree || !!review.history?.local;
     // A pull request's review of what was pushed needs no word for it: PR #n says so.
-    const place = snapshot.paths ? 'Critical code' : snapshot.mode === 'uncommitted' ? 'Your uncommitted changes' : local ? 'Your checkout' : prReview(snapshot, review) ? null : snapshot.mode === 'commit' ? 'One commit' : 'Your branch';
+    const place = snapshot.paths ? 'Critical code' : snapshot.mode === 'uncommitted' ? 'Uncommitted changes' : local ? 'Your checkout' : prReview(snapshot, review) ? null : snapshot.mode === 'commit' ? 'One commit' : 'Your branch';
     return {issue, pr: labels.pr_number || null, place, head: head || null, base: labels.base_label || null};
+  }
+  // What kind of review this is, for the line's tooltip: work in progress without a pull request,
+  // a pull request checked against what it takes on, or fixes after review (review.stage.after_review),
+  // and the part of the workspace's plan it is (review.stage.part), when the agent found one.
+  function stageText(snapshot, review = {}, issue = null) {
+    if (snapshot.paths || snapshot.mode === 'commit') return null;
+    const stage = review.stage || {};
+    const pr = comparisonLabels(snapshot, review)?.pr_number;
+    const kind = !pr ? `Work in progress. Reviewed for what is here, not for what ${issue || 'the issue'} still needs.`
+      : stage.after_review ? 'Fixing after review. Checked that the fixes for the earlier comments landed and broke nothing near them.'
+      : 'Pull request. Reviewed against what it says it takes on: an issue may take several pull requests.';
+    const part = typeof stage.part === 'string' && stage.part.trim();
+    return part ? `${kind}\n${part}` : kind;
   }
   // The issue's page in Linear, when the text names it with a linear.app link (a pull request's
   // description usually does); null otherwise, never a guessed address.
@@ -515,7 +528,8 @@ globalThis.ReviewTools = (() => {
     const parts = pr && number
       ? [issue, link(pr, 'Open the pull request on GitHub', [number, branches('&nbsp;→&nbsp;')].filter(Boolean).join('<i aria-hidden="true">&nbsp;·&nbsp;</i>'), 'where-pr'), at.place && escapeHTML(at.place), revision]
       : [issue, number, at.place && escapeHTML(at.place), revision, branches()];
-    return `<p class="overview-where" title="${escapeHTML(comparisonText(snapshot, review))}">${parts.filter(Boolean).join(dot)}</p>`;
+    const about = [stageText(snapshot, review, at.issue), comparisonText(snapshot, review)].filter(Boolean).join('\n\n');
+    return `<p class="overview-where" title="${escapeHTML(about)}">${parts.filter(Boolean).join(dot)}</p>`;
   }
   function flowOwner(flow) { return flow.comment_id || (flow.assets || []).find(asset => asset.comment_id)?.comment_id; }
   function evidenceFlows(qa, comment) {
@@ -747,5 +761,5 @@ globalThis.ReviewTools = (() => {
     return views.includes(savedView) ? savedView : 'overview';
   };
 
-  return {githubResolved, resolvedOnGitHub, waitsOnReader, whenText, ledgerPlace, screenshotLink, issueUrl, pullRequestDescription, overviewShows, whereLine, ledgerBy, pathParts, pathFit, modelName, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, ledgerOpen, popoverPlace, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, where, scopeLabel, sha256, githubLink, githubFileLink, evidenceFlows, flowLines, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
+  return {githubResolved, resolvedOnGitHub, waitsOnReader, whenText, ledgerPlace, screenshotLink, issueUrl, pullRequestDescription, overviewShows, whereLine, ledgerBy, pathParts, pathFit, modelName, modelText, riskLevel, fileNeed, needLabel, riskTag, riskFiles, ledgerOpen, popoverPlace, landing, markdown, focusFiles, layerFiles, sidebarFiles, fullFileHunks, componentGroups, categories, category, walkthroughSections, viewedFiles, fileProgress, anchor, outdatedWhere, displayRows, splitComment, sourceText, commentText, reviewText, setConversationSource, githubItem, overviewFeedback, comparisonText, stageText, where, scopeLabel, sha256, githubLink, githubFileLink, evidenceFlows, flowLines, flowOwner, commentBody, postingText, previewEligible, pendingPreviews, previewLifecycle, requestPreviews, visualPrompt};
 })();

@@ -69,7 +69,7 @@ console.log('PASS component pairs respect directory and layer boundaries without
   assert.deepEqual(pushed, {issue:'COR-1653', pr:123, place:null, head:'sam/cor-1653-consent-check', base:'main'}, 'what was pushed needs no word: PR #123 says it');
   assert.equal(tools.where({mode:'series',working_tree:true,base:'a',head:'b',branch:'feat/COR-9/x'}, {history:{origin_mode:'pr'}}).place, 'Your checkout');
   assert.equal(tools.where({mode:'pr',base:'a',head:'b'}, {history:{local:true}}).place, 'Your checkout');
-  assert.deepEqual(tools.where({mode:'uncommitted'}, {}), {issue:null, pr:null, place:'Your uncommitted changes', head:null, base:null});
+  assert.deepEqual(tools.where({mode:'uncommitted'}, {}), {issue:null, pr:null, place:'Uncommitted changes', head:null, base:null});
   assert.equal(tools.where({mode:'pr',branch:'main'}, {}).issue, null, 'a branch that names no issue');
   console.log('PASS a review says where it is working: the issue, the pull request, and the checkout or what was pushed');
 }
@@ -98,6 +98,14 @@ console.log('PASS component pairs respect directory and layer boundaries without
   assert.match(tools.whereLine(snapshot, review, 'See https://linear.app/acme/issue/COR-18520.'), /<b>COR-1852<\/b>(?!<\/a>)/, 'a link to another issue is not this one');
   assert.doesNotMatch(tools.whereLine({mode:'uncommitted'}, {}), /<a /, 'with no pull request the line has no links');
   console.log('PASS the line above the title links the issue to Linear when known and the pull request to GitHub');
+
+  // The line's tooltip says what kind of review this is, and the part of the plan when the agent found one.
+  assert.match(tools.whereLine({mode:'uncommitted', branch:'feat/acme-42/keep'}, {}), /title="Work in progress\. Reviewed for what is here, not for what ACME-42 still needs\.\n\nUncommitted changes/);
+  assert.match(tools.stageText(snapshot, review), /^Pull request\. /);
+  assert.equal(tools.stageText(snapshot, {...review, stage:{after_review:true, part:'Part 2 of 3: the fee window'}}),
+    'Fixing after review. Checked that the fixes for the earlier comments landed and broke nothing near them.\nPart 2 of 3: the fee window');
+  assert.equal(tools.stageText({mode:'commit'}, {}), null, 'one commit has no stage');
+  console.log('PASS the line above the title explains in its tooltip where the work is');
 }
 assert.equal(tools.category('app/views/rentals/show.html.erb'), 'Design / UI');
 assert.equal(tools.category('app/assets/stylesheets/rentals.scss'), 'Design / UI');

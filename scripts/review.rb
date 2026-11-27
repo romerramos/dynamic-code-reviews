@@ -298,11 +298,22 @@ module DynamicReviews
       raise ArgumentError, 'Finding must anchor to a collected hunk' unless hunks.key?(finding['hunk'])
     end
     validate_risk_ranking(review['risk_ranking'], files) if review.key?('risk_ranking')
+    validate_stage(review['stage']) if review.key?('stage')
     ids = []
     Array(review['comments']).each do |comment|
       ids << comment.fetch('id')
       raise ArgumentError, 'Comment ID must be unique and URL-safe' unless ids.uniq == ids
       validate_comment(comment, hunks)
+    end
+  end
+
+  # Where the work is, beyond what the page knows (whether there is a pull request): fixes after review,
+  # and the part of the workspace's plan the change is, in a few words. The page puts both in a tooltip.
+  def self.validate_stage(stage)
+    unless stage.is_a?(Hash) && (stage.keys - %w[after_review part]).empty? &&
+           (!stage.key?('after_review') || [true, false].include?(stage['after_review'])) &&
+           (!stage.key?('part') || (stage['part'].is_a?(String) && !stage['part'].strip.empty? && stage['part'].length <= 80))
+      raise ArgumentError, 'stage takes after_review (true or false) and part (a few words, at most 80 characters)'
     end
   end
 
