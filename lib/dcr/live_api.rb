@@ -64,7 +64,7 @@ module DCR
     def call(method, path, body)
       uri = URI(path)
       query = URI.decode_www_form(uri.query.to_s).to_h
-      key = query['key']
+      key = current(query['key'])
       case [method, uri.path]
       when ['GET', '/api/state'] then [200, snapshot(key)]
       when ['GET', '/api/poll'] then [200, poll(key, Integer(query.fetch('since', '-1')))]
@@ -604,12 +604,18 @@ module DCR
     def json(body)
       value = JSON.parse(body.call)
       raise ArgumentError, 'Expected a JSON object' unless value.is_a?(Hash)
-      value
+      value.key?('key') ? value.merge('key' => current(value['key'])) : value
     end
+
+    # Where a page's review key is now. A revision saved again under another commit moves everything
+    # to a new key (State#rekey); a page opened before that still asks with the old one, and must read
+    # and write where its threads went, or a sent comment looks unsent and its answer never shows.
+    def current(key) = key.is_a?(String) && key.match?(State::KEY) ? @state.current(@state.read, key) : key
 
     def snapshot(key)
       raise ArgumentError, 'Invalid review key' unless key.to_s.match?(State::KEY)
       state = @state.read
+      key = @state.current(state, key) # a long poll that began before the revision moved
       {'rev' => state['rev'], 'threads' => state['threads'][key] || {}, 'github' => (state['github'][key] || {}).merge('voice' => GitHubDraft.version(voice, emojis, own: own_pull?(key))), 'comments' => state['comments'][key] || [], 'screenshots' => Array(state['screenshots'][key]).map { |shot| shot.except('file') }, 'no_screenshots' => state['no_screenshots'][key], 'risk_ranking' => state['risk_rankings'][key], 'verdict' => state['verdicts'][key.split(':')[1].to_s],'previews' => preview_status(state['previews'][key]), 'latest_revision' => latest_revision, 'latest_save' => latest_save, 'listening' => @state.listening?, 'agent' => @state.listener, 'agent_model' => @state.listener_model,
        'pending' => state['outbox'].count { |entry| entry['seq'] > state['acked'] && entry['key'] == key }}
     end

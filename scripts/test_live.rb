@@ -450,3 +450,25 @@ Dir.mktmpdir('dcr-stop') do |root|
   assert(!same.call('dcr serve --name job', here), 'A process whose repository cannot be told is not taken for this one')
 end
 puts 'PASS dcr stop stops only the review of this checkout, not one of the same name elsewhere'
+
+# A page opened before its revision was saved again under another commit still asks with the old key:
+# it reads, sends and posts where the threads went, so a sent comment does not look unsent.
+Dir.mktmpdir('dcr-moved-key') do |series|
+  File.write(File.join(series, 'manifest.json'), JSON.generate('version' => 1, 'name' => 'feature', 'repo' => series, 'revisions' => [{'number' => 2, 'fingerprint' => 'def456'}]))
+  before, after = 'dynamic-review:abc123:feature:2', 'dynamic-review:def456:feature:2'
+  state = DCR::State.new(series)
+  state.send_items(before, [{'id' => 'c1', 'text' => 'first question'}])
+  state.rekey(before, after)
+  api = DCR::LiveAPI.new(series)
+  shown = api.call('GET', "/api/state?key=#{before}", nil)[1]
+  assert(shown['threads'].dig('c1', 'delivery') == 'sent', "The old key's page must still see its sent comment: #{shown['threads']}")
+  waiting = Thread.new { api.call('GET', "/api/poll?key=#{before}&since=#{shown['rev']}", nil)[1] } # asked before the next move
+  sleep 0.6
+  state.rekey(after, before)
+  assert(waiting.value['threads'].dig('c1', 'delivery') == 'sent', 'A long poll that was waiting when the revision moved must answer with the moved threads')
+  state.rekey(before, after)
+  api.call('POST', '/api/send', -> { JSON.generate('key' => before, 'items' => [{'id' => 'c2', 'text' => 'second question'}]) })
+  threads = state.read['threads']
+  assert(threads.keys == [after] && threads[after].dig('c2', 'delivery') == 'sent', "A send with the old key must land with the moved threads: #{threads.keys}")
+end
+puts 'PASS a page opened before its revision moved to another commit reads and sends where its threads went'
