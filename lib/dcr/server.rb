@@ -14,6 +14,8 @@ module DCR
   # to its handlers: the served review (ReviewSite) when there is one, then the QA recorder.
   class Server
     ENDPOINT = '.serve.json' # in the series: the served review's port and token, reused on restart
+    READ_SECONDS = 15    # to send a request once connected
+    ANSWER_SECONDS = 120 # to answer it; each slow call inside has a shorter limit of its own
 
     attr_reader :port, :token, :shared_origin, :share_note
 
@@ -66,11 +68,22 @@ module DCR
       loop do
         # One thread per connection so the page's long poll never blocks uploads or commands.
         Thread.new(@socket.accept) do |client|
-          Timeout.timeout(15) { serve(client) }
-        rescue Timeout::Error
-          # Browsers open idle connections ahead of time; answering one with an error would
-          # show that error for whichever navigation later reuses the socket.
-          nil
+          # Browsers open idle connections ahead of time: one that sends nothing is closed quietly,
+          # since answering it with an error would show that error for whichever navigation later
+          # reuses the socket.
+          request = begin
+            Timeout.timeout(READ_SECONDS) { HTTP::Request.read(client) }
+          rescue Timeout::Error
+            next
+          end
+          # A request that arrived is answered, even when it runs long: finishing a GitHub review
+          # makes several calls to GitHub, each with its own limit, and cutting it off unanswered
+          # leaves the page waiting and the review perhaps posted without the page knowing.
+          begin
+            Timeout.timeout(ANSWER_SECONDS) { serve(client, request) }
+          rescue Timeout::Error
+            HTTP.json({error: 'This took too long and was stopped. Check GitHub before trying again.'}, code: 504).write(client) rescue nil
+          end
         rescue StandardError => error
           HTTP.json({error: error.message}, code: 400).write(client) rescue nil
         ensure
@@ -83,8 +96,7 @@ module DCR
 
     private
 
-    def serve(client)
-      request = HTTP::Request.read(client)
+    def serve(client, request)
       arrival = arrival(request.headers)
       request = request.with(arrival: arrival, own_origin: arrival == :shared ? @shared_origin : @origin)
       response = @site&.call(request) || @recorder.call(request)

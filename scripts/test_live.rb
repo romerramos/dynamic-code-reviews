@@ -172,6 +172,18 @@ Dir.mktmpdir('dcr-live-test') do |directory|
     assert(!File.exist?(state.path), 'Rejected requests wrote state')
     puts 'PASS the conversation API rejects a wrong token, a foreign origin or host, invalid keys and unsupported methods'
 
+    # A request that takes longer to answer than a connection may take to send one is still answered.
+    read_limit, poll_limit = DCR::Server::READ_SECONDS, DCR::LiveAPI::POLL_SECONDS
+    [[DCR::Server, :READ_SECONDS, 1], [DCR::LiveAPI, :POLL_SECONDS, 2]].each { |owner, name, value| owner.send(:remove_const, name); owner.const_set(name, value) }
+    begin
+      since = json.call(request.call('GET', "/api/state?key=#{KEY}"))['rev']
+      slow = request.call('GET', "/api/poll?key=#{KEY}&since=#{since}")
+      assert(slow.start_with?('HTTP/1.1 200'), "A long answer was cut off unanswered: #{slow[0, 80].inspect}")
+    ensure
+      [[DCR::Server, :READ_SECONDS, read_limit], [DCR::LiveAPI, :POLL_SECONDS, poll_limit]].each { |owner, name, value| owner.send(:remove_const, name); owner.const_set(name, value) }
+    end
+    puts 'PASS a request that runs past the time to send one is still answered'
+
     blob = {'viewedFiles' => ['a.rb'], 'personalComments' => [{'id' => 'mine-1', 'subject' => 'x'}]}
     assert(request.call('POST', '/api/state', JSON.generate(key: KEY, blob: blob)).start_with?('HTTP/1.1 200'), 'Progress was not saved')
     page = request.call('GET', '/')

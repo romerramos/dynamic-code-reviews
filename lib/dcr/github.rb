@@ -16,7 +16,7 @@ module DCR
     PR_URL = %r{\Ahttps://github\.com/([\w.-]+)/([\w.-]+)/pull/(\d+)\z}
     EVENTS = %w[COMMENT APPROVE REQUEST_CHANGES].freeze
     BODY_LIMIT = 65_000 # GitHub's limit is 65,536 characters
-    CALL_SECONDS = 12   # below the server's per-request limit
+    CALL_SECONDS = 12   # one GitHub call; a request may make several, within the server's ANSWER_SECONDS
     STATUS_SECONDS = 60
     AVATAR_HOST = 'avatars.githubusercontent.com'
     AVATAR_BYTES = 200_000
