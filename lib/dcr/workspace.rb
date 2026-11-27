@@ -5,10 +5,10 @@ require 'open3'
 
 module DCR
   # The name and running app a workspace tool gave this checkout, in <git dir>/workspace.json:
-  # {"name": "orion", "app": "https://app.orion.test"}. Apps that make worktrees (T3 Code, Paseo)
+  # {"name": "orion", "app": "https://app.orion.test", "plan": "/abs/path/plan.md"}. Apps that make worktrees (T3 Code, Paseo)
   # name the folder their own way, like t3-c6839a9e; this is the name the reviewer knows it by.
   # Each worktree has its own git dir, which git never commits. The workspace kit's ws writes it;
-  # any tool may.
+  # any tool may. `plan` is the workspace tool's plan for the issue (its parts and pull requests), when it keeps one.
   module Workspace
     module_function
 
@@ -16,7 +16,7 @@ module DCR
     NAME = /\A[A-Za-z0-9][A-Za-z0-9._-]{0,39}\z/
     APP = %r{\Ahttps?://[^\s/]+[^\s]*\z}i
 
-    # {'name', 'app', 'path'} with the usable fields, or nil without a marker.
+    # {'name', 'app', 'plan', 'path'} with the usable fields, or nil without a marker.
     def find(repo)
       dir, status = Open3.capture2('git', '-C', repo.to_s, 'rev-parse', '--absolute-git-dir', err: File::NULL)
       return unless status.success?
@@ -30,6 +30,8 @@ module DCR
       found = {'name' => data['name'].to_s.strip, 'app' => data['app'].to_s.strip}
       found.delete('name') unless found['name'].match?(NAME)
       found.delete('app') unless found['app'].match?(APP)
+      plan = data['plan'].to_s.strip
+      found['plan'] = plan if plan.start_with?('/') && File.file?(plan)
       found.merge('path' => path) unless found.empty?
     rescue JSON::ParserError, SystemCallError
       nil

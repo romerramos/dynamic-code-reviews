@@ -158,6 +158,19 @@ Dir.mktmpdir('dcr-pr-context-test') do |directory|
   assert(status.success? && out.strip.start_with?('No GitHub context: GitHub CLI (`gh`) is not installed.'), "A missing gh must say so in one line: #{out}")
   puts 'PASS with no pull request, no GitHub remote or no gh it says so in one line and succeeds'
 
+  plan = File.join(directory, 'plan.md')
+  File.write(plan, "# ACME-42\n1. Keep the value\n")
+  marker = File.join(repo, '.git', 'workspace.json')
+  File.write(marker, JSON.generate(name: 'orion', plan: plan))
+  out, _, status = dcr.('--repo', repo)
+  assert(status.success? && out.lines.map(&:strip) == ["Plan: #{plan} (the workspace's plan for this issue; read it)", 'No GitHub context: feat/no-pull has no open pull request.'],
+         "The workspace's plan must be named first, with or without a pull request: #{out}")
+  File.write(marker, JSON.generate(name: 'orion', plan: File.join(directory, 'gone.md')))
+  out, = dcr.('--repo', repo)
+  assert(!out.include?('Plan:'), "A plan that is not there is not named: #{out}")
+  File.delete(marker)
+  puts 'PASS the workspace marker\'s plan is named before the context'
+
   # A review keeps its read and, after a new revision, learns what changed on the pull request since.
   kept = File.join(repo, '.reviews', 'acme-42', 'context.json')
   out, _, status = dcr.('--repo', repo, '--name', 'acme-42', '--pr', '#7')

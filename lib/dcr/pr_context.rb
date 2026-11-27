@@ -8,6 +8,7 @@ require 'optparse'
 require 'time'
 require_relative 'github'
 require_relative 'review_report'
+require_relative 'workspace'
 
 module DCR
   # What has already been said around a pull request, for the reviewing agent to read before it
@@ -412,6 +413,8 @@ module DCR
       before = series && stored(series)
       options[:pr] ||= before&.dig('context', 'url')
       github = GitHub.new(nil, gh: gh)
+      plan = options[:repo] && Workspace.find(options[:repo])&.dig('plan')
+      out.puts "Plan: #{plan} (the workspace's plan for this issue; read it)" if plan
       repo, number = target(github, options)
       return out.puts("No GitHub context: #{repo}") unless number
 

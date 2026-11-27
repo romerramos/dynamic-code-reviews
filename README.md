@@ -223,11 +223,13 @@ open it is hard to tell which review is which. A tool that names its workspaces 
 `workspace.json` in the checkout's git dir (`git rev-parse --absolute-git-dir`), which git never commits:
 
 ```json
-{"name": "orion", "app": "https://app.orion.test"}
+{"name": "orion", "app": "https://app.orion.test", "plan": "/path/to/plan.md"}
 ```
 
 The served review then shows `orion` in its header and tab title, `dcr serve` and `dcr link` print it,
-and `dcr serve` shows `app` inside the review when no `--app` is given. Both fields are optional. The
+and `dcr serve` shows `app` inside the review when no `--app` is given. `plan` is the tool's plan for the
+issue (its parts, the pull requests they go in, which are done), as an absolute path: `dcr context` names
+it, and the agent reviews the change as the part of the plan it is. Every field is optional. The
 workspace kit's `ws` writes it for its workspaces; without a marker the folder name is shown, as before.
 
 ## Stopping reviews
