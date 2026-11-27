@@ -6,4 +6,4 @@ Read `upstream/code-review-and-quality.md`. Take from it: the five axes, Structu
 
 Leave out what is not about judging this diff: Change Sizing and Change Descriptions (unless the size or the description is itself the problem), Review Speed, Multi-Model Review Pattern (the reviewer's adversaries already do that), Dead Code Hygiene's "ask before deleting", Dependency Discipline unless a dependency changed, and the checklist and verdict format. Step 2's mutation experiment edits files: reason about whether a test would fail instead.
 
-Its severity prefixes map to Conventional Comments: **Critical** is `issue (blocking)`, no prefix (required) is `issue (blocking)` or `suggestion (blocking)`, **Optional** / **Consider** is `suggestion (non-blocking)`, **Nit** is `nitpick (non-blocking)`, **FYI** is `note`.
+Its severity prefixes map to Conventional Comments: **Critical** is `issue (blocking)`, no prefix (required) is `issue (blocking)` or `suggestion (blocking)`, **Optional** / **Consider** is `suggestion (non-blocking)`, **Nit** is `nitpick (non-blocking)`, **FYI** is no comment: it goes in the explanation of that code.

@@ -94,9 +94,9 @@ and hunk IDs; always take current IDs from the prepared plan. A small update:
   "comments": [{
     "id": "empty-selection",
     "hunk": "f3h1", "side": "new", "start": 42, "end": 45,
-    "label": "note", "decoration": "non-blocking",
-    "subject": "An empty selection still produces a valid file",
-    "discussion": "The exported file retains its column headers even without task rows."
+    "label": "question", "decoration": "non-blocking",
+    "subject": "Should an empty selection download a file at all?",
+    "discussion": "It downloads a header-only CSV now. The issue asks for nothing to happen without a selection."
   }],
   "finding_updates": [{
     "id": "F1", "status": "resolved",

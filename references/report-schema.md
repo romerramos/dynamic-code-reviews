@@ -147,10 +147,10 @@ remaining code. The renderer rejects ranges outside the captured side.
 {
   "comments": [{
     "id": "csv-headers",
-    "label": "note",
+    "label": "suggestion",
     "decoration": "non-blocking",
-    "subject": "Empty exports retain their column headers",
-    "discussion": "A header-only CSV still describes the exported fields.",
+    "subject": "Keep the column headers in an empty export",
+    "discussion": "An empty selection now downloads an empty file. A header-only CSV still describes the exported fields.",
     "hunk": "f3h1",
     "side": "new",
     "start": 12,
@@ -162,7 +162,7 @@ remaining code. The renderer rejects ranges outside the captured side.
 IDs must be unique letters/digits/hyphens. Supported labels follow
 [Conventional Comments](https://conventionalcomments.org/): issue, suggestion,
 question, note, praise, nitpick, todo, thought, chore, typo, polish, quibble.
-Always choose `blocking` or `non-blocking` explicitly. Notes, praise, thoughts
+The agent never posts `note` (see SKILL.md); it stays for the reviewer's own comments. Always choose `blocking` or `non-blocking` explicitly. Notes, praise, thoughts
 and preference-level nitpicks should be non-blocking. Findings remain a separate
 list for confirmed defects; do not inflate that list with explanatory notes.
 A finding may have a corresponding comment when precise inline discussion helps.
