@@ -219,6 +219,7 @@ module DCR
       ids = sends.flat_map { |entry| entry['thread_ids'] }.uniq
       conversation = sends.any? || finish || (previews.empty? && qas.empty? && setups.empty? && risks.empty? && syncs.empty? && fixes.empty?) # a pure task request is not a conversation
       out = []
+      out << batch_index(entries) if entries.size > 1
       out << REPLY_ONLY if conversation
       out << PREVIEW_RULE if previews.any?
       out << QA_RULE if qas.any?
@@ -250,6 +251,25 @@ module DCR
              else 'Reminder: submit HTML only, change nothing in the project.'
              end
       out.join("\n\n")
+    end
+
+    # Several requests can arrive at once (more so once the reviewer's approvals run on their own).
+    # The first line names every one, so an agent that reads only the top still sees them all.
+    def batch_index(entries)
+      items = entries.map do |entry|
+        case entry['kind']
+        when 'preview' then "preview of #{entry['path']}"
+        when 'send' then "thread #{entry['thread_ids'].join(', ')}"
+        when 'fix' then "fix in thread #{entry['thread_ids'].first}"
+        when 'qa' then "QA review in thread #{entry['thread_ids'].first}"
+        when 'setup' then "browse setup in thread #{entry['thread_ids'].first}"
+        when 'sync' then 'code update'
+        when 'risk' then 'risk ranking'
+        when 'finish' then 'finish'
+        else entry['kind']
+        end
+      end
+      "#{entries.size} REQUESTS IN THIS MESSAGE, handle every one: #{items.uniq.join('; ')}."
     end
 
     def sync_commands(flags)

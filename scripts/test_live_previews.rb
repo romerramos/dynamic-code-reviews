@@ -131,6 +131,11 @@ Dir.mktmpdir('dcr-previews-test') do |directory|
   agent.request_preview(KEY, PATH)
   out, = run.call('wait', '--dir', agent_dir, '--timeout', '3')
   assert(out.include?('REPLY ONLY') && out.include?('PREVIEW REQUEST: app/views') && out.include?('a question'), 'A mixed batch carries both rules')
+  agent.request_preview(KEY, 'app/views/orders/index.html.erb')
+  agent.request_preview(KEY, 'app/views/orders/edit.html.erb')
+  agent.send_items(KEY, [{'id' => 'c2', 'text' => 'another question'}])
+  out, = run.call('wait', '--dir', agent_dir, '--timeout', '3')
+  assert(out.lines.first.chomp == '3 REQUESTS IN THIS MESSAGE, handle every one: preview of app/views/orders/index.html.erb; preview of app/views/orders/edit.html.erb; thread c2.', "Requests taken together are all named in the first line: #{out.lines.first}")
   puts 'PASS dcr wait prints a self-contained preview request, dcr preview submit takes only HTML from a file or stdin, and mistakes get a clear message'
 
   # --- the page's side ----------------------------------------------------------------------------
