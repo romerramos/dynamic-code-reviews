@@ -708,7 +708,8 @@ module DCR
       raise ArgumentError, 'Invalid template path' unless Previews.valid_path?(path)
       update do |state|
         preview = (state['previews'][key] ||= {})[path] ||= {}
-        raise ArgumentError, 'A preview of this template is already being built' if %w[requested working].include?(preview['status'])
+        # Once the agent has it, asking again is allowed: it may have moved on without building it.
+        raise ArgumentError, 'This preview is already waiting for your agent' if preview['status'] == 'requested'
         state['previews'][key][path] = {'status' => 'requested', 'requested_at' => Time.now.utc.iso8601}
         enqueue(state, 'preview', key, [], "Preview of #{path}", 'path' => path)
       end

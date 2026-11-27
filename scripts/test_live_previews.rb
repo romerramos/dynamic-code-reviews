@@ -76,6 +76,9 @@ Dir.mktmpdir('dcr-previews-test') do |directory|
   assert(state.pending.length == 1, 'Only one request may be queued')
   state.ack(entry['seq'])
   assert(state.read.dig('previews', KEY, PATH, 'status') == 'working' && state.read.dig('previews', KEY, PATH, 'delivered_at'), 'Handing the request over means the agent is working on it')
+  again = state.request_preview(KEY, PATH)
+  assert(state.read.dig('previews', KEY, PATH, 'status') == 'requested', 'A preview the agent has but never built can be asked for again')
+  state.ack(again['seq'])
   rejects('submitting a template nobody asked for') { state.submit_preview('app/views/other.html.erb', DCR::Previews.build('<p>x</p>')) }
   state.submit_preview(PATH, DCR::Previews.build('<p>Done</p>', title: 'Order'))
   ready = state.read.dig('previews', KEY, PATH)

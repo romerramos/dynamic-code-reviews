@@ -1677,7 +1677,7 @@
     const selected = `<section class="hub-section hub-selected"><h3>Selected <span>${hub.selected.length}</span></h3>${hub.selected.length ? `<ul class="hub-list">${hub.selected.map(path => hubRow(path, '', `<button type="button" class="btn btn-sm btn-ghost" data-remove-preview="${escape(path)}" aria-label="${escape(`Remove ${path} from previews`)}">Remove</button>`)).join('')}</ul>` : `<p class="hub-help">Nothing selected. While reading a template, use <strong>Select for preview</strong> in its header.</p>`}<div class="hub-footer"><button type="button" class="btn btn-sm btn-primary" data-copy-previews="selected" ${hub.selected.length ? '' : 'disabled'}>Copy prompt for ${hub.selected.length ? plural(hub.selected.length, 'template') : 'selected templates'}</button><small>Paste it into your coding agent. The selection then moves to Requested.</small></div></section>`;
     const unavailable = hub.unavailable.length ? `<details class="hub-section hub-unavailable"><summary>Not previewed <span>${hub.unavailable.length}</span></summary><ul class="hub-list">${hub.unavailable.map(item => hubRow(item.path, `${item.status === 'not_visual' ? 'Not visual' : 'Unavailable'}${item.note ? ` · ${escape(item.note)}` : ''}`, '')).join('')}</ul></details>` : '';
     const agentRows = [...live.ready.keys()].map(path => hubRow(path, 'Built by your agent', `<button type="button" class="btn btn-sm" data-show-live-preview="${escape(path)}">View</button>`))
-      .concat([...live.pending].map(([path, request]) => hubRow(path, request.status === 'failed' ? `Not built: ${escape(request.error || 'no reason given')}` : request.status === 'requested' ? 'Waiting for your agent' : 'Your agent is building it', request.status === 'failed' ? `<button type="button" class="btn btn-sm" data-request-preview="${escape(path)}">Try again</button>` : '')));
+      .concat([...live.pending].map(([path, request]) => hubRow(path, request.status === 'failed' ? `Not built: ${escape(request.error || 'no reason given')}` : request.status === 'requested' ? 'Waiting for your agent' : 'Your agent is building it', request.status === 'failed' ? `<button type="button" class="btn btn-sm" data-request-preview="${escape(path)}">Try again</button>` : request.status === 'working' ? `<button type="button" class="btn btn-sm btn-ghost" data-ask-preview-again="${escape(path)}" title="If your agent moved on without building it">Ask again</button>` : '')));
     const byAgent = agentRows.length ? `<section class="hub-section"><h3>Your agent <span>${agentRows.length}</span></h3><ul class="hub-list">${agentRows.join('')}</ul></section>` : '';
     return live.enabled ? `${byAgent}${ready}${unavailable}` : `${byAgent}${ready}${requested}${selected}${unavailable}`;
   }
@@ -1775,7 +1775,7 @@
     }
     if (status === 'requested' || status === 'working') {
       const waiting = status === 'requested';
-      view.innerHTML = `<div class="stage-message" role="status"><div class="skeleton-frame" aria-hidden="true"><span class="skeleton-line w40"></span><span class="skeleton-block"></span><span class="skeleton-line w80"></span><span class="skeleton-line w60"></span><span class="skeleton-block short"></span></div><p><strong>${waiting ? 'Waiting for your agent to start' : 'Your agent is building this preview'}</strong><br>It reads the template and the pieces it renders, then draws an approximation. You can close this and keep reviewing; it appears here when it is ready.</p></div>`;
+      view.innerHTML = `<div class="stage-message" role="status"><div class="skeleton-frame" aria-hidden="true"><span class="skeleton-line w40"></span><span class="skeleton-block"></span><span class="skeleton-line w80"></span><span class="skeleton-line w60"></span><span class="skeleton-block short"></span></div><p><strong>${waiting ? 'Waiting for your agent to start' : 'Your agent is building this preview'}</strong><br>It reads the template and the pieces it renders, then draws an approximation. You can close this and keep reviewing; it appears here when it is ready.</p>${waiting ? '' : `<button type="button" class="act" data-ask-preview-again="${escape(path)}" title="If your agent moved on without building it">${icon('refresh-cw')}Ask again</button>`}</div>`;
       return;
     }
     const failed = status === 'failed' ? pendingPreview(path) : null;
@@ -3567,6 +3567,8 @@
       toast(stored ? (selected ? 'Removed from previews.' : 'Selected. Ask for all your selected templates from Previews in the header.') : 'Browser storage is unavailable. Copy your preview prompt before closing.');
       return;
     }
+    const askAgain = event.target.closest('[data-ask-preview-again]');
+    if (askAgain) { document.dispatchEvent(new CustomEvent('review-preview-request', {detail: {path: askAgain.dataset.askPreviewAgain}})); return; }
     if (event.target.closest('[data-open-previews]')) { openStage(); return; }
     if (event.target.closest('[data-start-reading]')) { select(layers[0]?.id || 'files'); return; }
     const shows = event.target.closest('[data-overview-shows]');
