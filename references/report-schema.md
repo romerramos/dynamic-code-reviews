@@ -242,7 +242,7 @@ For PRs, supply verified names with their captured endpoints:
 {"comparison": {"base": "<snapshot.base>", "head": "<snapshot.head>", "base_label": "main", "head_label": "feat/inbox-state", "pr_number": 123, "pr_title": "STO-123 Keep inbox state", "pr_url": "https://github.com/acme/app/pull/123"}}
 ```
 
-These are display labels, not instructions to collect a different diff. Use the
+Leave them out for uncommitted changes: the page names the checkout's branch itself, and a part of a plan goes in `stage.part`. These are display labels, not instructions to collect a different diff. Use the
 snapshot merge-base SHA for `base`, not a newer base branch tip. Labels are only
 used when both SHAs match; otherwise the UI shows captured SHAs. `pr_title` is the
 PR's live title, shown in the header instead of the head SHA. `pr_url` is its GitHub

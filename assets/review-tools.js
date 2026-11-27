@@ -473,8 +473,11 @@ globalThis.ReviewTools = (() => {
   // sscott/cor-1653-consent is COR-1653), its pull request, whether it shows the checkout or what
   // was pushed, and the two branches. comparisonText is the whole account, for a tooltip.
   function where(snapshot, review = {}) {
-    const labels = comparisonLabels(snapshot, review) || {};
-    const head = labels.head_label || snapshot.branch || '';
+    // Uncommitted changes are always compared with HEAD: the checkout's branch is the one name to give,
+    // whatever labels were supplied.
+    const uncommitted = snapshot.mode === 'uncommitted';
+    const labels = uncommitted ? {} : comparisonLabels(snapshot, review) || {};
+    const head = (uncommitted ? review.history?.branch : labels.head_label) || snapshot.branch || '';
     const issue = (String(head).match(/(?:^|[\/_-])([A-Za-z]{2,10}-\d{1,6})(?=$|[\/_-])/) || [])[1]?.toUpperCase() || null;
     const local = snapshot.mode === 'uncommitted' || !!snapshot.working_tree || !!review.history?.local;
     // A pull request's review of what was pushed needs no word for it: PR #n says so.
@@ -527,7 +530,7 @@ globalThis.ReviewTools = (() => {
     const revision = review.history?.revision > 1 && `Revision ${escapeHTML(review.history.revision)}`;
     const parts = pr && number
       ? [issue, link(pr, 'Open the pull request on GitHub', [number, branches('&nbsp;→&nbsp;')].filter(Boolean).join('<i aria-hidden="true">&nbsp;·&nbsp;</i>'), 'where-pr'), at.place && escapeHTML(at.place), revision]
-      : [issue, number, at.place && escapeHTML(at.place), revision, branches()];
+      : [issue, number, at.place && escapeHTML(at.place), revision, branches() || (at.head && `<span class="where-branches"><span class="where-branch">${escapeHTML(at.head)}</span></span>`)];
     const about = [stageText(snapshot, review, at.issue), comparisonText(snapshot, review)].filter(Boolean).join('\n\n');
     return `<p class="overview-where" title="${escapeHTML(about)}">${parts.filter(Boolean).join(dot)}</p>`;
   }

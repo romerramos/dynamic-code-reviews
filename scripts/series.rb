@@ -1024,7 +1024,7 @@ module ReviewSeries
     comparison = review['comparison']
     comparison = review['comparison'] = DCR::Page.pr_names(comparison) if comparison.is_a?(Hash)
     review['comparison'] = comparison.merge('base' => snapshot['base'], 'head' => snapshot['head']) if comparison.is_a?(Hash) && !comparison.key?('base') && !comparison.key?('head')
-    review['history'] = increment.merge('series' => history['name'], 'revision' => entry['number'], 'save' => Array(entry['saves']).length, 'entries' => history['revisions'], 'origin_mode' => history['origin_mode'])
+    review['history'] = increment.merge('series' => history['name'], 'revision' => entry['number'], 'save' => Array(entry['saves']).length, 'entries' => history['revisions'], 'origin_mode' => history['origin_mode'], 'branch' => history['branch'])
     html = DynamicReviews.review_html(snapshot, review)
     # The revision's page is durable first; the manifest is the commit point.
     atomic_write(output, html)
@@ -1043,6 +1043,7 @@ module ReviewSeries
       review['pull_request'] = described if described
       review['history']['preview'] = true
       review['history']['origin_mode'] = history['origin_mode']
+      review['history']['branch'] = history['branch']
       review['history']['entries'] = history['revisions']
       html = DynamicReviews.review_html(payload.fetch('snapshot'), review)
       atomic_write(File.join(path, format('revision-%03d.html', entry['number'])), html)

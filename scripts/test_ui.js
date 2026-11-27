@@ -106,6 +106,10 @@ console.log('PASS component pairs respect directory and layer boundaries without
     'Fixing after review. Checked that the fixes for the earlier comments landed and broke nothing near them.\nPart 2 of 3: the fee window');
   assert.equal(tools.stageText({mode:'commit'}, {}), null, 'one commit has no stage');
   console.log('PASS the line above the title explains in its tooltip where the work is');
+  const local = tools.whereLine({mode:'uncommitted', base:'c1', head:'c1'}, {comparison:{base:'c1', head:'c1', base_label:'HEAD (feat/ENG-7/charges)', head_label:'Uncommitted (staged slice 1)'}, history:{branch:'feat/ENG-7/charges', revision:1}});
+  assert.match(local, /<b>ENG-7<\/b><i aria-hidden="true">·<\/i>Uncommitted changes<i aria-hidden="true">·<\/i><span class="where-branches"><span class="where-branch">feat\/ENG-7\/charges<\/span><\/span><\/p>/);
+  assert.doesNotMatch(local, /slice|HEAD \(/, "uncommitted changes name the checkout's branch once, never supplied labels");
+  console.log('PASS uncommitted changes name the issue, the checkout and its branch once');
 }
 assert.equal(tools.category('app/views/rentals/show.html.erb'), 'Design / UI');
 assert.equal(tools.category('app/assets/stylesheets/rentals.scss'), 'Design / UI');
