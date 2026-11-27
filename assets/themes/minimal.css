@@ -46,7 +46,7 @@
   --comment-action-height:28px;--comment-action-pad:0 11px;--comment-action-border:1px solid var(--line);--comment-action-radius:8px;--comment-action-bg:var(--surface);--comment-action-ink:var(--ink-neutral-3);--comment-action-size:13px;--comment-action-weight:500;--comment-action-shadow:none;
   --message-name:none;--message-you-name:none;--message-model:none;--message-role:none;--message-head-size:12.5px;--message-head-ink:var(--minimal-faint);
   --verdict-pad:0;--verdict-border:0;--verdict-bg:none;--verdict-ink:var(--ink-neutral-3);--verdict-size:12.5px;--verdict-weight:400;--verdict-icon:none;--op-face-opacity:.4;--peek-face:14px;
-  --popover-pad:0;--popover-divider:var(--line);--popover-space:16px;--popover-where:none;--popover-tags:none;--popover-face:grid;--popover-face-col:18px;--popover-gap:12px;--popover-title-room:30px;--popover-title-size:15px;--popover-title-line:1.4;--popover-title-ink:var(--ink);--popover-place:block;--popover-text-ink:var(--ink-neutral-3);--popover-text-size:14px;--popover-footer-top:18px;--popover-message-face:18px;--popover-message-gap:12px}
+  --popover-pad:0;--popover-divider:var(--line);--popover-space:16px;--popover-where:none;--popover-tags:none;--popover-face:grid;--popover-face-col:18px;--popover-gap:12px;--popover-title-room:30px;--popover-title-size:15px;--popover-title-line:1.4;--popover-title-ink:var(--ink);--popover-text-ink:var(--ink-neutral-3);--popover-text-size:14px;--popover-footer-top:18px;--popover-message-face:18px;--popover-message-gap:12px}
 [data-theme^="minimal-"] *{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 
 /* --- the list: step names, and nothing around them ------------------------------------------------ */

@@ -1456,7 +1456,7 @@
     const found = ReviewTools.anchor(snapshot, comment);
     const tags = comment.personal && comment.audience === 'agent' ? `${comment.resolved ? `<span class="thread-resolved">${icon('check')} Resolved locally</span>` : ''}${youBadge()}` : threadBadges(comment, comment.personal);
     return UI.CommentPopover({id: comment.id, own: comment.personal, where: pathFit(found?.file.path || '', lines, true), tags, face: authorFace(comment),
-      title: comment.personal ? escape(comment.subject) : prose(comment.subject), place: escape(lines),
+      title: comment.personal ? escape(comment.subject) : prose(comment.subject),
       meta: threadMeta(comment, found?.file.path, lines.slice(1)), body: `${body}${evidence}`,
       footer: `${actions}${comment.personal ? '' : UI.Button({html: comment.resolved ? `${icon('rotate-ccw')} Reopen` : `${icon('check')} Resolve`, variant: comment.resolved ? 'ghost' : 'soft', size: 'xs', attrs: {'data-resolve': comment.id}})}`});
   }

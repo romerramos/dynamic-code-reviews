@@ -1,17 +1,16 @@
 /* CommentPopover (comment-popover.js): a comment beside its code. Where it is, its kind and weight,
-   then its line (face, title, place) and everything under it on the title's column, its actions last.
+   then its face and title, and everything under it on the title's column, its actions last.
    Tokens: --popover-pad, --popover-divider, --popover-where, --popover-tags, --popover-face,
-   --popover-face-col, --popover-gap, --popover-title-*, --popover-place, --popover-text-*,
+   --popover-face-col, --popover-gap, --popover-title-*, --popover-text-*,
    --popover-footer-top; its buttons follow --comment-action-* where the theme sets them. */
 .ui-popover-comment{--popover-indent:calc(var(--popover-face-col,0px) + var(--popover-gap,0px));padding:var(--popover-pad,14px 16px);font:13px/1.65 var(--review-font-family)}
 .ui-popover-comment+.ui-popover-comment{margin-top:var(--popover-space,0px);padding-top:var(--popover-space,0px);border-top:1px solid var(--popover-divider,var(--line-amber-1))}
 .ui-popover-comment>.comment-location{display:var(--popover-where,block);margin:0 0 12px;font:10px/1.65 var(--mono);color:var(--ink-amber-5);overflow-wrap:anywhere}
 .ui-popover-comment>.thread-badges{display:var(--popover-tags,flex);align-items:center;flex-wrap:wrap;gap:10px}
-.ui-popover-comment .popover-title{display:grid;grid-template-columns:var(--popover-face-col,0px) minmax(0,1fr) auto;column-gap:var(--popover-gap,0px);align-items:baseline;margin:0 0 9px;padding-right:var(--popover-title-room,0px)}
+.ui-popover-comment .popover-title{display:grid;grid-template-columns:var(--popover-face-col,0px) minmax(0,1fr);column-gap:var(--popover-gap,0px);align-items:baseline;margin:0 0 9px;padding-right:var(--popover-title-room,0px)}
 .ui-popover-comment .popover-title>.ui-comment-face{--avatar-size:var(--popover-face-col,18px);display:var(--popover-face,none);grid-column:1;place-items:center;align-self:center}
 .ui-popover-comment .popover-title h4{grid-column:2;margin:0;font-size:var(--popover-title-size,13px);font-weight:600;line-height:var(--popover-title-line,1.55);color:var(--popover-title-ink,var(--ink-amber-1));letter-spacing:0}
 .ui-popover-comment .popover-title h4 code{font:.9em var(--mono)}
-.ui-popover-comment .popover-title .thread-at{display:var(--popover-place,none);grid-column:3;color:var(--comment-quiet);font:12px var(--mono)}
 .ui-popover-comment>:not(.popover-title,.comment-location,.thread-badges,.thread-footer){margin-left:var(--popover-indent)}
 .ui-popover-comment .thread-meta{display:var(--comment-meta);flex-wrap:wrap;gap:2px 8px;margin:2px 0 12px var(--popover-indent);color:var(--comment-quiet);font-size:12.5px}
 .ui-popover-comment .thread-meta i{font-style:normal;opacity:.6}
